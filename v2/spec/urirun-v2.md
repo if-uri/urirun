@@ -49,11 +49,13 @@ execution requires an allow rule plus `allowShellTemplates: true`.
 ## Decorators
 
 ```python
-@uri_command("say://local/echo/message")
+import urirun
+
+@urirun.command("say://local/echo/message")
 def echo(text: str):
     return ["python3", "-c", "import sys; print(sys.argv[1])", "{text}"]
 
-@uri_shell("shell://local/echo/message")
+@urirun.shell("shell://local/echo/message")
 def shell_echo(text: str):
     return "printf '%s\\n' '{text}'"
 ```

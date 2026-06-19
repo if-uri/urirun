@@ -36,3 +36,35 @@ def dispatch(uri: str, registry: dict, payload=None):
     if not callable(fn):
         raise KeyError(f"Unknown function: {invocation['package']}.{invocation['functionName']}")
     return fn(*invocation['args'], payload, invocation)
+
+
+def command(uri: str, **options):
+    """Declare a v2 URI command with the public top-level decorator API.
+
+    This is the preferred spelling for connector authors:
+
+        import urirun
+
+        @urirun.command("demo://host/http/query/status")
+        def status(url: str):
+            return ["demo", "{url}"]
+
+    ``urirun.v2.uri_command`` remains supported for existing code.
+    """
+    from urirun.v2 import uri_command
+
+    return uri_command(uri, **options)
+
+
+def shell(uri: str, **options):
+    """Declare a v2 shell-template URI route with the top-level API."""
+    from urirun.v2 import uri_shell
+
+    return uri_shell(uri, **options)
+
+
+def connector_bindings(*, routes=None, connector=None):
+    """Export v2 bindings generated from ``@urirun.command`` decorators."""
+    from urirun.v2 import connector_bindings as _connector_bindings
+
+    return _connector_bindings(routes=routes, connector=connector)

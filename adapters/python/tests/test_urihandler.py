@@ -1,5 +1,6 @@
 import unittest
 
+import urirun
 from urirun import build_invocation, dispatch, parse_uri, v2
 
 
@@ -55,7 +56,7 @@ class UriHandlerTests(unittest.TestCase):
         previous = dict(v2.DECORATED_BINDINGS)
         v2.DECORATED_BINDINGS.clear()
         try:
-            @v2.uri_command("demo://host/http/query/status", meta={"connector": "demo"})
+            @urirun.command("demo://host/http/query/status", meta={"connector": "demo"})
             def demo_status(url: str, expectStatus: int = 200):
                 return ["demo-http-check", "{url}", "{expectStatus}"]
 
@@ -63,7 +64,7 @@ class UriHandlerTests(unittest.TestCase):
             def other_command(name: str):
                 return ["echo", "{name}"]
 
-            document = v2.connector_bindings(connector="demo")
+            document = urirun.connector_bindings(connector="demo")
             self.assertEqual(document["version"], "urirun.bindings.v2")
             self.assertEqual(list(document["bindings"]), ["demo://host/http/query/status"])
 

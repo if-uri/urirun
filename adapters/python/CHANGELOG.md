@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-06-20
+
+### Added
+- Add the preferred top-level decorator API:
+  `@urirun.command(...)`, `@urirun.shell(...)` and
+  `urirun.connector_bindings(...)`.
+
 ## [0.3.11] - 2026-06-20
 
 ### Fixed

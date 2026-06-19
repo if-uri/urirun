@@ -7,7 +7,7 @@ npm install github:tellmesh/urirun
 
 ## Python
 ```bash
-pip install "git+https://github.com/tellmesh/urirun.git@v0.3.11#subdirectory=adapters/python"
+pip install "git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
 ```
 
 ## Firmware / C

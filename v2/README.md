@@ -9,13 +9,13 @@ signatures.
 ## Decorator
 
 ```python
-from urirun.v2 import uri_command, uri_shell
+import urirun
 
-@uri_command("media://local/video/transcode")
+@urirun.command("media://local/video/transcode")
 def transcode(input: str, output: str, width: int = 1280, height: int = 720):
     return ["ffmpeg", "-i", "{input}", "-vf", "scale={width}:{height}", "{output}"]
 
-@uri_shell("shell://local/echo/message")
+@urirun.shell("shell://local/echo/message")
 def echo(text: str):
     return "printf '%s\\n' '{text}'"
 ```
@@ -24,6 +24,10 @@ The decorator creates an `inputSchema` from Pydantic and stores the argv or shel
 template as a normal v2 binding. The runtime validates payload/query values
 against that schema, applies defaults, renders placeholders, and then runs the
 command.
+
+`urirun.v2.uri_command(...)` and `urirun.v2.uri_shell(...)` remain supported for
+older code, but new connector packages should prefer the top-level
+`@urirun.command(...)` and `@urirun.shell(...)` API.
 
 Shell routes are real shell execution, but they stay behind the policy gate:
 execution needs both an allow rule and `allowShellTemplates: true`.
@@ -219,7 +223,7 @@ for common requests such as process listing, logs, browser open, `which python3`
 Install the optional dependency when the host should manage work items:
 
 ```bash
-pip install "urirun[planfile] @ git+https://github.com/tellmesh/urirun.git@v0.3.11#subdirectory=adapters/python"
+pip install "urirun[planfile] @ git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
 ```
 
 `urirun host task` keeps tasks in planfile's `.planfile/` store and uses

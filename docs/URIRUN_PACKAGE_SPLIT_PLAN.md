@@ -83,9 +83,9 @@ Connector nie powinien importowac `urirun.v2`. Publiczne API powinno byc
 wersjonowane kontraktem danych, nie sciezka modulu:
 
 ```python
-from urirun import uri_command, uri_shell, decorated_bindings
+import urirun
 
-@uri_command(
+@urirun.command(
     "dns://host/records/command/plan",
     adapter="python-call",
     kind="command",
@@ -95,7 +95,7 @@ def plan_dns(domain: str, ensure_records: list[dict] | None = None):
     ...
 
 def urirun_bindings():
-    return decorated_bindings()
+    return urirun.connector_bindings(connector="namecheap")
 ```
 
 Entry point connectora:
@@ -140,7 +140,7 @@ urirun connectors registry --out generated/registry.json
 
 Zostaje w core:
 
-- `uri_command`, `uri_shell`, `decorated_bindings`,
+- `command`, `shell`, `connector_bindings`,
 - schema generation and validation,
 - `compile`, `validate`, `scan`, `list`, `run`,
 - built-in execution adapters: `argv-template`, `shell-template`,
@@ -246,9 +246,9 @@ potem `urirun compile` tworzy registry.
 ### Faza 1 - stabilne API core
 
 - Wyeksportowac z `urirun.__init__`:
-  - `uri_command`,
-  - `uri_shell`,
-  - `decorated_bindings`,
+  - `command`,
+  - `shell`,
+  - `connector_bindings`,
   - `compile_registry`,
   - `load_registry_arg`.
 - Dodac `urirun connectors ...` jako loader entry pointow.

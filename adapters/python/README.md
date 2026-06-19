@@ -3,13 +3,13 @@
 Install directly from GitHub:
 
 ```bash
-pip install "git+https://github.com/tellmesh/urirun.git@v0.3.11#subdirectory=adapters/python"
+pip install "git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
 ```
 
 Or install a GitHub Release wheel:
 
 ```bash
-pip install "https://github.com/tellmesh/urirun/releases/download/v0.3.11/urirun-0.3.11-py3-none-any.whl"
+pip install "https://github.com/tellmesh/urirun/releases/download/v0.3.12/urirun-0.3.12-py3-none-any.whl"
 ```
 
 PyPI publishing is not required. The distribution is named `urirun`; the Python
@@ -34,7 +34,7 @@ points for scripts that need a stable major-version command.
 The optional v2 gRPC transport can be installed with:
 
 ```bash
-pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@v0.3.11#subdirectory=adapters/python"
+pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
 ```
 
 v2 can generate schema-first bindings and a compiled registry from existing
@@ -52,14 +52,14 @@ Connector packages can also generate bindings directly from decorated Python
 functions:
 
 ```python
-from urirun import v2
+import urirun
 
-@v2.uri_command("httpcheck://host/http/query/status", meta={"connector": "http-check"})
+@urirun.command("httpcheck://host/http/query/status", meta={"connector": "http-check"})
 def status_command(url: str, expectStatus: int = 200, timeout: float = 10.0):
     return ["urirun-http-check", "status", "{url}", "--expect-status", "{expectStatus}"]
 
 def urirun_bindings():
-    return v2.connector_bindings(connector="http-check")
+    return urirun.connector_bindings(connector="http-check")
 ```
 
 
