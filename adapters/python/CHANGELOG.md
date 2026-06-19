@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.11] - 2026-06-20
+
+### Fixed
+- Restore release-version consistency after the skipped v0.3.8-v0.3.10 tags
+  still built `urirun` Python artifacts with version 0.3.5.
+
 ## [0.3.5] - 2026-06-20
 
 ### Added
