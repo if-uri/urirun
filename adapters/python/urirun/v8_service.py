@@ -1,4 +1,4 @@
-"""urihandler v8 service dispatch - call a URI implemented by a remote worker.
+"""urirun v8 service dispatch - call a URI implemented by a remote worker.
 
 In a polyglot deployment each worker implements its own URI resources natively
 (Python, Node.js, shell, ...) and exposes `POST /run`. From a coordinator's point
@@ -11,7 +11,7 @@ route (`local-service`, `command`, ...) - to the coordinator every worker URI is
 reached over HTTP.
 
 ```python
-from urihandler import v8_service
+from urirun import v8_service
 env = v8_service.call("python://python-worker/text/normalize", {"text": "Hi"}, registry)
 ```
 
@@ -28,7 +28,7 @@ import urllib.request
 
 from jsonschema import exceptions as jsonschema_exceptions
 
-from urihandler import _registry as reglib, v8
+from urirun import _registry as reglib, v8
 
 DEFAULT_PORT = 8080
 

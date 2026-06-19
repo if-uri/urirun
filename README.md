@@ -1,19 +1,12 @@
-# urihandler
+# urirun
 
+`urirun` is a small URI-addressed command runtime. It lets a project expose
+functions, scripts, Docker services, HTTP endpoints, MQTT topics, firmware
+commands, and package entry points as stable URI routes compiled into one
+registry.
 
-## AI Cost Tracking
-
-![Package](https://img.shields.io/badge/package-GitHub-blue) ![Version](https://img.shields.io/badge/version-0.3.4-blue) ![Python](https://img.shields.io/badge/python-3.10+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![AI Cost](https://img.shields.io/badge/AI%20Cost-$0.73-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-3.5h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
-
-- 🤖 **LLM usage:** $0.7255 (10 commits)
-- 👤 **Human dev:** ~$349 (3.5h @ $100/h, 30min dedup)
-
-Generated on 2026-06-19 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
-
----
-
-A small, language-agnostic URI-to-handler translator for integrating URI commands with existing code in any runtime.
+The repository is still named `tellmesh/urihandler` for compatibility. The
+user-facing Python distribution and CLI are named `urirun`.
 
 ## Goal
 
@@ -40,6 +33,15 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - `path segments` -> operation chain
 - `payload` -> optional data
 
+## Naming
+
+- `urirun` is the CLI and Python distribution name.
+- `urihandler` remains the Python import namespace, JS package name, JSON schema
+  prefix, Docker/OCI label prefix, and C adapter filename for compatibility.
+- New user-facing commands should use `urirun`, `urirun-v7`, or `urirun-v8`.
+- Do not globally replace `urihandler` inside imports, schema versions, labels,
+  tests, or package metadata unless a compatibility migration is added first.
+
 ## Repository layout
 
 - `spec/urihandler-spec.md` - portable specification
@@ -49,6 +51,9 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - `v7/` - parameter binding (`{name}` from payload/query), string shorthand, Docker adapters, and `env`/`stdin`/`cwd`/`timeout`
 - `v8/` - schema-first command packages (JSON Schema inputs, multi-language decorators, artifact adoption) + MCP/A2A interop for LLM/agent discovery
 - `examples/reference_adapters/` - minimal base adapter examples for JS, Python, C/firmware, and browser usage
+- `docs/` - current documentation for naming, quick start, CLI, registry, and transports
+- `www/` - small PHP documentation site using the generated urirun logo assets
+- `logo/` - generated SVG logo family for icon, wordmark, horizontal and stacked marks
 - `project/` - generated architecture maps and analysis artifacts, including `map.toon.yaml`
 - `github/` - GitHub integration notes
 
@@ -86,10 +91,10 @@ The Python package installs the v8-first `urirun` CLI and versioned v7/v8
 entrypoints:
 
 ```bash
-urirun scan ./project --out .urihandler/bindings.v8.json --registry-out .urihandler/registry.merged.json
-urirun validate .urihandler/bindings.v8.json
-urirun list .urihandler/registry.merged.json
-urirun run 'cli://local/git/status' .urihandler/registry.merged.json
+urirun scan ./project --out .urirun/bindings.v8.json --registry-out .urirun/registry.merged.json
+urirun validate .urirun/bindings.v8.json
+urirun list .urirun/registry.merged.json
+urirun run 'cli://local/git/status' .urirun/registry.merged.json
 urirun-v7 --help
 urirun-v8 --help
 ```
@@ -110,6 +115,22 @@ Copy `adapters/c/urihandler.c` and `adapters/c/urihandler.h` into your firmware 
 make test
 ```
 
+## Documentation
+
+- [docs/index.md](docs/index.md) - documentation index
+- [docs/getting-started.md](docs/getting-started.md) - shortest path to a registry and URI run
+- [docs/naming.md](docs/naming.md) - exact `urirun` vs `urihandler` rules
+- [docs/commands.md](docs/commands.md) - CLI command reference
+- [docs/registry-and-bindings.md](docs/registry-and-bindings.md) - binding and registry lifecycle
+- [docs/transports.md](docs/transports.md) - local, HTTP, gRPC, Docker, MCP/A2A and browser use
+- [docs/roadmap.md](docs/roadmap.md) - remaining work to make `urirun` easier to use
+
+The PHP site can be served locally with:
+
+```bash
+php -S 127.0.0.1:8098 -t www
+```
+
 ## v7 parameter binding, Docker, and shell
 
 v7 adds named **parameter binding** so real tools (ffmpeg, kubectl, docker) are
@@ -118,14 +139,14 @@ easy to drive, plus a string shorthand, Docker adapters, and `env`/`stdin`/
 
 ```bash
 # string shorthand + named params; dry-run prints the exact command first
-PYTHONPATH=adapters/python python -m urihandler.v7 compile v7/examples/json/bindings.v7.example.json \
+PYTHONPATH=adapters/python urirun-v7 compile v7/examples/json/bindings.v7.example.json \
   --out /tmp/registry.json
-PYTHONPATH=adapters/python python -m urihandler.v7 run 'media://local/video/transcode' /tmp/registry.json \
+PYTHONPATH=adapters/python urirun-v7 run 'media://local/video/transcode' /tmp/registry.json \
   --payload '{"input":"a.mp4","output":"b.mp4"}'
 # -> result.command: ["ffmpeg","-i","a.mp4","-vf","scale=1280:720","b.mp4"]
 
 # Docker as an execution surface (target = container; or one-shot from an image)
-PYTHONPATH=adapters/python python -m urihandler.v7 run 'container://api/db/backup' /tmp/registry.json \
+PYTHONPATH=adapters/python urirun-v7 run 'container://api/db/backup' /tmp/registry.json \
   --payload '{"database":"app"}'
 # -> docker exec api pg_dump -U postgres app
 ```
@@ -151,12 +172,12 @@ can discover and call the endpoints — still through the policy gate.
 
 ```bash
 # add a binding from a PyPI package in one line, then compile
-python -m urihandler.v8 add-pypi sampleproject --out urihandler.bindings.v8.json
-python -m urihandler.v8 compile urihandler.bindings.v8.json --out registry.json
+urirun add-pypi sampleproject --out urirun.bindings.v8.json
+urirun compile urirun.bindings.v8.json --out registry.json
 
 # adopt the CLI commands installed packages ship (PyPI console_scripts, npm bin)
-python -m urihandler.v8_adopt add-python-package black --out urihandler.bindings.v8.json
-python -m urihandler.v8_adopt add-npm-package prettier --out urihandler.bindings.v8.json
+python -m urihandler.v8_adopt add-python-package black --out urirun.bindings.v8.json
+python -m urihandler.v8_adopt add-npm-package prettier --out urirun.bindings.v8.json
 python -m urihandler.v8_adopt init .   # scan project -> bindings + registry in one command
 
 # project the registry to MCP / A2A, or serve MCP over stdio

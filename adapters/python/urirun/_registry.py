@@ -13,7 +13,7 @@ from importlib import metadata
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, unquote
 
-REGISTRY_VERSION = "urihandler.registry.v7"
+REGISTRY_VERSION = "urirun.registry.v7"
 URI_RE = re.compile(
     r"^(?P<scheme>[a-z][a-z0-9+.-]*)://(?P<target>[^/?#]+)(?P<path>/[^?#]*)?(?:\?(?P<query>[^#]*))?(?:#(?P<fragment>.*))?$",
     re.I,
@@ -277,32 +277,32 @@ def _parse_command(value: str) -> list[str]:
 
 
 def discover_docker_labels(labels: dict, source: dict | None = None) -> list[dict]:
-    if labels.get("urihandler.enabled", "true").lower() not in {"1", "true", "yes", "on"}:
+    if labels.get("urirun.enabled", "true").lower() not in {"1", "true", "yes", "on"}:
         return []
 
-    route_uri = labels.get("urihandler.uri")
-    package = labels.get("urihandler.package")
-    resource = labels.get("urihandler.resource")
-    operation = labels.get("urihandler.operation")
-    kind = labels.get("urihandler.kind") or "http"
-    adapter = labels.get("urihandler.adapter") or default_adapter(kind)
+    route_uri = labels.get("urirun.uri")
+    package = labels.get("urirun.package")
+    resource = labels.get("urirun.resource")
+    operation = labels.get("urirun.operation")
+    kind = labels.get("urirun.kind") or "http"
+    adapter = labels.get("urirun.adapter") or default_adapter(kind)
     config: dict = {}
 
     for key, value in labels.items():
-        if key.startswith("urihandler.config."):
-            config[key.removeprefix("urihandler.config.")] = value
+        if key.startswith("urirun.config."):
+            config[key.removeprefix("urirun.config.")] = value
 
     for label_key, config_key in {
-        "urihandler.url": "url",
-        "urihandler.method": "method",
-        "urihandler.template": "template",
-        "urihandler.topicPrefix": "topicPrefix",
+        "urirun.url": "url",
+        "urirun.method": "method",
+        "urirun.template": "template",
+        "urirun.topicPrefix": "topicPrefix",
     }.items():
         if label_key in labels:
             config[config_key] = labels[label_key]
 
-    if "urihandler.command" in labels:
-        config["command"] = _parse_command(labels["urihandler.command"])
+    if "urirun.command" in labels:
+        config["command"] = _parse_command(labels["urirun.command"])
 
     route_entry = {"kind": kind, "adapter": adapter, "config": config}
     merged_source = {"type": "docker-labels", **(source or {})}
@@ -310,8 +310,8 @@ def discover_docker_labels(labels: dict, source: dict | None = None) -> list[dic
     if route_uri:
         return [route_from_uri(route_uri, route_entry, merged_source)]
     if package and resource and operation:
-        return [route_from_parts(package, resource, operation, route_entry, merged_source, labels.get("urihandler.target", "_"))]
-    raise ValueError("Docker labels require urihandler.uri or package/resource/operation")
+        return [route_from_parts(package, resource, operation, route_entry, merged_source, labels.get("urirun.target", "_"))]
+    raise ValueError("Docker labels require urirun.uri or package/resource/operation")
 
 
 def discover_docker_inspect(inspect_data: dict | list) -> list[dict]:
@@ -364,7 +364,7 @@ def discover_openapi(
         for method, operation in path_item.items():
             if method.lower() not in HTTP_METHODS or not isinstance(operation, dict):
                 continue
-            route_uri = operation.get("x-urihandler-uri") or _default_openapi_route(method.lower(), path, operation, package, target)
+            route_uri = operation.get("x-urirun-uri") or _default_openapi_route(method.lower(), path, operation, package, target)
             url = f"{base_url.rstrip('/')}{path}" if base_url else path
             route_entry = {"kind": "http", "adapter": "fetch", "config": {"method": method.upper(), "url": url}}
             entries.append(
@@ -381,7 +381,7 @@ def uri_handler(uri: str, **route_entry):
     def decorator(fn):
         entry = normalize_route_entry(route_entry)
         entry["ref"] = entry.get("ref") or f"{fn.__module__}.{fn.__name__}"
-        fn.__urihandler_route__ = {"uri": uri, "routeEntry": entry}
+        fn.__urirun_route__ = {"uri": uri, "routeEntry": entry}
         return fn
 
     return decorator
@@ -402,7 +402,7 @@ def _iter_module_exports(modules):
 def discover_python_modules(modules) -> list[dict]:
     entries: list[dict] = []
     for module_name, export_name, value in _iter_module_exports(modules):
-        meta = getattr(value, "__urihandler_route__", None)
+        meta = getattr(value, "__urirun_route__", None)
         if not meta:
             continue
         route_entry = dict(meta.get("routeEntry") or {})
@@ -417,13 +417,13 @@ def discover_python_modules(modules) -> list[dict]:
     return entries
 
 
-def discover_entry_points(group: str = "urihandler.routes") -> list[dict]:
+def discover_entry_points(group: str = "urirun.routes") -> list[dict]:
     eps = metadata.entry_points()
     selected = eps.select(group=group) if hasattr(eps, "select") else eps.get(group, [])
     entries: list[dict] = []
     for entry_point in selected:
         obj = entry_point.load()
-        meta = getattr(obj, "__urihandler_route__", None)
+        meta = getattr(obj, "__urirun_route__", None)
         if not meta:
             continue
         route_entry = dict(meta.get("routeEntry") or {})
@@ -598,7 +598,7 @@ def _discover_python_module(module_name: str) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="urihandler")
+    parser = argparse.ArgumentParser(prog="urirun")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     discover = subparsers.add_parser("discover", help="Generate a registry document from one source")
@@ -634,13 +634,13 @@ def main(argv: list[str] | None = None) -> int:
 
     build = subparsers.add_parser("build-registry", help="Merge discovery files into one registry document")
     build.add_argument("sources", nargs="+")
-    build.add_argument("--out", default=".urihandler/registry.merged.json")
+    build.add_argument("--out", default=".urirun/registry.merged.json")
     build.add_argument("--on-conflict", choices=["error", "keep", "replace"], default="error")
     build.add_argument("--generated-at")
 
     call = subparsers.add_parser("call", help="Dispatch one URI through a generated registry")
     call.add_argument("uri")
-    call.add_argument("--registry", default=".urihandler/registry.merged.json")
+    call.add_argument("--registry", default=".urirun/registry.merged.json")
     call.add_argument("--payload", default="null")
 
     args = parser.parse_args(argv)

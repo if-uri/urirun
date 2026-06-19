@@ -1,4 +1,4 @@
-"""urihandler v7 - parameter binding, Docker adapters, richer process control.
+"""urirun v7 - parameter binding, Docker adapters, richer process control.
 
 - **Named parameter binding.** `{name}` placeholders in commands/templates/urls
   are filled from the URI query, the payload, positional args (`{0}`, `{1}`) and
@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from urihandler import _registry as reglib, _scan as scan, _runtime as runtime
+from urirun import _registry as reglib, _scan as scan, _runtime as runtime
 
 PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_.]+)\}")
 PROCESS_CONFIG_KEYS = ("image", "mount", "env", "stdin", "timeout", "cwd", "params")
@@ -349,7 +349,7 @@ def load_registry_arg(arg: str, openapi_base_url: str = "") -> dict:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     executable = Path(sys.argv[0]).name
-    prog = executable if executable in {"urirun-v7", "urihandler-v7"} else "urirun-v7"
+    prog = executable if executable in {"urirun-v7", "urirun-v7"} else "urirun-v7"
     parser = argparse.ArgumentParser(prog=prog)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -357,7 +357,7 @@ def main(argv: list[str] | None = None) -> int:
         if with_uri:
             p.add_argument("uri")
         p.add_argument("source", nargs="?", help="project directory, registry, or bindings file")
-        p.add_argument("--registry", default=".urihandler/reglib.merged.json")
+        p.add_argument("--registry", default=".urirun/reglib.merged.json")
         p.add_argument("--policy")
         p.add_argument("--allow", action="append", default=[], metavar="GLOB")
         p.add_argument("--deny", action="append", default=[], metavar="GLOB")
@@ -377,7 +377,7 @@ def main(argv: list[str] | None = None) -> int:
 
     compile_parser = subparsers.add_parser("compile", help="Compile bindings (incl. string shorthand) to a registry")
     compile_parser.add_argument("sources", nargs="+")
-    compile_parser.add_argument("--out", default=".urihandler/reglib.merged.json")
+    compile_parser.add_argument("--out", default=".urirun/reglib.merged.json")
     compile_parser.add_argument("--on-conflict", choices=["error", "keep", "replace"], default="keep")
     compile_parser.add_argument("--generated-at")
 

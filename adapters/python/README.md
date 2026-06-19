@@ -3,39 +3,39 @@
 Install directly from GitHub:
 
 ```bash
-pip install "git+https://github.com/tellmesh/urihandler.git@main#subdirectory=adapters/python"
+pip install "git+https://github.com/tellmesh/urirun.git@main#subdirectory=adapters/python"
 ```
 
 Or install a GitHub Release wheel:
 
 ```bash
-pip install "https://github.com/tellmesh/urihandler/releases/download/v0.3.4/urirun-0.3.4-py3-none-any.whl"
+pip install "https://github.com/tellmesh/urirun/releases/download/v0.3.4/urirun-0.3.4-py3-none-any.whl"
 ```
 
 PyPI publishing is not required. The distribution is named `urirun`; the Python
-import package remains `urihandler`:
+import package remains `urirun`:
 
 ```python
-import urihandler
+import urirun
 ```
 
 After installation the `urirun` CLI is available:
 
 ```bash
-urirun scan ./project --out .urihandler/bindings.v8.json --registry-out .urihandler/registry.merged.json
-urirun validate .urihandler/bindings.v8.json
-urirun list .urihandler/registry.merged.json
-urirun run 'cli://local/git/status' .urihandler/registry.merged.json
+urirun scan ./project --out .urirun/bindings.v8.json --registry-out .urirun/registry.merged.json
+urirun validate .urirun/bindings.v8.json
+urirun list .urirun/registry.merged.json
+urirun run 'cli://local/git/status' .urirun/registry.merged.json
 ```
 
 `urirun-v7` and `urirun-v8` are also installed as explicit versioned entry
-points. Compatibility aliases `urihandler-v7` and `urihandler-v8` are kept for
+points. Compatibility aliases `urirun-v7` and `urirun-v8` are kept for
 existing v7/v8 scripts.
 
 The optional v8 gRPC transport can be installed with:
 
 ```bash
-pip install "urirun[grpc] @ git+https://github.com/tellmesh/urihandler.git@main#subdirectory=adapters/python"
+pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@main#subdirectory=adapters/python"
 ```
 
 v8 can generate schema-first bindings and a compiled registry from existing

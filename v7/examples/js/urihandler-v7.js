@@ -61,7 +61,7 @@ export function compileRegistryDocument(doc, options = {}) {
   for (const binding of doc.bindings || []) {
     setRoute(tree, binding.uri, binding, options.onConflict || 'keep');
   }
-  return { version: 'urihandler.registry.v7', generatedAt: options.generatedAt || new Date().toISOString(), routes: tree };
+  return { version: 'urirun.registry.v7', generatedAt: options.generatedAt || new Date().toISOString(), routes: tree };
 }
 
 function routeRows(registry) {
@@ -323,7 +323,7 @@ export function expandBindings(doc) {
   else if (doc && doc.bindings) {
     pairs = Array.isArray(doc.bindings) ? doc.bindings.map((item) => [item.uri, item]) : Object.entries(doc.bindings);
   } else pairs = Object.entries(doc);
-  return { version: 'urihandler.bindings.v7', bindings: pairs.map(([uri, binding]) => expandBinding(uri, binding)) };
+  return { version: 'urirun.bindings.v7', bindings: pairs.map(([uri, binding]) => expandBinding(uri, binding)) };
 }
 
 export function compileRegistry(doc, options = {}) {

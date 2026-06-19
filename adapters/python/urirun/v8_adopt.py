@@ -1,13 +1,13 @@
-"""urihandler v8 adoption helpers - turn installed packages into URI commands.
+"""urirun v8 adoption helpers - turn installed packages into URI commands.
 
 The decorator path covers code you own. This module covers code you *install*:
 the CLI commands that PyPI and npm packages ship. It reads their declared
 entry points and emits ready v8 bindings, so adopting a tool is one command:
 
 ```bash
-python -m urihandler.v8_adopt add-python-package black --out urihandler.bindings.v8.json
-python -m urihandler.v8_adopt add-npm-package prettier --out urihandler.bindings.v8.json
-python -m urihandler.v8_adopt init .            # scan project + write bindings + registry
+python -m urirun.v8_adopt add-python-package black --out urirun.bindings.v8.json
+python -m urirun.v8_adopt add-npm-package prettier --out urirun.bindings.v8.json
+python -m urirun.v8_adopt init .            # scan project + write bindings + registry
 ```
 
 Each generated binding is a passthrough command: a fixed prefix (the tool) plus a
@@ -23,7 +23,7 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
-from urihandler import _registry as reglib, _scan as scan, v8
+from urirun import _registry as reglib, _scan as scan, v8
 
 
 def passthrough_schema(extra: dict | None = None) -> dict:
@@ -143,27 +143,27 @@ def merge_into(out: str, bindings: list[dict]) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="urihandler-v8-adopt")
+    parser = argparse.ArgumentParser(prog="urirun-v8-adopt")
     sub = parser.add_subparsers(dest="command", required=True)
 
     py = sub.add_parser("add-python-package", help="Adopt a PyPI package's console scripts")
     py.add_argument("name")
-    py.add_argument("--out", default="urihandler.bindings.v8.json")
+    py.add_argument("--out", default="urirun.bindings.v8.json")
 
     npm = sub.add_parser("add-npm-package", help="Adopt an installed npm package's bin commands")
     npm.add_argument("name")
     npm.add_argument("--project", default=".")
-    npm.add_argument("--out", default="urihandler.bindings.v8.json")
+    npm.add_argument("--out", default="urirun.bindings.v8.json")
 
     adopt = sub.add_parser("adopt-python", help="Adopt console scripts from named packages (or --all)")
     adopt.add_argument("names", nargs="*")
     adopt.add_argument("--all", action="store_true")
-    adopt.add_argument("--out", default="urihandler.bindings.v8.json")
+    adopt.add_argument("--out", default="urirun.bindings.v8.json")
 
     init = sub.add_parser("init", help="Scan a project and write a starter bindings + registry")
     init.add_argument("path", nargs="?", default=".")
-    init.add_argument("--out", default="urihandler.bindings.v8.json")
-    init.add_argument("--registry-out", default=".urihandler/reglib.merged.json")
+    init.add_argument("--out", default="urirun.bindings.v8.json")
+    init.add_argument("--registry-out", default=".urirun/reglib.merged.json")
 
     args = parser.parse_args(argv)
 

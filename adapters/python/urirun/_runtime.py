@@ -17,9 +17,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from urihandler import _registry as reglib, _scan as scan
+from urirun import _registry as reglib, _scan as scan
 
-POLICY_VERSION = "urihandler.policy.v7"
+POLICY_VERSION = "urirun.policy.v7"
 OUTPUT_LIMIT = 4000
 DEFAULT_TIMEOUT = 30
 
@@ -357,14 +357,14 @@ def format_route_table(items: list[dict], show_decision: bool = False) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    parser = argparse.ArgumentParser(prog="urihandler")
+    parser = argparse.ArgumentParser(prog="urirun")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     def add_source(p, with_uri=True):
         if with_uri:
             p.add_argument("uri")
         p.add_argument("source", nargs="?", help="project directory, registry, or bindings file")
-        p.add_argument("--registry", default=".urihandler/reglib.merged.json")
+        p.add_argument("--registry", default=".urirun/reglib.merged.json")
         p.add_argument("--policy")
         p.add_argument("--allow", action="append", default=[], metavar="GLOB", help="allow URIs matching glob (repeatable)")
         p.add_argument("--deny", action="append", default=[], metavar="GLOB", help="deny URIs matching glob (repeatable)")

@@ -1,4 +1,4 @@
-"""urihandler v8 interop - project a registry to MCP tools and an A2A agent card.
+"""urirun v8 interop - project a registry to MCP tools and an A2A agent card.
 
 The v8 binding already carries a JSON Schema (``inputSchema``), which is exactly
 what the Model Context Protocol wants for a tool, and what an Agent-to-Agent
@@ -23,10 +23,10 @@ import re
 import sys
 from pathlib import Path
 
-from urihandler import _registry as reglib, _runtime as runtime, v8
+from urirun import _registry as reglib, _runtime as runtime, v8
 
 PROTOCOL_VERSION = "2024-11-05"
-SERVER_INFO = {"name": "urihandler", "version": "0.8.0"}
+SERVER_INFO = {"name": "urirun", "version": "0.8.0"}
 
 
 def tool_name(uri: str) -> str:
@@ -62,7 +62,7 @@ def to_mcp_manifest(registry: dict) -> dict:
     return {"protocolVersion": PROTOCOL_VERSION, "serverInfo": SERVER_INFO, "capabilities": {"tools": {}}, "tools": tools}
 
 
-def to_a2a_card(registry: dict, name: str = "urihandler-agent", url: str = "http://localhost:8080",
+def to_a2a_card(registry: dict, name: str = "urirun-agent", url: str = "http://localhost:8080",
                 version: str = "0.8.0") -> dict:
     skills = []
     for route in reglib.flatten_registry_document(registry):
@@ -79,7 +79,7 @@ def to_a2a_card(registry: dict, name: str = "urihandler-agent", url: str = "http
         })
     return {
         "name": name,
-        "description": "urihandler registry exposed as an A2A agent",
+        "description": "urirun registry exposed as an A2A agent",
         "url": url,
         "version": version,
         "capabilities": {"streaming": False, "pushNotifications": False},
@@ -143,14 +143,14 @@ def serve_mcp(registry: dict, policy: dict | None = None, mode: str = "dry-run",
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="urihandler-v8-mcp")
+    parser = argparse.ArgumentParser(prog="urirun-v8-mcp")
     sub = parser.add_subparsers(dest="command", required=True)
 
     for name in ("tools", "card", "serve"):
         p = sub.add_parser(name)
         p.add_argument("source", help="project dir, v8 bindings file, or registry document")
         if name == "card":
-            p.add_argument("--name", default="urihandler-agent")
+            p.add_argument("--name", default="urirun-agent")
             p.add_argument("--url", default="http://localhost:8080")
         if name == "serve":
             p.add_argument("--policy")

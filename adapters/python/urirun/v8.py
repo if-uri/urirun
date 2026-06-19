@@ -1,4 +1,4 @@
-"""urihandler v8 - schema-first command packages and decorator runtime.
+"""urirun v8 - schema-first command packages and decorator runtime.
 
 v8 keeps the v7 execution model, but makes command declarations portable:
 
@@ -24,10 +24,10 @@ from typing import Any, Callable
 from jsonschema import Draft202012Validator, exceptions as jsonschema_exceptions
 from pydantic import Field, create_model
 
-from urihandler import _registry as reglib, _scan as scan, _runtime as runtime, v7
+from urirun import _registry as reglib, _scan as scan, _runtime as runtime, v7
 
-VERSION = "urihandler.bindings.v8"
-OCI_MANIFEST_LABEL = "io.tellmesh.urihandler.manifest"
+VERSION = "urirun.bindings.v8"
+OCI_MANIFEST_LABEL = "io.tellmesh.urirun.manifest"
 PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_.]+)\}")
 CONFIG_KEYS = {
     "argv",
@@ -47,11 +47,11 @@ CONFIG_KEYS = {
     "topicPrefix",
 }
 MANIFEST_NAMES = {
-    "urihandler.manifest.json",
-    "urihandler.bindings.v8.json",
+    "urirun.manifest.json",
+    "urirun.bindings.v8.json",
     "bindings.v8.json",
-    ".urihandler/manifest.json",
-    ".urihandler/bindings.v8.json",
+    ".urirun/manifest.json",
+    ".urirun/bindings.v8.json",
 }
 IGNORED_DIRS = {".git", ".hg", ".svn", ".venv", "__pycache__", "build", "dist", "node_modules", ".pytest_cache"}
 
@@ -835,7 +835,7 @@ def _load_many(sources: list[str]) -> list[dict]:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     executable = Path(sys.argv[0]).name
-    prog = executable if executable in {"urirun", "urirun-v8", "urihandler-v8"} else "urirun"
+    prog = executable if executable in {"urirun", "urirun-v8", "urirun-v8"} else "urirun"
     parser = argparse.ArgumentParser(prog=prog)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -846,7 +846,7 @@ def main(argv: list[str] | None = None) -> int:
 
     compile_parser = subparsers.add_parser("compile", help="Compile v8 bindings or adopted artifact dirs")
     compile_parser.add_argument("sources", nargs="+")
-    compile_parser.add_argument("--out", default=".urihandler/reglib.merged.json")
+    compile_parser.add_argument("--out", default=".urirun/reglib.merged.json")
     compile_parser.add_argument("--generated-at")
     compile_parser.add_argument("--on-conflict", choices=["error", "keep", "replace"], default="keep")
 
@@ -860,19 +860,19 @@ def main(argv: list[str] | None = None) -> int:
     add_command_parser.add_argument("--shell")
     add_command_parser.add_argument("--param", action="append", default=[], metavar="DECL")
     add_command_parser.add_argument("--label")
-    add_command_parser.add_argument("--out", default="urihandler.bindings.v8.json")
+    add_command_parser.add_argument("--out", default="urirun.bindings.v8.json")
 
     add_pypi_parser = subparsers.add_parser("add-pypi", help="Append a PyPI install binding in one line")
     add_pypi_parser.add_argument("name")
     add_pypi_parser.add_argument("--version")
     add_pypi_parser.add_argument("--uri")
-    add_pypi_parser.add_argument("--out", default="urihandler.bindings.v8.json")
+    add_pypi_parser.add_argument("--out", default="urirun.bindings.v8.json")
 
     def add_source(p, with_uri=True):
         if with_uri:
             p.add_argument("uri")
         p.add_argument("source", nargs="?", help="project directory, registry, or bindings file")
-        p.add_argument("--registry", default=".urihandler/reglib.merged.json")
+        p.add_argument("--registry", default=".urirun/reglib.merged.json")
         p.add_argument("--policy")
         p.add_argument("--allow", action="append", default=[], metavar="GLOB")
         p.add_argument("--deny", action="append", default=[], metavar="GLOB")

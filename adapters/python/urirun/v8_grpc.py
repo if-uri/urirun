@@ -1,4 +1,4 @@
-"""urihandler v8 gRPC transport - the HTTP `v8_service` story over gRPC.
+"""urirun v8 gRPC transport - the HTTP `v8_service` story over gRPC.
 
 The registry, JSON Schema and policy gate stay the source of truth; gRPC is just
 another transport. This implements a single **generic** service (one `Run`, not
@@ -33,9 +33,9 @@ from concurrent import futures
 import grpc
 from jsonschema import exceptions as jsonschema_exceptions
 
-from urihandler import _registry as reglib, v8
+from urirun import _registry as reglib, v8
 
-SERVICE = "urihandler.UriHandler"
+SERVICE = "urirun.UriHandler"
 DEFAULT_PORT = 50051
 
 
@@ -158,7 +158,7 @@ def list_routes(target: str, timeout: float = 5.0) -> dict:
 # CLI
 # --------------------------------------------------------------------------- #
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="urihandler-v8-grpc")
+    parser = argparse.ArgumentParser(prog="urirun-v8-grpc")
     sub = parser.add_subparsers(dest="command", required=True)
 
     s = sub.add_parser("serve", help="Serve a registry over gRPC")
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         policy = reglib.load_json(args.policy) if args.policy else None
         _, port = serve(registry, host=args.host, port=args.port, policy=policy,
                         mode="execute" if args.execute else "dry-run", block=False)
-        print(f"urihandler gRPC serving {SERVICE} on {args.host}:{port}", flush=True)
+        print(f"urirun gRPC serving {SERVICE} on {args.host}:{port}", flush=True)
         try:
             while True:
                 __import__("time").sleep(3600)

@@ -14,14 +14,14 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback.
     tomllib = None
 
-from urihandler import _registry as reglib
+from urirun import _registry as reglib
 
-BINDINGS_VERSION = "urihandler.bindings.v7"
+BINDINGS_VERSION = "urirun.bindings.v7"
 DEFAULT_MANIFEST_NAMES = {
-    "urihandler.bindings.json",
-    "urihandler.routes.json",
-    ".urihandler/bindings.json",
-    ".urihandler/routes.json",
+    "urirun.bindings.json",
+    "urirun.routes.json",
+    ".urirun/bindings.json",
+    ".urirun/routes.json",
 }
 IGNORED_DIRS = {".git", ".hg", ".svn", ".venv", "__pycache__", "build", "dist", "node_modules", ".pytest_cache"}
 
@@ -411,7 +411,7 @@ def scan_js_code(path: Path, root: Path) -> list[dict]:
 
 def parse_compose_label_line(line: str) -> tuple[str, str] | None:
     value = line.strip().lstrip("-").strip().strip("'\"")
-    if not value.startswith("urihandler."):
+    if not value.startswith("urirun."):
         return None
     if "=" in value:
         key, raw_value = value.split("=", 1)
@@ -575,12 +575,12 @@ def format_binding_table(bindings: list[dict]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    parser = argparse.ArgumentParser(prog="urihandler")
+    parser = argparse.ArgumentParser(prog="urirun")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     scan = subparsers.add_parser("scan", help="Scan a project and generate bindings")
     scan.add_argument("path")
-    scan.add_argument("--out", default=".urihandler/bindings.v7.json")
+    scan.add_argument("--out", default=".urirun/bindings.v7.json")
     scan.add_argument("--registry-out")
     scan.add_argument("--generated-at")
     scan.add_argument("--openapi-base-url", default="")
@@ -588,7 +588,7 @@ def main(argv: list[str] | None = None) -> int:
 
     scan_github_parser = subparsers.add_parser("scan-github", help="Clone a GitHub repo and scan it")
     scan_github_parser.add_argument("repo")
-    scan_github_parser.add_argument("--out", default=".urihandler/bindings.v7.json")
+    scan_github_parser.add_argument("--out", default=".urirun/bindings.v7.json")
     scan_github_parser.add_argument("--registry-out")
     scan_github_parser.add_argument("--generated-at")
     scan_github_parser.add_argument("--openapi-base-url", default="")
@@ -596,7 +596,7 @@ def main(argv: list[str] | None = None) -> int:
 
     compile_parser = subparsers.add_parser("compile", help="Compile bindings, registries, or project directories")
     compile_parser.add_argument("sources", nargs="+")
-    compile_parser.add_argument("--out", default=".urihandler/reglib.merged.json")
+    compile_parser.add_argument("--out", default=".urirun/reglib.merged.json")
     compile_parser.add_argument("--on-conflict", choices=["error", "keep", "replace"], default="keep")
     compile_parser.add_argument("--generated-at")
     compile_parser.add_argument("--openapi-base-url", default="")
@@ -610,7 +610,7 @@ def main(argv: list[str] | None = None) -> int:
 
     call = subparsers.add_parser("call", help="Dispatch one URI through a generated registry")
     call.add_argument("uri")
-    call.add_argument("--registry", default=".urihandler/reglib.merged.json", help="registry, bindings file, or project directory")
+    call.add_argument("--registry", default=".urirun/reglib.merged.json", help="registry, bindings file, or project directory")
     call.add_argument("--payload", default="null")
     call.add_argument("--openapi-base-url", default="")
     call.add_argument("--include-shell", action=argparse.BooleanOptionalAction, default=True)

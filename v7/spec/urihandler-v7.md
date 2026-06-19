@@ -1,6 +1,6 @@
-# urihandler v7
+# urirun v7
 
-`urihandler v7` makes real tools easy to drive: ffmpeg, kubectl, git, docker.
+`urirun v7` makes real tools easy to drive: ffmpeg, kubectl, git, docker.
 
 Real command-line tools need *named* flags and values, so v7 provides parameter
 binding, a string shorthand, Docker adapters, uniform process options, dry-run
@@ -25,7 +25,7 @@ by default, and a default-deny policy gate for execute mode.
 ```
 
 ```bash
-urihandler run media://local/video/transcode bindings.json \
+urirun run media://local/video/transcode bindings.json \
   --payload '{"input":"a.mp4","output":"b.mp4"}'
 # dry-run result.command -> ["ffmpeg","-i","a.mp4","-vf","scale=1280:720","b.mp4"]
 ```
@@ -89,8 +89,8 @@ For `docker-exec`/`docker-run`, `env` is passed as `-e KEY=VALUE`.
 ## CLI
 
 ```bash
-urirun-v7 compile bindings.v7.json --out .urihandler/registry.merged.json
-urirun-v7 list .urihandler/registry.merged.json --allow 'media://**'
+urirun-v7 compile bindings.v7.json --out .urirun/registry.merged.json
+urirun-v7 list .urirun/registry.merged.json --allow 'media://**'
 urirun-v7 run media://local/video/transcode bindings.v7.json --payload '{"input":"a.mp4","output":"b.mp4"}'
 urirun-v7 run media://local/video/transcode bindings.v7.json --payload '{"input":"a.mp4","output":"b.mp4"}' --allow 'media://**' --execute
 ```

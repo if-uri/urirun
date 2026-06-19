@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from urihandler.v7 import compile_registry, run
+from urirun.v7 import compile_registry, run
 
 EXTEND = Path(__file__).resolve().parents[1] / "extend"
 LIB = EXTEND / "lib.sh"
@@ -11,7 +11,7 @@ ALLOW_ALL = {"execute": {"allow": ["*"]}}
 
 
 def merged_registry():
-    """Same as `urihandler compile a.json b.json ...`: one registry from many files."""
+    """Same as `urirun compile a.json b.json ...`: one registry from many files."""
     bindings = {}
     for name in ("base", "bash-function", "http-request", "new-script"):
         doc = json.loads((EXTEND / f"{name}.bindings.json").read_text(encoding="utf-8"))
@@ -32,13 +32,13 @@ class ExtendRegistryTests(unittest.TestCase):
 
     def test_bash_function_dry_run_renders_safe_argv(self):
         result = run("fn://local/greet/call", self.registry, payload={"name": "Ada"})
-        self.assertEqual(result["result"]["command"][:4], ["bash", "-c", 'source "$1"; greet "$2"', "urihandler"])
+        self.assertEqual(result["result"]["command"][:4], ["bash", "-c", 'source "$1"; greet "$2"', "urirun"])
         self.assertEqual(result["result"]["command"][-1], "Ada")
 
     def test_http_request_url_is_templated(self):
-        result = run("api://github/repo/get", self.registry, payload={"owner": "tellmesh", "repo": "urihandler"})
+        result = run("api://github/repo/get", self.registry, payload={"owner": "tellmesh", "repo": "urirun"})
         self.assertEqual(result["result"]["method"], "GET")
-        self.assertEqual(result["result"]["url"], "https://api.github.com/repos/tellmesh/urihandler")
+        self.assertEqual(result["result"]["url"], "https://api.github.com/repos/tellmesh/urirun")
 
     def test_http_missing_param_is_a_params_error(self):
         result = run("api://github/repo/get", self.registry, payload={"owner": "tellmesh"})

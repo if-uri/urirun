@@ -57,6 +57,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove public project versions below v7.
 - Keep GitHub Release / Git install as the supported Python package channel.
 
+## [0.3.5] - 2026-06-19
+
+### Docs
+- Update README.md
+- Update SUMD.md
+- Update SUMR.md
+- Update TODO.md
+- Update adapters/python/CHANGELOG.md
+- Update adapters/python/README.md
+- Update v7/examples/extend/README.md
+- Update v7/examples/html_uri_app/README.md
+- Update v7/spec/urihandler-v7.md
+
+### Test
+- Update test/urirun.test.js
+
+### Other
+- Update Makefile
+- Update adapters/js/package.json
+- Update adapters/python/pyproject.toml
+- Update adapters/python/tests/test_urihandler.py
+- Update adapters/python/urirun/__init__.py
+- Update adapters/python/urirun/_registry.py
+- Update adapters/python/urirun/_runtime.py
+- Update adapters/python/urirun/_scan.py
+- Update adapters/python/urirun/v7.py
+- Update adapters/python/urirun/v8.py
+- ... and 24 more files
+
 ## [0.3.2] - 2026-06-19
 
 ### Docs
