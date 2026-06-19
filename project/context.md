@@ -5,21 +5,21 @@
 
 - **Project**: /home/tom/github/tellmesh/urihandler
 - **Primary Language**: python
-- **Languages**: python: 18, yaml: 3, javascript: 3, shell: 2, json: 2
+- **Languages**: python: 18, yaml: 4, javascript: 3, shell: 2, json: 2
 - **Analysis Mode**: static
-- **Total Functions**: 453
+- **Total Functions**: 455
 - **Total Classes**: 4
-- **Modules**: 32
+- **Modules**: 33
 - **Entry Points**: 120
 
 ## Architecture by Module
 
-### v1.js.urirun-v1
+### v1.examples.js.urirun-v1
 - **Functions**: 65
 - **File**: `urirun-v1.js`
 
 ### adapters.python.urirun.v2
-- **Functions**: 60
+- **Functions**: 62
 - **File**: `v2.py`
 
 ### adapters.python.urirun.mesh
@@ -162,11 +162,17 @@ Main execution flows into the system:
 and s
 - **Calls**: adapters.python.urirun.planfile_adapter.load_planfile, pf.fail_ticket, adapters.python.urirun.planfile_adapter.ticket_to_dict, dict, int, int, execution.get, execution.get
 
-### v1.js.urirun-v1.DEFAULT_TIMEOUT
-- **Calls**: v1.js.urirun-v1.String, v1.js.urirun-v1.match, v1.js.urirun-v1.Error, v1.js.urirun-v1.split, v1.js.urirun-v1.filter, v1.js.urirun-v1.map, v1.js.urirun-v1.fromEntries, v1.js.urirun-v1.URLSearchParams
+### v1.examples.js.urirun-v1.DEFAULT_TIMEOUT
+- **Calls**: v1.examples.js.urirun-v1.String, v1.examples.js.urirun-v1.match, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.split, v1.examples.js.urirun-v1.filter, v1.examples.js.urirun-v1.map, v1.examples.js.urirun-v1.fromEntries, v1.examples.js.urirun-v1.URLSearchParams
 
-### v1.js.urirun-v1.OUTPUT_LIMIT
-- **Calls**: v1.js.urirun-v1.String, v1.js.urirun-v1.match, v1.js.urirun-v1.Error, v1.js.urirun-v1.split, v1.js.urirun-v1.filter, v1.js.urirun-v1.map, v1.js.urirun-v1.fromEntries, v1.js.urirun-v1.URLSearchParams
+### v1.examples.js.urirun-v1.OUTPUT_LIMIT
+- **Calls**: v1.examples.js.urirun-v1.String, v1.examples.js.urirun-v1.match, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.split, v1.examples.js.urirun-v1.filter, v1.examples.js.urirun-v1.map, v1.examples.js.urirun-v1.fromEntries, v1.examples.js.urirun-v1.URLSearchParams
+
+### adapters.python.urirun.v2.connector_bindings
+> Return serializable bindings generated from decorated connector commands.
+
+``decorated_bindings()`` intentionally keeps runtime-only objects such as t
+- **Calls**: set, sorted, adapters.python.urirun.v2.expand_bindings, adapters.python.urirun.v2._document_binding_from_expanded, binding.get, adapters.python.urirun.v2.decorated_bindings, binding.get, isinstance
 
 ### adapters.python.urirun.v2_service.call
 - **Calls**: reglib.parse_uri, reglib.translate, data.get, bool, adapters.python.urirun.v2_service._post, data.get, reglib.resolve_route, v2.validate_input
@@ -180,20 +186,17 @@ and s
 ### adapters.python.urirun.host_db.add_llm_message
 - **Calls**: adapters.python.urirun.host_db.init_db, adapters.python.urirun.host_db.new_id, adapters.python.urirun.host_db.connection, conn.execute, adapters.python.urirun.host_db.row_dict, None.fetchone, adapters.python.urirun.host_db.now_iso, json.dumps
 
-### v1.js.urirun-v1.run
-- **Calls**: v1.js.urirun-v1.mergePolicy, v1.js.urirun-v1.parseUri, v1.js.urirun-v1.translate, v1.js.urirun-v1.registryTree, v1.js.urirun-v1.Error, v1.js.urirun-v1.join, v1.js.urirun-v1.resolveParams, v1.js.urirun-v1.evaluatePolicy
+### v1.examples.js.urirun-v1.run
+- **Calls**: v1.examples.js.urirun-v1.mergePolicy, v1.examples.js.urirun-v1.parseUri, v1.examples.js.urirun-v1.translate, v1.examples.js.urirun-v1.registryTree, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.join, v1.examples.js.urirun-v1.resolveParams, v1.examples.js.urirun-v1.evaluatePolicy
+
+### adapters.python.urirun.host_db.create_llm_session
+- **Calls**: adapters.python.urirun.host_db.init_db, adapters.python.urirun.host_db.new_id, adapters.python.urirun.host_db.connection, conn.execute, adapters.python.urirun.host_db.row_dict, None.fetchone, adapters.python.urirun.host_db.now_iso, conn.execute
 
 ### adapters.python.urirun.v1.run_docker_exec
 - **Calls**: None.get, adapters.python.urirun.v1.render_command, config.get, flags.extend, flags.extend, adapters.python.urirun.v1._env_flags, adapters.python.urirun.v1._run_process, config.get
 
 ### adapters.python.urirun.v1.run_fetch
 - **Calls**: dict, adapters.python.urirun.v1.render_value, None.upper, runtime.run_fetch, None.get, str, config.get, config.get
-
-### adapters.python.urirun.host_db.create_llm_session
-- **Calls**: adapters.python.urirun.host_db.init_db, adapters.python.urirun.host_db.new_id, adapters.python.urirun.host_db.connection, conn.execute, adapters.python.urirun.host_db.row_dict, None.fetchone, adapters.python.urirun.host_db.now_iso, conn.execute
-
-### adapters.python.urirun.v1.run_spawn
-- **Calls**: None.get, adapters.python.urirun.v1.render_command, config.get, adapters.python.urirun.v1._has_placeholders, ValueError, adapters.python.urirun.v1._run_process, str
 
 ## Process Flows
 
@@ -299,6 +302,9 @@ Key functions that process and transform data:
 
 ### adapters.c.urirun.urirun_parse
 
+### adapters.python.urirun.host_db._validate_record
+- **Output to**: None.validate, dataset.get, Draft202012Validator
+
 ### adapters.python.urirun.v1._run_process
 - **Output to**: subprocess.run, runtime._truncate, runtime._truncate, config.get, config.get
 
@@ -312,6 +318,21 @@ Key functions that process and transform data:
 > Return an error envelope if the URI/payload is invalid, else None.
 - **Output to**: reglib.parse_uri, reglib.translate, reglib.resolve_route, v2.validate_input
 
+### adapters.python.urirun.mesh.format_nodes
+- **Output to**: adapters.python.urirun.mesh.format_table, len, len, rows.append, None.get
+
+### adapters.python.urirun.mesh.format_routes
+- **Output to**: adapters.python.urirun.mesh.format_table, sorted, adapters.python.urirun.mesh.safe_route, route.get, route.get
+
+### adapters.python.urirun.mesh.format_tickets
+- **Output to**: adapters.python.urirun.mesh.format_table, ticket.get, ticket.get, None.get, None.get
+
+### adapters.python.urirun.mesh.format_table
+- **Output to**: output.extend, None.join, max, None.rstrip, line
+
+### adapters.python.urirun.mesh._parse_json_option
+- **Output to**: json.loads
+
 ### adapters.python.urirun._registry.parse_uri
 - **Output to**: URI_RE.match, unquote, str, ValueError, unquote
 
@@ -324,8 +345,14 @@ Key functions that process and transform data:
 ### adapters.python.urirun._scan.format_binding_table
 - **Output to**: output.extend, None.join, max, None.rstrip, line
 
-### adapters.python.urirun.host_db._validate_record
-- **Output to**: None.validate, dataset.get, Draft202012Validator
+### adapters.python.urirun.namecheap_dns.parse_api_xml
+- **Output to**: ET.fromstring, root.attrib.get, root.iter, adapters.python.urirun.namecheap_dns._strip_ns, errors.append
+
+### v1.examples.js.urirun-v1.parseUri
+- **Output to**: v1.examples.js.urirun-v1.String, v1.examples.js.urirun-v1.match, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.split, v1.examples.js.urirun-v1.filter
+
+### v1.examples.js.urirun-v1.runProcess
+- **Output to**: v1.examples.js.urirun-v1.spawnSync, v1.examples.js.urirun-v1.renderedEnv, v1.examples.js.urirun-v1.truncate
 
 ### adapters.python.urirun.v2.validate_input
 - **Output to**: adapters.python.urirun.v2._input_values, adapters.python.urirun.v2._schema_for, Draft202012Validator.check_schema, set, adapters.python.urirun.v2._apply_defaults
@@ -344,30 +371,6 @@ Supported forms:
 
 ### adapters.python.urirun.v2._parse_dockerfile_labels
 - **Output to**: re.compile, re.compile, None.splitlines, label_re.match, pair_re.findall
-
-### adapters.python.urirun.mesh.format_nodes
-- **Output to**: adapters.python.urirun.mesh.format_table, len, len, rows.append, None.get
-
-### adapters.python.urirun.mesh.format_routes
-- **Output to**: adapters.python.urirun.mesh.format_table, sorted, adapters.python.urirun.mesh.safe_route, route.get, route.get
-
-### adapters.python.urirun.mesh.format_tickets
-- **Output to**: adapters.python.urirun.mesh.format_table, ticket.get, ticket.get, None.get, None.get
-
-### adapters.python.urirun.mesh.format_table
-- **Output to**: output.extend, None.join, max, None.rstrip, line
-
-### adapters.python.urirun.mesh._parse_json_option
-- **Output to**: json.loads
-
-### adapters.python.urirun.namecheap_dns.parse_api_xml
-- **Output to**: ET.fromstring, root.attrib.get, root.iter, adapters.python.urirun.namecheap_dns._strip_ns, errors.append
-
-### v1.js.urirun-v1.parseUri
-- **Output to**: v1.js.urirun-v1.String, v1.js.urirun-v1.match, v1.js.urirun-v1.Error, v1.js.urirun-v1.split, v1.js.urirun-v1.filter
-
-### v1.js.urirun-v1.runProcess
-- **Output to**: v1.js.urirun-v1.spawnSync, v1.js.urirun-v1.renderedEnv, v1.js.urirun-v1.truncate
 
 ## Behavioral Patterns
 
@@ -401,31 +404,31 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.v1.main` - 44 calls
 - `adapters.python.urirun.planfile_adapter.build_ticket_payload` - 43 calls
 - `adapters.python.urirun._runtime.main` - 33 calls
-- `adapters.python.urirun.v2_adopt.main` - 31 calls
 - `adapters.python.urirun.mesh.normalize_flow` - 31 calls
+- `adapters.python.urirun.v2_adopt.main` - 31 calls
 - `adapters.python.urirun.mesh.data_command` - 29 calls
-- `adapters.python.urirun._scan.scan_path` - 27 calls
 - `adapters.python.urirun.task_planner.heuristic_plan_chat_request` - 27 calls
+- `adapters.python.urirun._scan.scan_path` - 27 calls
 - `adapters.python.urirun.mesh.host_command` - 26 calls
 - `adapters.python.urirun.v2_grpc.main` - 25 calls
 - `adapters.python.urirun.namecheap_dns.apply` - 25 calls
 - `adapters.python.urirun.v2.validate_binding_document` - 24 calls
 - `adapters.python.urirun.v1.run` - 23 calls
 - `adapters.python.urirun._runtime.run_fetch` - 23 calls
-- `adapters.python.urirun.v2_mcp.serve_mcp` - 23 calls
 - `adapters.python.urirun.host_dashboard.summary` - 23 calls
-- `adapters.python.urirun.v2.run` - 22 calls
+- `adapters.python.urirun.v2_mcp.serve_mcp` - 23 calls
 - `adapters.python.urirun.mesh.serve_node` - 22 calls
 - `adapters.python.urirun.namecheap_dns.config_from_env` - 22 calls
 - `adapters.python.urirun.namecheap_dns.normalize_record` - 22 calls
+- `adapters.python.urirun.v2.run` - 22 calls
 - `adapters.python.urirun.host_db.search_records` - 21 calls
 - `adapters.python.urirun.mesh.node_command` - 21 calls
 - `adapters.python.urirun._runtime.run` - 20 calls
-- `adapters.python.urirun._runtime.evaluate_policy` - 19 calls
-- `adapters.python.urirun._registry.discover_manifest` - 19 calls
 - `adapters.python.urirun.domain_monitor.check_domain` - 19 calls
-- `adapters.python.urirun.v2.scan_artifacts` - 19 calls
+- `adapters.python.urirun._runtime.evaluate_policy` - 19 calls
 - `adapters.python.urirun.mesh.monitor_command` - 19 calls
+- `adapters.python.urirun._registry.discover_manifest` - 19 calls
+- `adapters.python.urirun.v2.scan_artifacts` - 19 calls
 - `adapters.python.urirun._registry.discover_docker_labels` - 18 calls
 - `adapters.python.urirun.v2_grpc.serve` - 17 calls
 - `adapters.python.urirun._scan.format_binding_table` - 17 calls

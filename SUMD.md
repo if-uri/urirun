@@ -39,7 +39,7 @@ SUMD (description) → DOQL/source (code) → taskfile (automation) → testql (
 
 app {
   name: urirun;
-  version: 0.3.7;
+  version: 0.3.9;
 }
 
 workflow[name="test"] {
@@ -91,6 +91,10 @@ workflow[name="test-v2"] {
 workflow[name="clean"] {
   trigger: manual;
   step-1: run cmd=rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build __pycache__;
+}
+
+tests {
+  import: testql-scenarios/**/*.testql.toon.yaml;
 }
 
 env_vars {
@@ -193,13 +197,13 @@ Language-agnostic URI to handler adapter
 ### `project/map.toon.yaml`
 
 ```toon markpact:analysis path=project/map.toon.yaml
-# urihandler | 32f 9637L | python:26,javascript:3,shell:2,less:1 | 2026-06-19
-# stats: 383 func | 13 cls | 32 mod | CC̄=5.0 | critical:50 | cycles:0
+# urihandler | 33f 9714L | python:26,javascript:4,shell:2,less:1 | 2026-06-20
+# stats: 385 func | 13 cls | 33 mod | CC̄=5.0 | critical:51 | cycles:0
 # alerts[5]: CC task_command=52; CC run_uri_route=46; CC run_uri_route=45; CC build_ticket_payload=35; CC run_planfile_task=31
 # hotspots[5]: task_command fan=34; main fan=33; run_planfile_task fan=25; main fan=23; run_uri_route fan=22
 # evolution: baseline
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[32]:
+M[33]:
   adapters/js/index.js,31
   adapters/js/index.test.js,50
   adapters/python/tests/test_domain_monitor.py,159
@@ -209,7 +213,7 @@ M[32]:
   adapters/python/tests/test_namecheap_dns.py,156
   adapters/python/tests/test_planfile_adapter.py,340
   adapters/python/tests/test_scheduler.py,59
-  adapters/python/tests/test_urihandler.py,57
+  adapters/python/tests/test_urihandler.py,85
   adapters/python/urirun/__init__.py,39
   adapters/python/urirun/_registry.py,680
   adapters/python/urirun/_runtime.py,419
@@ -223,13 +227,14 @@ M[32]:
   adapters/python/urirun/scheduler.py,128
   adapters/python/urirun/task_planner.py,342
   adapters/python/urirun/v1.py,421
-  adapters/python/urirun/v2.py,1619
+  adapters/python/urirun/v2.py,1656
   adapters/python/urirun/v2_adopt.py,193
   adapters/python/urirun/v2_grpc.py,203
   adapters/python/urirun/v2_mcp.py,177
   adapters/python/urirun/v2_service.py,101
-  app.doql.less,75
+  app.doql.less,79
   project.sh,63
+  test/urirun.test.js,8
   tree.sh,2
   v1/js/urirun-v1.js,332
 D:
@@ -260,7 +265,7 @@ D:
     SchedulerTests: test_systemd_preview_and_install(0),test_cli_schedule_cron_preview(0)
   adapters/python/tests/test_urihandler.py:
     e: UriHandlerTests
-    UriHandlerTests: test_parse_uri(0),test_build_invocation(0),test_dispatch(0),test_missing_registry_entries(0)
+    UriHandlerTests: test_parse_uri(0),test_build_invocation(0),test_dispatch(0),test_missing_registry_entries(0),test_v2_connector_bindings_from_decorators(0)
   adapters/python/urirun/__init__.py:
     e: parse_uri,build_invocation,dispatch
     parse_uri(uri)
@@ -581,12 +586,14 @@ D:
     load_registry_arg(arg;openapi_base_url)
     main(argv)
   adapters/python/urirun/v2.py:
-    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,decorated_bindings,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,planfile_task_bindings,_list_param,_ticket_id,_planfile_action,_planfile_project,_simulate_planfile,run_planfile_task,host_data_bindings,run_host_data,domain_monitor_bindings,run_domain_monitor,run,check,list_routes,_strip_runtime_only,expand_binding,_binding_pairs,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_iter_files,_rel,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_many,main
+    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,decorated_bindings,_document_binding_from_expanded,connector_bindings,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,planfile_task_bindings,_list_param,_ticket_id,_planfile_action,_planfile_project,_simulate_planfile,run_planfile_task,host_data_bindings,run_host_data,domain_monitor_bindings,run_domain_monitor,run,check,list_routes,_strip_runtime_only,expand_binding,_binding_pairs,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_iter_files,_rel,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_many,main
     model_from_function(fn)
     _placeholder_kwargs(fn)
     uri_command(uri)
     uri_shell(uri)
     decorated_bindings()
+    _document_binding_from_expanded(entry)
+    connector_bindings(routes)
     _schema_for(route_entry)
     _apply_defaults(schema;value)
     _input_values(descriptor;translation;payload)
@@ -687,7 +694,7 @@ D:
 
 ```prolog markpact:analysis path=project/logic.pl
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urihandler', '0.3.7', 'javascript').
+project_metadata('urihandler', '0.3.9', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/js/index.js', 31, 'javascript').
@@ -699,7 +706,7 @@ project_file('adapters/python/tests/test_mesh.py', 61, 'python').
 project_file('adapters/python/tests/test_namecheap_dns.py', 156, 'python').
 project_file('adapters/python/tests/test_planfile_adapter.py', 340, 'python').
 project_file('adapters/python/tests/test_scheduler.py', 59, 'python').
-project_file('adapters/python/tests/test_urihandler.py', 57, 'python').
+project_file('adapters/python/tests/test_urihandler.py', 85, 'python').
 project_file('adapters/python/urirun/__init__.py', 39, 'python').
 project_file('adapters/python/urirun/_registry.py', 680, 'python').
 project_file('adapters/python/urirun/_runtime.py', 419, 'python').
@@ -713,13 +720,14 @@ project_file('adapters/python/urirun/planfile_adapter.py', 259, 'python').
 project_file('adapters/python/urirun/scheduler.py', 128, 'python').
 project_file('adapters/python/urirun/task_planner.py', 342, 'python').
 project_file('adapters/python/urirun/v1.py', 421, 'python').
-project_file('adapters/python/urirun/v2.py', 1619, 'python').
+project_file('adapters/python/urirun/v2.py', 1656, 'python').
 project_file('adapters/python/urirun/v2_adopt.py', 193, 'python').
 project_file('adapters/python/urirun/v2_grpc.py', 203, 'python').
 project_file('adapters/python/urirun/v2_mcp.py', 177, 'python').
 project_file('adapters/python/urirun/v2_service.py', 101, 'python').
-project_file('app.doql.less', 75, 'less').
+project_file('app.doql.less', 79, 'less').
 project_file('project.sh', 63, 'shell').
+project_file('test/urirun.test.js', 8, 'javascript').
 project_file('tree.sh', 2, 'shell').
 project_file('v1/js/urirun-v1.js', 332, 'javascript').
 
@@ -1021,6 +1029,8 @@ python_function('adapters/python/urirun/v2.py', '_placeholder_kwargs', 1, 2, 1).
 python_function('adapters/python/urirun/v2.py', 'uri_command', 1, 1, 6).
 python_function('adapters/python/urirun/v2.py', 'uri_shell', 1, 1, 1).
 python_function('adapters/python/urirun/v2.py', 'decorated_bindings', 0, 2, 1).
+python_function('adapters/python/urirun/v2.py', '_document_binding_from_expanded', 1, 4, 5).
+python_function('adapters/python/urirun/v2.py', 'connector_bindings', 1, 11, 8).
 python_function('adapters/python/urirun/v2.py', '_schema_for', 1, 3, 1).
 python_function('adapters/python/urirun/v2.py', '_apply_defaults', 2, 14, 5).
 python_function('adapters/python/urirun/v2.py', '_input_values', 3, 4, 7).
@@ -1161,6 +1171,7 @@ python_method('UriHandlerTests', 'test_parse_uri', 0, 1, 2).
 python_method('UriHandlerTests', 'test_build_invocation', 0, 1, 2).
 python_method('UriHandlerTests', 'test_dispatch', 0, 1, 2).
 python_method('UriHandlerTests', 'test_missing_registry_entries', 0, 1, 2).
+python_method('UriHandlerTests', 'test_v2_connector_bindings_from_decorators', 0, 2, 10).
 python_class('adapters/python/urirun/_runtime.py', 'PolicyError').
 python_class('adapters/python/urirun/planfile_adapter.py', 'PlanfileUnavailable').
 python_class('adapters/python/urirun/task_planner.py', 'PlannedTicket').
@@ -1218,7 +1229,7 @@ sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/pytho
 
 ## Call Graph
 
-*368 nodes · 478 edges · 22 modules · CC̄=4.7*
+*371 nodes · 481 edges · 22 modules · CC̄=4.8*
 
 ### Hubs (by degree)
 
@@ -1236,8 +1247,8 @@ sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/pytho
 ```toon markpact:analysis path=project/calls.toon.yaml
 # code2llm call graph | /home/tom/github/tellmesh/urihandler
 # generated in 0.17s
-# nodes: 368 | edges: 478 | modules: 22
-# CC̄=4.7
+# nodes: 371 | edges: 481 | modules: 22
+# CC̄=4.8
 
 HUBS[20]:
   adapters.python.urirun.mesh.task_command
@@ -1258,28 +1269,28 @@ HUBS[20]:
     CC=15  in:4  out:27  total:31
   adapters.python.urirun.mesh.data_command
     CC=15  in:1  out:29  total:30
-  adapters.python.urirun.task_planner.heuristic_plan_chat_request
-    CC=22  in:2  out:27  total:29
   adapters.python.urirun._scan.normalize_binding
     CC=11  in:17  out:12  total:29
-  adapters.python.urirun.host_dashboard._json_response
-    CC=1  in:13  out:13  total:26
-  adapters.python.urirun.mesh.host_command
-    CC=19  in:0  out:26  total:26
+  adapters.python.urirun.task_planner.heuristic_plan_chat_request
+    CC=22  in:2  out:27  total:29
   adapters.python.urirun.namecheap_dns.apply
     CC=15  in:1  out:25  total:26
+  adapters.python.urirun.mesh.host_command
+    CC=19  in:0  out:26  total:26
+  adapters.python.urirun.host_dashboard._json_response
+    CC=1  in:13  out:13  total:26
   adapters.python.urirun.v1.run
     CC=14  in:2  out:23  total:25
   adapters.python.urirun.v2.validate_binding_document
     CC=12  in:1  out:24  total:25
-  adapters.python.urirun.host_dashboard.summary
-    CC=6  in:1  out:23  total:24
-  adapters.python.urirun.namecheap_dns.normalize_record
-    CC=13  in:2  out:22  total:24
-  adapters.python.urirun.namecheap_dns.config_from_env
-    CC=12  in:2  out:22  total:24
   adapters.python.urirun.v2_mcp.serve_mcp
     CC=15  in:1  out:23  total:24
+  adapters.python.urirun.namecheap_dns.config_from_env
+    CC=12  in:2  out:22  total:24
+  adapters.python.urirun.namecheap_dns.normalize_record
+    CC=13  in:2  out:22  total:24
+  adapters.python.urirun.host_dashboard.summary
+    CC=6  in:1  out:23  total:24
 
 MODULES:
   adapters.c.urirun  [3 funcs]
@@ -1423,17 +1434,17 @@ MODULES:
     expand_binding  CC=7  out:6
     expand_bindings  CC=2  out:2
     load_registry_arg  CC=4  out:9
-  adapters.python.urirun.v2  [47 funcs]
+  adapters.python.urirun.v2  [50 funcs]
     _apply_defaults  CC=14  out:12
     _binding_pairs  CC=8  out:11
     _bindings_as_map  CC=2  out:2
     _coerce_default  CC=4  out:3
+    _document_binding_from_expanded  CC=4  out:5
     _empty_input_schema  CC=1  out:0
     _input_values  CC=4  out:8
     _iter_files  CC=5  out:4
     _load_manifest  CC=1  out:2
     _load_many  CC=3  out:7
-    _manifest_candidates  CC=2  out:3
   adapters.python.urirun.v2_adopt  [5 funcs]
     _command_binding  CC=2  out:2
     installed_python_bindings  CC=4  out:3
@@ -1463,7 +1474,7 @@ MODULES:
     _post  CC=3  out:10
     call  CC=9  out:10
     service_base  CC=3  out:4
-  v1.js.urirun-v1  [34 funcs]
+  v1.examples.js.urirun-v1  [34 funcs]
     DEFAULT_TIMEOUT  CC=5  out:11
     OUTPUT_LIMIT  CC=5  out:11
     allow  CC=2  out:2
@@ -1483,49 +1494,49 @@ EDGES:
   adapters.c.urirun_test.main → adapters.c.urirun_test.assert
   adapters.c.urirun.copy_token → adapters.c.urirun.memcpy
   adapters.c.urirun.memcpy → adapters.c.urirun.is_path_end
-  adapters.python.urirun.v2_service.call → adapters.python.urirun.v2_service._post
-  adapters.python.urirun.v2_service.call → adapters.python.urirun.v2_service.service_base
-  adapters.python.urirun.v1.resolve_params → adapters.python.urirun.v1._params_spec
-  adapters.python.urirun.v1.render_command → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1._proc_env → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1._run_process → adapters.python.urirun.v1._proc_env
-  adapters.python.urirun.v1._env_flags → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1.run_spawn → adapters.python.urirun.v1.render_command
-  adapters.python.urirun.v1.run_spawn → adapters.python.urirun.v1._has_placeholders
-  adapters.python.urirun.v1.run_spawn → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_shell_template → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1.run_shell_template → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_docker_exec → adapters.python.urirun.v1.render_command
-  adapters.python.urirun.v1.run_docker_exec → adapters.python.urirun.v1._env_flags
-  adapters.python.urirun.v1.run_docker_exec → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_docker_run → adapters.python.urirun.v1.render_command
-  adapters.python.urirun.v1.run_docker_run → adapters.python.urirun.v1._env_flags
-  adapters.python.urirun.v1.run_docker_run → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_fetch → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1.run → adapters.python.urirun.v1.resolve_params
-  adapters.python.urirun.v1.expand_bindings → adapters.python.urirun.v1.expand_binding
-  adapters.python.urirun.v1.expand_bindings → adapters.python.urirun.v1._binding_pairs
-  adapters.python.urirun.v1.compile_registry → adapters.python.urirun.v1.expand_bindings
-  adapters.python.urirun.v1.load_registry_arg → adapters.python.urirun.v1.compile_registry
-  adapters.python.urihandler.dispatch → adapters.python.urihandler.parse_uri
-  adapters.python.urihandler.dispatch → adapters.python.urihandler.build_invocation
-  adapters.python.urihandler.dispatch → adapters.js.fn
-  adapters.python.urirun._runtime.merge_policy → adapters.python.urirun._runtime.default_policy
-  adapters.python.urirun._runtime.evaluate_policy → adapters.python.urirun._runtime._matches_any
-  adapters.python.urirun._runtime.run_spawn → adapters.python.urirun._runtime._truncate
-  adapters.python.urirun._runtime.run_shell_template → adapters.python.urirun._runtime._truncate
-  adapters.python.urirun._runtime.run_local_function → adapters.js.fn
-  adapters.python.urirun._runtime.run → adapters.python.urirun._runtime.merge_policy
-  adapters.python.urirun._runtime.run → adapters.python.urirun._runtime.evaluate_policy
-  adapters.python.urirun._runtime.check → adapters.python.urirun._runtime.merge_policy
-  adapters.python.urirun._runtime.check → adapters.python.urirun._runtime.evaluate_policy
-  adapters.python.urirun._runtime.list_routes → adapters.python.urirun._runtime.merge_policy
-  adapters.python.urirun._runtime.list_routes → adapters.python.urirun._runtime.evaluate_policy
-  adapters.python.urirun.v2_grpc.serve → adapters.python.urirun.v2_grpc._route_list
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v2_grpc.channel_target
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v2_grpc._validate
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v2_grpc._method
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v1.run
+  adapters.python.urirun.host_db.connect → adapters.python.urirun.host_db.db_path
+  adapters.python.urirun.host_db.connection → adapters.python.urirun.host_db.connect
+  adapters.python.urirun.host_db.rows_dict → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.init_db → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.init_db → adapters.python.urirun.host_db.db_path
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.get_dataset
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db._schema_json
+  adapters.python.urirun.host_db.list_datasets → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.list_datasets → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.list_datasets → adapters.python.urirun.host_db.rows_dict
+  adapters.python.urirun.host_db.get_dataset → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.get_dataset → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.get_dataset → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.get_dataset
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db._validate_record
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.get_dataset
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.rows_dict
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.list_artifacts → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.list_artifacts → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.list_artifacts → adapters.python.urirun.host_db.rows_dict
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.recent_checks → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.recent_checks → adapters.python.urirun.host_db.connection
 ```
 
 ## Test Contracts

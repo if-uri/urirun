@@ -2,7 +2,7 @@
 
 app {
   name: urirun;
-  version: 0.3.7;
+  version: 0.3.9;
 }
 
 workflow[name="test"] {
@@ -54,6 +54,10 @@ workflow[name="test-v2"] {
 workflow[name="clean"] {
   trigger: manual;
   step-1: run cmd=rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build __pycache__;
+}
+
+tests {
+  import: testql-scenarios/**/*.testql.toon.yaml;
 }
 
 env_vars {

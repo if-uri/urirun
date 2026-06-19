@@ -17,10 +17,10 @@ flowchart TD
         adapters__c__urirun__copy_token["copy_token"]
         adapters__c__urirun__urirun_parse["urirun_parse"]
         adapters__c__urirun__memset["memset"]
-        adapters__python__urirun__v2_service__call["call"]
-        adapters__python__urirun__v1__run_spawn["run_spawn"]
-        adapters__python__urirun__v1__run_shell_template["run_shell_template"]
-        ...["+132 more"]
+        adapters__python__urirun__host_db__create_llm_session["create_llm_session"]
+        adapters__python__urirun__host_db__add_llm_message["add_llm_message"]
+        adapters__python__urirun__host_db__run_uri_route["run_uri_route"]
+        ...["+98 more"]
     end
 
     subgraph Exporters

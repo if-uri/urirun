@@ -1,5 +1,5 @@
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urihandler', '0.3.7', 'javascript').
+project_metadata('urihandler', '0.3.9', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/js/index.js', 31, 'javascript').
@@ -11,7 +11,7 @@ project_file('adapters/python/tests/test_mesh.py', 61, 'python').
 project_file('adapters/python/tests/test_namecheap_dns.py', 156, 'python').
 project_file('adapters/python/tests/test_planfile_adapter.py', 340, 'python').
 project_file('adapters/python/tests/test_scheduler.py', 59, 'python').
-project_file('adapters/python/tests/test_urihandler.py', 57, 'python').
+project_file('adapters/python/tests/test_urihandler.py', 85, 'python').
 project_file('adapters/python/urirun/__init__.py', 39, 'python').
 project_file('adapters/python/urirun/_registry.py', 680, 'python').
 project_file('adapters/python/urirun/_runtime.py', 419, 'python').
@@ -25,13 +25,14 @@ project_file('adapters/python/urirun/planfile_adapter.py', 259, 'python').
 project_file('adapters/python/urirun/scheduler.py', 128, 'python').
 project_file('adapters/python/urirun/task_planner.py', 342, 'python').
 project_file('adapters/python/urirun/v1.py', 421, 'python').
-project_file('adapters/python/urirun/v2.py', 1619, 'python').
+project_file('adapters/python/urirun/v2.py', 1656, 'python').
 project_file('adapters/python/urirun/v2_adopt.py', 193, 'python').
 project_file('adapters/python/urirun/v2_grpc.py', 203, 'python').
 project_file('adapters/python/urirun/v2_mcp.py', 177, 'python').
 project_file('adapters/python/urirun/v2_service.py', 101, 'python').
-project_file('app.doql.less', 75, 'less').
+project_file('app.doql.less', 79, 'less').
 project_file('project.sh', 63, 'shell').
+project_file('test/urirun.test.js', 8, 'javascript').
 project_file('tree.sh', 2, 'shell').
 project_file('v1/js/urirun-v1.js', 332, 'javascript').
 
@@ -333,6 +334,8 @@ python_function('adapters/python/urirun/v2.py', '_placeholder_kwargs', 1, 2, 1).
 python_function('adapters/python/urirun/v2.py', 'uri_command', 1, 1, 6).
 python_function('adapters/python/urirun/v2.py', 'uri_shell', 1, 1, 1).
 python_function('adapters/python/urirun/v2.py', 'decorated_bindings', 0, 2, 1).
+python_function('adapters/python/urirun/v2.py', '_document_binding_from_expanded', 1, 4, 5).
+python_function('adapters/python/urirun/v2.py', 'connector_bindings', 1, 11, 8).
 python_function('adapters/python/urirun/v2.py', '_schema_for', 1, 3, 1).
 python_function('adapters/python/urirun/v2.py', '_apply_defaults', 2, 14, 5).
 python_function('adapters/python/urirun/v2.py', '_input_values', 3, 4, 7).
@@ -473,6 +476,7 @@ python_method('UriHandlerTests', 'test_parse_uri', 0, 1, 2).
 python_method('UriHandlerTests', 'test_build_invocation', 0, 1, 2).
 python_method('UriHandlerTests', 'test_dispatch', 0, 1, 2).
 python_method('UriHandlerTests', 'test_missing_registry_entries', 0, 1, 2).
+python_method('UriHandlerTests', 'test_v2_connector_bindings_from_decorators', 0, 2, 10).
 python_class('adapters/python/urirun/_runtime.py', 'PolicyError').
 python_class('adapters/python/urirun/planfile_adapter.py', 'PlanfileUnavailable').
 python_class('adapters/python/urirun/task_planner.py', 'PlannedTicket').

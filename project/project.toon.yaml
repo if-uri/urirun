@@ -1,8 +1,8 @@
-# urihandler | 453 func | 24f | 9748L | python | 2026-06-19
+# urihandler | 455 func | 24f | 9829L | python | 2026-06-20
 # generated in 0.00s
 
 HEALTH:
-  CC̄=4.7  critical=54 (limit:10)  dup=0  cycles=0
+  CC̄=4.8  critical=55 (limit:10)  dup=0  cycles=0
 
 ALERTS[20]:
   !!! high_fan_out     main = 100 (limit:10)
@@ -16,23 +16,23 @@ ALERTS[20]:
   !!! high_fan_out     main = 25 (limit:10)
   !!! high_fan_out     run_planfile_task = 25 (limit:10)
 
-MODULES[33] (top by size):
-  M[adapters/python/urirun/v2.py] 1618L C:0 F:60 CC↑31 D:0 (python)
+MODULES[34] (top by size):
+  M[adapters/python/urirun/v2.py] 1655L C:0 F:62 CC↑31 D:0 (python)
   M[adapters/python/urirun/mesh.py] 1071L C:0 F:51 CC↑52 D:0 (python)
+  M[planfile.yaml] 851L C:0 F:0 CC↑0 D:0 (yaml)
   M[adapters/python/urirun/_registry.py] 679L C:0 F:41 CC↑14 D:0 (python)
   M[adapters/python/urirun/_scan.py] 667L C:0 F:36 CC↑15 D:0 (python)
   M[adapters/python/urirun/host_dashboard.py] 587L C:0 F:12 CC↑8 D:0 (python)
   M[goal.yaml] 526L C:0 F:0 CC↑0 D:0 (yaml)
-  M[planfile.yaml] 487L C:0 F:0 CC↑0 D:0 (yaml)
   M[adapters/python/urirun/host_db.py] 468L C:0 F:27 CC↑45 D:0 (python)
   M[adapters/python/urirun/v1.py] 420L C:0 F:24 CC↑14 D:1 (python)
   M[adapters/python/urirun/_runtime.py] 418L C:1 F:18 CC↑16 D:0 (python)
   M[adapters/python/urirun/domain_monitor.py] 380L C:0 F:17 CC↑46 D:0 (python)
   M[adapters/python/urirun/task_planner.py] 341L C:2 F:13 CC↑22 D:0 (python)
-  M[v1/js/urirun-v1.js] 331L C:0 F:54 CC↑19 D:4 (javascript)
   M[adapters/python/urirun/namecheap_dns.py] 288L C:0 F:20 CC↑16 D:0 (python)
   M[adapters/python/urirun/planfile_adapter.py] 258L C:1 F:21 CC↑35 D:0 (python)
-  LANGS: python:18/javascript:3/c:3/yaml:3/json:2/shell:2/other:1/toml:1
+  M[adapters/python/urirun/v2_grpc.py] 202L C:0 F:11 CC↑9 D:0 (python)
+  LANGS: python:18/yaml:4/javascript:3/c:3/json:2/shell:2/other:1/toml:1
 
 HOTSPOTS[10]:
   ★ main fan=100  // Orchestrates 100 calls
@@ -44,9 +44,9 @@ HOTSPOTS[10]:
 REFACTOR[15]:
   [1] H/L Split run_uri_route (CC=45)
   [2] H/L Split run_uri_route (CC=46)
-  [3] H/L Split run_planfile_task (CC=31)
-  [4] H/L Split task_command (CC=52)
-  [5] H/L Split build_ticket_payload (CC=35)
+  [3] H/L Split task_command (CC=52)
+  [4] H/L Split build_ticket_payload (CC=35)
+  [5] H/L Split run_planfile_task (CC=31)
 
 EVOLUTION:
-  2026-06-19 CC̄=4.7 crit=54 9748L // Automated analysis
+  2026-06-20 CC̄=4.8 crit=55 9829L // Automated analysis

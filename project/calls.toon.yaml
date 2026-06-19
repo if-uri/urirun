@@ -1,7 +1,7 @@
 # code2llm call graph | /home/tom/github/tellmesh/urihandler
 # generated in 0.17s
-# nodes: 368 | edges: 478 | modules: 22
-# CC̄=4.7
+# nodes: 371 | edges: 481 | modules: 22
+# CC̄=4.8
 
 HUBS[20]:
   adapters.python.urirun.mesh.task_command
@@ -22,28 +22,28 @@ HUBS[20]:
     CC=15  in:4  out:27  total:31
   adapters.python.urirun.mesh.data_command
     CC=15  in:1  out:29  total:30
-  adapters.python.urirun.task_planner.heuristic_plan_chat_request
-    CC=22  in:2  out:27  total:29
   adapters.python.urirun._scan.normalize_binding
     CC=11  in:17  out:12  total:29
-  adapters.python.urirun.host_dashboard._json_response
-    CC=1  in:13  out:13  total:26
-  adapters.python.urirun.mesh.host_command
-    CC=19  in:0  out:26  total:26
+  adapters.python.urirun.task_planner.heuristic_plan_chat_request
+    CC=22  in:2  out:27  total:29
   adapters.python.urirun.namecheap_dns.apply
     CC=15  in:1  out:25  total:26
+  adapters.python.urirun.mesh.host_command
+    CC=19  in:0  out:26  total:26
+  adapters.python.urirun.host_dashboard._json_response
+    CC=1  in:13  out:13  total:26
   adapters.python.urirun.v1.run
     CC=14  in:2  out:23  total:25
   adapters.python.urirun.v2.validate_binding_document
     CC=12  in:1  out:24  total:25
-  adapters.python.urirun.host_dashboard.summary
-    CC=6  in:1  out:23  total:24
-  adapters.python.urirun.namecheap_dns.normalize_record
-    CC=13  in:2  out:22  total:24
-  adapters.python.urirun.namecheap_dns.config_from_env
-    CC=12  in:2  out:22  total:24
   adapters.python.urirun.v2_mcp.serve_mcp
     CC=15  in:1  out:23  total:24
+  adapters.python.urirun.namecheap_dns.config_from_env
+    CC=12  in:2  out:22  total:24
+  adapters.python.urirun.namecheap_dns.normalize_record
+    CC=13  in:2  out:22  total:24
+  adapters.python.urirun.host_dashboard.summary
+    CC=6  in:1  out:23  total:24
 
 MODULES:
   adapters.c.urirun  [3 funcs]
@@ -187,17 +187,17 @@ MODULES:
     expand_binding  CC=7  out:6
     expand_bindings  CC=2  out:2
     load_registry_arg  CC=4  out:9
-  adapters.python.urirun.v2  [47 funcs]
+  adapters.python.urirun.v2  [50 funcs]
     _apply_defaults  CC=14  out:12
     _binding_pairs  CC=8  out:11
     _bindings_as_map  CC=2  out:2
     _coerce_default  CC=4  out:3
+    _document_binding_from_expanded  CC=4  out:5
     _empty_input_schema  CC=1  out:0
     _input_values  CC=4  out:8
     _iter_files  CC=5  out:4
     _load_manifest  CC=1  out:2
     _load_many  CC=3  out:7
-    _manifest_candidates  CC=2  out:3
   adapters.python.urirun.v2_adopt  [5 funcs]
     _command_binding  CC=2  out:2
     installed_python_bindings  CC=4  out:3
@@ -227,7 +227,7 @@ MODULES:
     _post  CC=3  out:10
     call  CC=9  out:10
     service_base  CC=3  out:4
-  v1.js.urirun-v1  [34 funcs]
+  v1.examples.js.urirun-v1  [34 funcs]
     DEFAULT_TIMEOUT  CC=5  out:11
     OUTPUT_LIMIT  CC=5  out:11
     allow  CC=2  out:2
@@ -247,46 +247,46 @@ EDGES:
   adapters.c.urirun_test.main → adapters.c.urirun_test.assert
   adapters.c.urirun.copy_token → adapters.c.urirun.memcpy
   adapters.c.urirun.memcpy → adapters.c.urirun.is_path_end
-  adapters.python.urirun.v2_service.call → adapters.python.urirun.v2_service._post
-  adapters.python.urirun.v2_service.call → adapters.python.urirun.v2_service.service_base
-  adapters.python.urirun.v1.resolve_params → adapters.python.urirun.v1._params_spec
-  adapters.python.urirun.v1.render_command → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1._proc_env → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1._run_process → adapters.python.urirun.v1._proc_env
-  adapters.python.urirun.v1._env_flags → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1.run_spawn → adapters.python.urirun.v1.render_command
-  adapters.python.urirun.v1.run_spawn → adapters.python.urirun.v1._has_placeholders
-  adapters.python.urirun.v1.run_spawn → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_shell_template → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1.run_shell_template → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_docker_exec → adapters.python.urirun.v1.render_command
-  adapters.python.urirun.v1.run_docker_exec → adapters.python.urirun.v1._env_flags
-  adapters.python.urirun.v1.run_docker_exec → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_docker_run → adapters.python.urirun.v1.render_command
-  adapters.python.urirun.v1.run_docker_run → adapters.python.urirun.v1._env_flags
-  adapters.python.urirun.v1.run_docker_run → adapters.python.urirun.v1._run_process
-  adapters.python.urirun.v1.run_fetch → adapters.python.urirun.v1.render_value
-  adapters.python.urirun.v1.run → adapters.python.urirun.v1.resolve_params
-  adapters.python.urirun.v1.expand_bindings → adapters.python.urirun.v1.expand_binding
-  adapters.python.urirun.v1.expand_bindings → adapters.python.urirun.v1._binding_pairs
-  adapters.python.urirun.v1.compile_registry → adapters.python.urirun.v1.expand_bindings
-  adapters.python.urirun.v1.load_registry_arg → adapters.python.urirun.v1.compile_registry
-  adapters.python.urihandler.dispatch → adapters.python.urihandler.parse_uri
-  adapters.python.urihandler.dispatch → adapters.python.urihandler.build_invocation
-  adapters.python.urihandler.dispatch → adapters.js.fn
-  adapters.python.urirun._runtime.merge_policy → adapters.python.urirun._runtime.default_policy
-  adapters.python.urirun._runtime.evaluate_policy → adapters.python.urirun._runtime._matches_any
-  adapters.python.urirun._runtime.run_spawn → adapters.python.urirun._runtime._truncate
-  adapters.python.urirun._runtime.run_shell_template → adapters.python.urirun._runtime._truncate
-  adapters.python.urirun._runtime.run_local_function → adapters.js.fn
-  adapters.python.urirun._runtime.run → adapters.python.urirun._runtime.merge_policy
-  adapters.python.urirun._runtime.run → adapters.python.urirun._runtime.evaluate_policy
-  adapters.python.urirun._runtime.check → adapters.python.urirun._runtime.merge_policy
-  adapters.python.urirun._runtime.check → adapters.python.urirun._runtime.evaluate_policy
-  adapters.python.urirun._runtime.list_routes → adapters.python.urirun._runtime.merge_policy
-  adapters.python.urirun._runtime.list_routes → adapters.python.urirun._runtime.evaluate_policy
-  adapters.python.urirun.v2_grpc.serve → adapters.python.urirun.v2_grpc._route_list
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v2_grpc.channel_target
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v2_grpc._validate
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v2_grpc._method
-  adapters.python.urirun.v2_grpc.call → adapters.python.urirun.v1.run
+  adapters.python.urirun.host_db.connect → adapters.python.urirun.host_db.db_path
+  adapters.python.urirun.host_db.connection → adapters.python.urirun.host_db.connect
+  adapters.python.urirun.host_db.rows_dict → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.init_db → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.init_db → adapters.python.urirun.host_db.db_path
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.get_dataset
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.create_dataset → adapters.python.urirun.host_db._schema_json
+  adapters.python.urirun.host_db.list_datasets → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.list_datasets → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.list_datasets → adapters.python.urirun.host_db.rows_dict
+  adapters.python.urirun.host_db.get_dataset → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.get_dataset → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.get_dataset → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.get_dataset
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db._validate_record
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.upsert_record → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.get_dataset
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.search_records → adapters.python.urirun.host_db.rows_dict
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.register_artifact → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.list_artifacts → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.list_artifacts → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.list_artifacts → adapters.python.urirun.host_db.rows_dict
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.new_id
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.connection
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.row_dict
+  adapters.python.urirun.host_db.add_check → adapters.python.urirun.host_db.now_iso
+  adapters.python.urirun.host_db.recent_checks → adapters.python.urirun.host_db.init_db
+  adapters.python.urirun.host_db.recent_checks → adapters.python.urirun.host_db.connection
