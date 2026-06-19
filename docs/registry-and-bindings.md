@@ -9,7 +9,7 @@ adapter configuration.
 
 ```json
 {
-  "version": "urirun.bindings.v8",
+  "version": "urirun.bindings.v2",
   "bindings": {
     "report://local/render/pdf": {
       "kind": "command",
@@ -34,7 +34,7 @@ adapter configuration.
 The registry is compiled from one or more binding documents:
 
 ```bash
-urirun compile bindings.v8.json --out registry.json
+urirun compile bindings.v2.json --out registry.json
 ```
 
 The runtime dispatches from the registry only. This makes a generated registry

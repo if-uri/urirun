@@ -38,7 +38,7 @@ return [
     ],
     'features' => [
         ['title' => 'Artifact-first adoption', 'text' => 'Existing Dockerfiles, pyproject scripts, package.json scripts, shell files, and Makefile targets become routes without hand-writing every endpoint.'],
-        ['title' => 'Schema-first calls', 'text' => 'v8 bindings use JSON Schema. Python decorators can generate schemas from function signatures through Pydantic.'],
+        ['title' => 'Schema-first calls', 'text' => 'v2 bindings use JSON Schema. Python decorators can generate schemas from function signatures through Pydantic.'],
         ['title' => 'One address across layers', 'text' => 'Frontend buttons, backend handlers, shell clients, firmware tables, and service flows can share the same URI naming standard.'],
         ['title' => 'Policy before execution', 'text' => 'Command routes dry-run by default. Real execution is explicit and can be limited by URI allow and deny rules.'],
     ],
@@ -51,9 +51,9 @@ return [
         ['name' => 'MCP/A2A', 'detail' => 'Agent tool projection'],
     ],
     'examples' => [
-        ['path' => 'v8/examples/html_uri_app', 'text' => 'Browser UI that calls a Python backend through URI actions and exposes logs/tools.'],
-        ['path' => 'v8/examples/docker_uri_flow', 'text' => 'Docker Compose services communicating through generated URI bindings and a flow runner.'],
-        ['path' => 'v8/examples/generators', 'text' => 'JS, Node.js, TypeScript, and PHP declarations that generate the same v8 binding contract.'],
+        ['path' => 'v2/examples/html_uri_app', 'text' => 'Browser UI that calls a Python backend through URI actions and exposes logs/tools.'],
+        ['path' => 'v2/examples/docker_uri_flow', 'text' => 'Docker Compose services communicating through generated URI bindings and a flow runner.'],
+        ['path' => 'v2/examples/generators', 'text' => 'JS, Node.js, TypeScript, and PHP declarations that generate the same v2 binding contract.'],
         ['path' => 'examples/reference_adapters', 'text' => 'Minimal adapters for JavaScript, Python, C/firmware, and browser use.'],
     ],
     'roadmap' => [

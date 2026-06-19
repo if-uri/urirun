@@ -1,4 +1,4 @@
-# urihandler | 65f 9836L | python:33,javascript:14,shell:12,css:4,less:1,typescript:1 | 2026-06-19
+# urihandler | 65f 9875L | python:33,javascript:14,shell:12,css:4,less:1,typescript:1 | 2026-06-19
 # stats: 285 func | 26 cls | 65 mod | CC̄=4.4 | critical:33 | cycles:0
 # alerts[5]: CC parse_flow=24; CC main=21; CC evaluate_policy=16; CC expand_binding=16; CC scan_path=15
 # hotspots[5]: main fan=31; main fan=23; main fan=19; run_e2e fan=19; serve_http fan=19
@@ -38,7 +38,7 @@ M[65]:
   v1/examples/python/test_urihandler_v1.py,135
   v2/examples/artifacts/deploy.sh,4
   v2/examples/decorators/example.py,25
-  v2/examples/device_mesh_lab/www/app.js,517
+  v2/examples/device_mesh_lab/www/app.js,556
   v2/examples/device_mesh_lab/www/runtime-config.js,11
   v2/examples/device_mesh_lab/www/styles.css,608
   v2/examples/docker_uri_flow/generate_registry.sh,27

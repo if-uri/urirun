@@ -18,9 +18,9 @@ dependencies = [
 grpc = ["grpcio>=1.60"]
 
 [project.scripts]
-urirun = "urirun.v8:main"
-urirun-v7 = "urirun.v7:main"
-urirun-v8 = "urirun.v8:main"
+urirun = "urirun.v2:main"
+urirun-v1 = "urirun.v1:main"
+urirun-v2 = "urirun.v2:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

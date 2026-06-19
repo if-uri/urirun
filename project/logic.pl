@@ -35,7 +35,7 @@ project_file('v1/examples/python/test_extend.py', 70, 'python').
 project_file('v1/examples/python/test_urihandler_v1.py', 135, 'python').
 project_file('v2/examples/artifacts/deploy.sh', 4, 'shell').
 project_file('v2/examples/decorators/example.py', 25, 'python').
-project_file('v2/examples/device_mesh_lab/www/app.js', 517, 'javascript').
+project_file('v2/examples/device_mesh_lab/www/app.js', 556, 'javascript').
 project_file('v2/examples/device_mesh_lab/www/runtime-config.js', 11, 'javascript').
 project_file('v2/examples/device_mesh_lab/www/styles.css', 608, 'css').
 project_file('v2/examples/docker_uri_flow/generate_registry.sh', 27, 'shell').
@@ -461,8 +461,8 @@ makefile_target('test-js', '').
 makefile_target('test-python', '').
 makefile_target('test-c', '').
 makefile_target('test-examples', '').
-makefile_target('test-v1', '').
-makefile_target('test-v2', '').
+makefile_target('test-v7', '').
+makefile_target('test-v8', '').
 makefile_target('clean', '').
 
 % ── Taskfile Tasks ───────────────────────────────────────
@@ -501,23 +501,23 @@ sumd_workflow('test-examples', 'manual').
 sumd_workflow_step('test-examples', 1, '$(NODE) --check examples/reference_adapters/node-server.js').
 sumd_workflow_step('test-examples', 2, '$(PYTHON) -m py_compile examples/reference_adapters/python-server.py').
 sumd_workflow_step('test-examples', 3, '$(CC) -Wall -Wextra -Werror -Iadapters/c -c examples/reference_adapters/firmware-pseudo.c -o /tmp/urirun-firmware-example.o').
-sumd_workflow('test-v1', 'manual').
-sumd_workflow_step('test-v1', 1, '$(NODE) --test v1/examples/js/*.test.js').
-sumd_workflow_step('test-v1', 2, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v1/examples/python -p \'test_*.py\'').
-sumd_workflow_step('test-v1', 3, '$(NODE) v1/examples/js/example.js').
-sumd_workflow_step('test-v1', 4, 'PYTHONPATH=adapters/python $(PYTHON) v1/examples/python/example.py').
-sumd_workflow_step('test-v1', 5, '$(PYTHON) -m json.tool v1/examples/json/bindings.v1.example.json >/tmp/urirun-v1-bindings.json').
-sumd_workflow_step('test-v1', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v1 compile v1/examples/json/bindings.v1.example.json --out /tmp/urirun-v1.registry.json --generated-at 2026-06-19T00:00:00.000Z').
-sumd_workflow('test-v2', 'manual').
-sumd_workflow_step('test-v2', 1, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v2/examples/python -p \'test_*.py\'').
-sumd_workflow_step('test-v2', 2, '$(NODE) v2/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v2-gen.json').
-sumd_workflow_step('test-v2', 3, '$(NODE) v2/examples/html_uri_app/test.mjs').
-sumd_workflow_step('test-v2', 4, '$(PYTHON) -m json.tool v2/examples/json/bindings.v2.example.json >/tmp/urirun-v2-bindings.json').
-sumd_workflow_step('test-v2', 5, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2 compile v2/examples/json/bindings.v2.example.json --out /tmp/urirun-v2.registry.json').
-sumd_workflow_step('test-v2', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_mcp tools /tmp/urirun-v2.registry.json >/tmp/urirun-v2-mcp.json').
-sumd_workflow_step('test-v2', 7, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_mcp card /tmp/urirun-v2.registry.json >/tmp/urirun-v2-a2a.json').
-sumd_workflow_step('test-v2', 8, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_adopt add-python-package pip --out /tmp/urirun-v2-adopt.bindings.json').
-sumd_workflow_step('test-v2', 9, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2 compile /tmp/urirun-v2-adopt.bindings.json --out /tmp/urirun-v2-adopt.registry.json').
+sumd_workflow('test-v7', 'manual').
+sumd_workflow_step('test-v7', 1, '$(NODE) --test v7/examples/js/*.test.js').
+sumd_workflow_step('test-v7', 2, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v7/examples/python -p \'test_*.py\'').
+sumd_workflow_step('test-v7', 3, '$(NODE) v7/examples/js/example.js').
+sumd_workflow_step('test-v7', 4, 'PYTHONPATH=adapters/python $(PYTHON) v7/examples/python/example.py').
+sumd_workflow_step('test-v7', 5, '$(PYTHON) -m json.tool v7/examples/json/bindings.v7.example.json >/tmp/urirun-v7-bindings.json').
+sumd_workflow_step('test-v7', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 compile v7/examples/json/bindings.v7.example.json --out /tmp/urirun-v7.registry.json --generated-at 2026-06-19T00:00:00.000Z').
+sumd_workflow('test-v8', 'manual').
+sumd_workflow_step('test-v8', 1, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v8/examples/python -p \'test_*.py\'').
+sumd_workflow_step('test-v8', 2, '$(NODE) v8/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v8-gen.json').
+sumd_workflow_step('test-v8', 3, '$(NODE) v8/examples/html_uri_app/test.mjs').
+sumd_workflow_step('test-v8', 4, '$(PYTHON) -m json.tool v8/examples/json/bindings.v8.example.json >/tmp/urirun-v8-bindings.json').
+sumd_workflow_step('test-v8', 5, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile v8/examples/json/bindings.v8.example.json --out /tmp/urirun-v8.registry.json').
+sumd_workflow_step('test-v8', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp tools /tmp/urirun-v8.registry.json >/tmp/urirun-v8-mcp.json').
+sumd_workflow_step('test-v8', 7, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp card /tmp/urirun-v8.registry.json >/tmp/urirun-v8-a2a.json').
+sumd_workflow_step('test-v8', 8, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_adopt add-python-package pip --out /tmp/urirun-v8-adopt.bindings.json').
+sumd_workflow_step('test-v8', 9, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile /tmp/urirun-v8-adopt.bindings.json --out /tmp/urirun-v8-adopt.registry.json').
 sumd_workflow('clean', 'manual').
-sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v1/examples/python/__pycache__ v2/examples/python/__pycache__ v2/examples/docker_uri_flow/__pycache__ v2/examples/transports/__pycache__ __pycache__').
+sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v7/examples/python/__pycache__ v8/examples/python/__pycache__ v8/examples/docker_uri_flow/__pycache__ v8/examples/transports/__pycache__ __pycache__').
 

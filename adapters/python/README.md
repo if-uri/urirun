@@ -22,29 +22,29 @@ import urirun
 After installation the `urirun` CLI is available:
 
 ```bash
-urirun scan ./project --out .urirun/bindings.v8.json --registry-out .urirun/registry.merged.json
-urirun validate .urirun/bindings.v8.json
+urirun scan ./project --out .urirun/bindings.v2.json --registry-out .urirun/registry.merged.json
+urirun validate .urirun/bindings.v2.json
 urirun list .urirun/registry.merged.json
 urirun run 'cli://local/git/status' .urirun/registry.merged.json
 ```
 
-`urirun-v7` and `urirun-v8` are also installed as explicit versioned entry
+`urirun-v1` and `urirun-v2` are also installed as explicit versioned entry
 points for scripts that need a stable major-version command.
 
-The optional v8 gRPC transport can be installed with:
+The optional v2 gRPC transport can be installed with:
 
 ```bash
 pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@main#subdirectory=adapters/python"
 ```
 
-v8 can generate schema-first bindings and a compiled registry from existing
+v2 can generate schema-first bindings and a compiled registry from existing
 artifacts:
 
 ```bash
 urirun scan ./project \
-  --out generated/bindings.v8.json \
+  --out generated/bindings.v2.json \
   --registry-out generated/registry.json
-urirun validate generated/bindings.v8.json
+urirun validate generated/bindings.v2.json
 urirun list generated/registry.json
 ```
 

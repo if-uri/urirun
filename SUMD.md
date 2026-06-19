@@ -1,6 +1,6 @@
-# urihandler
+# urirun
 
-urihandler
+urirun
 
 ## Contents
 
@@ -38,8 +38,8 @@ SUMD (description) → DOQL/source (code) → taskfile (automation) → testql (
 // LESS format — define @variables here as needed
 
 app {
-  name: urihandler;
-  version: 0.3.4;
+  name: urirun;
+  version: 0.3.6;
 }
 
 workflow[name="test"] {
@@ -64,15 +64,15 @@ workflow[name="test-python"] {
 
 workflow[name="test-c"] {
   trigger: manual;
-  step-1: run cmd=$(CC) -Wall -Wextra -Werror -Iadapters/c adapters/c/urihandler.c adapters/c/urihandler_test.c -o /tmp/urihandler-c-test;
-  step-2: run cmd=/tmp/urihandler-c-test;
+  step-1: run cmd=$(CC) -Wall -Wextra -Werror -Iadapters/c adapters/c/urirun.c adapters/c/urirun_test.c -o /tmp/urirun-c-test;
+  step-2: run cmd=/tmp/urirun-c-test;
 }
 
 workflow[name="test-examples"] {
   trigger: manual;
   step-1: run cmd=$(NODE) --check examples/reference_adapters/node-server.js;
   step-2: run cmd=$(PYTHON) -m py_compile examples/reference_adapters/python-server.py;
-  step-3: run cmd=$(CC) -Wall -Wextra -Werror -Iadapters/c -c examples/reference_adapters/firmware-pseudo.c -o /tmp/urihandler-firmware-example.o;
+  step-3: run cmd=$(CC) -Wall -Wextra -Werror -Iadapters/c -c examples/reference_adapters/firmware-pseudo.c -o /tmp/urirun-firmware-example.o;
 }
 
 workflow[name="test-v7"] {
@@ -81,26 +81,26 @@ workflow[name="test-v7"] {
   step-2: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v7/examples/python -p 'test_*.py';
   step-3: run cmd=$(NODE) v7/examples/js/example.js;
   step-4: run cmd=PYTHONPATH=adapters/python $(PYTHON) v7/examples/python/example.py;
-  step-5: run cmd=$(PYTHON) -m json.tool v7/examples/json/bindings.v7.example.json >/tmp/urihandler-v7-bindings.json;
-  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v7 compile v7/examples/json/bindings.v7.example.json --out /tmp/urihandler-v7.registry.json --generated-at 2026-06-19T00:00:00.000Z;
-  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v7 run 'media://local/video/transcode' --registry /tmp/urihandler-v7.registry.json --payload '{"input":"a.mp4","output":"b.mp4"}' >/tmp/urihandler-v7-ffmpeg.json;
-  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v7 list /tmp/urihandler-v7.registry.json --allow 'media://**';
+  step-5: run cmd=$(PYTHON) -m json.tool v7/examples/json/bindings.v7.example.json >/tmp/urirun-v7-bindings.json;
+  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 compile v7/examples/json/bindings.v7.example.json --out /tmp/urirun-v7.registry.json --generated-at 2026-06-19T00:00:00.000Z;
+  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 run 'media://local/video/transcode' --registry /tmp/urirun-v7.registry.json --payload '{"input":"a.mp4","output":"b.mp4"}' >/tmp/urirun-v7-ffmpeg.json;
+  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 list /tmp/urirun-v7.registry.json --allow 'media://**';
   step-9: run cmd=$(NODE) v7/examples/html_uri_app/test.mjs;
 }
 
 workflow[name="test-v8"] {
   trigger: manual;
   step-1: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v8/examples/python -p 'test_*.py';
-  step-2: run cmd=$(NODE) v8/examples/generators/nodejs/generate-bindings.mjs >/tmp/urihandler-v8-gen.json;
+  step-2: run cmd=$(NODE) v8/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v8-gen.json;
   step-3: run cmd=$(NODE) v8/examples/html_uri_app/test.mjs;
-  step-4: run cmd=$(PYTHON) -m json.tool v8/examples/json/bindings.v8.example.json >/tmp/urihandler-v8-bindings.json;
-  step-5: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8 compile v8/examples/json/bindings.v8.example.json --out /tmp/urihandler-v8.registry.json;
-  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8_mcp tools /tmp/urihandler-v8.registry.json >/tmp/urihandler-v8-mcp.json;
-  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8_mcp card /tmp/urihandler-v8.registry.json >/tmp/urihandler-v8-a2a.json;
-  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8_adopt add-python-package pip --out /tmp/urihandler-v8-adopt.bindings.json;
-  step-9: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8 compile /tmp/urihandler-v8-adopt.bindings.json --out /tmp/urihandler-v8-adopt.registry.json;
-  step-10: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8 run 'cli://pip/pip/run' --registry /tmp/urihandler-v8-adopt.registry.json --payload '{"args":["--version"]}' >/tmp/urihandler-v8-adopt-run.json;
-  step-11: run cmd=command -v php >/dev/null 2>&1 && php v8/examples/generators/php/example.php >/tmp/urihandler-v8-php.json || echo "php not installed; skipping PHP generator";
+  step-4: run cmd=$(PYTHON) -m json.tool v8/examples/json/bindings.v8.example.json >/tmp/urirun-v8-bindings.json;
+  step-5: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile v8/examples/json/bindings.v8.example.json --out /tmp/urirun-v8.registry.json;
+  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp tools /tmp/urirun-v8.registry.json >/tmp/urirun-v8-mcp.json;
+  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp card /tmp/urirun-v8.registry.json >/tmp/urirun-v8-a2a.json;
+  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_adopt add-python-package pip --out /tmp/urirun-v8-adopt.bindings.json;
+  step-9: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile /tmp/urirun-v8-adopt.bindings.json --out /tmp/urirun-v8-adopt.registry.json;
+  step-10: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 run 'cli://pip/pip/run' --registry /tmp/urirun-v8-adopt.registry.json --payload '{"args":["--version"]}' >/tmp/urirun-v8-adopt-run.json;
+  step-11: run cmd=command -v php >/dev/null 2>&1 && php v8/examples/generators/php/example.php >/tmp/urirun-v8-php.json || echo "php not installed; skipping PHP generator";
   step-12: run cmd=$(PYTHON) v8/examples/docker_uri_flow/test_flow_runner.py;
   step-13: run cmd=$(PYTHON) v8/examples/docker_uri_flow/test_flow_e2e.py;
   step-14: run cmd=PYTHONPATH=adapters/python $(PYTHON) v8/examples/docker_uri_flow/test_service_adapter.py;
@@ -109,7 +109,7 @@ workflow[name="test-v8"] {
 
 workflow[name="clean"] {
   trigger: manual;
-  step-1: run cmd=rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urihandler/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v7/examples/python/__pycache__ v8/examples/python/__pycache__ v8/examples/docker_uri_flow/__pycache__ v8/examples/transports/__pycache__ __pycache__;
+  step-1: run cmd=rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v7/examples/python/__pycache__ v8/examples/python/__pycache__ v8/examples/docker_uri_flow/__pycache__ v8/examples/transports/__pycache__ __pycache__;
 }
 
 tests {
@@ -171,7 +171,7 @@ project:
 ## Deployment
 
 ```bash markpact:run
-npm install urihandler
+npm install urirun
 ```
 
 ## Environment Variables (`.env.example`)
@@ -196,7 +196,7 @@ npm install urihandler
 - **commits**: `conventional` scope=`urihandler`
 - **changelog**: `keep-a-changelog`
 - **build strategies**: `python`, `nodejs`, `rust`
-- **version files**: `VERSION`, `adapters/python/pyproject.toml:version`
+- **version files**: `VERSION`, `package.json:version`, `venv/lib/python3.13/site-packages/cryptography/__init__.py:__version__`
 
 ## Makefile Targets
 
@@ -221,13 +221,13 @@ Language-agnostic URI to handler adapter
 ### `project/map.toon.yaml`
 
 ```toon markpact:analysis path=project/map.toon.yaml
-# urihandler | 59f 8144L | python:33,shell:12,javascript:10,css:2,less:1,typescript:1 | 2026-06-19
-# stats: 285 func | 26 cls | 59 mod | CC̄=4.4 | critical:33 | cycles:0
+# urihandler | 65f 9836L | python:33,javascript:14,shell:12,css:4,less:1,typescript:1 | 2026-06-19
+# stats: 285 func | 26 cls | 65 mod | CC̄=4.4 | critical:33 | cycles:0
 # alerts[5]: CC parse_flow=24; CC main=21; CC evaluate_policy=16; CC expand_binding=16; CC scan_path=15
 # hotspots[5]: main fan=31; main fan=23; main fan=19; run_e2e fan=19; serve_http fan=19
 # evolution: baseline
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[59]:
+M[65]:
   adapters/js/index.js,31
   adapters/js/index.test.js,50
   adapters/python/tests/test_urihandler.py,57
@@ -235,58 +235,64 @@ M[59]:
   adapters/python/urirun/_registry.py,680
   adapters/python/urirun/_runtime.py,419
   adapters/python/urirun/_scan.py,668
-  adapters/python/urirun/v7.py,421
-  adapters/python/urirun/v8.py,956
-  adapters/python/urirun/v8_adopt.py,193
-  adapters/python/urirun/v8_grpc.py,203
-  adapters/python/urirun/v8_mcp.py,177
-  adapters/python/urirun/v8_service.py,101
+  adapters/python/urirun/v1.py,421
+  adapters/python/urirun/v2.py,956
+  adapters/python/urirun/v2_adopt.py,193
+  adapters/python/urirun/v2_grpc.py,203
+  adapters/python/urirun/v2_mcp.py,177
+  adapters/python/urirun/v2_service.py,101
   app.doql.less,98
   examples/reference_adapters/node-server.js,44
   examples/reference_adapters/python-server.py,52
   project.sh,63
+  test/urirun.test.js,8
   tree.sh,2
-  v7/examples/extend/lib.sh,12
-  v7/examples/extend/notify.sh,7
-  v7/examples/html_uri_app/app.js,186
-  v7/examples/html_uri_app/run.sh,18
-  v7/examples/html_uri_app/styles.css,104
-  v7/examples/html_uri_app/uri-runtime-v7.js,239
-  v7/examples/js/example.js,23
-  v7/examples/js/urihandler-v7.js,332
-  v7/examples/js/urihandler-v7.test.js,65
-  v7/examples/python/example.py,22
-  v7/examples/python/test_extend.py,70
-  v7/examples/python/test_urihandler_v7.py,135
-  v8/examples/artifacts/deploy.sh,4
-  v8/examples/decorators/example.py,25
-  v8/examples/docker_uri_flow/generate_registry.sh,27
-  v8/examples/docker_uri_flow/node-worker/server.js,53
-  v8/examples/docker_uri_flow/orchestrator/flow_runner.py,219
-  v8/examples/docker_uri_flow/python-worker/server.py,69
-  v8/examples/docker_uri_flow/run.sh,14
-  v8/examples/docker_uri_flow/run_tests.sh,14
-  v8/examples/docker_uri_flow/shell-worker/server.py,65
-  v8/examples/docker_uri_flow/shell-worker/write_report.sh,10
-  v8/examples/docker_uri_flow/test_flow_e2e.py,100
-  v8/examples/docker_uri_flow/test_flow_runner.py,109
-  v8/examples/docker_uri_flow/test_service_adapter.py,108
-  v8/examples/docker_uri_flow/tester/run_compose_test.py,80
-  v8/examples/generators/ts/decorators.ts,63
-  v8/examples/html_uri_app/app.js,168
-  v8/examples/html_uri_app/backend.py,228
-  v8/examples/html_uri_app/run.sh,6
-  v8/examples/html_uri_app/styles.css,293
-  v8/examples/multi_transport/run_multi_test.py,106
-  v8/examples/multi_transport/run_tests.sh,14
-  v8/examples/multi_transport/worker.py,78
-  v8/examples/python/test_adopt.py,101
-  v8/examples/python/test_mcp_a2a.py,140
-  v8/examples/python/test_urihandler_v8.py,314
-  v8/examples/transports/demo.py,16
-  v8/examples/transports/scan_and_run.py,50
-  v8/examples/transports/test_transports.py,50
-  v8/examples/transports/transport_lib.py,153
+  v1/examples/extend/lib.sh,12
+  v1/examples/extend/notify.sh,7
+  v1/examples/html_uri_app/app.js,186
+  v1/examples/html_uri_app/run.sh,18
+  v1/examples/html_uri_app/styles.css,104
+  v1/examples/html_uri_app/uri-runtime-v1.js,239
+  v1/examples/js/example.js,23
+  v1/examples/js/urirun-v1.js,332
+  v1/examples/js/urirun-v1.test.js,65
+  v1/examples/python/example.py,22
+  v1/examples/python/test_extend.py,70
+  v1/examples/python/test_urihandler_v1.py,135
+  v2/examples/artifacts/deploy.sh,4
+  v2/examples/decorators/example.py,25
+  v2/examples/device_mesh_lab/www/app.js,517
+  v2/examples/device_mesh_lab/www/runtime-config.js,11
+  v2/examples/device_mesh_lab/www/styles.css,608
+  v2/examples/docker_uri_flow/generate_registry.sh,27
+  v2/examples/docker_uri_flow/node-worker/server.js,53
+  v2/examples/docker_uri_flow/orchestrator/flow_runner.py,219
+  v2/examples/docker_uri_flow/python-worker/server.py,69
+  v2/examples/docker_uri_flow/run.sh,14
+  v2/examples/docker_uri_flow/run_tests.sh,14
+  v2/examples/docker_uri_flow/shell-worker/server.py,65
+  v2/examples/docker_uri_flow/shell-worker/write_report.sh,10
+  v2/examples/docker_uri_flow/test_flow_e2e.py,100
+  v2/examples/docker_uri_flow/test_flow_runner.py,109
+  v2/examples/docker_uri_flow/test_service_adapter.py,108
+  v2/examples/docker_uri_flow/tester/run_compose_test.py,80
+  v2/examples/generators/ts/decorators.ts,63
+  v2/examples/html_uri_app/app.js,168
+  v2/examples/html_uri_app/backend.py,228
+  v2/examples/html_uri_app/run.sh,6
+  v2/examples/html_uri_app/styles.css,293
+  v2/examples/multi_transport/run_multi_test.py,106
+  v2/examples/multi_transport/run_tests.sh,14
+  v2/examples/multi_transport/worker.py,78
+  v2/examples/novnc_lan_flow/dashboard/runtime-config.js,10
+  v2/examples/python/test_adopt.py,101
+  v2/examples/python/test_mcp_a2a.py,140
+  v2/examples/python/test_urihandler_v2.py,314
+  v2/examples/transports/demo.py,16
+  v2/examples/transports/scan_and_run.py,50
+  v2/examples/transports/test_transports.py,50
+  v2/examples/transports/transport_lib.py,153
+  www/style.css,538
 D:
   adapters/python/tests/test_urihandler.py:
     e: UriHandlerTests
@@ -398,7 +404,7 @@ D:
     list_bindings(paths;include_shell;openapi_base_url)
     format_binding_table(bindings)
     main(argv)
-  adapters/python/urirun/v7.py:
+  adapters/python/urirun/v1.py:
     e: _params_spec,resolve_params,render_value,render_command,_has_placeholders,_proc_env,_run_process,_env_flags,run_spawn,run_shell_template,run_docker_exec,run_docker_run,run_fetch,run_local_function,run_mqtt_publish,run,check,list_routes,expand_binding,_binding_pairs,expand_bindings,compile_registry,load_registry_arg,main
     _params_spec(route_entry)
     resolve_params(route_entry;descriptor;translation;payload)
@@ -424,7 +430,7 @@ D:
     compile_registry(doc;generated_at;on_conflict)
     load_registry_arg(arg;openapi_base_url)
     main(argv)
-  adapters/python/urirun/v8.py:
+  adapters/python/urirun/v2.py:
     e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,decorated_bindings,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,run,check,list_routes,_strip_runtime_only,expand_binding,_binding_pairs,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_iter_files,_rel,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_many,main
     model_from_function(fn)
     _placeholder_kwargs(fn)
@@ -475,7 +481,7 @@ D:
     scan_artifacts(path)
     _load_many(sources)
     main(argv)
-  adapters/python/urirun/v8_adopt.py:
+  adapters/python/urirun/v2_adopt.py:
     e: passthrough_schema,_command_binding,python_package_bindings,installed_python_bindings,npm_package_bindings,init_project,merge_into,main
     passthrough_schema(extra)
     _command_binding(uri;argv;label;source;schema)
@@ -485,7 +491,7 @@ D:
     init_project(path)
     merge_into(out;bindings)
     main(argv)
-  adapters/python/urirun/v8_grpc.py:
+  adapters/python/urirun/v2_grpc.py:
     e: _dumps,_loads,_route_list,serve,channel_target,_method,_validate,call,stream,list_routes,main
     _dumps(value)
     _loads(data)
@@ -498,7 +504,7 @@ D:
     stream(uri;payload;target;mode;timeout)
     list_routes(target;timeout)
     main(argv)
-  adapters/python/urirun/v8_mcp.py:
+  adapters/python/urirun/v2_mcp.py:
     e: tool_name,_input_schema,to_mcp_tools,to_mcp_manifest,to_a2a_card,build_tool_index,call_tool,serve_mcp,main
     tool_name(uri)
     _input_schema(entry)
@@ -509,7 +515,7 @@ D:
     call_tool(name;arguments;registry;mode;policy;confirm)
     serve_mcp(registry;policy;mode;instream;outstream)
     main(argv)
-  adapters/python/urirun/v8_service.py:
+  adapters/python/urirun/v2_service.py:
     e: service_base,_post,call
     service_base(target)
     _post(url;body;timeout)
@@ -518,12 +524,12 @@ D:
     e: DeviceModule,Handler
     DeviceModule: led_set(4)
     Handler: do_POST(0),log_message(1),write_json(2)
-  v7/examples/python/example.py:
-  v7/examples/python/test_extend.py:
+  v1/examples/python/example.py:
+  v1/examples/python/test_extend.py:
     e: merged_registry,ExtendRegistryTests
     ExtendRegistryTests: setUp(0),test_all_endpoints_live_in_one_registry(0),test_bash_function_dry_run_renders_safe_argv(0),test_http_request_url_is_templated(0),test_http_missing_param_is_a_params_error(0),test_bash_function_executes_for_real(0),test_new_script_executes_with_env(0),test_shell_template_is_gated(0)
     merged_registry()
-  v7/examples/python/test_urihandler_v7.py:
+  v1/examples/python/test_urihandler_v1.py:
     e: registry,ParamBindingTests,ShorthandTests,DockerAdapterTests,ExecutionTests,CliTests
     ParamBindingTests: setUp(0),test_named_params_from_payload_render_into_command(0),test_defaults_apply_when_param_missing(0),test_missing_required_param_is_an_error_even_in_dry_run(0),test_query_string_supplies_params(0),test_legacy_positional_append_when_no_placeholders(0)
     ShorthandTests: test_string_binding_expands_to_spawn(0)
@@ -531,12 +537,12 @@ D:
     ExecutionTests: test_spawn_executes_with_bound_params(0),test_env_is_injected_into_the_process(0),test_stdin_is_passed_to_the_process(0),test_execute_is_denied_by_default(0)
     CliTests: test_cli_compile_and_run_dry(0)
     registry()
-  v8/examples/decorators/example.py:
+  v2/examples/decorators/example.py:
     e: echo_message,transcode,shell_echo
     echo_message(text)
     transcode(input;output;width;height)
     shell_echo(text)
-  v8/examples/docker_uri_flow/orchestrator/flow_runner.py:
+  v2/examples/docker_uri_flow/orchestrator/flow_runner.py:
     e: parse_scalar,parse_flow,get_path,resolve_payload,service_url,route_key,normalize_uri,registry_has_uri,registry_route_count,load_registry,validate_flow_registry,json_get,json_post,wait_for_services,run_flow,main
     parse_scalar(value)
     parse_flow(path)
@@ -554,19 +560,19 @@ D:
     wait_for_services(uris)
     run_flow(flow)
     main(argv)
-  v8/examples/docker_uri_flow/python-worker/server.py:
+  v2/examples/docker_uri_flow/python-worker/server.py:
     e: response,normalize,summary,dispatch,Handler
     Handler: log_message(1),do_GET(0),do_POST(0)
     response(handler;status;payload)
     normalize(payload)
     summary(payload)
     dispatch(uri;payload)
-  v8/examples/docker_uri_flow/shell-worker/server.py:
+  v2/examples/docker_uri_flow/shell-worker/server.py:
     e: response,dispatch,Handler
     Handler: log_message(1),do_GET(0),do_POST(0)
     response(handler;status;payload)
     dispatch(uri;payload)
-  v8/examples/docker_uri_flow/test_flow_e2e.py:
+  v2/examples/docker_uri_flow/test_flow_e2e.py:
     e: load_runner,free_port,start,wait_health,run_e2e,test_cross_service_flow_runs_without_docker
     load_runner()
     free_port()
@@ -574,14 +580,14 @@ D:
     wait_health(port;timeout)
     run_e2e()
     test_cross_service_flow_runs_without_docker()
-  v8/examples/docker_uri_flow/test_flow_runner.py:
+  v2/examples/docker_uri_flow/test_flow_runner.py:
     e: load_runner,test_parse_compact_uri_flow,test_registry_uri_lookup,test_registry_uri_lookup_prefers_full_uri_index,test_registry_dispatch_distinguishes_targets_with_same_segments
     load_runner()
     test_parse_compact_uri_flow()
     test_registry_uri_lookup()
     test_registry_uri_lookup_prefers_full_uri_index()
     test_registry_dispatch_distinguishes_targets_with_same_segments()
-  v8/examples/docker_uri_flow/test_service_adapter.py:
+  v2/examples/docker_uri_flow/test_service_adapter.py:
     e: registry,free_port,wait_health,test_dry_run_plans_the_http_call_without_network,test_schema_validation_runs_before_dispatch,test_unknown_uri_is_a_registry_error,test_service_dispatch_calls_live_workers
     registry()
     free_port()
@@ -590,12 +596,12 @@ D:
     test_schema_validation_runs_before_dispatch()
     test_unknown_uri_is_a_registry_error()
     test_service_dispatch_calls_live_workers()
-  v8/examples/docker_uri_flow/tester/run_compose_test.py:
+  v2/examples/docker_uri_flow/tester/run_compose_test.py:
     e: get,wait_healthy,main
     get(url)
     wait_healthy(host;timeout)
     main()
-  v8/examples/html_uri_app/backend.py:
+  v2/examples/html_uri_app/backend.py:
     e: load_env,env_bool,read_json,binding_document,registry,routes,add_log,recent_logs,json_response,execute_policy,dispatch,dispatch_tool,main,Handler
     Handler: log_message(1),do_GET(0),do_POST(0),read_body(0),serve_static(1)
     load_env(path)
@@ -611,7 +617,7 @@ D:
     dispatch(body)
     dispatch_tool(body)
     main()
-  v8/examples/multi_transport/run_multi_test.py:
+  v2/examples/multi_transport/run_multi_test.py:
     e: http_get,wait_http,wait_grpc,route_key,detect_conflicts,main
     http_get(url)
     wait_http(host;port;timeout)
@@ -619,41 +625,41 @@ D:
     route_key(uri)
     detect_conflicts(sources)
     main()
-  v8/examples/multi_transport/worker.py:
+  v2/examples/multi_transport/worker.py:
     e: discovery,serve_http,serve_grpc
     discovery()
     serve_http()
     serve_grpc()
-  v8/examples/python/test_adopt.py:
+  v2/examples/python/test_adopt.py:
     e: SpreadArgsTests,PythonPackageAdoptionTests,NpmPackageAdoptionTests,InitTests,CliTests
     SpreadArgsTests: test_spread_array_param_expands_into_argv(0),test_spread_defaults_to_empty(0),test_validate_accepts_spread_placeholder(0)
     PythonPackageAdoptionTests: test_console_scripts_become_passthrough_commands(0),test_adopted_command_runs_with_passthrough_args(0)
     NpmPackageAdoptionTests: test_bin_field_becomes_npx_command(0)
     InitTests: test_init_builds_binding_document_from_project(0)
     CliTests: test_add_python_package_compile_and_run(0)
-  v8/examples/python/test_mcp_a2a.py:
+  v2/examples/python/test_mcp_a2a.py:
     e: registry,McpProjectionTests,A2aCardTests,McpServerTests,BackendInteropTests
     McpProjectionTests: setUp(0),test_mcp_manifest_exposes_tools_with_json_schema(0),test_tool_index_maps_back_to_uris(0),test_call_tool_dry_run_renders_command(0),test_call_unknown_tool_raises(0)
     A2aCardTests: test_agent_card_lists_skills(0)
     McpServerTests: test_jsonrpc_roundtrip_over_streams(0)
     BackendInteropTests: test_backend_serves_mcp_tools_and_calls(0)
     registry()
-  v8/examples/python/test_urihandler_v8.py:
+  v2/examples/python/test_urihandler_v2.py:
     e: DecoratorTests,SchemaRuntimeTests,ArtifactAdoptionTests,HtmlAppTests
     DecoratorTests: test_decorator_generates_schema_and_argv_runtime(0),test_shell_decorator_executes_only_when_shell_policy_allows_it(0)
     SchemaRuntimeTests: setUp(0),test_json_schema_defaults_are_applied_before_rendering(0),test_missing_required_input_is_schema_error(0),test_shell_binding_is_real_shell_runtime_when_allowed(0),test_document_validation_catches_unresolved_placeholders(0)
-    ArtifactAdoptionTests: test_artifact_scan_builds_v8_bindings_from_common_standards(0),test_cli_scan_validate_compile_and_run(0),test_cli_add_pypi_and_command_binding_in_one_line(0)
-    HtmlAppTests: test_html_backend_dispatches_v8_runtime(0)
-  v8/examples/transports/demo.py:
-  v8/examples/transports/scan_and_run.py:
+    ArtifactAdoptionTests: test_artifact_scan_builds_v2_bindings_from_common_standards(0),test_cli_scan_validate_compile_and_run(0),test_cli_add_pypi_and_command_binding_in_one_line(0)
+    HtmlAppTests: test_html_backend_dispatches_v2_runtime(0)
+  v2/examples/transports/demo.py:
+  v2/examples/transports/scan_and_run.py:
     e: main
     main(argv)
-  v8/examples/transports/test_transports.py:
+  v2/examples/transports/test_transports.py:
     e: test_all_transports_agree,test_schema_validation_is_uniform,test_scan_and_run_cli
     test_all_transports_agree()
     test_schema_validation_is_uniform()
     test_scan_and_run_cli()
-  v8/examples/transports/transport_lib.py:
+  v2/examples/transports/transport_lib.py:
     e: build_registry,run_inprocess,run_queue,serverless_handler,start_http_worker,run_via,grpc_available,available_transports
     build_registry()
     run_inprocess(uri;payload;registry;mode)
@@ -669,7 +675,7 @@ D:
 
 ```prolog markpact:analysis path=project/logic.pl
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urihandler', '0.3.4', 'javascript').
+project_metadata('urihandler', '0.3.6', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/js/index.js', 31, 'javascript').
@@ -679,58 +685,64 @@ project_file('adapters/python/urirun/__init__.py', 39, 'python').
 project_file('adapters/python/urirun/_registry.py', 680, 'python').
 project_file('adapters/python/urirun/_runtime.py', 419, 'python').
 project_file('adapters/python/urirun/_scan.py', 668, 'python').
-project_file('adapters/python/urirun/v7.py', 421, 'python').
-project_file('adapters/python/urirun/v8.py', 956, 'python').
-project_file('adapters/python/urirun/v8_adopt.py', 193, 'python').
-project_file('adapters/python/urirun/v8_grpc.py', 203, 'python').
-project_file('adapters/python/urirun/v8_mcp.py', 177, 'python').
-project_file('adapters/python/urirun/v8_service.py', 101, 'python').
+project_file('adapters/python/urirun/v1.py', 421, 'python').
+project_file('adapters/python/urirun/v2.py', 956, 'python').
+project_file('adapters/python/urirun/v2_adopt.py', 193, 'python').
+project_file('adapters/python/urirun/v2_grpc.py', 203, 'python').
+project_file('adapters/python/urirun/v2_mcp.py', 177, 'python').
+project_file('adapters/python/urirun/v2_service.py', 101, 'python').
 project_file('app.doql.less', 98, 'less').
 project_file('examples/reference_adapters/node-server.js', 44, 'javascript').
 project_file('examples/reference_adapters/python-server.py', 52, 'python').
 project_file('project.sh', 63, 'shell').
+project_file('test/urirun.test.js', 8, 'javascript').
 project_file('tree.sh', 2, 'shell').
-project_file('v7/examples/extend/lib.sh', 12, 'shell').
-project_file('v7/examples/extend/notify.sh', 7, 'shell').
-project_file('v7/examples/html_uri_app/app.js', 186, 'javascript').
-project_file('v7/examples/html_uri_app/run.sh', 18, 'shell').
-project_file('v7/examples/html_uri_app/styles.css', 104, 'css').
-project_file('v7/examples/html_uri_app/uri-runtime-v7.js', 239, 'javascript').
-project_file('v7/examples/js/example.js', 23, 'javascript').
-project_file('v7/examples/js/urihandler-v7.js', 332, 'javascript').
-project_file('v7/examples/js/urihandler-v7.test.js', 65, 'javascript').
-project_file('v7/examples/python/example.py', 22, 'python').
-project_file('v7/examples/python/test_extend.py', 70, 'python').
-project_file('v7/examples/python/test_urihandler_v7.py', 135, 'python').
-project_file('v8/examples/artifacts/deploy.sh', 4, 'shell').
-project_file('v8/examples/decorators/example.py', 25, 'python').
-project_file('v8/examples/docker_uri_flow/generate_registry.sh', 27, 'shell').
-project_file('v8/examples/docker_uri_flow/node-worker/server.js', 53, 'javascript').
-project_file('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 219, 'python').
-project_file('v8/examples/docker_uri_flow/python-worker/server.py', 69, 'python').
-project_file('v8/examples/docker_uri_flow/run.sh', 14, 'shell').
-project_file('v8/examples/docker_uri_flow/run_tests.sh', 14, 'shell').
-project_file('v8/examples/docker_uri_flow/shell-worker/server.py', 65, 'python').
-project_file('v8/examples/docker_uri_flow/shell-worker/write_report.sh', 10, 'shell').
-project_file('v8/examples/docker_uri_flow/test_flow_e2e.py', 100, 'python').
-project_file('v8/examples/docker_uri_flow/test_flow_runner.py', 109, 'python').
-project_file('v8/examples/docker_uri_flow/test_service_adapter.py', 108, 'python').
-project_file('v8/examples/docker_uri_flow/tester/run_compose_test.py', 80, 'python').
-project_file('v8/examples/generators/ts/decorators.ts', 63, 'typescript').
-project_file('v8/examples/html_uri_app/app.js', 168, 'javascript').
-project_file('v8/examples/html_uri_app/backend.py', 228, 'python').
-project_file('v8/examples/html_uri_app/run.sh', 6, 'shell').
-project_file('v8/examples/html_uri_app/styles.css', 293, 'css').
-project_file('v8/examples/multi_transport/run_multi_test.py', 106, 'python').
-project_file('v8/examples/multi_transport/run_tests.sh', 14, 'shell').
-project_file('v8/examples/multi_transport/worker.py', 78, 'python').
-project_file('v8/examples/python/test_adopt.py', 101, 'python').
-project_file('v8/examples/python/test_mcp_a2a.py', 140, 'python').
-project_file('v8/examples/python/test_urihandler_v8.py', 314, 'python').
-project_file('v8/examples/transports/demo.py', 16, 'python').
-project_file('v8/examples/transports/scan_and_run.py', 50, 'python').
-project_file('v8/examples/transports/test_transports.py', 50, 'python').
-project_file('v8/examples/transports/transport_lib.py', 153, 'python').
+project_file('v1/examples/extend/lib.sh', 12, 'shell').
+project_file('v1/examples/extend/notify.sh', 7, 'shell').
+project_file('v1/examples/html_uri_app/app.js', 186, 'javascript').
+project_file('v1/examples/html_uri_app/run.sh', 18, 'shell').
+project_file('v1/examples/html_uri_app/styles.css', 104, 'css').
+project_file('v1/examples/html_uri_app/uri-runtime-v1.js', 239, 'javascript').
+project_file('v1/examples/js/example.js', 23, 'javascript').
+project_file('v1/examples/js/urirun-v1.js', 332, 'javascript').
+project_file('v1/examples/js/urirun-v1.test.js', 65, 'javascript').
+project_file('v1/examples/python/example.py', 22, 'python').
+project_file('v1/examples/python/test_extend.py', 70, 'python').
+project_file('v1/examples/python/test_urihandler_v1.py', 135, 'python').
+project_file('v2/examples/artifacts/deploy.sh', 4, 'shell').
+project_file('v2/examples/decorators/example.py', 25, 'python').
+project_file('v2/examples/device_mesh_lab/www/app.js', 556, 'javascript').
+project_file('v2/examples/device_mesh_lab/www/runtime-config.js', 11, 'javascript').
+project_file('v2/examples/device_mesh_lab/www/styles.css', 608, 'css').
+project_file('v2/examples/docker_uri_flow/generate_registry.sh', 27, 'shell').
+project_file('v2/examples/docker_uri_flow/node-worker/server.js', 53, 'javascript').
+project_file('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 219, 'python').
+project_file('v2/examples/docker_uri_flow/python-worker/server.py', 69, 'python').
+project_file('v2/examples/docker_uri_flow/run.sh', 14, 'shell').
+project_file('v2/examples/docker_uri_flow/run_tests.sh', 14, 'shell').
+project_file('v2/examples/docker_uri_flow/shell-worker/server.py', 65, 'python').
+project_file('v2/examples/docker_uri_flow/shell-worker/write_report.sh', 10, 'shell').
+project_file('v2/examples/docker_uri_flow/test_flow_e2e.py', 100, 'python').
+project_file('v2/examples/docker_uri_flow/test_flow_runner.py', 109, 'python').
+project_file('v2/examples/docker_uri_flow/test_service_adapter.py', 108, 'python').
+project_file('v2/examples/docker_uri_flow/tester/run_compose_test.py', 80, 'python').
+project_file('v2/examples/generators/ts/decorators.ts', 63, 'typescript').
+project_file('v2/examples/html_uri_app/app.js', 168, 'javascript').
+project_file('v2/examples/html_uri_app/backend.py', 228, 'python').
+project_file('v2/examples/html_uri_app/run.sh', 6, 'shell').
+project_file('v2/examples/html_uri_app/styles.css', 293, 'css').
+project_file('v2/examples/multi_transport/run_multi_test.py', 106, 'python').
+project_file('v2/examples/multi_transport/run_tests.sh', 14, 'shell').
+project_file('v2/examples/multi_transport/worker.py', 78, 'python').
+project_file('v2/examples/novnc_lan_flow/dashboard/runtime-config.js', 10, 'javascript').
+project_file('v2/examples/python/test_adopt.py', 101, 'python').
+project_file('v2/examples/python/test_mcp_a2a.py', 140, 'python').
+project_file('v2/examples/python/test_urihandler_v2.py', 314, 'python').
+project_file('v2/examples/transports/demo.py', 16, 'python').
+project_file('v2/examples/transports/scan_and_run.py', 50, 'python').
+project_file('v2/examples/transports/test_transports.py', 50, 'python').
+project_file('v2/examples/transports/transport_lib.py', 153, 'python').
+project_file('www/style.css', 538, 'css').
 
 % ── Python Functions ─────────────────────────────────────
 python_function('adapters/python/urirun/__init__.py', 'parse_uri', 1, 7, 8).
@@ -831,193 +843,193 @@ python_function('adapters/python/urirun/_scan.py', 'load_registry_arg', 5, 4, 8)
 python_function('adapters/python/urirun/_scan.py', 'list_bindings', 3, 2, 3).
 python_function('adapters/python/urirun/_scan.py', 'format_binding_table', 1, 11, 8).
 python_function('adapters/python/urirun/_scan.py', 'main', 1, 10, 19).
-python_function('adapters/python/urirun/v7.py', '_params_spec', 1, 4, 1).
-python_function('adapters/python/urirun/v7.py', 'resolve_params', 4, 11, 11).
-python_function('adapters/python/urirun/v7.py', 'render_value', 2, 1, 4).
-python_function('adapters/python/urirun/v7.py', 'render_command', 2, 2, 1).
-python_function('adapters/python/urirun/v7.py', '_has_placeholders', 1, 2, 3).
-python_function('adapters/python/urirun/v7.py', '_proc_env', 2, 3, 6).
-python_function('adapters/python/urirun/v7.py', '_run_process', 5, 1, 4).
-python_function('adapters/python/urirun/v7.py', '_env_flags', 2, 3, 5).
-python_function('adapters/python/urirun/v7.py', 'run_spawn', 3, 6, 6).
-python_function('adapters/python/urirun/v7.py', 'run_shell_template', 3, 3, 5).
-python_function('adapters/python/urirun/v7.py', 'run_docker_exec', 3, 4, 5).
-python_function('adapters/python/urirun/v7.py', 'run_docker_run', 3, 5, 9).
-python_function('adapters/python/urirun/v7.py', 'run_fetch', 3, 3, 6).
-python_function('adapters/python/urirun/v7.py', 'run_local_function', 3, 2, 2).
-python_function('adapters/python/urirun/v7.py', 'run_mqtt_publish', 3, 1, 1).
-python_function('adapters/python/urirun/v7.py', 'run', 7, 14, 11).
-python_function('adapters/python/urirun/v7.py', 'check', 3, 1, 1).
-python_function('adapters/python/urirun/v7.py', 'list_routes', 2, 1, 1).
-python_function('adapters/python/urirun/v7.py', 'expand_binding', 2, 7, 5).
-python_function('adapters/python/urirun/v7.py', '_binding_pairs', 1, 8, 5).
-python_function('adapters/python/urirun/v7.py', 'expand_bindings', 1, 2, 2).
-python_function('adapters/python/urirun/v7.py', 'compile_registry', 3, 1, 2).
-python_function('adapters/python/urirun/v7.py', 'load_registry_arg', 2, 4, 9).
-python_function('adapters/python/urirun/v7.py', 'main', 1, 13, 23).
-python_function('adapters/python/urirun/v8.py', 'model_from_function', 1, 4, 4).
-python_function('adapters/python/urirun/v8.py', '_placeholder_kwargs', 1, 2, 1).
-python_function('adapters/python/urirun/v8.py', 'uri_command', 1, 1, 6).
-python_function('adapters/python/urirun/v8.py', 'uri_shell', 1, 1, 1).
-python_function('adapters/python/urirun/v8.py', 'decorated_bindings', 0, 2, 1).
-python_function('adapters/python/urirun/v8.py', '_schema_for', 1, 3, 1).
-python_function('adapters/python/urirun/v8.py', '_apply_defaults', 2, 14, 5).
-python_function('adapters/python/urirun/v8.py', '_input_values', 3, 4, 7).
-python_function('adapters/python/urirun/v8.py', 'validate_input', 4, 6, 13).
-python_function('adapters/python/urirun/v8.py', 'render_value', 2, 1, 4).
-python_function('adapters/python/urirun/v8.py', 'render_sequence', 2, 2, 1).
-python_function('adapters/python/urirun/v8.py', 'render_argv', 2, 7, 9).
-python_function('adapters/python/urirun/v8.py', 'run_argv_template', 3, 5, 4).
-python_function('adapters/python/urirun/v8.py', 'run_shell_template', 3, 4, 3).
-python_function('adapters/python/urirun/v8.py', 'run', 7, 15, 11).
-python_function('adapters/python/urirun/v8.py', 'check', 3, 1, 1).
-python_function('adapters/python/urirun/v8.py', 'list_routes', 2, 1, 1).
-python_function('adapters/python/urirun/v8.py', '_strip_runtime_only', 1, 3, 1).
-python_function('adapters/python/urirun/v8.py', 'expand_binding', 2, 16, 6).
-python_function('adapters/python/urirun/v8.py', '_binding_pairs', 1, 8, 5).
-python_function('adapters/python/urirun/v8.py', 'expand_bindings', 1, 2, 2).
-python_function('adapters/python/urirun/v8.py', 'compile_registry', 3, 1, 2).
-python_function('adapters/python/urirun/v8.py', 'build_binding_document', 2, 3, 5).
-python_function('adapters/python/urirun/v8.py', '_bindings_as_map', 1, 2, 2).
-python_function('adapters/python/urirun/v8.py', 'merge_binding_document', 2, 2, 3).
-python_function('adapters/python/urirun/v8.py', 'write_or_emit_binding', 2, 3, 7).
-python_function('adapters/python/urirun/v8.py', '_coerce_default', 2, 4, 3).
-python_function('adapters/python/urirun/v8.py', 'parse_param_declaration', 1, 8, 7).
-python_function('adapters/python/urirun/v8.py', 'input_schema_from_params', 1, 4, 2).
-python_function('adapters/python/urirun/v8.py', 'command_binding_from_cli', 1, 5, 5).
-python_function('adapters/python/urirun/v8.py', 'pypi_binding', 3, 3, 1).
-python_function('adapters/python/urirun/v8.py', 'load_registry_arg', 2, 4, 8).
-python_function('adapters/python/urirun/v8.py', '_placeholders_in', 1, 6, 6).
-python_function('adapters/python/urirun/v8.py', 'validate_binding_document', 1, 12, 15).
-python_function('adapters/python/urirun/v8.py', '_iter_files', 1, 5, 4).
-python_function('adapters/python/urirun/v8.py', '_rel', 2, 2, 3).
-python_function('adapters/python/urirun/v8.py', '_empty_input_schema', 0, 1, 0).
-python_function('adapters/python/urirun/v8.py', '_load_manifest', 1, 1, 2).
-python_function('adapters/python/urirun/v8.py', '_scan_package_json', 2, 4, 9).
-python_function('adapters/python/urirun/v8.py', '_read_toml', 1, 2, 3).
-python_function('adapters/python/urirun/v8.py', '_scan_pyproject', 2, 4, 9).
-python_function('adapters/python/urirun/v8.py', '_scan_shell_script', 2, 1, 4).
-python_function('adapters/python/urirun/v8.py', '_scan_makefile', 2, 5, 11).
-python_function('adapters/python/urirun/v8.py', '_parse_dockerfile_labels', 1, 4, 7).
-python_function('adapters/python/urirun/v8.py', '_manifest_candidates', 2, 2, 3).
-python_function('adapters/python/urirun/v8.py', '_scan_dockerfile', 2, 7, 12).
-python_function('adapters/python/urirun/v8.py', 'scan_artifacts', 1, 11, 15).
-python_function('adapters/python/urirun/v8.py', '_load_many', 1, 3, 6).
-python_function('adapters/python/urirun/v8.py', 'main', 1, 21, 31).
-python_function('adapters/python/urirun/v8_adopt.py', 'passthrough_schema', 1, 2, 1).
-python_function('adapters/python/urirun/v8_adopt.py', '_command_binding', 5, 2, 2).
-python_function('adapters/python/urirun/v8_adopt.py', 'python_package_bindings', 1, 4, 5).
-python_function('adapters/python/urirun/v8_adopt.py', 'installed_python_bindings', 0, 4, 3).
-python_function('adapters/python/urirun/v8_adopt.py', 'npm_package_bindings', 2, 4, 9).
-python_function('adapters/python/urirun/v8_adopt.py', 'init_project', 1, 1, 2).
-python_function('adapters/python/urirun/v8_adopt.py', 'merge_into', 2, 7, 9).
-python_function('adapters/python/urirun/v8_adopt.py', 'main', 1, 7, 14).
-python_function('adapters/python/urirun/v8_grpc.py', '_dumps', 1, 1, 2).
-python_function('adapters/python/urirun/v8_grpc.py', '_loads', 1, 2, 2).
-python_function('adapters/python/urirun/v8_grpc.py', '_route_list', 1, 2, 4).
-python_function('adapters/python/urirun/v8_grpc.py', 'serve', 7, 2, 12).
-python_function('adapters/python/urirun/v8_grpc.py', 'channel_target', 1, 3, 3).
-python_function('adapters/python/urirun/v8_grpc.py', '_method', 3, 2, 1).
-python_function('adapters/python/urirun/v8_grpc.py', '_validate', 3, 5, 4).
-python_function('adapters/python/urirun/v8_grpc.py', 'call', 7, 6, 7).
-python_function('adapters/python/urirun/v8_grpc.py', 'stream', 5, 4, 7).
-python_function('adapters/python/urirun/v8_grpc.py', 'list_routes', 2, 1, 3).
-python_function('adapters/python/urirun/v8_grpc.py', 'main', 1, 9, 15).
-python_function('adapters/python/urirun/v8_mcp.py', 'tool_name', 1, 1, 4).
-python_function('adapters/python/urirun/v8_mcp.py', '_input_schema', 1, 4, 1).
-python_function('adapters/python/urirun/v8_mcp.py', 'to_mcp_tools', 1, 4, 5).
-python_function('adapters/python/urirun/v8_mcp.py', 'to_mcp_manifest', 1, 4, 2).
-python_function('adapters/python/urirun/v8_mcp.py', 'to_a2a_card', 4, 4, 6).
-python_function('adapters/python/urirun/v8_mcp.py', 'build_tool_index', 1, 2, 1).
-python_function('adapters/python/urirun/v8_mcp.py', 'call_tool', 6, 3, 4).
-python_function('adapters/python/urirun/v8_mcp.py', 'serve_mcp', 5, 15, 11).
-python_function('adapters/python/urirun/v8_mcp.py', 'main', 1, 9, 11).
-python_function('adapters/python/urirun/v8_service.py', 'service_base', 1, 3, 4).
-python_function('adapters/python/urirun/v8_service.py', '_post', 3, 3, 7).
-python_function('adapters/python/urirun/v8_service.py', 'call', 6, 9, 9).
-python_function('v7/examples/python/test_extend.py', 'merged_registry', 0, 2, 4).
-python_function('v7/examples/python/test_urihandler_v7.py', 'registry', 0, 1, 3).
-python_function('v8/examples/decorators/example.py', 'echo_message', 1, 1, 1).
-python_function('v8/examples/decorators/example.py', 'transcode', 4, 1, 1).
-python_function('v8/examples/decorators/example.py', 'shell_echo', 1, 1, 1).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'parse_scalar', 1, 3, 2).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'parse_flow', 1, 24, 12).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'get_path', 2, 2, 1).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'resolve_payload', 2, 4, 4).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'service_url', 1, 5, 6).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'route_key', 1, 5, 5).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'normalize_uri', 1, 6, 6).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'registry_has_uri', 2, 4, 5).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'registry_route_count', 1, 5, 4).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'load_registry', 1, 3, 4).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'validate_flow_registry', 2, 5, 3).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'json_get', 1, 1, 4).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'json_post', 2, 1, 7).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'wait_for_services', 1, 5, 7).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'run_flow', 1, 8, 10).
-python_function('v8/examples/docker_uri_flow/orchestrator/flow_runner.py', 'main', 1, 3, 5).
-python_function('v8/examples/docker_uri_flow/python-worker/server.py', 'response', 3, 1, 8).
-python_function('v8/examples/docker_uri_flow/python-worker/server.py', 'normalize', 1, 1, 6).
-python_function('v8/examples/docker_uri_flow/python-worker/server.py', 'summary', 1, 1, 2).
-python_function('v8/examples/docker_uri_flow/python-worker/server.py', 'dispatch', 2, 3, 2).
-python_function('v8/examples/docker_uri_flow/shell-worker/server.py', 'response', 3, 1, 8).
-python_function('v8/examples/docker_uri_flow/shell-worker/server.py', 'dispatch', 2, 2, 3).
-python_function('v8/examples/docker_uri_flow/test_flow_e2e.py', 'load_runner', 0, 1, 3).
-python_function('v8/examples/docker_uri_flow/test_flow_e2e.py', 'free_port', 0, 1, 3).
-python_function('v8/examples/docker_uri_flow/test_flow_e2e.py', 'start', 3, 2, 4).
-python_function('v8/examples/docker_uri_flow/test_flow_e2e.py', 'wait_health', 2, 4, 4).
-python_function('v8/examples/docker_uri_flow/test_flow_e2e.py', 'run_e2e', 0, 11, 19).
-python_function('v8/examples/docker_uri_flow/test_flow_e2e.py', 'test_cross_service_flow_runs_without_docker', 0, 1, 1).
-python_function('v8/examples/docker_uri_flow/test_flow_runner.py', 'load_runner', 0, 1, 3).
-python_function('v8/examples/docker_uri_flow/test_flow_runner.py', 'test_parse_compact_uri_flow', 0, 4, 2).
-python_function('v8/examples/docker_uri_flow/test_flow_runner.py', 'test_registry_uri_lookup', 0, 4, 3).
-python_function('v8/examples/docker_uri_flow/test_flow_runner.py', 'test_registry_uri_lookup_prefers_full_uri_index', 0, 5, 4).
-python_function('v8/examples/docker_uri_flow/test_flow_runner.py', 'test_registry_dispatch_distinguishes_targets_with_same_segments', 0, 3, 2).
-python_function('v8/examples/docker_uri_flow/test_service_adapter.py', 'registry', 0, 2, 4).
-python_function('v8/examples/docker_uri_flow/test_service_adapter.py', 'free_port', 0, 1, 3).
-python_function('v8/examples/docker_uri_flow/test_service_adapter.py', 'wait_health', 2, 4, 4).
-python_function('v8/examples/docker_uri_flow/test_service_adapter.py', 'test_dry_run_plans_the_http_call_without_network', 0, 4, 3).
-python_function('v8/examples/docker_uri_flow/test_service_adapter.py', 'test_schema_validation_runs_before_dispatch', 0, 3, 2).
-python_function('v8/examples/docker_uri_flow/test_service_adapter.py', 'test_unknown_uri_is_a_registry_error', 0, 3, 2).
-python_function('v8/examples/docker_uri_flow/test_service_adapter.py', 'test_service_dispatch_calls_live_workers', 0, 10, 13).
-python_function('v8/examples/docker_uri_flow/tester/run_compose_test.py', 'get', 1, 1, 4).
-python_function('v8/examples/docker_uri_flow/tester/run_compose_test.py', 'wait_healthy', 2, 3, 4).
-python_function('v8/examples/docker_uri_flow/tester/run_compose_test.py', 'main', 0, 9, 7).
-python_function('v8/examples/html_uri_app/backend.py', 'load_env', 1, 6, 7).
-python_function('v8/examples/html_uri_app/backend.py', 'env_bool', 2, 1, 2).
-python_function('v8/examples/html_uri_app/backend.py', 'read_json', 1, 1, 2).
-python_function('v8/examples/html_uri_app/backend.py', 'binding_document', 0, 1, 2).
-python_function('v8/examples/html_uri_app/backend.py', 'registry', 0, 1, 2).
-python_function('v8/examples/html_uri_app/backend.py', 'routes', 0, 4, 4).
-python_function('v8/examples/html_uri_app/backend.py', 'add_log', 3, 2, 2).
-python_function('v8/examples/html_uri_app/backend.py', 'recent_logs', 1, 1, 1).
-python_function('v8/examples/html_uri_app/backend.py', 'json_response', 3, 1, 8).
-python_function('v8/examples/html_uri_app/backend.py', 'execute_policy', 2, 1, 0).
-python_function('v8/examples/html_uri_app/backend.py', 'dispatch', 1, 6, 8).
-python_function('v8/examples/html_uri_app/backend.py', 'dispatch_tool', 1, 7, 7).
-python_function('v8/examples/html_uri_app/backend.py', 'main', 0, 5, 9).
-python_function('v8/examples/multi_transport/run_multi_test.py', 'http_get', 1, 1, 4).
-python_function('v8/examples/multi_transport/run_multi_test.py', 'wait_http', 3, 3, 4).
-python_function('v8/examples/multi_transport/run_multi_test.py', 'wait_grpc', 2, 3, 4).
-python_function('v8/examples/multi_transport/run_multi_test.py', 'route_key', 1, 1, 3).
-python_function('v8/examples/multi_transport/run_multi_test.py', 'detect_conflicts', 1, 5, 5).
-python_function('v8/examples/multi_transport/run_multi_test.py', 'main', 0, 7, 12).
-python_function('v8/examples/multi_transport/worker.py', 'discovery', 0, 2, 1).
-python_function('v8/examples/multi_transport/worker.py', 'serve_http', 0, 1, 19).
-python_function('v8/examples/multi_transport/worker.py', 'serve_grpc', 0, 1, 2).
-python_function('v8/examples/python/test_mcp_a2a.py', 'registry', 0, 1, 3).
-python_function('v8/examples/transports/scan_and_run.py', 'main', 1, 6, 10).
-python_function('v8/examples/transports/test_transports.py', 'test_all_transports_agree', 0, 4, 4).
-python_function('v8/examples/transports/test_transports.py', 'test_schema_validation_is_uniform', 0, 5, 3).
-python_function('v8/examples/transports/test_transports.py', 'test_scan_and_run_cli', 0, 2, 3).
-python_function('v8/examples/transports/transport_lib.py', 'build_registry', 0, 1, 3).
-python_function('v8/examples/transports/transport_lib.py', 'run_inprocess', 4, 2, 1).
-python_function('v8/examples/transports/transport_lib.py', 'run_queue', 4, 1, 7).
-python_function('v8/examples/transports/transport_lib.py', 'serverless_handler', 2, 1, 2).
-python_function('v8/examples/transports/transport_lib.py', 'start_http_worker', 2, 1, 19).
-python_function('v8/examples/transports/transport_lib.py', 'run_via', 4, 6, 13).
-python_function('v8/examples/transports/transport_lib.py', 'grpc_available', 0, 2, 0).
-python_function('v8/examples/transports/transport_lib.py', 'available_transports', 0, 4, 1).
+python_function('adapters/python/urirun/v1.py', '_params_spec', 1, 4, 1).
+python_function('adapters/python/urirun/v1.py', 'resolve_params', 4, 11, 11).
+python_function('adapters/python/urirun/v1.py', 'render_value', 2, 1, 4).
+python_function('adapters/python/urirun/v1.py', 'render_command', 2, 2, 1).
+python_function('adapters/python/urirun/v1.py', '_has_placeholders', 1, 2, 3).
+python_function('adapters/python/urirun/v1.py', '_proc_env', 2, 3, 6).
+python_function('adapters/python/urirun/v1.py', '_run_process', 5, 1, 4).
+python_function('adapters/python/urirun/v1.py', '_env_flags', 2, 3, 5).
+python_function('adapters/python/urirun/v1.py', 'run_spawn', 3, 6, 6).
+python_function('adapters/python/urirun/v1.py', 'run_shell_template', 3, 3, 5).
+python_function('adapters/python/urirun/v1.py', 'run_docker_exec', 3, 4, 5).
+python_function('adapters/python/urirun/v1.py', 'run_docker_run', 3, 5, 9).
+python_function('adapters/python/urirun/v1.py', 'run_fetch', 3, 3, 6).
+python_function('adapters/python/urirun/v1.py', 'run_local_function', 3, 2, 2).
+python_function('adapters/python/urirun/v1.py', 'run_mqtt_publish', 3, 1, 1).
+python_function('adapters/python/urirun/v1.py', 'run', 7, 14, 11).
+python_function('adapters/python/urirun/v1.py', 'check', 3, 1, 1).
+python_function('adapters/python/urirun/v1.py', 'list_routes', 2, 1, 1).
+python_function('adapters/python/urirun/v1.py', 'expand_binding', 2, 7, 5).
+python_function('adapters/python/urirun/v1.py', '_binding_pairs', 1, 8, 5).
+python_function('adapters/python/urirun/v1.py', 'expand_bindings', 1, 2, 2).
+python_function('adapters/python/urirun/v1.py', 'compile_registry', 3, 1, 2).
+python_function('adapters/python/urirun/v1.py', 'load_registry_arg', 2, 4, 9).
+python_function('adapters/python/urirun/v1.py', 'main', 1, 13, 23).
+python_function('adapters/python/urirun/v2.py', 'model_from_function', 1, 4, 4).
+python_function('adapters/python/urirun/v2.py', '_placeholder_kwargs', 1, 2, 1).
+python_function('adapters/python/urirun/v2.py', 'uri_command', 1, 1, 6).
+python_function('adapters/python/urirun/v2.py', 'uri_shell', 1, 1, 1).
+python_function('adapters/python/urirun/v2.py', 'decorated_bindings', 0, 2, 1).
+python_function('adapters/python/urirun/v2.py', '_schema_for', 1, 3, 1).
+python_function('adapters/python/urirun/v2.py', '_apply_defaults', 2, 14, 5).
+python_function('adapters/python/urirun/v2.py', '_input_values', 3, 4, 7).
+python_function('adapters/python/urirun/v2.py', 'validate_input', 4, 6, 13).
+python_function('adapters/python/urirun/v2.py', 'render_value', 2, 1, 4).
+python_function('adapters/python/urirun/v2.py', 'render_sequence', 2, 2, 1).
+python_function('adapters/python/urirun/v2.py', 'render_argv', 2, 7, 9).
+python_function('adapters/python/urirun/v2.py', 'run_argv_template', 3, 5, 4).
+python_function('adapters/python/urirun/v2.py', 'run_shell_template', 3, 4, 3).
+python_function('adapters/python/urirun/v2.py', 'run', 7, 15, 11).
+python_function('adapters/python/urirun/v2.py', 'check', 3, 1, 1).
+python_function('adapters/python/urirun/v2.py', 'list_routes', 2, 1, 1).
+python_function('adapters/python/urirun/v2.py', '_strip_runtime_only', 1, 3, 1).
+python_function('adapters/python/urirun/v2.py', 'expand_binding', 2, 16, 6).
+python_function('adapters/python/urirun/v2.py', '_binding_pairs', 1, 8, 5).
+python_function('adapters/python/urirun/v2.py', 'expand_bindings', 1, 2, 2).
+python_function('adapters/python/urirun/v2.py', 'compile_registry', 3, 1, 2).
+python_function('adapters/python/urirun/v2.py', 'build_binding_document', 2, 3, 5).
+python_function('adapters/python/urirun/v2.py', '_bindings_as_map', 1, 2, 2).
+python_function('adapters/python/urirun/v2.py', 'merge_binding_document', 2, 2, 3).
+python_function('adapters/python/urirun/v2.py', 'write_or_emit_binding', 2, 3, 7).
+python_function('adapters/python/urirun/v2.py', '_coerce_default', 2, 4, 3).
+python_function('adapters/python/urirun/v2.py', 'parse_param_declaration', 1, 8, 7).
+python_function('adapters/python/urirun/v2.py', 'input_schema_from_params', 1, 4, 2).
+python_function('adapters/python/urirun/v2.py', 'command_binding_from_cli', 1, 5, 5).
+python_function('adapters/python/urirun/v2.py', 'pypi_binding', 3, 3, 1).
+python_function('adapters/python/urirun/v2.py', 'load_registry_arg', 2, 4, 8).
+python_function('adapters/python/urirun/v2.py', '_placeholders_in', 1, 6, 6).
+python_function('adapters/python/urirun/v2.py', 'validate_binding_document', 1, 12, 15).
+python_function('adapters/python/urirun/v2.py', '_iter_files', 1, 5, 4).
+python_function('adapters/python/urirun/v2.py', '_rel', 2, 2, 3).
+python_function('adapters/python/urirun/v2.py', '_empty_input_schema', 0, 1, 0).
+python_function('adapters/python/urirun/v2.py', '_load_manifest', 1, 1, 2).
+python_function('adapters/python/urirun/v2.py', '_scan_package_json', 2, 4, 9).
+python_function('adapters/python/urirun/v2.py', '_read_toml', 1, 2, 3).
+python_function('adapters/python/urirun/v2.py', '_scan_pyproject', 2, 4, 9).
+python_function('adapters/python/urirun/v2.py', '_scan_shell_script', 2, 1, 4).
+python_function('adapters/python/urirun/v2.py', '_scan_makefile', 2, 5, 11).
+python_function('adapters/python/urirun/v2.py', '_parse_dockerfile_labels', 1, 4, 7).
+python_function('adapters/python/urirun/v2.py', '_manifest_candidates', 2, 2, 3).
+python_function('adapters/python/urirun/v2.py', '_scan_dockerfile', 2, 7, 12).
+python_function('adapters/python/urirun/v2.py', 'scan_artifacts', 1, 11, 15).
+python_function('adapters/python/urirun/v2.py', '_load_many', 1, 3, 6).
+python_function('adapters/python/urirun/v2.py', 'main', 1, 21, 31).
+python_function('adapters/python/urirun/v2_adopt.py', 'passthrough_schema', 1, 2, 1).
+python_function('adapters/python/urirun/v2_adopt.py', '_command_binding', 5, 2, 2).
+python_function('adapters/python/urirun/v2_adopt.py', 'python_package_bindings', 1, 4, 5).
+python_function('adapters/python/urirun/v2_adopt.py', 'installed_python_bindings', 0, 4, 3).
+python_function('adapters/python/urirun/v2_adopt.py', 'npm_package_bindings', 2, 4, 9).
+python_function('adapters/python/urirun/v2_adopt.py', 'init_project', 1, 1, 2).
+python_function('adapters/python/urirun/v2_adopt.py', 'merge_into', 2, 7, 9).
+python_function('adapters/python/urirun/v2_adopt.py', 'main', 1, 7, 14).
+python_function('adapters/python/urirun/v2_grpc.py', '_dumps', 1, 1, 2).
+python_function('adapters/python/urirun/v2_grpc.py', '_loads', 1, 2, 2).
+python_function('adapters/python/urirun/v2_grpc.py', '_route_list', 1, 2, 4).
+python_function('adapters/python/urirun/v2_grpc.py', 'serve', 7, 2, 12).
+python_function('adapters/python/urirun/v2_grpc.py', 'channel_target', 1, 3, 3).
+python_function('adapters/python/urirun/v2_grpc.py', '_method', 3, 2, 1).
+python_function('adapters/python/urirun/v2_grpc.py', '_validate', 3, 5, 4).
+python_function('adapters/python/urirun/v2_grpc.py', 'call', 7, 6, 7).
+python_function('adapters/python/urirun/v2_grpc.py', 'stream', 5, 4, 7).
+python_function('adapters/python/urirun/v2_grpc.py', 'list_routes', 2, 1, 3).
+python_function('adapters/python/urirun/v2_grpc.py', 'main', 1, 9, 15).
+python_function('adapters/python/urirun/v2_mcp.py', 'tool_name', 1, 1, 4).
+python_function('adapters/python/urirun/v2_mcp.py', '_input_schema', 1, 4, 1).
+python_function('adapters/python/urirun/v2_mcp.py', 'to_mcp_tools', 1, 4, 5).
+python_function('adapters/python/urirun/v2_mcp.py', 'to_mcp_manifest', 1, 4, 2).
+python_function('adapters/python/urirun/v2_mcp.py', 'to_a2a_card', 4, 4, 6).
+python_function('adapters/python/urirun/v2_mcp.py', 'build_tool_index', 1, 2, 1).
+python_function('adapters/python/urirun/v2_mcp.py', 'call_tool', 6, 3, 4).
+python_function('adapters/python/urirun/v2_mcp.py', 'serve_mcp', 5, 15, 11).
+python_function('adapters/python/urirun/v2_mcp.py', 'main', 1, 9, 11).
+python_function('adapters/python/urirun/v2_service.py', 'service_base', 1, 3, 4).
+python_function('adapters/python/urirun/v2_service.py', '_post', 3, 3, 7).
+python_function('adapters/python/urirun/v2_service.py', 'call', 6, 9, 9).
+python_function('v1/examples/python/test_extend.py', 'merged_registry', 0, 2, 4).
+python_function('v1/examples/python/test_urihandler_v1.py', 'registry', 0, 1, 3).
+python_function('v2/examples/decorators/example.py', 'echo_message', 1, 1, 1).
+python_function('v2/examples/decorators/example.py', 'transcode', 4, 1, 1).
+python_function('v2/examples/decorators/example.py', 'shell_echo', 1, 1, 1).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'parse_scalar', 1, 3, 2).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'parse_flow', 1, 24, 12).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'get_path', 2, 2, 1).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'resolve_payload', 2, 4, 4).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'service_url', 1, 5, 6).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'route_key', 1, 5, 5).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'normalize_uri', 1, 6, 6).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'registry_has_uri', 2, 4, 5).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'registry_route_count', 1, 5, 4).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'load_registry', 1, 3, 4).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'validate_flow_registry', 2, 5, 3).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'json_get', 1, 1, 4).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'json_post', 2, 1, 7).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'wait_for_services', 1, 5, 7).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'run_flow', 1, 8, 10).
+python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'main', 1, 3, 5).
+python_function('v2/examples/docker_uri_flow/python-worker/server.py', 'response', 3, 1, 8).
+python_function('v2/examples/docker_uri_flow/python-worker/server.py', 'normalize', 1, 1, 6).
+python_function('v2/examples/docker_uri_flow/python-worker/server.py', 'summary', 1, 1, 2).
+python_function('v2/examples/docker_uri_flow/python-worker/server.py', 'dispatch', 2, 3, 2).
+python_function('v2/examples/docker_uri_flow/shell-worker/server.py', 'response', 3, 1, 8).
+python_function('v2/examples/docker_uri_flow/shell-worker/server.py', 'dispatch', 2, 2, 3).
+python_function('v2/examples/docker_uri_flow/test_flow_e2e.py', 'load_runner', 0, 1, 3).
+python_function('v2/examples/docker_uri_flow/test_flow_e2e.py', 'free_port', 0, 1, 3).
+python_function('v2/examples/docker_uri_flow/test_flow_e2e.py', 'start', 3, 2, 4).
+python_function('v2/examples/docker_uri_flow/test_flow_e2e.py', 'wait_health', 2, 4, 4).
+python_function('v2/examples/docker_uri_flow/test_flow_e2e.py', 'run_e2e', 0, 11, 19).
+python_function('v2/examples/docker_uri_flow/test_flow_e2e.py', 'test_cross_service_flow_runs_without_docker', 0, 1, 1).
+python_function('v2/examples/docker_uri_flow/test_flow_runner.py', 'load_runner', 0, 1, 3).
+python_function('v2/examples/docker_uri_flow/test_flow_runner.py', 'test_parse_compact_uri_flow', 0, 4, 2).
+python_function('v2/examples/docker_uri_flow/test_flow_runner.py', 'test_registry_uri_lookup', 0, 4, 3).
+python_function('v2/examples/docker_uri_flow/test_flow_runner.py', 'test_registry_uri_lookup_prefers_full_uri_index', 0, 5, 4).
+python_function('v2/examples/docker_uri_flow/test_flow_runner.py', 'test_registry_dispatch_distinguishes_targets_with_same_segments', 0, 3, 2).
+python_function('v2/examples/docker_uri_flow/test_service_adapter.py', 'registry', 0, 2, 4).
+python_function('v2/examples/docker_uri_flow/test_service_adapter.py', 'free_port', 0, 1, 3).
+python_function('v2/examples/docker_uri_flow/test_service_adapter.py', 'wait_health', 2, 4, 4).
+python_function('v2/examples/docker_uri_flow/test_service_adapter.py', 'test_dry_run_plans_the_http_call_without_network', 0, 4, 3).
+python_function('v2/examples/docker_uri_flow/test_service_adapter.py', 'test_schema_validation_runs_before_dispatch', 0, 3, 2).
+python_function('v2/examples/docker_uri_flow/test_service_adapter.py', 'test_unknown_uri_is_a_registry_error', 0, 3, 2).
+python_function('v2/examples/docker_uri_flow/test_service_adapter.py', 'test_service_dispatch_calls_live_workers', 0, 10, 13).
+python_function('v2/examples/docker_uri_flow/tester/run_compose_test.py', 'get', 1, 1, 4).
+python_function('v2/examples/docker_uri_flow/tester/run_compose_test.py', 'wait_healthy', 2, 3, 4).
+python_function('v2/examples/docker_uri_flow/tester/run_compose_test.py', 'main', 0, 9, 7).
+python_function('v2/examples/html_uri_app/backend.py', 'load_env', 1, 6, 7).
+python_function('v2/examples/html_uri_app/backend.py', 'env_bool', 2, 1, 2).
+python_function('v2/examples/html_uri_app/backend.py', 'read_json', 1, 1, 2).
+python_function('v2/examples/html_uri_app/backend.py', 'binding_document', 0, 1, 2).
+python_function('v2/examples/html_uri_app/backend.py', 'registry', 0, 1, 2).
+python_function('v2/examples/html_uri_app/backend.py', 'routes', 0, 4, 4).
+python_function('v2/examples/html_uri_app/backend.py', 'add_log', 3, 2, 2).
+python_function('v2/examples/html_uri_app/backend.py', 'recent_logs', 1, 1, 1).
+python_function('v2/examples/html_uri_app/backend.py', 'json_response', 3, 1, 8).
+python_function('v2/examples/html_uri_app/backend.py', 'execute_policy', 2, 1, 0).
+python_function('v2/examples/html_uri_app/backend.py', 'dispatch', 1, 6, 8).
+python_function('v2/examples/html_uri_app/backend.py', 'dispatch_tool', 1, 7, 7).
+python_function('v2/examples/html_uri_app/backend.py', 'main', 0, 5, 9).
+python_function('v2/examples/multi_transport/run_multi_test.py', 'http_get', 1, 1, 4).
+python_function('v2/examples/multi_transport/run_multi_test.py', 'wait_http', 3, 3, 4).
+python_function('v2/examples/multi_transport/run_multi_test.py', 'wait_grpc', 2, 3, 4).
+python_function('v2/examples/multi_transport/run_multi_test.py', 'route_key', 1, 1, 3).
+python_function('v2/examples/multi_transport/run_multi_test.py', 'detect_conflicts', 1, 5, 5).
+python_function('v2/examples/multi_transport/run_multi_test.py', 'main', 0, 7, 12).
+python_function('v2/examples/multi_transport/worker.py', 'discovery', 0, 2, 1).
+python_function('v2/examples/multi_transport/worker.py', 'serve_http', 0, 1, 19).
+python_function('v2/examples/multi_transport/worker.py', 'serve_grpc', 0, 1, 2).
+python_function('v2/examples/python/test_mcp_a2a.py', 'registry', 0, 1, 3).
+python_function('v2/examples/transports/scan_and_run.py', 'main', 1, 6, 10).
+python_function('v2/examples/transports/test_transports.py', 'test_all_transports_agree', 0, 4, 4).
+python_function('v2/examples/transports/test_transports.py', 'test_schema_validation_is_uniform', 0, 5, 3).
+python_function('v2/examples/transports/test_transports.py', 'test_scan_and_run_cli', 0, 2, 3).
+python_function('v2/examples/transports/transport_lib.py', 'build_registry', 0, 1, 3).
+python_function('v2/examples/transports/transport_lib.py', 'run_inprocess', 4, 2, 1).
+python_function('v2/examples/transports/transport_lib.py', 'run_queue', 4, 1, 7).
+python_function('v2/examples/transports/transport_lib.py', 'serverless_handler', 2, 1, 2).
+python_function('v2/examples/transports/transport_lib.py', 'start_http_worker', 2, 1, 19).
+python_function('v2/examples/transports/transport_lib.py', 'run_via', 4, 6, 13).
+python_function('v2/examples/transports/transport_lib.py', 'grpc_available', 0, 2, 0).
+python_function('v2/examples/transports/transport_lib.py', 'available_transports', 0, 4, 1).
 
 % ── Python Classes ───────────────────────────────────────
 python_class('adapters/python/tests/test_urihandler.py', 'UriHandlerTests').
@@ -1032,7 +1044,7 @@ python_class('examples/reference_adapters/python-server.py', 'Handler').
 python_method('Handler', 'do_POST', 0, 5, 8).
 python_method('Handler', 'log_message', 1, 1, 0).
 python_method('Handler', 'write_json', 2, 1, 8).
-python_class('v7/examples/python/test_extend.py', 'ExtendRegistryTests').
+python_class('v1/examples/python/test_extend.py', 'ExtendRegistryTests').
 python_method('ExtendRegistryTests', 'setUp', 0, 1, 1).
 python_method('ExtendRegistryTests', 'test_all_endpoints_live_in_one_registry', 0, 1, 1).
 python_method('ExtendRegistryTests', 'test_bash_function_dry_run_renders_safe_argv', 0, 1, 2).
@@ -1041,80 +1053,80 @@ python_method('ExtendRegistryTests', 'test_http_missing_param_is_a_params_error'
 python_method('ExtendRegistryTests', 'test_bash_function_executes_for_real', 0, 1, 4).
 python_method('ExtendRegistryTests', 'test_new_script_executes_with_env', 0, 1, 4).
 python_method('ExtendRegistryTests', 'test_shell_template_is_gated', 0, 1, 3).
-python_class('v7/examples/python/test_urihandler_v7.py', 'ParamBindingTests').
+python_class('v1/examples/python/test_urihandler_v1.py', 'ParamBindingTests').
 python_method('ParamBindingTests', 'setUp', 0, 1, 1).
 python_method('ParamBindingTests', 'test_named_params_from_payload_render_into_command', 0, 1, 2).
 python_method('ParamBindingTests', 'test_defaults_apply_when_param_missing', 0, 1, 2).
 python_method('ParamBindingTests', 'test_missing_required_param_is_an_error_even_in_dry_run', 0, 1, 4).
 python_method('ParamBindingTests', 'test_query_string_supplies_params', 0, 1, 2).
 python_method('ParamBindingTests', 'test_legacy_positional_append_when_no_placeholders', 0, 1, 3).
-python_class('v7/examples/python/test_urihandler_v7.py', 'ShorthandTests').
+python_class('v1/examples/python/test_urihandler_v1.py', 'ShorthandTests').
 python_method('ShorthandTests', 'test_string_binding_expands_to_spawn', 0, 1, 3).
-python_class('v7/examples/python/test_urihandler_v7.py', 'DockerAdapterTests').
+python_class('v1/examples/python/test_urihandler_v1.py', 'DockerAdapterTests').
 python_method('DockerAdapterTests', 'setUp', 0, 1, 1).
 python_method('DockerAdapterTests', 'test_docker_exec_builds_command_with_target_as_container', 0, 1, 2).
 python_method('DockerAdapterTests', 'test_docker_run_builds_command_with_mount_and_image', 0, 1, 4).
-python_class('v7/examples/python/test_urihandler_v7.py', 'ExecutionTests').
+python_class('v1/examples/python/test_urihandler_v1.py', 'ExecutionTests').
 python_method('ExecutionTests', 'test_spawn_executes_with_bound_params', 0, 1, 5).
 python_method('ExecutionTests', 'test_env_is_injected_into_the_process', 0, 1, 4).
 python_method('ExecutionTests', 'test_stdin_is_passed_to_the_process', 0, 1, 4).
 python_method('ExecutionTests', 'test_execute_is_denied_by_default', 0, 1, 4).
-python_class('v7/examples/python/test_urihandler_v7.py', 'CliTests').
+python_class('v1/examples/python/test_urihandler_v1.py', 'CliTests').
 python_method('CliTests', 'test_cli_compile_and_run_dry', 0, 1, 6).
-python_class('v8/examples/docker_uri_flow/python-worker/server.py', 'Handler').
+python_class('v2/examples/docker_uri_flow/python-worker/server.py', 'Handler').
 python_method('Handler', 'log_message', 1, 1, 0).
 python_method('Handler', 'do_GET', 0, 3, 1).
 python_method('Handler', 'do_POST', 0, 6, 8).
-python_class('v8/examples/docker_uri_flow/shell-worker/server.py', 'Handler').
+python_class('v2/examples/docker_uri_flow/shell-worker/server.py', 'Handler').
 python_method('Handler', 'log_message', 1, 1, 0).
 python_method('Handler', 'do_GET', 0, 3, 1).
 python_method('Handler', 'do_POST', 0, 6, 8).
-python_class('v8/examples/html_uri_app/backend.py', 'Handler').
+python_class('v2/examples/html_uri_app/backend.py', 'Handler').
 python_method('Handler', 'log_message', 1, 1, 1).
 python_method('Handler', 'do_GET', 0, 8, 14).
 python_method('Handler', 'do_POST', 0, 4, 6).
 python_method('Handler', 'read_body', 0, 3, 5).
 python_method('Handler', 'serve_static', 1, 7, 13).
-python_class('v8/examples/python/test_adopt.py', 'SpreadArgsTests').
+python_class('v2/examples/python/test_adopt.py', 'SpreadArgsTests').
 python_method('SpreadArgsTests', 'test_spread_array_param_expands_into_argv', 0, 1, 6).
 python_method('SpreadArgsTests', 'test_spread_defaults_to_empty', 0, 1, 4).
 python_method('SpreadArgsTests', 'test_validate_accepts_spread_placeholder', 0, 1, 3).
-python_class('v8/examples/python/test_adopt.py', 'PythonPackageAdoptionTests').
+python_class('v2/examples/python/test_adopt.py', 'PythonPackageAdoptionTests').
 python_method('PythonPackageAdoptionTests', 'test_console_scripts_become_passthrough_commands', 0, 4, 4).
 python_method('PythonPackageAdoptionTests', 'test_adopted_command_runs_with_passthrough_args', 0, 2, 6).
-python_class('v8/examples/python/test_adopt.py', 'NpmPackageAdoptionTests').
+python_class('v2/examples/python/test_adopt.py', 'NpmPackageAdoptionTests').
 python_method('NpmPackageAdoptionTests', 'test_bin_field_becomes_npx_command', 0, 1, 7).
-python_class('v8/examples/python/test_adopt.py', 'InitTests').
+python_class('v2/examples/python/test_adopt.py', 'InitTests').
 python_method('InitTests', 'test_init_builds_binding_document_from_project', 0, 1, 3).
-python_class('v8/examples/python/test_adopt.py', 'CliTests').
+python_class('v2/examples/python/test_adopt.py', 'CliTests').
 python_method('CliTests', 'test_add_python_package_compile_and_run', 0, 1, 6).
-python_class('v8/examples/python/test_mcp_a2a.py', 'McpProjectionTests').
+python_class('v2/examples/python/test_mcp_a2a.py', 'McpProjectionTests').
 python_method('McpProjectionTests', 'setUp', 0, 1, 1).
 python_method('McpProjectionTests', 'test_mcp_manifest_exposes_tools_with_json_schema', 0, 2, 4).
 python_method('McpProjectionTests', 'test_tool_index_maps_back_to_uris', 0, 1, 3).
 python_method('McpProjectionTests', 'test_call_tool_dry_run_renders_command', 0, 1, 4).
 python_method('McpProjectionTests', 'test_call_unknown_tool_raises', 0, 1, 2).
-python_class('v8/examples/python/test_mcp_a2a.py', 'A2aCardTests').
+python_class('v2/examples/python/test_mcp_a2a.py', 'A2aCardTests').
 python_method('A2aCardTests', 'test_agent_card_lists_skills', 0, 3, 7).
-python_class('v8/examples/python/test_mcp_a2a.py', 'McpServerTests').
+python_class('v2/examples/python/test_mcp_a2a.py', 'McpServerTests').
 python_method('McpServerTests', 'test_jsonrpc_roundtrip_over_streams', 0, 2, 13).
-python_class('v8/examples/python/test_mcp_a2a.py', 'BackendInteropTests').
+python_class('v2/examples/python/test_mcp_a2a.py', 'BackendInteropTests').
 python_method('BackendInteropTests', 'test_backend_serves_mcp_tools_and_calls', 0, 5, 26).
-python_class('v8/examples/python/test_urihandler_v8.py', 'DecoratorTests').
+python_class('v2/examples/python/test_urihandler_v2.py', 'DecoratorTests').
 python_method('DecoratorTests', 'test_decorator_generates_schema_and_argv_runtime', 0, 1, 8).
 python_method('DecoratorTests', 'test_shell_decorator_executes_only_when_shell_policy_allows_it', 0, 1, 8).
-python_class('v8/examples/python/test_urihandler_v8.py', 'SchemaRuntimeTests').
+python_class('v2/examples/python/test_urihandler_v2.py', 'SchemaRuntimeTests').
 python_method('SchemaRuntimeTests', 'setUp', 0, 1, 3).
 python_method('SchemaRuntimeTests', 'test_json_schema_defaults_are_applied_before_rendering', 0, 1, 2).
 python_method('SchemaRuntimeTests', 'test_missing_required_input_is_schema_error', 0, 1, 4).
 python_method('SchemaRuntimeTests', 'test_shell_binding_is_real_shell_runtime_when_allowed', 0, 1, 4).
 python_method('SchemaRuntimeTests', 'test_document_validation_catches_unresolved_placeholders', 0, 1, 3).
-python_class('v8/examples/python/test_urihandler_v8.py', 'ArtifactAdoptionTests').
-python_method('ArtifactAdoptionTests', 'test_artifact_scan_builds_v8_bindings_from_common_standards', 0, 2, 5).
+python_class('v2/examples/python/test_urihandler_v2.py', 'ArtifactAdoptionTests').
+python_method('ArtifactAdoptionTests', 'test_artifact_scan_builds_v2_bindings_from_common_standards', 0, 2, 5).
 python_method('ArtifactAdoptionTests', 'test_cli_scan_validate_compile_and_run', 0, 1, 6).
 python_method('ArtifactAdoptionTests', 'test_cli_add_pypi_and_command_binding_in_one_line', 0, 1, 6).
-python_class('v8/examples/python/test_urihandler_v8.py', 'HtmlAppTests').
-python_method('HtmlAppTests', 'test_html_backend_dispatches_v8_runtime', 0, 5, 23).
+python_class('v2/examples/python/test_urihandler_v2.py', 'HtmlAppTests').
+python_method('HtmlAppTests', 'test_html_backend_dispatches_v2_runtime', 0, 5, 23).
 
 % ── Dependencies ─────────────────────────────────────────
 
@@ -1159,106 +1171,104 @@ sumd_workflow_step('test-js', 1, '$(NODE) --test adapters/js/*.test.js').
 sumd_workflow('test-python', 'manual').
 sumd_workflow_step('test-python', 1, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s adapters/python/tests -p \'test_*.py\'').
 sumd_workflow('test-c', 'manual').
-sumd_workflow_step('test-c', 1, '$(CC) -Wall -Wextra -Werror -Iadapters/c adapters/c/urihandler.c adapters/c/urihandler_test.c -o /tmp/urihandler-c-test').
-sumd_workflow_step('test-c', 2, '/tmp/urihandler-c-test').
+sumd_workflow_step('test-c', 1, '$(CC) -Wall -Wextra -Werror -Iadapters/c adapters/c/urirun.c adapters/c/urirun_test.c -o /tmp/urirun-c-test').
+sumd_workflow_step('test-c', 2, '/tmp/urirun-c-test').
 sumd_workflow('test-examples', 'manual').
 sumd_workflow_step('test-examples', 1, '$(NODE) --check examples/reference_adapters/node-server.js').
 sumd_workflow_step('test-examples', 2, '$(PYTHON) -m py_compile examples/reference_adapters/python-server.py').
-sumd_workflow_step('test-examples', 3, '$(CC) -Wall -Wextra -Werror -Iadapters/c -c examples/reference_adapters/firmware-pseudo.c -o /tmp/urihandler-firmware-example.o').
+sumd_workflow_step('test-examples', 3, '$(CC) -Wall -Wextra -Werror -Iadapters/c -c examples/reference_adapters/firmware-pseudo.c -o /tmp/urirun-firmware-example.o').
 sumd_workflow('test-v7', 'manual').
 sumd_workflow_step('test-v7', 1, '$(NODE) --test v7/examples/js/*.test.js').
 sumd_workflow_step('test-v7', 2, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v7/examples/python -p \'test_*.py\'').
 sumd_workflow_step('test-v7', 3, '$(NODE) v7/examples/js/example.js').
 sumd_workflow_step('test-v7', 4, 'PYTHONPATH=adapters/python $(PYTHON) v7/examples/python/example.py').
-sumd_workflow_step('test-v7', 5, '$(PYTHON) -m json.tool v7/examples/json/bindings.v7.example.json >/tmp/urihandler-v7-bindings.json').
-sumd_workflow_step('test-v7', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v7 compile v7/examples/json/bindings.v7.example.json --out /tmp/urihandler-v7.registry.json --generated-at 2026-06-19T00:00:00.000Z').
+sumd_workflow_step('test-v7', 5, '$(PYTHON) -m json.tool v7/examples/json/bindings.v7.example.json >/tmp/urirun-v7-bindings.json').
+sumd_workflow_step('test-v7', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 compile v7/examples/json/bindings.v7.example.json --out /tmp/urirun-v7.registry.json --generated-at 2026-06-19T00:00:00.000Z').
 sumd_workflow('test-v8', 'manual').
 sumd_workflow_step('test-v8', 1, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v8/examples/python -p \'test_*.py\'').
-sumd_workflow_step('test-v8', 2, '$(NODE) v8/examples/generators/nodejs/generate-bindings.mjs >/tmp/urihandler-v8-gen.json').
+sumd_workflow_step('test-v8', 2, '$(NODE) v8/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v8-gen.json').
 sumd_workflow_step('test-v8', 3, '$(NODE) v8/examples/html_uri_app/test.mjs').
-sumd_workflow_step('test-v8', 4, '$(PYTHON) -m json.tool v8/examples/json/bindings.v8.example.json >/tmp/urihandler-v8-bindings.json').
-sumd_workflow_step('test-v8', 5, 'PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8 compile v8/examples/json/bindings.v8.example.json --out /tmp/urihandler-v8.registry.json').
-sumd_workflow_step('test-v8', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8_mcp tools /tmp/urihandler-v8.registry.json >/tmp/urihandler-v8-mcp.json').
-sumd_workflow_step('test-v8', 7, 'PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8_mcp card /tmp/urihandler-v8.registry.json >/tmp/urihandler-v8-a2a.json').
-sumd_workflow_step('test-v8', 8, 'PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8_adopt add-python-package pip --out /tmp/urihandler-v8-adopt.bindings.json').
-sumd_workflow_step('test-v8', 9, 'PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v8 compile /tmp/urihandler-v8-adopt.bindings.json --out /tmp/urihandler-v8-adopt.registry.json').
+sumd_workflow_step('test-v8', 4, '$(PYTHON) -m json.tool v8/examples/json/bindings.v8.example.json >/tmp/urirun-v8-bindings.json').
+sumd_workflow_step('test-v8', 5, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile v8/examples/json/bindings.v8.example.json --out /tmp/urirun-v8.registry.json').
+sumd_workflow_step('test-v8', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp tools /tmp/urirun-v8.registry.json >/tmp/urirun-v8-mcp.json').
+sumd_workflow_step('test-v8', 7, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp card /tmp/urirun-v8.registry.json >/tmp/urirun-v8-a2a.json').
+sumd_workflow_step('test-v8', 8, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_adopt add-python-package pip --out /tmp/urirun-v8-adopt.bindings.json').
+sumd_workflow_step('test-v8', 9, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile /tmp/urirun-v8-adopt.bindings.json --out /tmp/urirun-v8-adopt.registry.json').
 sumd_workflow('clean', 'manual').
-sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urihandler/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v7/examples/python/__pycache__ v8/examples/python/__pycache__ v8/examples/docker_uri_flow/__pycache__ v8/examples/transports/__pycache__ __pycache__').
+sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v7/examples/python/__pycache__ v8/examples/python/__pycache__ v8/examples/docker_uri_flow/__pycache__ v8/examples/transports/__pycache__ __pycache__').
 ```
 
 ## Call Graph
 
-*342 nodes · 396 edges · 28 modules · CC̄=3.7*
+*391 nodes · 464 edges · 30 modules · CC̄=3.7*
 
 ### Hubs (by degree)
 
 | Function | CC | in | out | total |
 |----------|----|----|-----|-------|
-| `scan_path` *(in adapters.python.urihandler._scan)* | 15 ⚠ | 4 | 27 | **31** |
-| `normalize_binding` *(in adapters.python.urihandler._scan)* | 11 ⚠ | 17 | 12 | **29** |
+| `scan_path` *(in adapters.python.urirun._scan)* | 15 ⚠ | 4 | 27 | **31** |
+| `normalize_binding` *(in adapters.python.urirun._scan)* | 11 ⚠ | 17 | 12 | **29** |
 | `parse_flow` *(in v8.examples.docker_uri_flow.orchestrator.flow_runner)* | 24 ⚠ | 1 | 26 | **27** |
-| `validate_binding_document` *(in adapters.python.urihandler.v8)* | 12 ⚠ | 2 | 24 | **26** |
-| `start_http_worker` *(in v8.examples.transports.transport_lib)* | 1 | 1 | 24 | **25** |
-| `serve_mcp` *(in adapters.python.urihandler.v8_mcp)* | 15 ⚠ | 1 | 23 | **24** |
-| `run` *(in adapters.python.urihandler.v7)* | 14 ⚠ | 1 | 23 | **24** |
-| `run` *(in adapters.python.urihandler.v8)* | 15 ⚠ | 1 | 22 | **23** |
+| `validate_binding_document` *(in adapters.python.urirun.v2)* | 12 ⚠ | 2 | 24 | **26** |
+| `start_http_worker` *(in v2.examples.transports.transport_lib)* | 1 | 1 | 24 | **25** |
+| `run` *(in adapters.python.urirun.v1)* | 14 ⚠ | 1 | 23 | **24** |
+| `serve_mcp` *(in adapters.python.urirun.v2_mcp)* | 15 ⚠ | 1 | 23 | **24** |
+| `scan_artifacts` *(in adapters.python.urirun.v2)* | 11 ⚠ | 4 | 19 | **23** |
 
 ```toon markpact:analysis path=project/calls.toon.yaml
 # code2llm call graph | /home/tom/github/tellmesh/urihandler
-# generated in 0.16s
-# nodes: 342 | edges: 396 | modules: 28
+# generated in 0.18s
+# nodes: 391 | edges: 464 | modules: 30
 # CC̄=3.7
 
 HUBS[20]:
-  adapters.python.urihandler._scan.scan_path
+  adapters.python.urirun._scan.scan_path
     CC=15  in:4  out:27  total:31
-  adapters.python.urihandler._scan.normalize_binding
+  adapters.python.urirun._scan.normalize_binding
     CC=11  in:17  out:12  total:29
   v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
     CC=24  in:1  out:26  total:27
-  adapters.python.urihandler.v8.validate_binding_document
+  adapters.python.urirun.v2.validate_binding_document
     CC=12  in:2  out:24  total:26
-  v8.examples.transports.transport_lib.start_http_worker
+  v2.examples.transports.transport_lib.start_http_worker
     CC=1  in:1  out:24  total:25
-  adapters.python.urihandler.v8_mcp.serve_mcp
-    CC=15  in:1  out:23  total:24
-  adapters.python.urihandler.v7.run
+  adapters.python.urirun.v1.run
     CC=14  in:1  out:23  total:24
-  adapters.python.urihandler.v8.run
-    CC=15  in:1  out:22  total:23
-  adapters.python.urihandler.v8.scan_artifacts
+  adapters.python.urirun.v2_mcp.serve_mcp
+    CC=15  in:1  out:23  total:24
+  adapters.python.urirun.v2.scan_artifacts
     CC=11  in:4  out:19  total:23
-  adapters.python.urihandler._runtime.evaluate_policy
+  adapters.python.urirun.v2.run
+    CC=15  in:1  out:22  total:23
+  adapters.python.urirun._runtime.evaluate_policy
     CC=16  in:3  out:19  total:22
-  v8.examples.html_uri_app.backend.Handler.do_GET
-    CC=8  in:0  out:21  total:21
-  adapters.python.urihandler._runtime.run
-    CC=10  in:1  out:20  total:21
-  adapters.python.urihandler._registry.discover_manifest
+  v2.examples.device_mesh_lab.www.app.escapeHtml
+    CC=1  in:20  out:2  total:22
+  adapters.python.urirun._registry.discover_manifest
     CC=14  in:2  out:19  total:21
-  adapters.python.urihandler._registry.discover_docker_labels
+  adapters.python.urirun._runtime.run
+    CC=10  in:1  out:20  total:21
+  v2.examples.html_uri_app.backend.Handler.do_GET
+    CC=8  in:0  out:21  total:21
+  adapters.python.urirun._registry.discover_docker_labels
     CC=14  in:2  out:18  total:20
-  adapters.python.urihandler._scan.load_bindings_from_manifest
-    CC=14  in:3  out:16  total:19
-  adapters.python.urihandler._registry.coerce_route_source
+  adapters.python.urirun._registry.coerce_route_source
     CC=11  in:5  out:14  total:19
-  v8.examples.html_uri_app.backend.json_response
+  adapters.python.urirun._scan.load_bindings_from_manifest
+    CC=14  in:3  out:16  total:19
+  v2.examples.html_uri_app.backend.json_response
     CC=1  in:10  out:9  total:19
-  adapters.python.urihandler._registry.build_registry_document
-    CC=10  in:2  out:16  total:18
-  adapters.python.urihandler.v8_grpc.serve
-    CC=2  in:1  out:17  total:18
-  adapters.python.urihandler._scan._read_toml
-    CC=12  in:1  out:17  total:18
+  v8.examples.docker_uri_flow.shell-worker.server.response
+    CC=1  in:10  out:9  total:19
+  adapters.python.urirun.v2.expand_binding
+    CC=16  in:9  out:9  total:18
 
 MODULES:
-  adapters.c.urihandler  [5 funcs]
+  adapters.c.urirun  [3 funcs]
     copy_token  CC=2  out:1
     is_path_end  CC=3  out:0
     memcpy  CC=1  out:1
-    memset  CC=5  out:0
-    urihandler_parse  CC=20  out:5
-  adapters.c.urihandler_test  [2 funcs]
+  adapters.c.urirun_test  [2 funcs]
     assert  CC=1  out:0
     main  CC=2  out:3
   adapters.js  [5 funcs]
@@ -1271,7 +1281,7 @@ MODULES:
     build_invocation  CC=1  out:2
     dispatch  CC=4  out:10
     parse_uri  CC=7  out:13
-  adapters.python.urihandler._registry  [35 funcs]
+  adapters.python.urirun._registry  [35 funcs]
     _default_openapi_route  CC=9  out:11
     _discover_python_module  CC=1  out:2
     _emit_json  CC=3  out:3
@@ -1282,7 +1292,7 @@ MODULES:
     _route_entry_equal  CC=2  out:2
     _walk_route_entries  CC=5  out:3
     add_route  CC=5  out:6
-  adapters.python.urihandler._runtime  [11 funcs]
+  adapters.python.urirun._runtime  [11 funcs]
     _matches_any  CC=3  out:1
     _truncate  CC=3  out:2
     check  CC=1  out:7
@@ -1293,7 +1303,7 @@ MODULES:
     run  CC=10  out:20
     run_local_function  CC=2  out:6
     run_shell_template  CC=3  out:11
-  adapters.python.urihandler._scan  [33 funcs]
+  adapters.python.urirun._scan  [33 funcs]
     _read_toml  CC=12  out:17
     binding_to_route_source  CC=3  out:3
     build_binding_document  CC=3  out:6
@@ -1304,7 +1314,7 @@ MODULES:
     iter_project_files  CC=5  out:4
     list_bindings  CC=2  out:3
     load_binding_source  CC=5  out:11
-  adapters.python.urihandler.v7  [19 funcs]
+  adapters.python.urirun.v1  [19 funcs]
     _binding_pairs  CC=8  out:11
     _env_flags  CC=3  out:5
     _has_placeholders  CC=2  out:3
@@ -1315,7 +1325,7 @@ MODULES:
     expand_binding  CC=7  out:6
     expand_bindings  CC=2  out:2
     load_registry_arg  CC=4  out:9
-  adapters.python.urihandler.v8  [43 funcs]
+  adapters.python.urirun.v2  [43 funcs]
     _apply_defaults  CC=14  out:12
     _binding_pairs  CC=8  out:11
     _bindings_as_map  CC=2  out:2
@@ -1326,13 +1336,13 @@ MODULES:
     _load_manifest  CC=1  out:2
     _load_many  CC=3  out:7
     _manifest_candidates  CC=2  out:3
-  adapters.python.urihandler.v8_adopt  [5 funcs]
+  adapters.python.urirun.v2_adopt  [5 funcs]
     _command_binding  CC=2  out:2
     installed_python_bindings  CC=4  out:3
     npm_package_bindings  CC=4  out:12
     passthrough_schema  CC=2  out:1
     python_package_bindings  CC=4  out:6
-  adapters.python.urihandler.v8_grpc  [8 funcs]
+  adapters.python.urirun.v2_grpc  [8 funcs]
     _method  CC=2  out:1
     _route_list  CC=2  out:5
     _validate  CC=5  out:4
@@ -1341,7 +1351,7 @@ MODULES:
     list_routes  CC=1  out:3
     serve  CC=2  out:17
     stream  CC=4  out:7
-  adapters.python.urihandler.v8_mcp  [9 funcs]
+  adapters.python.urirun.v2_mcp  [9 funcs]
     _input_schema  CC=4  out:3
     build_tool_index  CC=2  out:1
     call_tool  CC=3  out:4
@@ -1351,7 +1361,7 @@ MODULES:
     to_mcp_manifest  CC=4  out:2
     to_mcp_tools  CC=4  out:7
     tool_name  CC=1  out:4
-  adapters.python.urihandler.v8_service  [3 funcs]
+  adapters.python.urirun.v2_service  [3 funcs]
     _post  CC=3  out:10
     call  CC=9  out:10
     service_base  CC=3  out:4
@@ -1364,7 +1374,7 @@ MODULES:
     writeJson  CC=1  out:4
   examples.reference_adapters.python-server  [1 funcs]
     do_POST  CC=5  out:11
-  v7.examples.html_uri_app.app  [21 funcs]
+  v1.examples.html_uri_app.app  [21 funcs]
     active  CC=1  out:1
     appendLog  CC=1  out:4
     badge  CC=1  out:1
@@ -1375,7 +1385,7 @@ MODULES:
     executeMode  CC=5  out:0
     inputs  CC=4  out:4
     items  CC=4  out:4
-  v7.examples.html_uri_app.uri-runtime-v7  [29 funcs]
+  v1.examples.html_uri_app.uri-runtime-v1  [29 funcs]
     activePolicy  CC=1  out:1
     adapter  CC=3  out:1
     allowed  CC=4  out:1
@@ -1386,7 +1396,7 @@ MODULES:
     entries  CC=1  out:0
     evaluatePolicy  CC=18  out:3
     expandBinding  CC=10  out:1
-  v7.examples.js.urihandler-v7  [35 funcs]
+  v1.examples.js.urirun-v1  [34 funcs]
     DEFAULT_TIMEOUT  CC=5  out:11
     OUTPUT_LIMIT  CC=5  out:11
     allow  CC=2  out:2
@@ -1397,10 +1407,43 @@ MODULES:
     deny  CC=2  out:2
     envFlags  CC=3  out:4
     evaluatePolicy  CC=6  out:4
-  v8.examples.decorators.example  [3 funcs]
+  v2.examples.decorators.example  [3 funcs]
     echo_message  CC=1  out:1
     shell_echo  CC=1  out:1
     transcode  CC=1  out:1
+  v2.examples.device_mesh_lab.www.app  [48 funcs]
+    appendTimeline  CC=3  out:3
+    data  CC=2  out:1
+    defaultValueFor  CC=20  out:2
+    description  CC=3  out:1
+    deviceRows  CC=2  out:1
+    escapeHtml  CC=1  out:2
+    extractRunResult  CC=10  out:0
+    filter  CC=3  out:1
+    frontendRows  CC=1  out:1
+    groups  CC=6  out:6
+  v2.examples.generators.php.example  [2 funcs]
+    bindingFromFunction  CC=2  out:9
+    schemaType  CC=2  out:3
+  v2.examples.html_uri_app.backend  [14 funcs]
+    do_GET  CC=8  out:21
+    do_POST  CC=4  out:10
+    log_message  CC=1  out:1
+    add_log  CC=2  out:2
+    binding_document  CC=1  out:2
+    dispatch  CC=6  out:14
+    dispatch_tool  CC=7  out:13
+    env_bool  CC=1  out:2
+    json_response  CC=1  out:9
+    load_env  CC=6  out:10
+  v2.examples.transports.transport_lib  [7 funcs]
+    available_transports  CC=4  out:1
+    grpc_available  CC=2  out:0
+    run_inprocess  CC=2  out:1
+    run_queue  CC=1  out:10
+    run_via  CC=6  out:16
+    serverless_handler  CC=1  out:2
+    start_http_worker  CC=1  out:24
   v8.examples.docker_uri_flow.node-worker.server  [6 funcs]
     body  CC=2  out:1
     readBody  CC=2  out:4
@@ -1425,12 +1468,11 @@ MODULES:
     dispatch  CC=3  out:2
     normalize  CC=1  out:6
     summary  CC=1  out:2
-  v8.examples.docker_uri_flow.shell-worker.server  [2 funcs]
+  v8.examples.docker_uri_flow.shell-worker.server  [4 funcs]
     do_GET  CC=3  out:3
     do_POST  CC=6  out:11
-  v8.examples.generators.php.example  [2 funcs]
-    bindingFromFunction  CC=2  out:9
-    schemaType  CC=2  out:3
+    dispatch  CC=2  out:5
+    response  CC=1  out:9
   v8.examples.html_uri_app.app  [15 funcs]
     card  CC=2  out:2
     classFor  CC=1  out:2
@@ -1442,77 +1484,61 @@ MODULES:
     payloadDefaults  CC=4  out:0
     refreshLogs  CC=5  out:7
     renderActions  CC=5  out:5
-  v8.examples.html_uri_app.backend  [14 funcs]
-    do_GET  CC=8  out:21
-    do_POST  CC=4  out:10
-    log_message  CC=1  out:1
-    add_log  CC=2  out:2
-    binding_document  CC=1  out:2
-    dispatch  CC=6  out:14
-    dispatch_tool  CC=7  out:13
-    env_bool  CC=1  out:2
-    json_response  CC=1  out:9
-    load_env  CC=6  out:10
-  v8.examples.transports.transport_lib  [7 funcs]
-    available_transports  CC=4  out:1
-    grpc_available  CC=2  out:0
-    run_inprocess  CC=2  out:1
-    run_queue  CC=1  out:10
-    run_via  CC=6  out:16
-    serverless_handler  CC=1  out:2
-    start_http_worker  CC=1  out:24
+  www.docs  [2 funcs]
+    inline_markdown  CC=1  out:4
+    render_markdown  CC=15  out:13
 
 EDGES:
-  v7.examples.js.urihandler-v7.DEFAULT_TIMEOUT → v7.examples.js.urihandler-v7.match
-  v7.examples.js.urihandler-v7.OUTPUT_LIMIT → v7.examples.js.urihandler-v7.match
-  v7.examples.js.urihandler-v7.parseUri → v7.examples.js.urihandler-v7.match
-  v7.examples.js.urihandler-v7.setRoute → v7.examples.js.urihandler-v7.translate
-  v7.examples.js.urihandler-v7.setRoute → v7.examples.js.urihandler-v7.parseUri
-  v7.examples.js.urihandler-v7.compileRegistryDocument → v7.examples.js.urihandler-v7.setRoute
-  v7.examples.js.urihandler-v7.routeRows → v7.examples.js.urihandler-v7.registryTree
-  v7.examples.js.urihandler-v7.evaluatePolicy → v7.examples.js.urihandler-v7.mergePolicy
-  v7.examples.js.urihandler-v7.evaluatePolicy → v7.examples.js.urihandler-v7.globMatch
-  v7.examples.js.urihandler-v7.merged → v7.examples.js.urihandler-v7.routeRows
-  v7.examples.js.urihandler-v7.merged → v7.examples.js.urihandler-v7.evaluatePolicy
-  v7.examples.js.urihandler-v7.deny → v7.examples.js.urihandler-v7.globMatch
-  v7.examples.js.urihandler-v7.allow → v7.examples.js.urihandler-v7.globMatch
-  v7.examples.js.urihandler-v7.check → v7.examples.js.urihandler-v7.parseUri
-  v7.examples.js.urihandler-v7.check → v7.examples.js.urihandler-v7.translate
-  v7.examples.js.urihandler-v7.check → v7.examples.js.urihandler-v7.registryTree
-  v7.examples.js.urihandler-v7.check → v7.examples.js.urihandler-v7.evaluatePolicy
-  v7.examples.js.urihandler-v7.check → v7.examples.js.urihandler-v7.mergePolicy
-  v7.examples.js.urihandler-v7.renderCommand → v7.examples.js.urihandler-v7.renderValue
-  v7.examples.js.urihandler-v7.renderedEnv → v7.examples.js.urihandler-v7.renderValue
-  v7.examples.js.urihandler-v7.runProcess → v7.examples.js.urihandler-v7.renderedEnv
-  v7.examples.js.urihandler-v7.runProcess → v7.examples.js.urihandler-v7.truncate
-  v7.examples.js.urihandler-v7.envFlags → v7.examples.js.urihandler-v7.renderValue
-  v7.examples.js.urihandler-v7.tokens → v7.examples.js.urihandler-v7.runProcess
-  v7.examples.js.urihandler-v7.inner → v7.examples.js.urihandler-v7.renderValue
-  v7.examples.js.urihandler-v7.run → v7.examples.js.urihandler-v7.mergePolicy
-  v7.examples.js.urihandler-v7.run → v7.examples.js.urihandler-v7.parseUri
-  v7.examples.js.urihandler-v7.run → v7.examples.js.urihandler-v7.translate
-  v7.examples.js.urihandler-v7.run → v7.examples.js.urihandler-v7.registryTree
-  v7.examples.js.urihandler-v7.run → v7.examples.js.urihandler-v7.resolveParams
-  v7.examples.js.urihandler-v7.run → v7.examples.js.urihandler-v7.evaluatePolicy
-  v7.examples.js.urihandler-v7.run → v7.examples.js.urihandler-v7.executor
-  v7.examples.js.urihandler-v7.listRoutes → v7.examples.js.urihandler-v7.mergePolicy
-  v7.examples.js.urihandler-v7.listRoutes → v7.examples.js.urihandler-v7.routeRows
-  v7.examples.js.urihandler-v7.listRoutes → v7.examples.js.urihandler-v7.evaluatePolicy
-  v7.examples.js.urihandler-v7.expandBinding → v7.examples.js.urihandler-v7.tokenize
-  v7.examples.js.urihandler-v7.expandBinding → v7.examples.js.urihandler-v7.inferKind
-  v7.examples.js.urihandler-v7.expandBinding → v7.examples.js.urihandler-v7.defaultAdapter
-  v7.examples.js.urihandler-v7.expandBindings → v7.examples.js.urihandler-v7.expandBinding
-  v7.examples.js.urihandler-v7.compileRegistry → v7.examples.js.urihandler-v7.compileRegistryDocument
-  v7.examples.js.urihandler-v7.compileRegistry → v7.examples.js.urihandler-v7.expandBindings
-  v7.examples.html_uri_app.uri-runtime-v7.parseUri → v7.examples.html_uri_app.uri-runtime-v7.match
-  v7.examples.html_uri_app.uri-runtime-v7.routeKey → v7.examples.html_uri_app.uri-runtime-v7.translate
-  v7.examples.html_uri_app.uri-runtime-v7.routeKey → v7.examples.html_uri_app.uri-runtime-v7.parseUri
-  v7.examples.html_uri_app.uri-runtime-v7.expandBinding → v7.examples.html_uri_app.uri-runtime-v7.tokenize
-  v7.examples.html_uri_app.uri-runtime-v7.compileBindings → v7.examples.html_uri_app.uri-runtime-v7.entries
-  v7.examples.html_uri_app.uri-runtime-v7.compileBindings → v7.examples.html_uri_app.uri-runtime-v7.routeKey
-  v7.examples.html_uri_app.uri-runtime-v7.compileBindings → v7.examples.html_uri_app.uri-runtime-v7.expandBinding
-  v7.examples.html_uri_app.uri-runtime-v7.resolveParams → v7.examples.html_uri_app.uri-runtime-v7.entries
-  v7.examples.html_uri_app.uri-runtime-v7.renderCommand → v7.examples.html_uri_app.uri-runtime-v7.renderValue
+  examples.reference_adapters.node-server.server → examples.reference_adapters.node-server.writeJson
+  examples.reference_adapters.node-server.server → examples.reference_adapters.node-server.readJson
+  examples.reference_adapters.python-server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.dispatch
+  examples.reference_adapters.firmware-pseudo.handle_uri → examples.reference_adapters.firmware-pseudo.led_set
+  v8.examples.html_uri_app.app.routeResponse → v8.examples.html_uri_app.app.renderActions
+  v8.examples.html_uri_app.app.routeResponse → v8.examples.html_uri_app.app.renderForm
+  v8.examples.html_uri_app.app.renderActions → v8.examples.html_uri_app.app.classFor
+  v8.examples.html_uri_app.app.renderActions → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.renderActions → v8.examples.html_uri_app.app.iconFor
+  v8.examples.html_uri_app.app.renderForm → v8.examples.html_uri_app.app.schemaFor
+  v8.examples.html_uri_app.app.renderForm → v8.examples.html_uri_app.app.payloadDefaults
+  v8.examples.html_uri_app.app.renderForm → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.required → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.defaults → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.inputType → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.refreshLogs → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.data → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.card → v8.examples.html_uri_app.app.renderToolList
+  v8.examples.html_uri_app.app.renderToolList → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.iconFor → v8.examples.html_uri_app.app.classFor
+  v8.examples.docker_uri_flow.shell-worker.server.Handler.do_GET → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.shell-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.dispatch
+  v8.examples.docker_uri_flow.shell-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.node-worker.server.server → v8.examples.docker_uri_flow.node-worker.server.send
+  v8.examples.docker_uri_flow.node-worker.server.server → v8.examples.docker_uri_flow.node-worker.server.readBody
+  v8.examples.docker_uri_flow.node-worker.server.server → v8.examples.docker_uri_flow.node-worker.server.slugify
+  v8.examples.docker_uri_flow.node-worker.server.body → v8.examples.docker_uri_flow.node-worker.server.send
+  v8.examples.docker_uri_flow.node-worker.server.slug → v8.examples.docker_uri_flow.node-worker.server.send
+  v8.examples.docker_uri_flow.python-worker.server.dispatch → v8.examples.docker_uri_flow.python-worker.server.normalize
+  v8.examples.docker_uri_flow.python-worker.server.dispatch → v8.examples.docker_uri_flow.python-worker.server.summary
+  v8.examples.docker_uri_flow.python-worker.server.Handler.do_GET → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.python-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.dispatch
+  v8.examples.docker_uri_flow.python-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_scalar
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.resolve_payload → v8.examples.docker_uri_flow.orchestrator.flow_runner.get_path
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_has_uri → v8.examples.docker_uri_flow.orchestrator.flow_runner.route_key
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_has_uri → v8.examples.docker_uri_flow.orchestrator.flow_runner.normalize_uri
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.validate_flow_registry → v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_route_count
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.validate_flow_registry → v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_has_uri
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.wait_for_services → v8.examples.docker_uri_flow.orchestrator.flow_runner.service_url
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.wait_for_services → v8.examples.docker_uri_flow.orchestrator.flow_runner.json_get
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.validate_flow_registry
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.wait_for_services
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.load_registry
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.resolve_payload
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.json_post
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow
+  v2.examples.device_mesh_lab.www.app.recordActivity → v2.examples.device_mesh_lab.www.app.renderActivityLog
+  v2.examples.device_mesh_lab.www.app.routeBadge → v2.examples.device_mesh_lab.www.app.isRouteSafe
 ```
 
 ## Test Contracts
@@ -1525,4 +1551,4 @@ EDGES:
 
 ## Intent
 
-urihandler
+urirun

@@ -1,4 +1,4 @@
-# code2llm/evolution | 224 func | 16f | 2026-06-19
+# code2llm/evolution | 224 func | 17f | 2026-06-19
 # generated in 0.00s
 
 NEXT[9] (ranked by impact):
@@ -45,10 +45,10 @@ RISKS[3]:
   ⚠ Splitting adapters/python/urirun/_scan.py may break 36 import paths
 
 METRICS-TARGET:
-  CC̄:          4.7 → ≤3.3
+  CC̄:          4.6 → ≤3.2
   max-CC:      21 → ≤10
   god-modules: 4 → 0
-  high-CC(≥15): 8 → ≤4
+  high-CC(≥15): 7 → ≤3
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
@@ -76,4 +76,4 @@ PATTERNS (language parser shared logic):
     - Standardized FunctionInfo/ClassInfo models
 
 HISTORY:
-  prev CC̄=4.7 → now CC̄=4.7
+  prev CC̄=4.7 → now CC̄=4.6

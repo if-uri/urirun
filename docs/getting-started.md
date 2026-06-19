@@ -14,7 +14,7 @@ Scan a project and compile a runtime registry in one command:
 
 ```bash
 urirun scan ./project \
-  --out generated/bindings.v8.json \
+  --out generated/bindings.v2.json \
   --registry-out generated/registry.json
 ```
 
@@ -24,7 +24,7 @@ Python entry points, Makefile targets, and shell scripts.
 ## Inspect routes
 
 ```bash
-urirun validate generated/bindings.v8.json
+urirun validate generated/bindings.v2.json
 urirun list generated/registry.json
 ```
 

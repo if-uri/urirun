@@ -37,7 +37,7 @@ function h(string $value): string
         <h1>One URI registry for commands across code, shell, containers, and services.</h1>
         <p class="lede">Declare a route once, compile it into a registry, and call the same URI from a frontend button, backend handler, shell client, Docker flow, or agent tool.</p>
         <div class="actions">
-          <a class="button primary" href="docs.php?doc=getting-started">Start with v8</a>
+          <a class="button primary" href="docs.php?doc=getting-started">Start with v2</a>
           <a class="button" href="docs.php?doc=commands">CLI commands</a>
         </div>
       </div>
@@ -49,7 +49,7 @@ function h(string $value): string
         </div>
         <pre><code>pip install "git+https://github.com/tellmesh/urirun.git@main#subdirectory=adapters/python"
 urirun scan ./project \
-  --out generated/bindings.v8.json \
+  --out generated/bindings.v2.json \
   --registry-out generated/registry.json
 urirun list generated/registry.json
 urirun run 'tool://local/report/render' --registry generated/registry.json</code></pre>
@@ -59,7 +59,7 @@ urirun run 'tool://local/report/render' --registry generated/registry.json</code
     <section class="facts" aria-label="Project facts">
       <div><span>Runtime</span><strong>urirun</strong></div>
       <div><span>Repository</span><strong>tellmesh/urirun</strong></div>
-      <div><span>Default contract</span><strong>v8 JSON Schema</strong></div>
+      <div><span>Default contract</span><strong>v2 JSON Schema</strong></div>
       <div><span>Execution</span><strong>dry-run first</strong></div>
     </section>
 

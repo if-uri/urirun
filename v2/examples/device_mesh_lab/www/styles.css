@@ -17,19 +17,34 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+}
+
 body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
   margin: 0;
+  padding-bottom: 78px;
 }
 
 header {
-  align-items: end;
+  align-items: center;
+  background: rgba(246, 247, 249, 0.96);
+  border-bottom: 1px solid rgba(217, 225, 234, 0.86);
   display: flex;
   gap: 20px;
   justify-content: space-between;
   padding: 22px 28px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.brand-block {
+  min-width: 270px;
 }
 
 h1,
@@ -63,6 +78,33 @@ h3 {
   gap: 10px;
 }
 
+.top-menu,
+.bottom-menu {
+  background: #eef2f6;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.top-menu {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 360px;
+}
+
+.bottom-menu {
+  bottom: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  overflow-x: auto;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 40;
+}
+
 button {
   background: var(--ink);
   border: 1px solid var(--ink);
@@ -76,6 +118,25 @@ button {
 button + button {
   background: var(--panel);
   border-color: var(--line);
+  color: var(--ink);
+}
+
+.menu-link,
+.bottom-link,
+button.menu-link + button.menu-link,
+button.bottom-link + button.bottom-link {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.menu-link.active,
+.bottom-link.active {
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   color: var(--ink);
 }
 
@@ -151,7 +212,7 @@ input:focus {
 
 .observe-column {
   position: sticky;
-  top: 14px;
+  top: 96px;
 }
 
 .summary-grid {
@@ -589,6 +650,17 @@ li + li {
     display: flex;
   }
 
+  .brand-block,
+  .top-menu {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .top-menu {
+    justify-content: start;
+    overflow-x: auto;
+  }
+
   .command-grid,
   .device-grid,
   .demo-layout,
@@ -599,6 +671,11 @@ li + li {
 
   .view-tabs {
     width: 100%;
+  }
+
+  .bottom-menu {
+    justify-content: start;
+    width: calc(100vw - 24px);
   }
 
   dl {

@@ -7,11 +7,20 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <div>
+  <header class="app-header">
+    <div class="brand-block">
       <p class="kicker">mesh://local/devices/query/discover</p>
       <h1>Device mesh URI orchestrator</h1>
     </div>
+    <nav class="top-menu" aria-label="Dashboard navigation">
+      <button class="menu-link active" data-focus="overview" type="button">Overview</button>
+      <button class="menu-link" data-focus="flow" type="button">Flow</button>
+      <button class="menu-link" data-focus="uri" type="button">URI</button>
+      <button class="menu-link" data-focus="devices" type="button">Devices</button>
+      <button class="menu-link" data-focus="novnc" type="button">noVNC</button>
+      <button class="menu-link" data-focus="logs" type="button">Logs</button>
+      <button class="menu-link" data-focus="results" type="button">Results</button>
+    </nav>
     <div class="actions">
       <button id="refresh-devices" type="button">Refresh</button>
       <button id="run-nl-flow" type="button">Generate and run</button>
@@ -19,7 +28,7 @@
   </header>
 
   <main>
-    <section class="summary-grid" aria-label="Device summary">
+    <section id="overview" class="summary-grid" aria-label="Device summary">
       <article class="metric">
         <span>Devices</span>
         <strong id="device-count">0</strong>
@@ -40,7 +49,7 @@
 
     <section class="demo-layout">
       <div class="control-column">
-        <section class="nl-panel panel" aria-label="Natural language orchestration">
+        <section id="flow-panel" class="nl-panel panel" aria-label="Natural language orchestration">
           <div>
             <p class="kicker">llm://controller/flow/command/generate</p>
             <h2>Natural language to URI flow across devices</h2>
@@ -49,7 +58,7 @@
           <button id="run-nl-flow-inline" type="button">Generate and run URI flow</button>
         </section>
 
-        <section class="panel command-workbench" aria-label="URI command workbench">
+        <section id="command-workbench" class="panel command-workbench" aria-label="URI command workbench">
           <div class="panel-head">
             <h2>URI command workbench</h2>
             <input id="route-filter" type="search" placeholder="filter URI">
@@ -75,7 +84,7 @@
         <section class="device-grid" id="devices" aria-label="Devices"></section>
       </div>
 
-      <aside class="observe-column panel" aria-label="Presentation view">
+      <aside id="presentation-panel" class="observe-column panel" aria-label="Presentation view">
         <div class="panel-head">
           <div>
             <p class="kicker">demo://presentation/view</p>
@@ -119,6 +128,15 @@
       </aside>
     </section>
   </main>
+
+  <nav class="bottom-menu" aria-label="Demo controls">
+    <button class="bottom-link active" data-focus="overview" type="button">Overview</button>
+    <button class="bottom-link" data-focus="flow" type="button">Flow</button>
+    <button class="bottom-link" data-focus="uri" type="button">URI</button>
+    <button class="bottom-link" data-focus="novnc" type="button">noVNC</button>
+    <button class="bottom-link" data-focus="logs" type="button">Logs</button>
+    <button class="bottom-link" data-focus="results" type="button">Results</button>
+  </nav>
 
   <script src="runtime-config.js"></script>
   <script src="app.js"></script>

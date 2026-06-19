@@ -6,7 +6,7 @@ SUMMARY:
   dup_groups:    1
   dup_fragments: 2
   saved_lines:   7
-  scan_ms:       2141
+  scan_ms:       2827
 
 HOTSPOTS[2] (files with most duplication):
   v2/examples/multi_transport/worker.py  dup=7L  groups=1  frags=1  (0.8%)

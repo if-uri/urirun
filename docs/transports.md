@@ -19,12 +19,12 @@ node://node-worker/text/slugify
 shell://shell-worker/report/write
 ```
 
-See `v8/examples/docker_uri_flow` for a Compose flow where services publish
+See `v2/examples/docker_uri_flow` for a Compose flow where services publish
 bindings and an orchestrator runs a multi-step URI flow.
 
 ## HTTP and browser
 
-The HTML example in `v8/examples/html_uri_app` loads a binding document, renders
+The HTML example in `v2/examples/html_uri_app` loads a binding document, renders
 URI forms, and calls a Python backend through `POST /api/run`.
 
 The backend can expose logs, recent calls, MCP tools, and A2A cards from the same
@@ -32,7 +32,7 @@ registry, so frontend actions use the same URI names as backend actions.
 
 ## gRPC
 
-`urirun.v8_grpc` provides a small RPC surface for route listing, unary calls,
+`urirun.v2_grpc` provides a small RPC surface for route listing, unary calls,
 and stream-style calls. Install the optional dependency set when using it:
 
 ```bash
@@ -41,7 +41,7 @@ pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@main#subd
 
 ## MCP and A2A
 
-Because v8 bindings include JSON Schema, the registry can be projected into:
+Because v2 bindings include JSON Schema, the registry can be projected into:
 
 - MCP `tools/list`
 - MCP `tools/call`

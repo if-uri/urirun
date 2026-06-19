@@ -23,7 +23,7 @@ Recommended commands:
 ```bash
 urirun --help
 urirun scan ./project
-urirun validate generated/bindings.v8.json
+urirun validate generated/bindings.v2.json
 urirun list generated/registry.json
 urirun run 'tool://local/report/render' --registry generated/registry.json
 ```
@@ -31,15 +31,15 @@ urirun run 'tool://local/report/render' --registry generated/registry.json
 Version-specific CLIs are also available:
 
 ```bash
-urirun-v7 --help
-urirun-v8 --help
+urirun-v1 --help
+urirun-v2 --help
 ```
 
 Examples:
 
 ```python
-from urirun import v8
-from urirun.v8 import uri_command
+from urirun import v2
+from urirun.v2 import uri_command
 ```
 
 ```js
@@ -47,7 +47,7 @@ import { parseUri } from "urirun";
 ```
 
 ```json
-{ "version": "urirun.bindings.v8" }
+{ "version": "urirun.bindings.v2" }
 ```
 
 ```dockerfile

@@ -15,6 +15,7 @@ const novncGrid = document.querySelector("#novnc-grid");
 const activityLog = document.querySelector("#activity-log");
 const viewTabs = Array.from(document.querySelectorAll(".tab-button"));
 const viewPanes = Array.from(document.querySelectorAll(".view-pane"));
+const navigationButtons = Array.from(document.querySelectorAll("[data-focus]"));
 const examplePrompt = "Sprawdź oba komputery, pokaż procesy, zapisz notatkę na dostępnym urządzeniu i pokaż ostatnie logi. Jeśli możesz, sprawdź czy jest python3.";
 
 let latestMesh = { devices: [], routes: [], safeRoutes: [] };
@@ -36,12 +37,44 @@ function escapeHtml(value) {
   })[char]);
 }
 
-function showView(name) {
+function focusTargetFor(name) {
+  return {
+    overview: "#overview",
+    flow: "#flow-panel",
+    uri: "#command-workbench",
+    devices: "#devices",
+    novnc: "#presentation-panel",
+    logs: "#presentation-panel",
+    results: "#presentation-panel",
+  }[name] || "#overview";
+}
+
+function setMenuActive(name) {
+  for (const button of navigationButtons) {
+    button.classList.toggle("active", button.dataset.focus === name);
+  }
+}
+
+function showView(name, syncMenu = true) {
   for (const tab of viewTabs) {
     tab.classList.toggle("active", tab.dataset.view === name);
   }
   for (const pane of viewPanes) {
     pane.classList.toggle("active", pane.id === `view-${name}`);
+  }
+  if (syncMenu) setMenuActive(name);
+}
+
+function focusArea(name) {
+  if (["novnc", "logs", "results"].includes(name)) {
+    showView(name);
+  } else {
+    setMenuActive(name);
+  }
+
+  const target = document.querySelector(focusTargetFor(name));
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
@@ -229,6 +262,7 @@ function selectRoute(uri) {
   selectedRoute = latestMesh.routes.find((route) => route.uri === uri) || null;
   renderRoutes();
   renderPayloadForm();
+  setMenuActive("uri");
   showJson(output, {
     selected: selectedRoute?.uri || null,
     payload: previewPayload(),
@@ -487,6 +521,10 @@ for (const tab of viewTabs) {
   tab.addEventListener("click", () => showView(tab.dataset.view));
 }
 
+for (const button of navigationButtons) {
+  button.addEventListener("click", () => focusArea(button.dataset.focus));
+}
+
 payloadForm.addEventListener("input", () => {
   showJson(output, {
     selected: selectedRoute?.uri || null,
@@ -502,6 +540,7 @@ routesEl.addEventListener("click", (event) => {
 });
 
 promptInput.value = examplePrompt;
+setMenuActive("overview");
 recordActivity("dashboard.loaded", { view: "device_mesh_lab" });
 showJson(generatedFlow, {
   task: { title: "Generated URI workflow appears here" },

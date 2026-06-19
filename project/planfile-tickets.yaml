@@ -4,10 +4,10 @@ schema: code2llm.planfile_tickets.v1
 project_root: /home/tom/github/tellmesh/urihandler
 tickets:
 - signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v7.createUriRuntimeV7
+  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v1.createUriRuntimeV7
     (CC=32)'
-  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v7.createUriRuntimeV7`
-    at `v1/examples/html_uri_app/uri-runtime-v7.js:163` with cyclomatic complexity
+  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v1.createUriRuntimeV7`
+    at `v1/examples/html_uri_app/uri-runtime-v1.js:163` with cyclomatic complexity
     32 (limit 15).
 
 
@@ -20,12 +20,12 @@ tickets:
   - complexity
   - refactor
   files:
-  - v1/examples/html_uri_app/uri-runtime-v7.js
-  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v7.js:v1.examples.html_uri_app.uri-runtime-v7.createUriRuntimeV7
+  - v1/examples/html_uri_app/uri-runtime-v1.js
+  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v1.js:v1.examples.html_uri_app.uri-runtime-v1.createUriRuntimeV7
 - signal: code2llm_dup
   title: Consolidate duplicate class Handler
-  description: 'code2llm found similar `Handler` classes in `v2/examples/docker_uri_flow/python-worker/server.py`
-    and `v2/examples/docker_uri_flow/shell-worker/server.py` with 3 overlapping methods.
+  description: 'code2llm found similar `Handler` classes in `v8/examples/docker_uri_flow/shell-worker/server.py`
+    and `v8/examples/docker_uri_flow/python-worker/server.py` with 3 overlapping methods.
 
 
     Extract a shared base/helper or merge the duplicated behavior, then re-run code2llm
@@ -37,12 +37,12 @@ tickets:
   - duplication
   - refactor
   files:
-  - v2/examples/docker_uri_flow/python-worker/server.py
-  - v2/examples/docker_uri_flow/shell-worker/server.py
-  dedupe_key: code2llm:dup:Handler:v2/examples/docker_uri_flow/python-worker/server.py:v2/examples/docker_uri_flow/shell-worker/server.py
+  - v8/examples/docker_uri_flow/shell-worker/server.py
+  - v8/examples/docker_uri_flow/python-worker/server.py
+  dedupe_key: code2llm:dup:Handler:v8/examples/docker_uri_flow/shell-worker/server.py:v8/examples/docker_uri_flow/python-worker/server.py
 - signal: code2llm_dup
   title: Consolidate duplicate class Handler
-  description: 'code2llm found similar `Handler` classes in `v2/examples/docker_uri_flow/python-worker/server.py`
+  description: 'code2llm found similar `Handler` classes in `v8/examples/docker_uri_flow/shell-worker/server.py`
     and `v2/examples/html_uri_app/backend.py` with 3 overlapping methods.
 
 
@@ -55,12 +55,12 @@ tickets:
   - duplication
   - refactor
   files:
-  - v2/examples/docker_uri_flow/python-worker/server.py
+  - v8/examples/docker_uri_flow/shell-worker/server.py
   - v2/examples/html_uri_app/backend.py
-  dedupe_key: code2llm:dup:Handler:v2/examples/docker_uri_flow/python-worker/server.py:v2/examples/html_uri_app/backend.py
+  dedupe_key: code2llm:dup:Handler:v8/examples/docker_uri_flow/shell-worker/server.py:v2/examples/html_uri_app/backend.py
 - signal: code2llm_dup
   title: Consolidate duplicate class Handler
-  description: 'code2llm found similar `Handler` classes in `v2/examples/docker_uri_flow/shell-worker/server.py`
+  description: 'code2llm found similar `Handler` classes in `v8/examples/docker_uri_flow/python-worker/server.py`
     and `v2/examples/html_uri_app/backend.py` with 3 overlapping methods.
 
 
@@ -73,9 +73,9 @@ tickets:
   - duplication
   - refactor
   files:
-  - v2/examples/docker_uri_flow/shell-worker/server.py
+  - v8/examples/docker_uri_flow/python-worker/server.py
   - v2/examples/html_uri_app/backend.py
-  dedupe_key: code2llm:dup:Handler:v2/examples/docker_uri_flow/shell-worker/server.py:v2/examples/html_uri_app/backend.py
+  dedupe_key: code2llm:dup:Handler:v8/examples/docker_uri_flow/python-worker/server.py:v2/examples/html_uri_app/backend.py
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: call'
   description: 'code2llm reports `God Function: call` in `adapters/python/urirun/v2_service.py:55`.
@@ -97,6 +97,25 @@ tickets:
     Function: call'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: main'
+  description: 'code2llm reports `God Function: main` in `adapters/python/urirun/v1.py:349`.
+
+
+    Function ''main'' is oversized: CC=13, fan-out=26, mutations=30.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: high
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - god-function
+  files:
+  - adapters/python/urirun/v1.py
+  dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v1.py:349:God Function:
+    main'
+- signal: code2llm_smell_god_function
+  title: 'Address code smell: God Function: main'
   description: 'code2llm reports `God Function: main` in `adapters/python/urirun/v2_adopt.py:145`.
 
 
@@ -113,25 +132,6 @@ tickets:
   files:
   - adapters/python/urirun/v2_adopt.py
   dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v2_adopt.py:145:God
-    Function: main'
-- signal: code2llm_smell_god_function
-  title: 'Address code smell: God Function: main'
-  description: 'code2llm reports `God Function: main` in `adapters/python/urirun/v2_grpc.py:160`.
-
-
-    Function ''main'' is oversized: CC=9, fan-out=16, mutations=25.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: high
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - god-function
-  files:
-  - adapters/python/urirun/v2_grpc.py
-  dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v2_grpc.py:160:God
     Function: main'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: main'
@@ -173,6 +173,25 @@ tickets:
     Function: main'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: main'
+  description: 'code2llm reports `God Function: main` in `adapters/python/urirun/v2_grpc.py:160`.
+
+
+    Function ''main'' is oversized: CC=9, fan-out=16, mutations=25.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: high
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - god-function
+  files:
+  - adapters/python/urirun/v2_grpc.py
+  dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v2_grpc.py:160:God
+    Function: main'
+- signal: code2llm_smell_god_function
+  title: 'Address code smell: God Function: main'
   description: 'code2llm reports `God Function: main` in `adapters/python/urirun/_registry.py:600`.
 
 
@@ -190,25 +209,6 @@ tickets:
   - adapters/python/urirun/_registry.py
   dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/_registry.py:600:God
     Function: main'
-- signal: code2llm_smell_god_function
-  title: 'Address code smell: God Function: main'
-  description: 'code2llm reports `God Function: main` in `adapters/python/urirun/v1.py:349`.
-
-
-    Function ''main'' is oversized: CC=13, fan-out=26, mutations=30.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: high
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - god-function
-  files:
-  - adapters/python/urirun/v1.py
-  dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v1.py:349:God Function:
-    main'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: run'
   description: 'code2llm reports `God Function: run` in `adapters/python/urirun/v1.py:215`.
@@ -230,7 +230,7 @@ tickets:
     run'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: args'
-  description: 'code2llm reports `Shotgun Surgery: args` in `adapters/python/urirun/_scan.py:576`.
+  description: 'code2llm reports `Shotgun Surgery: args` in `adapters/python/urirun/_registry.py:43`.
 
 
     Mutation of variable ''args'' spans 14 functions. Changing this logic requires
@@ -245,12 +245,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:576:Shotgun
+  - adapters/python/urirun/_registry.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:43:Shotgun
     Surgery: args'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: argv'
-  description: 'code2llm reports `Shotgun Surgery: argv` in `adapters/python/urirun/_scan.py:576`.
+  description: 'code2llm reports `Shotgun Surgery: argv` in `adapters/python/urirun/v2.py:835`.
 
 
     Mutation of variable ''argv'' spans 5 functions. Changing this logic requires
@@ -265,12 +265,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:576:Shotgun
+  - adapters/python/urirun/v2.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:835:Shotgun
     Surgery: argv'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: binding'
-  description: 'code2llm reports `Shotgun Surgery: binding` in `adapters/python/urirun/v2.py:756`.
+  description: 'code2llm reports `Shotgun Surgery: binding` in `adapters/python/urirun/v2.py:371`.
 
 
     Mutation of variable ''binding'' spans 9 functions. Changing this logic requires
@@ -286,11 +286,11 @@ tickets:
   - shotgun-surgery
   files:
   - adapters/python/urirun/v2.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:756:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:371:Shotgun
     Surgery: binding'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: bindings'
-  description: 'code2llm reports `Shotgun Surgery: bindings` in `adapters/python/urirun/v2.py:756`.
+  description: 'code2llm reports `Shotgun Surgery: bindings` in `adapters/python/urirun/_runtime.py:289`.
 
 
     Mutation of variable ''bindings'' spans 33 functions. Changing this logic requires
@@ -305,12 +305,32 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:756:Shotgun
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_runtime.py:289:Shotgun
     Surgery: bindings'
 - signal: code2llm_smell_shotgun_surgery
+  title: 'Address code smell: Shotgun Surgery: body'
+  description: 'code2llm reports `Shotgun Surgery: body` in `adapters/python/urirun/_scan.py:389`.
+
+
+    Mutation of variable ''body'' spans 8 functions. Changing this logic requires
+    work in many places.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: high
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - shotgun-surgery
+  files:
+  - adapters/python/urirun/_scan.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:389:Shotgun
+    Surgery: body'
+- signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: command'
-  description: 'code2llm reports `Shotgun Surgery: command` in `adapters/python/urirun/v1.py:134`.
+  description: 'code2llm reports `Shotgun Surgery: command` in `adapters/python/urirun/_runtime.py:143`.
 
 
     Mutation of variable ''command'' spans 11 functions. Changing this logic requires
@@ -325,12 +345,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v1.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v1.py:134:Shotgun
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_runtime.py:143:Shotgun
     Surgery: command'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: config'
-  description: 'code2llm reports `Shotgun Surgery: config` in `adapters/python/urirun/v1.py:134`.
+  description: 'code2llm reports `Shotgun Surgery: config` in `adapters/python/urirun/v1.py:297`.
 
 
     Mutation of variable ''config'' spans 19 functions. Changing this logic requires
@@ -346,11 +366,11 @@ tickets:
   - shotgun-surgery
   files:
   - adapters/python/urirun/v1.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v1.py:134:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v1.py:297:Shotgun
     Surgery: config'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: data'
-  description: 'code2llm reports `Shotgun Surgery: data` in `adapters/python/urirun/_scan.py:280`.
+  description: 'code2llm reports `Shotgun Surgery: data` in `adapters/python/urirun/_runtime.py:289`.
 
 
     Mutation of variable ''data'' spans 23 functions. Changing this logic requires
@@ -365,12 +385,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:280:Shotgun
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_runtime.py:289:Shotgun
     Surgery: data'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: descriptor'
-  description: 'code2llm reports `Shotgun Surgery: descriptor` in `adapters/python/urirun/v2_grpc.py:108`.
+  description: 'code2llm reports `Shotgun Surgery: descriptor` in `adapters/python/urirun/_registry.py:445`.
 
 
     Mutation of variable ''descriptor'' spans 14 functions. Changing this logic requires
@@ -385,12 +405,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_grpc.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_grpc.py:108:Shotgun
+  - adapters/python/urirun/_registry.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:445:Shotgun
     Surgery: descriptor'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: entries'
-  description: 'code2llm reports `Shotgun Surgery: entries` in `adapters/python/urirun/_registry.py:600`.
+  description: 'code2llm reports `Shotgun Surgery: entries` in `adapters/python/urirun/_registry.py:317`.
 
 
     Mutation of variable ''entries'' spans 10 functions. Changing this logic requires
@@ -406,11 +426,11 @@ tickets:
   - shotgun-surgery
   files:
   - adapters/python/urirun/_registry.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:600:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:317:Shotgun
     Surgery: entries'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: entry'
-  description: 'code2llm reports `Shotgun Surgery: entry` in `adapters/python/urirun/_registry.py:75`.
+  description: 'code2llm reports `Shotgun Surgery: entry` in `adapters/python/urirun/v2_mcp.py:45`.
 
 
     Mutation of variable ''entry'' spans 6 functions. Changing this logic requires
@@ -425,12 +445,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/_registry.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:75:Shotgun
+  - adapters/python/urirun/v2_mcp.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_mcp.py:45:Shotgun
     Surgery: entry'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: envelope'
-  description: 'code2llm reports `Shotgun Surgery: envelope` in `adapters/python/urirun/v2_mcp.py:104`.
+  description: 'code2llm reports `Shotgun Surgery: envelope` in `adapters/python/urirun/v2.py:274`.
 
 
     Mutation of variable ''envelope'' spans 5 functions. Changing this logic requires
@@ -445,12 +465,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_mcp.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_mcp.py:104:Shotgun
+  - adapters/python/urirun/v2.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:274:Shotgun
     Surgery: envelope'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: execute'
-  description: 'code2llm reports `Shotgun Surgery: execute` in `v2/examples/html_uri_app/backend.py:119`.
+  description: 'code2llm reports `Shotgun Surgery: execute` in `v2/examples/html_uri_app/backend.py:95`.
 
 
     Mutation of variable ''execute'' spans 5 functions. Changing this logic requires
@@ -466,11 +486,11 @@ tickets:
   - shotgun-surgery
   files:
   - v2/examples/html_uri_app/backend.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:v2/examples/html_uri_app/backend.py:119:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:v2/examples/html_uri_app/backend.py:95:Shotgun
     Surgery: execute'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: index'
-  description: 'code2llm reports `Shotgun Surgery: index` in `adapters/python/urirun/v2_mcp.py:104`.
+  description: 'code2llm reports `Shotgun Surgery: index` in `adapters/python/urirun/_registry.py:445`.
 
 
     Mutation of variable ''index'' spans 7 functions. Changing this logic requires
@@ -485,32 +505,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_mcp.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_mcp.py:104:Shotgun
+  - adapters/python/urirun/_registry.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:445:Shotgun
     Surgery: index'
 - signal: code2llm_smell_shotgun_surgery
-  title: 'Address code smell: Shotgun Surgery: key'
-  description: 'code2llm reports `Shotgun Surgery: key` in `adapters/python/urirun/_registry.py:279`.
-
-
-    Mutation of variable ''key'' spans 16 functions. Changing this logic requires
-    work in many places.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: high
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - shotgun-surgery
-  files:
-  - adapters/python/urirun/_registry.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:279:Shotgun
-    Surgery: key'
-- signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: line'
-  description: 'code2llm reports `Shotgun Surgery: line` in `adapters/python/urirun/v2_mcp.py:104`.
+  description: 'code2llm reports `Shotgun Surgery: line` in `adapters/python/urirun/_runtime.py:343`.
 
 
     Mutation of variable ''line'' spans 5 functions. Changing this logic requires
@@ -525,12 +525,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_mcp.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_mcp.py:104:Shotgun
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_runtime.py:343:Shotgun
     Surgery: line'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: meta'
-  description: 'code2llm reports `Shotgun Surgery: meta` in `adapters/python/urirun/v2_mcp.py:45`.
+  description: 'code2llm reports `Shotgun Surgery: meta` in `adapters/python/urirun/_registry.py:445`.
 
 
     Mutation of variable ''meta'' spans 5 functions. Changing this logic requires
@@ -545,12 +545,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_mcp.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_mcp.py:45:Shotgun
+  - adapters/python/urirun/_registry.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:445:Shotgun
     Surgery: meta'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: name'
-  description: 'code2llm reports `Shotgun Surgery: name` in `adapters/python/urirun/v2_adopt.py:73`.
+  description: 'code2llm reports `Shotgun Surgery: name` in `adapters/python/urirun/_scan.py:464`.
 
 
     Mutation of variable ''name'' spans 10 functions. Changing this logic requires
@@ -565,12 +565,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_adopt.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_adopt.py:73:Shotgun
+  - adapters/python/urirun/_scan.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:464:Shotgun
     Surgery: name'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: normalized'
-  description: 'code2llm reports `Shotgun Surgery: normalized` in `adapters/python/urirun/v2.py:444`.
+  description: 'code2llm reports `Shotgun Surgery: normalized` in `adapters/python/urirun/_registry.py:445`.
 
 
     Mutation of variable ''normalized'' spans 10 functions. Changing this logic requires
@@ -585,12 +585,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:444:Shotgun
+  - adapters/python/urirun/_registry.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:445:Shotgun
     Surgery: normalized'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: operation'
-  description: 'code2llm reports `Shotgun Surgery: operation` in `adapters/python/urirun/_registry.py:279`.
+  description: 'code2llm reports `Shotgun Surgery: operation` in `adapters/python/urirun/_registry.py:43`.
 
 
     Mutation of variable ''operation'' spans 6 functions. Changing this logic requires
@@ -606,7 +606,7 @@ tickets:
   - shotgun-surgery
   files:
   - adapters/python/urirun/_registry.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:279:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:43:Shotgun
     Surgery: operation'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: package'
@@ -630,7 +630,7 @@ tickets:
     Surgery: package'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: params'
-  description: 'code2llm reports `Shotgun Surgery: params` in `adapters/python/urirun/v2_mcp.py:104`.
+  description: 'code2llm reports `Shotgun Surgery: params` in `adapters/python/urirun/v1.py:215`.
 
 
     Mutation of variable ''params'' spans 6 functions. Changing this logic requires
@@ -645,8 +645,8 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_mcp.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_mcp.py:104:Shotgun
+  - adapters/python/urirun/v1.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v1.py:215:Shotgun
     Surgery: params'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: parsed'
@@ -670,7 +670,7 @@ tickets:
     Surgery: parsed'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: parser'
-  description: 'code2llm reports `Shotgun Surgery: parser` in `adapters/python/urirun/_scan.py:576`.
+  description: 'code2llm reports `Shotgun Surgery: parser` in `adapters/python/urirun/v2.py:835`.
 
 
     Mutation of variable ''parser'' spans 9 functions. Changing this logic requires
@@ -685,12 +685,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:576:Shotgun
+  - adapters/python/urirun/v2.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:835:Shotgun
     Surgery: parser'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: path'
-  description: 'code2llm reports `Shotgun Surgery: path` in `adapters/python/urirun/v1.py:335`.
+  description: 'code2llm reports `Shotgun Surgery: path` in `adapters/python/urirun/_runtime.py:289`.
 
 
     Mutation of variable ''path'' spans 14 functions. Changing this logic requires
@@ -705,12 +705,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v1.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v1.py:335:Shotgun
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_runtime.py:289:Shotgun
     Surgery: path'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: payload'
-  description: 'code2llm reports `Shotgun Surgery: payload` in `adapters/python/urirun/_scan.py:576`.
+  description: 'code2llm reports `Shotgun Surgery: payload` in `v2/examples/html_uri_app/backend.py:95`.
 
 
     Mutation of variable ''payload'' spans 7 functions. Changing this logic requires
@@ -725,12 +725,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:576:Shotgun
+  - v2/examples/html_uri_app/backend.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:v2/examples/html_uri_app/backend.py:95:Shotgun
     Surgery: payload'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: policy'
-  description: 'code2llm reports `Shotgun Surgery: policy` in `adapters/python/urirun/v1.py:349`.
+  description: 'code2llm reports `Shotgun Surgery: policy` in `adapters/python/urirun/_runtime.py:275`.
 
 
     Mutation of variable ''policy'' spans 11 functions. Changing this logic requires
@@ -745,32 +745,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v1.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v1.py:349:Shotgun
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_runtime.py:275:Shotgun
     Surgery: policy'
 - signal: code2llm_smell_shotgun_surgery
-  title: 'Address code smell: Shotgun Surgery: registry'
-  description: 'code2llm reports `Shotgun Surgery: registry` in `adapters/python/urirun/_scan.py:576`.
-
-
-    Mutation of variable ''registry'' spans 11 functions. Changing this logic requires
-    work in many places.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: high
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - shotgun-surgery
-  files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:576:Shotgun
-    Surgery: registry'
-- signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: resource'
-  description: 'code2llm reports `Shotgun Surgery: resource` in `adapters/python/urirun/_registry.py:342`.
+  description: 'code2llm reports `Shotgun Surgery: resource` in `adapters/python/urirun/_registry.py:43`.
 
 
     Mutation of variable ''resource'' spans 7 functions. Changing this logic requires
@@ -786,31 +766,11 @@ tickets:
   - shotgun-surgery
   files:
   - adapters/python/urirun/_registry.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:342:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:43:Shotgun
     Surgery: resource'
 - signal: code2llm_smell_shotgun_surgery
-  title: 'Address code smell: Shotgun Surgery: result'
-  description: 'code2llm reports `Shotgun Surgery: result` in `v2/examples/docker_uri_flow/orchestrator/flow_runner.py:209`.
-
-
-    Mutation of variable ''result'' spans 17 functions. Changing this logic requires
-    work in many places.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: high
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - shotgun-surgery
-  files:
-  - v2/examples/docker_uri_flow/orchestrator/flow_runner.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:v2/examples/docker_uri_flow/orchestrator/flow_runner.py:209:Shotgun
-    Surgery: result'
-- signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: route'
-  description: 'code2llm reports `Shotgun Surgery: route` in `adapters/python/urirun/_registry.py:174`.
+  description: 'code2llm reports `Shotgun Surgery: route` in `adapters/python/urirun/_registry.py:100`.
 
 
     Mutation of variable ''route'' spans 5 functions. Changing this logic requires
@@ -826,11 +786,11 @@ tickets:
   - shotgun-surgery
   files:
   - adapters/python/urirun/_registry.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:174:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:100:Shotgun
     Surgery: route'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: route_entry'
-  description: 'code2llm reports `Shotgun Surgery: route_entry` in `adapters/python/urirun/v2_grpc.py:108`.
+  description: 'code2llm reports `Shotgun Surgery: route_entry` in `adapters/python/urirun/_registry.py:445`.
 
 
     Mutation of variable ''route_entry'' spans 17 functions. Changing this logic requires
@@ -845,12 +805,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_grpc.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_grpc.py:108:Shotgun
+  - adapters/python/urirun/_registry.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:445:Shotgun
     Surgery: route_entry'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: schema'
-  description: 'code2llm reports `Shotgun Surgery: schema` in `adapters/python/urirun/v2.py:593`.
+  description: 'code2llm reports `Shotgun Surgery: schema` in `adapters/python/urirun/v2.py:510`.
 
 
     Mutation of variable ''schema'' spans 5 functions. Changing this logic requires
@@ -866,8 +826,28 @@ tickets:
   - shotgun-surgery
   files:
   - adapters/python/urirun/v2.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:593:Shotgun
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:510:Shotgun
     Surgery: schema'
+- signal: code2llm_smell_shotgun_surgery
+  title: 'Address code smell: Shotgun Surgery: server'
+  description: 'code2llm reports `Shotgun Surgery: server` in `v2/examples/html_uri_app/backend.py:204`.
+
+
+    Mutation of variable ''server'' spans 5 functions. Changing this logic requires
+    work in many places.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: high
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - shotgun-surgery
+  files:
+  - v2/examples/html_uri_app/backend.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:v2/examples/html_uri_app/backend.py:204:Shotgun
+    Surgery: server'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: source_file'
   description: 'code2llm reports `Shotgun Surgery: source_file` in `adapters/python/urirun/v2.py:756`.
@@ -890,7 +870,7 @@ tickets:
     Surgery: source_file'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: subparsers'
-  description: 'code2llm reports `Shotgun Surgery: subparsers` in `adapters/python/urirun/_scan.py:576`.
+  description: 'code2llm reports `Shotgun Surgery: subparsers` in `adapters/python/urirun/v2.py:835`.
 
 
     Mutation of variable ''subparsers'' spans 5 functions. Changing this logic requires
@@ -905,8 +885,8 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_scan.py:576:Shotgun
+  - adapters/python/urirun/v2.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2.py:835:Shotgun
     Surgery: subparsers'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: target'
@@ -950,7 +930,7 @@ tickets:
     Surgery: translation'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: uri'
-  description: 'code2llm reports `Shotgun Surgery: uri` in `adapters/python/urirun/v2_mcp.py:104`.
+  description: 'code2llm reports `Shotgun Surgery: uri` in `adapters/python/urirun/_registry.py:100`.
 
 
     Mutation of variable ''uri'' spans 9 functions. Changing this logic requires work
@@ -965,12 +945,12 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - adapters/python/urirun/v2_mcp.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/v2_mcp.py:104:Shotgun
+  - adapters/python/urirun/_registry.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_registry.py:100:Shotgun
     Surgery: uri'
 - signal: code2llm_smell_shotgun_surgery
   title: 'Address code smell: Shotgun Surgery: value'
-  description: 'code2llm reports `Shotgun Surgery: value` in `v2/examples/html_uri_app/backend.py:25`.
+  description: 'code2llm reports `Shotgun Surgery: value` in `adapters/python/urirun/_runtime.py:190`.
 
 
     Mutation of variable ''value'' spans 9 functions. Changing this logic requires
@@ -985,26 +965,9 @@ tickets:
   - code-smell
   - shotgun-surgery
   files:
-  - v2/examples/html_uri_app/backend.py
-  dedupe_key: 'code2llm:smell:shotgun_surgery:v2/examples/html_uri_app/backend.py:25:Shotgun
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:shotgun_surgery:adapters/python/urirun/_runtime.py:190:Shotgun
     Surgery: value'
-- signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: adapters.c.urirun.urirun_parse (CC=20)'
-  description: 'code2llm reports `adapters.c.urirun.urirun_parse` at `adapters/c/urirun.c:16`
-    with cyclomatic complexity 20 (limit 15).
-
-
-    Extract smaller functions, flatten conditionals, or split strategy branches. Re-run
-    code2llm after the change and keep tests green.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - complexity
-  - refactor
-  files:
-  - adapters/c/urirun.c
-  dedupe_key: code2llm:cc:adapters/c/urirun.c:adapters.c.urirun.urirun_parse
 - signal: code2llm_cc
   title: 'Reduce cyclomatic complexity: adapters.python.urirun._runtime.evaluate_policy
     (CC=16)'
@@ -1110,10 +1073,10 @@ tickets:
   - adapters/python/urirun/v2_mcp.py
   dedupe_key: code2llm:cc:adapters/python/urirun/v2_mcp.py:adapters.python.urirun.v2_mcp.serve_mcp
 - signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v7.dispatch
+  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v1.dispatch
     (CC=17)'
-  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v7.dispatch`
-    at `v1/examples/html_uri_app/uri-runtime-v7.js:202` with cyclomatic complexity
+  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v1.dispatch`
+    at `v1/examples/html_uri_app/uri-runtime-v1.js:202` with cyclomatic complexity
     17 (limit 15).
 
 
@@ -1126,13 +1089,13 @@ tickets:
   - complexity
   - refactor
   files:
-  - v1/examples/html_uri_app/uri-runtime-v7.js
-  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v7.js:v1.examples.html_uri_app.uri-runtime-v7.dispatch
+  - v1/examples/html_uri_app/uri-runtime-v1.js
+  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v1.js:v1.examples.html_uri_app.uri-runtime-v1.dispatch
 - signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v7.evaluatePolicy
+  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v1.evaluatePolicy
     (CC=18)'
-  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v7.evaluatePolicy`
-    at `v1/examples/html_uri_app/uri-runtime-v7.js:138` with cyclomatic complexity
+  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v1.evaluatePolicy`
+    at `v1/examples/html_uri_app/uri-runtime-v1.js:138` with cyclomatic complexity
     18 (limit 15).
 
 
@@ -1145,13 +1108,13 @@ tickets:
   - complexity
   - refactor
   files:
-  - v1/examples/html_uri_app/uri-runtime-v7.js
-  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v7.js:v1.examples.html_uri_app.uri-runtime-v7.evaluatePolicy
+  - v1/examples/html_uri_app/uri-runtime-v1.js
+  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v1.js:v1.examples.html_uri_app.uri-runtime-v1.evaluatePolicy
 - signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v7.resolveParams
+  title: 'Reduce cyclomatic complexity: v1.examples.html_uri_app.uri-runtime-v1.resolveParams
     (CC=15)'
-  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v7.resolveParams`
-    at `v1/examples/html_uri_app/uri-runtime-v7.js:76` with cyclomatic complexity
+  description: 'code2llm reports `v1.examples.html_uri_app.uri-runtime-v1.resolveParams`
+    at `v1/examples/html_uri_app/uri-runtime-v1.js:76` with cyclomatic complexity
     15 (limit 15).
 
 
@@ -1164,11 +1127,11 @@ tickets:
   - complexity
   - refactor
   files:
-  - v1/examples/html_uri_app/uri-runtime-v7.js
-  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v7.js:v1.examples.html_uri_app.uri-runtime-v7.resolveParams
+  - v1/examples/html_uri_app/uri-runtime-v1.js
+  dedupe_key: code2llm:cc:v1/examples/html_uri_app/uri-runtime-v1.js:v1.examples.html_uri_app.uri-runtime-v1.resolveParams
 - signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: v1.examples.js.urirun-v7.resolveParams (CC=15)'
-  description: 'code2llm reports `v1.examples.js.urirun-v7.resolveParams` at `v1/examples/js/urirun-v7.js:119`
+  title: 'Reduce cyclomatic complexity: v1.examples.js.urirun-v1.resolveParams (CC=15)'
+  description: 'code2llm reports `v1.examples.js.urirun-v1.resolveParams` at `v1/examples/js/urirun-v1.js:119`
     with cyclomatic complexity 15 (limit 15).
 
 
@@ -1181,11 +1144,11 @@ tickets:
   - complexity
   - refactor
   files:
-  - v1/examples/js/urirun-v7.js
-  dedupe_key: code2llm:cc:v1/examples/js/urirun-v7.js:v1.examples.js.urirun-v7.resolveParams
+  - v1/examples/js/urirun-v1.js
+  dedupe_key: code2llm:cc:v1/examples/js/urirun-v1.js:v1.examples.js.urirun-v1.resolveParams
 - signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: v1.examples.js.urirun-v7.run (CC=19)'
-  description: 'code2llm reports `v1.examples.js.urirun-v7.run` at `v1/examples/js/urirun-v7.js:239`
+  title: 'Reduce cyclomatic complexity: v1.examples.js.urirun-v1.run (CC=19)'
+  description: 'code2llm reports `v1.examples.js.urirun-v1.run` at `v1/examples/js/urirun-v1.js:239`
     with cyclomatic complexity 19 (limit 15).
 
 
@@ -1198,8 +1161,8 @@ tickets:
   - complexity
   - refactor
   files:
-  - v1/examples/js/urirun-v7.js
-  dedupe_key: code2llm:cc:v1/examples/js/urirun-v7.js:v1.examples.js.urirun-v7.run
+  - v1/examples/js/urirun-v1.js
+  dedupe_key: code2llm:cc:v1/examples/js/urirun-v1.js:v1.examples.js.urirun-v1.run
 - signal: code2llm_cc
   title: 'Reduce cyclomatic complexity: v2.examples.device_mesh_lab.www.app.defaultValueFor
     (CC=20)'
@@ -1239,10 +1202,10 @@ tickets:
   - v2/examples/device_mesh_lab/www/app.js
   dedupe_key: code2llm:cc:v2/examples/device_mesh_lab/www/app.js:v2.examples.device_mesh_lab.www.app.renderField
 - signal: code2llm_cc
-  title: 'Reduce cyclomatic complexity: v2.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
+  title: 'Reduce cyclomatic complexity: v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
     (CC=24)'
-  description: 'code2llm reports `v2.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow`
-    at `v2/examples/docker_uri_flow/orchestrator/flow_runner.py:19` with cyclomatic
+  description: 'code2llm reports `v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow`
+    at `v8/examples/docker_uri_flow/orchestrator/flow_runner.py:19` with cyclomatic
     complexity 24 (limit 15).
 
 
@@ -1255,8 +1218,8 @@ tickets:
   - complexity
   - refactor
   files:
-  - v2/examples/docker_uri_flow/orchestrator/flow_runner.py
-  dedupe_key: code2llm:cc:v2/examples/docker_uri_flow/orchestrator/flow_runner.py:v2.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
+  - v8/examples/docker_uri_flow/orchestrator/flow_runner.py
+  dedupe_key: code2llm:cc:v8/examples/docker_uri_flow/orchestrator/flow_runner.py:v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
 - signal: code2llm_cc
   title: 'Reduce cyclomatic complexity: www.docs.render_markdown (CC=15)'
   description: 'code2llm reports `www.docs.render_markdown` at `www/docs.php:24` with
@@ -1275,182 +1238,14 @@ tickets:
   - www/docs.php
   dedupe_key: code2llm:cc:www/docs.php:www.docs.render_markdown
 - signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: doc, on_conflict, generated_at'
-  description: 'code2llm reports `Data Clump: doc, on_conflict, generated_at` in `adapters/python/urirun/v1.py:331`.
+  title: 'Address code smell: Data Clump: executors, policy, registry, uri, confirm,
+    mode, payload'
+  description: 'code2llm reports `Data Clump: executors, policy, registry, uri, confirm,
+    mode, payload` in `adapters/python/urirun/v1.py:215`.
 
 
-    Arguments (doc, on_conflict, generated_at) are used together in multiple functions:
-    adapters.python.urirun.v1.compile_registry, adapters.python.urirun.v2.compile_registry.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/v1.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v1.py:331:Data Clump:
-    doc, on_conflict, generated_at'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: doc, on_conflict, generated_at'
-  description: 'code2llm reports `Data Clump: doc, on_conflict, generated_at` in `adapters/python/urirun/v2.py:424`.
-
-
-    Arguments (doc, on_conflict, generated_at) are used together in multiple functions:
-    adapters.python.urirun.v1.compile_registry, adapters.python.urirun.v2.compile_registry.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/v2.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2.py:424:Data Clump:
-    doc, on_conflict, generated_at'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: handler, status, payload'
-  description: 'code2llm reports `Data Clump: handler, status, payload` in `v2/examples/docker_uri_flow/python-worker/server.py:13`.
-
-
-    Arguments (handler, status, payload) are used together in multiple functions:
-    v2.examples.docker_uri_flow.python-worker.server.response, v2.examples.docker_uri_flow.shell-worker.server.response,
-    v2.examples.html_uri_app.backend.json_response.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - v2/examples/docker_uri_flow/python-worker/server.py
-  dedupe_key: 'code2llm:smell:data_clump:v2/examples/docker_uri_flow/python-worker/server.py:13:Data
-    Clump: handler, status, payload'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: handler, status, payload'
-  description: 'code2llm reports `Data Clump: handler, status, payload` in `v2/examples/docker_uri_flow/shell-worker/server.py:13`.
-
-
-    Arguments (handler, status, payload) are used together in multiple functions:
-    v2.examples.docker_uri_flow.python-worker.server.response, v2.examples.docker_uri_flow.shell-worker.server.response,
-    v2.examples.html_uri_app.backend.json_response.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - v2/examples/docker_uri_flow/shell-worker/server.py
-  dedupe_key: 'code2llm:smell:data_clump:v2/examples/docker_uri_flow/shell-worker/server.py:13:Data
-    Clump: handler, status, payload'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: handler, status, payload'
-  description: 'code2llm reports `Data Clump: handler, status, payload` in `v2/examples/html_uri_app/backend.py:78`.
-
-
-    Arguments (handler, status, payload) are used together in multiple functions:
-    v2.examples.docker_uri_flow.python-worker.server.response, v2.examples.docker_uri_flow.shell-worker.server.response,
-    v2.examples.html_uri_app.backend.json_response.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - v2/examples/html_uri_app/backend.py
-  dedupe_key: 'code2llm:smell:data_clump:v2/examples/html_uri_app/backend.py:78:Data
-    Clump: handler, status, payload'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: include_shell, openapi_base_url, path'
-  description: 'code2llm reports `Data Clump: include_shell, openapi_base_url, path`
-    in `adapters/python/urirun/_scan.py:464`.
-
-
-    Arguments (include_shell, openapi_base_url, path) are used together in multiple
-    functions: adapters.python.urirun._scan.scan_path, adapters.python.urirun._scan.load_binding_source.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_scan.py:464:Data
-    Clump: include_shell, openapi_base_url, path'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: include_shell, openapi_base_url, path'
-  description: 'code2llm reports `Data Clump: include_shell, openapi_base_url, path`
-    in `adapters/python/urirun/_scan.py:507`.
-
-
-    Arguments (include_shell, openapi_base_url, path) are used together in multiple
-    functions: adapters.python.urirun._scan.scan_path, adapters.python.urirun._scan.load_binding_source.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/_scan.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_scan.py:507:Data
-    Clump: include_shell, openapi_base_url, path'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: mode, uri, policy, confirm, executors, payload,
-    registry'
-  description: 'code2llm reports `Data Clump: mode, uri, policy, confirm, executors,
-    payload, registry` in `adapters/python/urirun/_runtime.py:215`.
-
-
-    Arguments (mode, uri, policy, confirm, executors, payload, registry) are used
-    together in multiple functions: adapters.python.urirun._runtime.run, adapters.python.urirun.v1.run,
-    adapters.python.urirun.v2.run.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/_runtime.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_runtime.py:215:Data
-    Clump: mode, uri, policy, confirm, executors, payload, registry'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: mode, uri, policy, confirm, executors, payload,
-    registry'
-  description: 'code2llm reports `Data Clump: mode, uri, policy, confirm, executors,
-    payload, registry` in `adapters/python/urirun/v1.py:215`.
-
-
-    Arguments (mode, uri, policy, confirm, executors, payload, registry) are used
-    together in multiple functions: adapters.python.urirun._runtime.run, adapters.python.urirun.v1.run,
+    Arguments (executors, policy, registry, uri, confirm, mode, payload) are used
+    together in multiple functions: adapters.python.urirun.v1.run, adapters.python.urirun._runtime.run,
     adapters.python.urirun.v2.run.
 
 
@@ -1464,16 +1259,39 @@ tickets:
   files:
   - adapters/python/urirun/v1.py
   dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v1.py:215:Data Clump:
-    mode, uri, policy, confirm, executors, payload, registry'
+    executors, policy, registry, uri, confirm, mode, payload'
 - signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: mode, uri, policy, confirm, executors, payload,
-    registry'
-  description: 'code2llm reports `Data Clump: mode, uri, policy, confirm, executors,
-    payload, registry` in `adapters/python/urirun/v2.py:274`.
+  title: 'Address code smell: Data Clump: executors, policy, registry, uri, confirm,
+    mode, payload'
+  description: 'code2llm reports `Data Clump: executors, policy, registry, uri, confirm,
+    mode, payload` in `adapters/python/urirun/_runtime.py:215`.
 
 
-    Arguments (mode, uri, policy, confirm, executors, payload, registry) are used
-    together in multiple functions: adapters.python.urirun._runtime.run, adapters.python.urirun.v1.run,
+    Arguments (executors, policy, registry, uri, confirm, mode, payload) are used
+    together in multiple functions: adapters.python.urirun.v1.run, adapters.python.urirun._runtime.run,
+    adapters.python.urirun.v2.run.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_runtime.py:215:Data
+    Clump: executors, policy, registry, uri, confirm, mode, payload'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: executors, policy, registry, uri, confirm,
+    mode, payload'
+  description: 'code2llm reports `Data Clump: executors, policy, registry, uri, confirm,
+    mode, payload` in `adapters/python/urirun/v2.py:274`.
+
+
+    Arguments (executors, policy, registry, uri, confirm, mode, payload) are used
+    together in multiple functions: adapters.python.urirun.v1.run, adapters.python.urirun._runtime.run,
     adapters.python.urirun.v2.run.
 
 
@@ -1487,14 +1305,159 @@ tickets:
   files:
   - adapters/python/urirun/v2.py
   dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2.py:274:Data Clump:
-    mode, uri, policy, confirm, executors, payload, registry'
+    executors, policy, registry, uri, confirm, mode, payload'
 - signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: openapi_base_url, include_shell, paths'
-  description: 'code2llm reports `Data Clump: openapi_base_url, include_shell, paths`
+  title: 'Address code smell: Data Clump: generated_at, doc, on_conflict'
+  description: 'code2llm reports `Data Clump: generated_at, doc, on_conflict` in `adapters/python/urirun/v1.py:331`.
+
+
+    Arguments (generated_at, doc, on_conflict) are used together in multiple functions:
+    adapters.python.urirun.v1.compile_registry, adapters.python.urirun.v2.compile_registry.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/v1.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v1.py:331:Data Clump:
+    generated_at, doc, on_conflict'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: generated_at, doc, on_conflict'
+  description: 'code2llm reports `Data Clump: generated_at, doc, on_conflict` in `adapters/python/urirun/v2.py:424`.
+
+
+    Arguments (generated_at, doc, on_conflict) are used together in multiple functions:
+    adapters.python.urirun.v1.compile_registry, adapters.python.urirun.v2.compile_registry.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/v2.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2.py:424:Data Clump:
+    generated_at, doc, on_conflict'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: handler, payload, status'
+  description: 'code2llm reports `Data Clump: handler, payload, status` in `v8/examples/docker_uri_flow/shell-worker/server.py:13`.
+
+
+    Arguments (handler, payload, status) are used together in multiple functions:
+    v8.examples.docker_uri_flow.shell-worker.server.response, v8.examples.docker_uri_flow.python-worker.server.response,
+    v2.examples.html_uri_app.backend.json_response.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - v8/examples/docker_uri_flow/shell-worker/server.py
+  dedupe_key: 'code2llm:smell:data_clump:v8/examples/docker_uri_flow/shell-worker/server.py:13:Data
+    Clump: handler, payload, status'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: handler, payload, status'
+  description: 'code2llm reports `Data Clump: handler, payload, status` in `v8/examples/docker_uri_flow/python-worker/server.py:13`.
+
+
+    Arguments (handler, payload, status) are used together in multiple functions:
+    v8.examples.docker_uri_flow.shell-worker.server.response, v8.examples.docker_uri_flow.python-worker.server.response,
+    v2.examples.html_uri_app.backend.json_response.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - v8/examples/docker_uri_flow/python-worker/server.py
+  dedupe_key: 'code2llm:smell:data_clump:v8/examples/docker_uri_flow/python-worker/server.py:13:Data
+    Clump: handler, payload, status'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: handler, payload, status'
+  description: 'code2llm reports `Data Clump: handler, payload, status` in `v2/examples/html_uri_app/backend.py:78`.
+
+
+    Arguments (handler, payload, status) are used together in multiple functions:
+    v8.examples.docker_uri_flow.shell-worker.server.response, v8.examples.docker_uri_flow.python-worker.server.response,
+    v2.examples.html_uri_app.backend.json_response.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - v2/examples/html_uri_app/backend.py
+  dedupe_key: 'code2llm:smell:data_clump:v2/examples/html_uri_app/backend.py:78:Data
+    Clump: handler, payload, status'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: openapi_base_url, include_shell, path'
+  description: 'code2llm reports `Data Clump: openapi_base_url, include_shell, path`
+    in `adapters/python/urirun/_scan.py:464`.
+
+
+    Arguments (openapi_base_url, include_shell, path) are used together in multiple
+    functions: adapters.python.urirun._scan.scan_path, adapters.python.urirun._scan.load_binding_source.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/_scan.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_scan.py:464:Data
+    Clump: openapi_base_url, include_shell, path'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: openapi_base_url, include_shell, path'
+  description: 'code2llm reports `Data Clump: openapi_base_url, include_shell, path`
+    in `adapters/python/urirun/_scan.py:507`.
+
+
+    Arguments (openapi_base_url, include_shell, path) are used together in multiple
+    functions: adapters.python.urirun._scan.scan_path, adapters.python.urirun._scan.load_binding_source.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/_scan.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_scan.py:507:Data
+    Clump: openapi_base_url, include_shell, path'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: openapi_base_url, paths, include_shell'
+  description: 'code2llm reports `Data Clump: openapi_base_url, paths, include_shell`
     in `adapters/python/urirun/_scan.py:519`.
 
 
-    Arguments (openapi_base_url, include_shell, paths) are used together in multiple
+    Arguments (openapi_base_url, paths, include_shell) are used together in multiple
     functions: adapters.python.urirun._scan.load_binding_sources, adapters.python.urirun._scan.list_bindings.
 
 
@@ -1508,14 +1471,14 @@ tickets:
   files:
   - adapters/python/urirun/_scan.py
   dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_scan.py:519:Data
-    Clump: openapi_base_url, include_shell, paths'
+    Clump: openapi_base_url, paths, include_shell'
 - signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: openapi_base_url, include_shell, paths'
-  description: 'code2llm reports `Data Clump: openapi_base_url, include_shell, paths`
+  title: 'Address code smell: Data Clump: openapi_base_url, paths, include_shell'
+  description: 'code2llm reports `Data Clump: openapi_base_url, paths, include_shell`
     in `adapters/python/urirun/_scan.py:547`.
 
 
-    Arguments (openapi_base_url, include_shell, paths) are used together in multiple
+    Arguments (openapi_base_url, paths, include_shell) are used together in multiple
     functions: adapters.python.urirun._scan.load_binding_sources, adapters.python.urirun._scan.list_bindings.
 
 
@@ -1529,49 +1492,7 @@ tickets:
   files:
   - adapters/python/urirun/_scan.py
   dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_scan.py:547:Data
-    Clump: openapi_base_url, include_shell, paths'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: payload, translation, route_entry, descriptor'
-  description: 'code2llm reports `Data Clump: payload, translation, route_entry, descriptor`
-    in `adapters/python/urirun/v1.py:40`.
-
-
-    Arguments (payload, translation, route_entry, descriptor) are used together in
-    multiple functions: adapters.python.urirun.v1.resolve_params, adapters.python.urirun.v2.validate_input.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/v1.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v1.py:40:Data Clump:
-    payload, translation, route_entry, descriptor'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: payload, translation, route_entry, descriptor'
-  description: 'code2llm reports `Data Clump: payload, translation, route_entry, descriptor`
-    in `adapters/python/urirun/v2.py:187`.
-
-
-    Arguments (payload, translation, route_entry, descriptor) are used together in
-    multiple functions: adapters.python.urirun.v1.resolve_params, adapters.python.urirun.v2.validate_input.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/v2.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2.py:187:Data Clump:
-    payload, translation, route_entry, descriptor'
+    Clump: openapi_base_url, paths, include_shell'
 - signal: code2llm_smell_data_clump
   title: 'Address code smell: Data Clump: policy, execute, ctx'
   description: 'code2llm reports `Data Clump: policy, execute, ctx` in `adapters/python/urirun/v1.py:121`.
@@ -1780,72 +1701,12 @@ tickets:
   dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2.py:257:Data Clump:
     policy, execute, ctx'
 - signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: uri, payload, registry'
-  description: 'code2llm reports `Data Clump: uri, payload, registry` in `adapters/python/urirun/v2_grpc.py:108`.
+  title: 'Address code smell: Data Clump: policy, registry, uri'
+  description: 'code2llm reports `Data Clump: policy, registry, uri` in `adapters/python/urirun/v1.py:286`.
 
 
-    Arguments (uri, payload, registry) are used together in multiple functions: adapters.python.urirun.v2_grpc._validate,
-    adapters.python.urirun.dispatch.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/v2_grpc.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2_grpc.py:108:Data
-    Clump: uri, payload, registry'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: uri, payload, registry'
-  description: 'code2llm reports `Data Clump: uri, payload, registry` in `adapters/python/urirun/__init__.py:29`.
-
-
-    Arguments (uri, payload, registry) are used together in multiple functions: adapters.python.urirun.v2_grpc._validate,
-    adapters.python.urirun.dispatch.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/__init__.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/__init__.py:29:Data
-    Clump: uri, payload, registry'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: uri, policy, registry'
-  description: 'code2llm reports `Data Clump: uri, policy, registry` in `adapters/python/urirun/_runtime.py:275`.
-
-
-    Arguments (uri, policy, registry) are used together in multiple functions: adapters.python.urirun._runtime.check,
-    adapters.python.urirun.v1.check, adapters.python.urirun.v2.check.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - data-clump
-  files:
-  - adapters/python/urirun/_runtime.py
-  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_runtime.py:275:Data
-    Clump: uri, policy, registry'
-- signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: uri, policy, registry'
-  description: 'code2llm reports `Data Clump: uri, policy, registry` in `adapters/python/urirun/v1.py:286`.
-
-
-    Arguments (uri, policy, registry) are used together in multiple functions: adapters.python.urirun._runtime.check,
-    adapters.python.urirun.v1.check, adapters.python.urirun.v2.check.
+    Arguments (policy, registry, uri) are used together in multiple functions: adapters.python.urirun.v1.check,
+    adapters.python.urirun._runtime.check, adapters.python.urirun.v2.check.
 
 
     Make the smallest refactor that removes the smell and run local tests.'
@@ -1858,14 +1719,34 @@ tickets:
   files:
   - adapters/python/urirun/v1.py
   dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v1.py:286:Data Clump:
-    uri, policy, registry'
+    policy, registry, uri'
 - signal: code2llm_smell_data_clump
-  title: 'Address code smell: Data Clump: uri, policy, registry'
-  description: 'code2llm reports `Data Clump: uri, policy, registry` in `adapters/python/urirun/v2.py:356`.
+  title: 'Address code smell: Data Clump: policy, registry, uri'
+  description: 'code2llm reports `Data Clump: policy, registry, uri` in `adapters/python/urirun/_runtime.py:275`.
 
 
-    Arguments (uri, policy, registry) are used together in multiple functions: adapters.python.urirun._runtime.check,
-    adapters.python.urirun.v1.check, adapters.python.urirun.v2.check.
+    Arguments (policy, registry, uri) are used together in multiple functions: adapters.python.urirun.v1.check,
+    adapters.python.urirun._runtime.check, adapters.python.urirun.v2.check.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/_runtime.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/_runtime.py:275:Data
+    Clump: policy, registry, uri'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: policy, registry, uri'
+  description: 'code2llm reports `Data Clump: policy, registry, uri` in `adapters/python/urirun/v2.py:356`.
+
+
+    Arguments (policy, registry, uri) are used together in multiple functions: adapters.python.urirun.v1.check,
+    adapters.python.urirun._runtime.check, adapters.python.urirun.v2.check.
 
 
     Make the smallest refactor that removes the smell and run local tests.'
@@ -1878,10 +1759,92 @@ tickets:
   files:
   - adapters/python/urirun/v2.py
   dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2.py:356:Data Clump:
-    uri, policy, registry'
+    policy, registry, uri'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: registry, uri, payload'
+  description: 'code2llm reports `Data Clump: registry, uri, payload` in `adapters/python/urihandler/__init__.py:29`.
+
+
+    Arguments (registry, uri, payload) are used together in multiple functions: adapters.python.urihandler.dispatch,
+    adapters.python.urirun.v2_grpc._validate.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urihandler/__init__.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urihandler/__init__.py:29:Data
+    Clump: registry, uri, payload'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: registry, uri, payload'
+  description: 'code2llm reports `Data Clump: registry, uri, payload` in `adapters/python/urirun/v2_grpc.py:108`.
+
+
+    Arguments (registry, uri, payload) are used together in multiple functions: adapters.python.urihandler.dispatch,
+    adapters.python.urirun.v2_grpc._validate.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/v2_grpc.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2_grpc.py:108:Data
+    Clump: registry, uri, payload'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: route_entry, descriptor, translation, payload'
+  description: 'code2llm reports `Data Clump: route_entry, descriptor, translation,
+    payload` in `adapters/python/urirun/v1.py:40`.
+
+
+    Arguments (route_entry, descriptor, translation, payload) are used together in
+    multiple functions: adapters.python.urirun.v1.resolve_params, adapters.python.urirun.v2.validate_input.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/v1.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v1.py:40:Data Clump:
+    route_entry, descriptor, translation, payload'
+- signal: code2llm_smell_data_clump
+  title: 'Address code smell: Data Clump: route_entry, descriptor, translation, payload'
+  description: 'code2llm reports `Data Clump: route_entry, descriptor, translation,
+    payload` in `adapters/python/urirun/v2.py:187`.
+
+
+    Arguments (route_entry, descriptor, translation, payload) are used together in
+    multiple functions: adapters.python.urirun.v1.resolve_params, adapters.python.urirun.v2.validate_input.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - data-clump
+  files:
+  - adapters/python/urirun/v2.py
+  dedupe_key: 'code2llm:smell:data_clump:adapters/python/urirun/v2.py:187:Data Clump:
+    route_entry, descriptor, translation, payload'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: DEFAULT_TIMEOUT'
-  description: 'code2llm reports `God Function: DEFAULT_TIMEOUT` in `v1/examples/js/urirun-v7.js:7`.
+  description: 'code2llm reports `God Function: DEFAULT_TIMEOUT` in `v1/examples/js/urirun-v1.js:7`.
 
 
     Function ''DEFAULT_TIMEOUT'' is oversized: CC=5, fan-out=11, mutations=0.
@@ -1895,12 +1858,12 @@ tickets:
   - code-smell
   - god-function
   files:
-  - v1/examples/js/urirun-v7.js
-  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v7.js:7:God Function:
+  - v1/examples/js/urirun-v1.js
+  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v1.js:7:God Function:
     DEFAULT_TIMEOUT'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: OUTPUT_LIMIT'
-  description: 'code2llm reports `God Function: OUTPUT_LIMIT` in `v1/examples/js/urirun-v7.js:8`.
+  description: 'code2llm reports `God Function: OUTPUT_LIMIT` in `v1/examples/js/urirun-v1.js:8`.
 
 
     Function ''OUTPUT_LIMIT'' is oversized: CC=5, fan-out=11, mutations=0.
@@ -1914,8 +1877,8 @@ tickets:
   - code-smell
   - god-function
   files:
-  - v1/examples/js/urirun-v7.js
-  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v7.js:8:God Function:
+  - v1/examples/js/urirun-v1.js
+  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v1.js:8:God Function:
     OUTPUT_LIMIT'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: _apply_defaults'
@@ -2280,25 +2243,6 @@ tickets:
     Function: load_bindings_from_manifest'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: main'
-  description: 'code2llm reports `God Function: main` in `adapters/python/urirun/v2_mcp.py:145`.
-
-
-    Function ''main'' is oversized: CC=9, fan-out=11, mutations=13.
-
-
-    Make the smallest refactor that removes the smell and run local tests.'
-  priority: normal
-  labels:
-  - llm-ready
-  - code2llm
-  - code-smell
-  - god-function
-  files:
-  - adapters/python/urirun/v2_mcp.py
-  dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v2_mcp.py:145:God
-    Function: main'
-- signal: code2llm_smell_god_function
-  title: 'Address code smell: God Function: main'
   description: 'code2llm reports `God Function: main` in `v2/examples/transports/scan_and_run.py:20`.
 
 
@@ -2315,6 +2259,25 @@ tickets:
   files:
   - v2/examples/transports/scan_and_run.py
   dedupe_key: 'code2llm:smell:god_function:v2/examples/transports/scan_and_run.py:20:God
+    Function: main'
+- signal: code2llm_smell_god_function
+  title: 'Address code smell: God Function: main'
+  description: 'code2llm reports `God Function: main` in `adapters/python/urirun/v2_mcp.py:145`.
+
+
+    Function ''main'' is oversized: CC=9, fan-out=11, mutations=13.
+
+
+    Make the smallest refactor that removes the smell and run local tests.'
+  priority: normal
+  labels:
+  - llm-ready
+  - code2llm
+  - code-smell
+  - god-function
+  files:
+  - adapters/python/urirun/v2_mcp.py
+  dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v2_mcp.py:145:God
     Function: main'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: merge_into'
@@ -2394,7 +2357,7 @@ tickets:
     Function: parsePayloadValue'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: parseUri'
-  description: 'code2llm reports `God Function: parseUri` in `v1/examples/js/urirun-v7.js:10`.
+  description: 'code2llm reports `God Function: parseUri` in `v1/examples/js/urirun-v1.js:10`.
 
 
     Function ''parseUri'' is oversized: CC=5, fan-out=11, mutations=0.
@@ -2408,8 +2371,8 @@ tickets:
   - code-smell
   - god-function
   files:
-  - v1/examples/js/urirun-v7.js
-  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v7.js:10:God Function:
+  - v1/examples/js/urirun-v1.js
+  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v1.js:10:God Function:
     parseUri'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: parse_compose_label_line'
@@ -2489,7 +2452,7 @@ tickets:
     Function: refreshDevices'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: registry_has_uri'
-  description: 'code2llm reports `God Function: registry_has_uri` in `v2/examples/docker_uri_flow/orchestrator/flow_runner.py:119`.
+  description: 'code2llm reports `God Function: registry_has_uri` in `v8/examples/docker_uri_flow/orchestrator/flow_runner.py:119`.
 
 
     Function ''registry_has_uri'' is oversized: CC=4, fan-out=7, mutations=8.
@@ -2503,8 +2466,8 @@ tickets:
   - code-smell
   - god-function
   files:
-  - v2/examples/docker_uri_flow/orchestrator/flow_runner.py
-  dedupe_key: 'code2llm:smell:god_function:v2/examples/docker_uri_flow/orchestrator/flow_runner.py:119:God
+  - v8/examples/docker_uri_flow/orchestrator/flow_runner.py
+  dedupe_key: 'code2llm:smell:god_function:v8/examples/docker_uri_flow/orchestrator/flow_runner.py:119:God
     Function: registry_has_uri'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: renderDetail'
@@ -2717,7 +2680,7 @@ tickets:
     Function: run_fetch'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: run_flow'
-  description: 'code2llm reports `God Function: run_flow` in `v2/examples/docker_uri_flow/orchestrator/flow_runner.py:188`.
+  description: 'code2llm reports `God Function: run_flow` in `v8/examples/docker_uri_flow/orchestrator/flow_runner.py:188`.
 
 
     Function ''run_flow'' is oversized: CC=8, fan-out=12, mutations=8.
@@ -2731,8 +2694,8 @@ tickets:
   - code-smell
   - god-function
   files:
-  - v2/examples/docker_uri_flow/orchestrator/flow_runner.py
-  dedupe_key: 'code2llm:smell:god_function:v2/examples/docker_uri_flow/orchestrator/flow_runner.py:188:God
+  - v8/examples/docker_uri_flow/orchestrator/flow_runner.py
+  dedupe_key: 'code2llm:smell:god_function:v8/examples/docker_uri_flow/orchestrator/flow_runner.py:188:God
     Function: run_flow'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Function: run_via'
@@ -2985,12 +2948,12 @@ tickets:
   dedupe_key: 'code2llm:smell:god_function:adapters/python/urirun/v2.py:1:God Module:
     adapters.python.urirun.v2'
 - signal: code2llm_smell_god_function
-  title: 'Address code smell: God Module: v1.examples.html_uri_app.uri-runtime-v7'
-  description: 'code2llm reports `God Module: v1.examples.html_uri_app.uri-runtime-v7`
-    in `v1/examples/html_uri_app/uri-runtime-v7.js:1`.
+  title: 'Address code smell: God Module: v1.examples.html_uri_app.uri-runtime-v1'
+  description: 'code2llm reports `God Module: v1.examples.html_uri_app.uri-runtime-v1`
+    in `v1/examples/html_uri_app/uri-runtime-v1.js:1`.
 
 
-    Module ''v1.examples.html_uri_app.uri-runtime-v7'' is too large (54 functions,
+    Module ''v1.examples.html_uri_app.uri-runtime-v1'' is too large (54 functions,
     0 classes). Consider splitting into sub-modules.
 
 
@@ -3002,15 +2965,15 @@ tickets:
   - code-smell
   - god-function
   files:
-  - v1/examples/html_uri_app/uri-runtime-v7.js
-  dedupe_key: 'code2llm:smell:god_function:v1/examples/html_uri_app/uri-runtime-v7.js:1:God
-    Module: v1.examples.html_uri_app.uri-runtime-v7'
+  - v1/examples/html_uri_app/uri-runtime-v1.js
+  dedupe_key: 'code2llm:smell:god_function:v1/examples/html_uri_app/uri-runtime-v1.js:1:God
+    Module: v1.examples.html_uri_app.uri-runtime-v1'
 - signal: code2llm_smell_god_function
-  title: 'Address code smell: God Module: v1.examples.js.urirun-v7'
-  description: 'code2llm reports `God Module: v1.examples.js.urirun-v7` in `v1/examples/js/urirun-v7.js:1`.
+  title: 'Address code smell: God Module: v1.examples.js.urirun-v1'
+  description: 'code2llm reports `God Module: v1.examples.js.urirun-v1` in `v1/examples/js/urirun-v1.js:1`.
 
 
-    Module ''v1.examples.js.urirun-v7'' is too large (65 functions, 0 classes). Consider
+    Module ''v1.examples.js.urirun-v1'' is too large (65 functions, 0 classes). Consider
     splitting into sub-modules.
 
 
@@ -3022,9 +2985,9 @@ tickets:
   - code-smell
   - god-function
   files:
-  - v1/examples/js/urirun-v7.js
-  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v7.js:1:God Module:
-    v1.examples.js.urirun-v7'
+  - v1/examples/js/urirun-v1.js
+  dedupe_key: 'code2llm:smell:god_function:v1/examples/js/urirun-v1.js:1:God Module:
+    v1.examples.js.urirun-v1'
 - signal: code2llm_smell_god_function
   title: 'Address code smell: God Module: v2.examples.device_mesh_lab.www.app'
   description: 'code2llm reports `God Module: v2.examples.device_mesh_lab.www.app`

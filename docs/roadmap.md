@@ -16,5 +16,5 @@ The most useful next work for making `urirun` easier:
 - Add scanner explanations: every generated binding should include source file,
   source standard, and reason.
 - Add installer smoke tests for GitHub installs and GitHub Release wheels.
-- Keep public docs focused on v7 and v8; older experiment folders should remain
+- Keep public docs focused on v1 and v2; older experiment folders should remain
   removed or archived outside the main project.

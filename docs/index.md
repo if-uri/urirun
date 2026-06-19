@@ -20,13 +20,13 @@ agent tool projection.
 
 ## Current recommendation
 
-Use v8 for new projects:
+Use v2 for new projects:
 
 ```bash
 pip install "git+https://github.com/tellmesh/urirun.git@main#subdirectory=adapters/python"
-urirun scan ./project --out generated/bindings.v8.json --registry-out generated/registry.json
+urirun scan ./project --out generated/bindings.v2.json --registry-out generated/registry.json
 urirun list generated/registry.json
 ```
 
-Keep v7 only for older examples that depend on the first parameter-binding
+Keep v1 only for older examples that depend on the first parameter-binding
 contract.

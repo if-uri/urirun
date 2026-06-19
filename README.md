@@ -40,7 +40,7 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
   package name, JSON schema prefix, Docker/OCI label prefix, and C adapter files.
 - `tellmesh/urirun` remains the GitHub repository URL and may still appear
   in historical changelog entries.
-- New user-facing commands should use `urirun`, `urirun-v7`, or `urirun-v8`.
+- New user-facing commands should use `urirun`, `urirun-v1`, or `urirun-v2`.
 - Do not change the GitHub remote URL unless the repository is actually renamed
   or moved on GitHub.
 
@@ -50,8 +50,8 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - `adapters/js/` - JavaScript reference adapter
 - `adapters/python/` - Python reference adapter
 - `adapters/c/` - C firmware-style reference adapter
-- `v7/` - parameter binding (`{name}` from payload/query), string shorthand, Docker adapters, and `env`/`stdin`/`cwd`/`timeout`
-- `v8/` - schema-first command packages (JSON Schema inputs, multi-language decorators, artifact adoption) + MCP/A2A interop for LLM/agent discovery
+- `v1/` - parameter binding (`{name}` from payload/query), string shorthand, Docker adapters, and `env`/`stdin`/`cwd`/`timeout`
+- `v2/` - schema-first command packages (JSON Schema inputs, multi-language decorators, artifact adoption) + MCP/A2A interop for LLM/agent discovery
 - `examples/reference_adapters/` - minimal base adapter examples for JS, Python, C/firmware, and browser usage
 - `docs/` - current documentation for naming, quick start, CLI, registry, and transports
 - `www/` - PHP project site and documentation viewer using generated urirun logo assets
@@ -69,7 +69,7 @@ npm install github:tellmesh/urirun
 
 ```js
 import { parseUri } from "urirun";
-import { compileRegistry, run as runV7 } from "urirun/v7/js";
+import { compileRegistry, run as runV7 } from "urirun/v1/js";
 ```
 
 or vendor the adapter folder directly into your repo.
@@ -89,19 +89,19 @@ pip install "https://github.com/tellmesh/urirun/releases/download/v0.3.4/urirun-
 ```
 
 The distribution and import package are named `urirun`.
-The Python package installs the v8-first `urirun` CLI and versioned v7/v8
+The Python package installs the v2-first `urirun` CLI and versioned v1/v2
 entrypoints:
 
 ```bash
-urirun scan ./project --out .urirun/bindings.v8.json --registry-out .urirun/registry.merged.json
-urirun validate .urirun/bindings.v8.json
+urirun scan ./project --out .urirun/bindings.v2.json --registry-out .urirun/registry.merged.json
+urirun validate .urirun/bindings.v2.json
 urirun list .urirun/registry.merged.json
 urirun run 'cli://local/git/status' .urirun/registry.merged.json
-urirun-v7 --help
-urirun-v8 --help
+urirun-v1 --help
+urirun-v2 --help
 ```
 
-Optional transports stay optional. For the v8 gRPC transport install:
+Optional transports stay optional. For the v2 gRPC transport install:
 
 ```bash
 pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@main#subdirectory=adapters/python"
@@ -133,22 +133,22 @@ The PHP site can be served locally with:
 php -S 127.0.0.1:8098 -t www
 ```
 
-## v7 parameter binding, Docker, and shell
+## v1 parameter binding, Docker, and shell
 
-v7 adds named **parameter binding** so real tools (ffmpeg, kubectl, docker) are
+v1 adds named **parameter binding** so real tools (ffmpeg, kubectl, docker) are
 easy to drive, plus a string shorthand, Docker adapters, and `env`/`stdin`/
 `cwd`/`timeout`.
 
 ```bash
 # string shorthand + named params; dry-run prints the exact command first
-PYTHONPATH=adapters/python urirun-v7 compile v7/examples/json/bindings.v7.example.json \
+PYTHONPATH=adapters/python urirun-v1 compile v1/examples/json/bindings.v1.example.json \
   --out /tmp/registry.json
-PYTHONPATH=adapters/python urirun-v7 run 'media://local/video/transcode' /tmp/registry.json \
+PYTHONPATH=adapters/python urirun-v1 run 'media://local/video/transcode' /tmp/registry.json \
   --payload '{"input":"a.mp4","output":"b.mp4"}'
 # -> result.command: ["ffmpeg","-i","a.mp4","-vf","scale=1280:720","b.mp4"]
 
 # Docker as an execution surface (target = container; or one-shot from an image)
-PYTHONPATH=adapters/python urirun-v7 run 'container://api/db/backup' /tmp/registry.json \
+PYTHONPATH=adapters/python urirun-v1 run 'container://api/db/backup' /tmp/registry.json \
   --payload '{"database":"app"}'
 # -> docker exec api pg_dump -U postgres app
 ```
@@ -164,9 +164,9 @@ target (`{target}`):
 }}
 ```
 
-## v8 schema-first packages + MCP/A2A interop
+## v2 schema-first packages + MCP/A2A interop
 
-v8 makes each endpoint a schema-first package: the input contract is JSON Schema
+v2 makes each endpoint a schema-first package: the input contract is JSON Schema
 (authored by hand, by `add-pypi`/`add-command`, or by decorators in Python, JS,
 TS and PHP). Because that schema is exactly what agents need, the same registry
 projects to **MCP tools** and an **A2A agent card**, so an LLM or another agent
@@ -174,35 +174,35 @@ can discover and call the endpoints — still through the policy gate.
 
 ```bash
 # add a binding from a PyPI package in one line, then compile
-urirun add-pypi sampleproject --out urirun.bindings.v8.json
-urirun compile urirun.bindings.v8.json --out registry.json
+urirun add-pypi sampleproject --out urirun.bindings.v2.json
+urirun compile urirun.bindings.v2.json --out registry.json
 
 # adopt the CLI commands installed packages ship (PyPI console_scripts, npm bin)
-python -m urirun.v8_adopt add-python-package black --out urirun.bindings.v8.json
-python -m urirun.v8_adopt add-npm-package prettier --out urirun.bindings.v8.json
-python -m urirun.v8_adopt init .   # scan project -> bindings + registry in one command
+python -m urirun.v2_adopt add-python-package black --out urirun.bindings.v2.json
+python -m urirun.v2_adopt add-npm-package prettier --out urirun.bindings.v2.json
+python -m urirun.v2_adopt init .   # scan project -> bindings + registry in one command
 
 # project the registry to MCP / A2A, or serve MCP over stdio
-python -m urirun.v8_mcp tools registry.json     # MCP tools/list manifest
-python -m urirun.v8_mcp card  registry.json     # A2A agent card
-python -m urirun.v8_mcp serve registry.json     # MCP stdio server (dry-run by default)
+python -m urirun.v2_mcp tools registry.json     # MCP tools/list manifest
+python -m urirun.v2_mcp card  registry.json     # A2A agent card
+python -m urirun.v2_mcp serve registry.json     # MCP stdio server (dry-run by default)
 ```
 
-Multi-language authoring lives in `v8/examples/generators/` (JS, Node.js, TS,
-PHP), the HTTP console with live MCP/A2A discovery in `v8/examples/html_uri_app/`.
+Multi-language authoring lives in `v2/examples/generators/` (JS, Node.js, TS,
+PHP), the HTTP console with live MCP/A2A discovery in `v2/examples/html_uri_app/`.
 
-v8 also includes a Docker Compose flow where URI packages are discovered from
+v2 also includes a Docker Compose flow where URI packages are discovered from
 real artifacts before the flow starts:
 
 ```bash
-cd v8/examples/docker_uri_flow
+cd v2/examples/docker_uri_flow
 make registry   # Dockerfile/package/script artifacts -> generated registry
 make run        # generate registry, build services, validate flow URIs, dispatch
 ```
 
 The generated files are local artifacts under `generated/`:
 
-- `bindings.v8.json` - flat URI bindings discovered from Dockerfiles,
+- `bindings.v2.json` - flat URI bindings discovered from Dockerfiles,
   manifests, package metadata, Makefile targets and scripts
 - `registry.json` - compiled registry used by the orchestrator
 - `routes.txt` - human-readable list of generated URI routes

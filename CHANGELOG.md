@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2026-06-19
+
+### Fixed
+- Fix smart-return-type issues (ticket-eb869bc1)
+- Fix duplicate-imports issues (ticket-99718c09)
+- Fix smart-return-type issues (ticket-eaa1a1f7)
+- Fix string-concat issues (ticket-189972f1)
+- Fix unused-imports issues (ticket-2ae216f5)
+- Fix magic-numbers issues (ticket-501340be)
+- Fix ai-boilerplate issues (ticket-0d4413a6)
+- Fix smart-return-type issues (ticket-8a46e336)
+- Fix unused-imports issues (ticket-ce8677da)
+- Fix ai-boilerplate issues (ticket-2d28df98)
+- Fix smart-return-type issues (ticket-201b30dc)
+- Fix unused-imports issues (ticket-b5459d71)
+- Fix ai-boilerplate issues (ticket-716210d9)
+- Fix smart-return-type issues (ticket-458d3024)
+- Fix string-concat issues (ticket-c668e6f1)
+- Fix unused-imports issues (ticket-6768fa98)
+- Fix ai-boilerplate issues (ticket-b616f41a)
+- Fix unused-imports issues (ticket-0937ba6b)
+- Fix ai-boilerplate issues (ticket-aead3121)
+- Fix smart-return-type issues (ticket-2dc4a55e)
+- Fix unused-imports issues (ticket-13dfd8b6)
+- Fix magic-numbers issues (ticket-9f2b85cc)
+- Fix ai-boilerplate issues (ticket-c05d5ebc)
+- Fix duplicate-imports issues (ticket-7ed2df3e)
+- Fix unused-imports issues (ticket-e18f1230)
+- Fix magic-numbers issues (ticket-f686b7a3)
+- Fix smart-return-type issues (ticket-94ce9e76)
+- Fix string-concat issues (ticket-095f3619)
+- Fix unused-imports issues (ticket-a1bddd24)
+- Fix magic-numbers issues (ticket-b2d2ca2f)
+- Fix ai-boilerplate issues (ticket-3d6a7d0c)
+- Fix smart-return-type issues (ticket-0b9880f6)
+- Fix string-concat issues (ticket-ee11fc23)
+- Fix unused-imports issues (ticket-ea06d378)
+- Fix magic-numbers issues (ticket-04013af9)
+- Fix ai-boilerplate issues (ticket-d46eec47)
+
 ## [Unreleased]
 
 ### Added

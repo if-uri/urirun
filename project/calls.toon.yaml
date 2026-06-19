@@ -1,6 +1,6 @@
 # code2llm call graph | /home/tom/github/tellmesh/urihandler
-# generated in 0.17s
-# nodes: 392 | edges: 467 | modules: 30
+# generated in 0.18s
+# nodes: 391 | edges: 464 | modules: 30
 # CC̄=3.7
 
 HUBS[20]:
@@ -8,50 +8,48 @@ HUBS[20]:
     CC=15  in:4  out:27  total:31
   adapters.python.urirun._scan.normalize_binding
     CC=11  in:17  out:12  total:29
-  v2.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
     CC=24  in:1  out:26  total:27
   adapters.python.urirun.v2.validate_binding_document
     CC=12  in:2  out:24  total:26
   v2.examples.transports.transport_lib.start_http_worker
     CC=1  in:1  out:24  total:25
-  adapters.python.urirun.v2_mcp.serve_mcp
-    CC=15  in:1  out:23  total:24
   adapters.python.urirun.v1.run
     CC=14  in:1  out:23  total:24
+  adapters.python.urirun.v2_mcp.serve_mcp
+    CC=15  in:1  out:23  total:24
   adapters.python.urirun.v2.scan_artifacts
     CC=11  in:4  out:19  total:23
   adapters.python.urirun.v2.run
     CC=15  in:1  out:22  total:23
-  v2.examples.device_mesh_lab.www.app.escapeHtml
-    CC=1  in:20  out:2  total:22
   adapters.python.urirun._runtime.evaluate_policy
     CC=16  in:3  out:19  total:22
-  v2.examples.html_uri_app.backend.Handler.do_GET
-    CC=8  in:0  out:21  total:21
+  v2.examples.device_mesh_lab.www.app.escapeHtml
+    CC=1  in:20  out:2  total:22
   adapters.python.urirun._registry.discover_manifest
     CC=14  in:2  out:19  total:21
   adapters.python.urirun._runtime.run
     CC=10  in:1  out:20  total:21
+  v2.examples.html_uri_app.backend.Handler.do_GET
+    CC=8  in:0  out:21  total:21
   adapters.python.urirun._registry.discover_docker_labels
     CC=14  in:2  out:18  total:20
-  v2.examples.html_uri_app.backend.json_response
-    CC=1  in:10  out:9  total:19
   adapters.python.urirun._registry.coerce_route_source
     CC=11  in:5  out:14  total:19
   adapters.python.urirun._scan.load_bindings_from_manifest
     CC=14  in:3  out:16  total:19
-  adapters.python.urirun._registry.build_registry_document
-    CC=10  in:2  out:16  total:18
-  adapters.python.urirun._registry.parse_uri
-    CC=8  in:2  out:16  total:18
+  v2.examples.html_uri_app.backend.json_response
+    CC=1  in:10  out:9  total:19
+  v8.examples.docker_uri_flow.shell-worker.server.response
+    CC=1  in:10  out:9  total:19
+  adapters.python.urirun.v2.expand_binding
+    CC=16  in:9  out:9  total:18
 
 MODULES:
-  adapters.c.urirun  [5 funcs]
+  adapters.c.urirun  [3 funcs]
     copy_token  CC=2  out:1
     is_path_end  CC=3  out:0
     memcpy  CC=1  out:1
-    memset  CC=5  out:0
-    urirun_parse  CC=20  out:5
   adapters.c.urirun_test  [2 funcs]
     assert  CC=1  out:0
     main  CC=2  out:3
@@ -61,7 +59,7 @@ MODULES:
     fn  CC=2  out:1
     match  CC=2  out:1
     parseUri  CC=8  out:9
-  adapters.python.urirun  [3 funcs]
+  adapters.python.urihandler  [3 funcs]
     build_invocation  CC=1  out:2
     dispatch  CC=4  out:10
     parse_uri  CC=7  out:13
@@ -169,7 +167,7 @@ MODULES:
     executeMode  CC=5  out:0
     inputs  CC=4  out:4
     items  CC=4  out:4
-  v1.examples.html_uri_app.uri-runtime-v7  [29 funcs]
+  v1.examples.html_uri_app.uri-runtime-v1  [29 funcs]
     activePolicy  CC=1  out:1
     adapter  CC=3  out:1
     allowed  CC=4  out:1
@@ -180,7 +178,7 @@ MODULES:
     entries  CC=1  out:0
     evaluatePolicy  CC=18  out:3
     expandBinding  CC=10  out:1
-  v1.examples.js.urirun-v7  [34 funcs]
+  v1.examples.js.urirun-v1  [34 funcs]
     DEFAULT_TIMEOUT  CC=5  out:11
     OUTPUT_LIMIT  CC=5  out:11
     allow  CC=2  out:2
@@ -195,7 +193,7 @@ MODULES:
     echo_message  CC=1  out:1
     shell_echo  CC=1  out:1
     transcode  CC=1  out:1
-  v2.examples.device_mesh_lab.www.app  [49 funcs]
+  v2.examples.device_mesh_lab.www.app  [48 funcs]
     appendTimeline  CC=3  out:3
     data  CC=2  out:1
     defaultValueFor  CC=20  out:2
@@ -206,47 +204,9 @@ MODULES:
     filter  CC=3  out:1
     frontendRows  CC=1  out:1
     groups  CC=6  out:6
-  v2.examples.docker_uri_flow.node-worker.server  [6 funcs]
-    body  CC=2  out:1
-    readBody  CC=2  out:4
-    send  CC=1  out:4
-    server  CC=10  out:4
-    slug  CC=1  out:1
-    slugify  CC=1  out:4
-  v2.examples.docker_uri_flow.orchestrator.flow_runner  [16 funcs]
-    get_path  CC=2  out:1
-    json_get  CC=1  out:4
-    json_post  CC=1  out:7
-    load_registry  CC=3  out:4
-    main  CC=3  out:5
-    normalize_uri  CC=6  out:7
-    parse_flow  CC=24  out:26
-    parse_scalar  CC=3  out:2
-    registry_has_uri  CC=4  out:9
-    registry_route_count  CC=5  out:9
-  v2.examples.docker_uri_flow.python-worker.server  [5 funcs]
-    do_GET  CC=3  out:3
-    do_POST  CC=6  out:11
-    dispatch  CC=3  out:2
-    normalize  CC=1  out:6
-    summary  CC=1  out:2
-  v2.examples.docker_uri_flow.shell-worker.server  [2 funcs]
-    do_GET  CC=3  out:3
-    do_POST  CC=6  out:11
   v2.examples.generators.php.example  [2 funcs]
     bindingFromFunction  CC=2  out:9
     schemaType  CC=2  out:3
-  v2.examples.html_uri_app.app  [15 funcs]
-    card  CC=2  out:2
-    classFor  CC=1  out:2
-    data  CC=2  out:1
-    defaults  CC=8  out:5
-    escapeHtml  CC=1  out:2
-    iconFor  CC=2  out:3
-    inputType  CC=2  out:2
-    payloadDefaults  CC=4  out:0
-    refreshLogs  CC=5  out:7
-    renderActions  CC=5  out:5
   v2.examples.html_uri_app.backend  [14 funcs]
     do_GET  CC=8  out:21
     do_POST  CC=4  out:10
@@ -266,58 +226,98 @@ MODULES:
     run_via  CC=6  out:16
     serverless_handler  CC=1  out:2
     start_http_worker  CC=1  out:24
+  v8.examples.docker_uri_flow.node-worker.server  [6 funcs]
+    body  CC=2  out:1
+    readBody  CC=2  out:4
+    send  CC=1  out:4
+    server  CC=10  out:4
+    slug  CC=1  out:1
+    slugify  CC=1  out:4
+  v8.examples.docker_uri_flow.orchestrator.flow_runner  [16 funcs]
+    get_path  CC=2  out:1
+    json_get  CC=1  out:4
+    json_post  CC=1  out:7
+    load_registry  CC=3  out:4
+    main  CC=3  out:5
+    normalize_uri  CC=6  out:7
+    parse_flow  CC=24  out:26
+    parse_scalar  CC=3  out:2
+    registry_has_uri  CC=4  out:9
+    registry_route_count  CC=5  out:9
+  v8.examples.docker_uri_flow.python-worker.server  [5 funcs]
+    do_GET  CC=3  out:3
+    do_POST  CC=6  out:11
+    dispatch  CC=3  out:2
+    normalize  CC=1  out:6
+    summary  CC=1  out:2
+  v8.examples.docker_uri_flow.shell-worker.server  [4 funcs]
+    do_GET  CC=3  out:3
+    do_POST  CC=6  out:11
+    dispatch  CC=2  out:5
+    response  CC=1  out:9
+  v8.examples.html_uri_app.app  [15 funcs]
+    card  CC=2  out:2
+    classFor  CC=1  out:2
+    data  CC=2  out:1
+    defaults  CC=8  out:5
+    escapeHtml  CC=1  out:2
+    iconFor  CC=2  out:3
+    inputType  CC=2  out:2
+    payloadDefaults  CC=4  out:0
+    refreshLogs  CC=5  out:7
+    renderActions  CC=5  out:5
   www.docs  [2 funcs]
     inline_markdown  CC=1  out:4
     render_markdown  CC=15  out:13
 
 EDGES:
-  adapters.js.parseUri → adapters.js.match
-  adapters.js.dispatch → adapters.js.parseUri
-  adapters.js.dispatch → adapters.js.buildInvocation
-  adapters.js.dispatch → adapters.js.fn
   examples.reference_adapters.node-server.server → examples.reference_adapters.node-server.writeJson
   examples.reference_adapters.node-server.server → examples.reference_adapters.node-server.readJson
+  examples.reference_adapters.python-server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.dispatch
   examples.reference_adapters.firmware-pseudo.handle_uri → examples.reference_adapters.firmware-pseudo.led_set
-  v2.examples.docker_uri_flow.node-worker.server.server → v2.examples.docker_uri_flow.node-worker.server.send
-  v2.examples.docker_uri_flow.node-worker.server.server → v2.examples.docker_uri_flow.node-worker.server.readBody
-  v2.examples.docker_uri_flow.node-worker.server.server → v2.examples.docker_uri_flow.node-worker.server.slugify
-  v2.examples.docker_uri_flow.node-worker.server.body → v2.examples.docker_uri_flow.node-worker.server.send
-  v2.examples.docker_uri_flow.node-worker.server.slug → v2.examples.docker_uri_flow.node-worker.server.send
-  v2.examples.generators.php.example.UriCommand.bindingFromFunction → v2.examples.generators.php.example.UriCommand.schemaType
-  adapters.c.urirun.urirun_parse → adapters.c.urirun.memset
-  adapters.c.urirun.urirun_parse → adapters.c.urirun.copy_token
-  adapters.c.urirun.urirun_parse → adapters.c.urirun.is_path_end
-  www.docs.render_markdown → www.docs.inline_markdown
-  v2.examples.html_uri_app.app.routeResponse → v2.examples.html_uri_app.app.renderActions
-  v2.examples.html_uri_app.app.routeResponse → v2.examples.html_uri_app.app.renderForm
-  v2.examples.html_uri_app.app.renderActions → v2.examples.html_uri_app.app.classFor
-  v2.examples.html_uri_app.app.renderActions → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.renderActions → v2.examples.html_uri_app.app.iconFor
-  v2.examples.html_uri_app.app.renderForm → v2.examples.html_uri_app.app.schemaFor
-  v2.examples.html_uri_app.app.renderForm → v2.examples.html_uri_app.app.payloadDefaults
-  v2.examples.html_uri_app.app.renderForm → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.required → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.defaults → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.inputType → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.refreshLogs → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.data → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.card → v2.examples.html_uri_app.app.renderToolList
-  v2.examples.html_uri_app.app.renderToolList → v2.examples.html_uri_app.app.escapeHtml
-  v2.examples.html_uri_app.app.iconFor → v2.examples.html_uri_app.app.classFor
-  adapters.c.urirun.copy_token → adapters.c.urirun.memcpy
-  adapters.c.urirun.memcpy → adapters.c.urirun.is_path_end
-  adapters.c.urirun_test.main → adapters.c.urirun_test.assert
+  v8.examples.html_uri_app.app.routeResponse → v8.examples.html_uri_app.app.renderActions
+  v8.examples.html_uri_app.app.routeResponse → v8.examples.html_uri_app.app.renderForm
+  v8.examples.html_uri_app.app.renderActions → v8.examples.html_uri_app.app.classFor
+  v8.examples.html_uri_app.app.renderActions → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.renderActions → v8.examples.html_uri_app.app.iconFor
+  v8.examples.html_uri_app.app.renderForm → v8.examples.html_uri_app.app.schemaFor
+  v8.examples.html_uri_app.app.renderForm → v8.examples.html_uri_app.app.payloadDefaults
+  v8.examples.html_uri_app.app.renderForm → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.required → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.defaults → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.inputType → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.refreshLogs → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.data → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.card → v8.examples.html_uri_app.app.renderToolList
+  v8.examples.html_uri_app.app.renderToolList → v8.examples.html_uri_app.app.escapeHtml
+  v8.examples.html_uri_app.app.iconFor → v8.examples.html_uri_app.app.classFor
+  v8.examples.docker_uri_flow.shell-worker.server.Handler.do_GET → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.shell-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.dispatch
+  v8.examples.docker_uri_flow.shell-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.node-worker.server.server → v8.examples.docker_uri_flow.node-worker.server.send
+  v8.examples.docker_uri_flow.node-worker.server.server → v8.examples.docker_uri_flow.node-worker.server.readBody
+  v8.examples.docker_uri_flow.node-worker.server.server → v8.examples.docker_uri_flow.node-worker.server.slugify
+  v8.examples.docker_uri_flow.node-worker.server.body → v8.examples.docker_uri_flow.node-worker.server.send
+  v8.examples.docker_uri_flow.node-worker.server.slug → v8.examples.docker_uri_flow.node-worker.server.send
+  v8.examples.docker_uri_flow.python-worker.server.dispatch → v8.examples.docker_uri_flow.python-worker.server.normalize
+  v8.examples.docker_uri_flow.python-worker.server.dispatch → v8.examples.docker_uri_flow.python-worker.server.summary
+  v8.examples.docker_uri_flow.python-worker.server.Handler.do_GET → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.python-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.dispatch
+  v8.examples.docker_uri_flow.python-worker.server.Handler.do_POST → v8.examples.docker_uri_flow.shell-worker.server.response
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_scalar
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.resolve_payload → v8.examples.docker_uri_flow.orchestrator.flow_runner.get_path
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_has_uri → v8.examples.docker_uri_flow.orchestrator.flow_runner.route_key
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_has_uri → v8.examples.docker_uri_flow.orchestrator.flow_runner.normalize_uri
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.validate_flow_registry → v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_route_count
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.validate_flow_registry → v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_has_uri
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.wait_for_services → v8.examples.docker_uri_flow.orchestrator.flow_runner.service_url
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.wait_for_services → v8.examples.docker_uri_flow.orchestrator.flow_runner.json_get
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.validate_flow_registry
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.wait_for_services
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.load_registry
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.resolve_payload
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.json_post
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
+  v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow
   v2.examples.device_mesh_lab.www.app.recordActivity → v2.examples.device_mesh_lab.www.app.renderActivityLog
   v2.examples.device_mesh_lab.www.app.routeBadge → v2.examples.device_mesh_lab.www.app.isRouteSafe
-  v2.examples.device_mesh_lab.www.app.renderDevices → v2.examples.device_mesh_lab.www.app.filter
-  v2.examples.device_mesh_lab.www.app.renderDevices → v2.examples.device_mesh_lab.www.app.escapeHtml
-  v2.examples.device_mesh_lab.www.app.reachable → v2.examples.device_mesh_lab.www.app.escapeHtml
-  v2.examples.device_mesh_lab.www.app.installable → v2.examples.device_mesh_lab.www.app.escapeHtml
-  v2.examples.device_mesh_lab.www.app.novncUrlFor → v2.examples.device_mesh_lab.www.app.novncEntryFor
-  v2.examples.device_mesh_lab.www.app.renderNovnc → v2.examples.device_mesh_lab.www.app.novncUrlFor
-  v2.examples.device_mesh_lab.www.app.renderNovnc → v2.examples.device_mesh_lab.www.app.escapeHtml
-  v2.examples.device_mesh_lab.www.app.url → v2.examples.device_mesh_lab.www.app.escapeHtml
-  v2.examples.device_mesh_lab.www.app.status → v2.examples.device_mesh_lab.www.app.escapeHtml
-  v2.examples.device_mesh_lab.www.app.renderRoutes → v2.examples.device_mesh_lab.www.app.filter
-  v2.examples.device_mesh_lab.www.app.renderRoutes → v2.examples.device_mesh_lab.www.app.escapeHtml
-  v2.examples.device_mesh_lab.www.app.renderRoutes → v2.examples.device_mesh_lab.www.app.routeBadge
