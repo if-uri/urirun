@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-06-19
+
+### Docs
+- Update README.md
+
+### Other
+- Update .gitignore
+- Update Makefile
+- Update v5/examples/html_uri_app/app.js
+- Update v5/examples/html_uri_app/bindings.json
+- Update v5/examples/html_uri_app/index.html
+- Update v5/examples/html_uri_app/uri-runtime.js
+- Update v6/examples/js/example.js
+- Update v6/examples/js/urihandler-v6.js
+- Update v6/examples/js/urihandler-v6.test.js
+- Update v6/examples/python/test_urihandler_v6.py
+
 ## [0.3.1] - 2026-06-19
 
 ### Docs

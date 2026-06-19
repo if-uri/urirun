@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>URI bindings app</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">urihandler v5</p>
+          <h1>URI Console</h1>
+        </div>
+        <div class="metric">
+          <span id="route-count">0</span>
+          <small>routes</small>
+        </div>
+      </header>
+
+      <section class="grid">
+        <nav class="actions" aria-label="URI actions">
+          <h2>Actions</h2>
+
+          <a class="action device" href="#device://device-01/led/set/on">
+            <span>D</span>
+            <strong>LED on</strong>
+            <code>device://device-01/led/set/on</code>
+          </a>
+
+          <a class="action device" href="#device://device-01/led/set/off">
+            <span>D</span>
+            <strong>LED off</strong>
+            <code>device://device-01/led/set/off</code>
+          </a>
+
+          <a class="action device" href="#device://device-01/telemetry/query/latest">
+            <span>T</span>
+            <strong>Telemetry</strong>
+            <code>device://device-01/telemetry/query/latest</code>
+          </a>
+
+          <button
+            class="action service"
+            data-uri="service://api/user/create/basic"
+            data-payload='{"name":"Ada","source":"button"}'
+          >
+            <span>S</span>
+            <strong>Create user</strong>
+            <code>service://api/user/create/basic</code>
+          </button>
+
+          <a class="action mqtt" href="#mqtt://broker/publish/home/kitchen/light/on">
+            <span>M</span>
+            <strong>MQTT publish</strong>
+            <code>mqtt://broker/publish/home/kitchen/light/on</code>
+          </a>
+
+          <a class="action shell" href="#shell://local/system/restart/nginx">
+            <span>H</span>
+            <strong>Shell template</strong>
+            <code>shell://local/system/restart/nginx</code>
+          </a>
+
+          <a class="action workflow" href="#workflow://office/supplier-report/monthly">
+            <span>W</span>
+            <strong>Supplier report</strong>
+            <code>workflow://office/supplier-report/monthly</code>
+          </a>
+
+          <a class="action workflow" href="#workflow://portal/zus-form/dry-run">
+            <span>W</span>
+            <strong>ZUS form</strong>
+            <code>workflow://portal/zus-form/dry-run</code>
+          </a>
+
+          <a class="action workflow" href="#workflow://bank/batch-transfer/dry-run">
+            <span>W</span>
+            <strong>Bank batch</strong>
+            <code>workflow://bank/batch-transfer/dry-run</code>
+          </a>
+        </nav>
+
+        <section class="panel">
+          <h2>State</h2>
+          <pre id="state">{}</pre>
+        </section>
+
+        <section class="panel result">
+          <h2>Result</h2>
+          <pre id="output">{}</pre>
+        </section>
+
+        <section class="panel logs">
+          <h2>Logs</h2>
+          <ul id="logs"></ul>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

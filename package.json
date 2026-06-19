@@ -1,6 +1,6 @@
 {
   "name": "urihandler",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Language-agnostic URI to handler adapter",
   "type": "module",
   "main": "./adapters/js/index.js",
@@ -9,7 +9,8 @@
     "./v2/js": "./v2/examples/js/urihandler-v2.js",
     "./v3/js": "./v3/examples/js/urihandler-v3.js",
     "./v4/js": "./v4/examples/js/urihandler-v4.js",
-    "./v5/js": "./v5/examples/js/urihandler-v5.js"
+    "./v5/js": "./v5/examples/js/urihandler-v5.js",
+    "./v6/js": "./v6/examples/js/urihandler-v6.js"
   },
   "files": [
     "adapters/js/index.js",
@@ -17,11 +18,13 @@
     "v3/examples/js/urihandler-v3.js",
     "v4/examples/js/urihandler-v4.js",
     "v5/examples/js/urihandler-v5.js",
+    "v6/examples/js/urihandler-v6.js",
     "spec/urihandler-spec.md",
     "v2/spec/urihandler-v2.md",
     "v3/spec/urihandler-v3.md",
     "v4/spec/urihandler-v4.md",
     "v5/spec/urihandler-v5.md",
+    "v6/spec/urihandler-v6.md",
     "README.md",
     "LICENSE"
   ],

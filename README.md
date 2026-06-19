@@ -37,6 +37,7 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - `v3/` - route entry model with executor adapters for function/http/cli/shell/mqtt/artifact
 - `v4/` - auto-discovery, generated registry documents, and CLI `discover/build-registry/call`
 - `v5/` - simple bindings-first scanner for existing projects, services, CLI, shell, code, and GitHub repos
+- `v6/` - execution and policy runtime: real `run`/`check` with a default-deny, default-dry-run safety gate
 - `examples/` - end-to-end examples
 - `github/` - GitHub integration notes
 
@@ -53,6 +54,7 @@ import { parseUri } from "urihandler";
 import { dispatch } from "urihandler/v3/js";
 import { buildRegistryDocument } from "urihandler/v4/js";
 import { buildBindingDocument } from "urihandler/v5/js";
+import { run, check } from "urihandler/v6/js";
 ```
 
 or vendor the adapter folder directly into your repo.
@@ -103,6 +105,31 @@ PYTHONPATH=adapters/python python -m urihandler.v5 call 'cli://local/npm/test' -
 ```
 
 v5 scans existing project artifacts into flat URI bindings first, then compiles those bindings to the same v4 registry runtime.
+
+## v6 execution and policy workflow
+
+Through v5 every executor only *simulated* the call and the spec's safety rules
+were never enforced. v6 adds a real runtime over the same registry, gated by a
+policy and defaulting to `dry-run` so nothing runs by accident.
+
+```bash
+# show the policy decision without running anything
+PYTHONPATH=adapters/python python -m urihandler.v6 check 'cli://local/npm/test' \
+  --registry /tmp/urihandler-v5.registry.json --policy v6/examples/json/policy.example.json
+
+# dry-run (default): result mirrors the v5 simulated output
+PYTHONPATH=adapters/python python -m urihandler.v6 run 'cli://local/npm/test' \
+  --registry /tmp/urihandler-v5.registry.json
+
+# actually execute, only if the policy allows it (default deny otherwise)
+PYTHONPATH=adapters/python python -m urihandler.v6 run 'cli://local/npm/test' \
+  --registry /tmp/urihandler-v5.registry.json --policy v6/examples/json/policy.example.json --execute
+```
+
+Key guarantees: default-deny in execute mode, argv arrays instead of shell
+strings (no injection), opt-in shell templates, and `--confirm` required for
+destructive commands. v6 also delegates `scan`/`compile`/`discover`/
+`build-registry`/`call` to the v5/v4 CLI, so it is a drop-in superset.
 
 ## License
 
