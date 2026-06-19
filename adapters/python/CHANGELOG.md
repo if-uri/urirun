@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.13] - 2026-06-20
+
+### Added
+- Add `urirun.connector(...)`, a convention helper for connector packages. It
+  builds full URI routes from short paths, fills `meta.connector`, and exports
+  connector-scoped bindings through `.bindings()`.
+
 ## [0.3.12] - 2026-06-20
 
 ### Added

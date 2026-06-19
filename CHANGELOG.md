@@ -77,6 +77,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix magic-numbers issues (ticket-04013af9)
 - Fix ai-boilerplate issues (ticket-d46eec47)
 
+## [0.3.13] - 2026-06-20
+
+### Added
+- Add `urirun.connector(...)`, a convention helper for connector packages. It
+  builds full URI routes from short paths, fills `meta.connector`, and exports
+  connector-scoped bindings through `.bindings()`.
+
+## [0.3.12] - 2026-06-20
+
+### Added
+- Add the preferred top-level decorator API: `@urirun.command(...)`,
+  `@urirun.shell(...)` and `urirun.connector_bindings(...)` in
+  `adapters/python/urirun/__init__.py`. `urirun.v2.uri_command` /
+  `urirun.v2.uri_shell` remain supported.
+
+## [0.3.11] - 2026-06-20
+
+### Added
+- Add the release workflow (`.github/workflows/release.yml`): a `v*` tag builds
+  the `urirun` wheel + sdist, smoke-tests the wheel, writes `sha256sums.txt`,
+  and publishes a GitHub Release with the artifacts attached.
+- Add the CI workflow (`.github/workflows/ci.yml`) running `make test` on push
+  and pull request.
+
+### Fixed
+- Restore release-version consistency after the skipped v0.3.8-v0.3.10 tags
+  still built `urirun` Python artifacts with version 0.3.5.
+
 ## [Unreleased]
 
 ### Added
@@ -88,19 +116,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a curated `TODO.md` focused on urirun usability work.
 
 ### Changed
-- Update README for the current `urirun` runtime name while keeping the GitHub
-  repository URL as `tellmesh/urihandler`.
+- Update README for the current `urirun` runtime name; the GitHub repository is
+  `tellmesh/urirun` (renamed from `tellmesh/urihandler`).
 - Refresh the PHP project site with current positioning, workflow, transport,
   examples, docs, and roadmap content.
 - Rename the portable spec path to `spec/urirun-spec.md`.
 - Align examples and docs on `urirun` imports, schema versions, Docker labels,
   C adapter files, and CLI commands.
-- Keep `tellmesh/urihandler` only where it refers to the actual GitHub
-  repository URL or historical changelog entries.
+- Keep `tellmesh/urihandler` only in historical changelog entries that refer to
+  the pre-rename repository.
 
 ### Fixed
-- Fix stale references to a non-existing `tellmesh/urirun` GitHub repository in
-  examples.
+- Point all repository references at the renamed `tellmesh/urirun` URL.
 
 ## [0.3.10] - 2026-06-20
 

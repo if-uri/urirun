@@ -80,6 +80,35 @@ class UriHandlerTests(unittest.TestCase):
             v2.DECORATED_BINDINGS.clear()
             v2.DECORATED_BINDINGS.update(previous)
 
+    def test_connector_helper_uses_human_defaults(self):
+        previous = dict(v2.DECORATED_BINDINGS)
+        v2.DECORATED_BINDINGS.clear()
+        try:
+            demo = urirun.connector("demo-tools", scheme="demo", meta={"area": "test"})
+
+            @demo.command("http/query/status", meta={"label": "Check status"})
+            def demo_status(url: str, expectStatus: int = 200):
+                return ["demo-http-check", "{url}", "{expectStatus}"]
+
+            self.assertEqual(demo.uri("http/query/status"), "demo://host/http/query/status")
+
+            document = demo.bindings()
+            self.assertEqual(list(document["bindings"]), ["demo://host/http/query/status"])
+
+            route = document["bindings"]["demo://host/http/query/status"]
+            self.assertEqual(route["meta"]["connector"], "demo-tools")
+            self.assertEqual(route["meta"]["area"], "test")
+            self.assertEqual(route["meta"]["label"], "Check status")
+            self.assertEqual(route["inputSchema"]["required"], ["url"])
+            self.assertFalse(route["inputSchema"]["additionalProperties"])
+
+            registry = v2.compile_registry(document)
+            result = v2.run("demo://host/http/query/status", registry, {"url": "https://example.com"})
+            self.assertEqual(result["result"]["command"], ["demo-http-check", "https://example.com", "200"])
+        finally:
+            v2.DECORATED_BINDINGS.clear()
+            v2.DECORATED_BINDINGS.update(previous)
+
 
 if __name__ == "__main__":
     unittest.main()

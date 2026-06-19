@@ -5,9 +5,9 @@ functions, scripts, Docker services, HTTP endpoints, MQTT topics, firmware
 commands, and package entry points as stable URI routes compiled into one
 registry.
 
-The GitHub repository is still `tellmesh/urirun` for compatibility. The
-runtime, CLI, Python import namespace, JS package name, schema prefix, Docker
-labels, and C adapter names are now `urirun`.
+The GitHub repository is `tellmesh/urirun` (renamed from the original
+`tellmesh/urihandler`). The runtime, CLI, Python import namespace, JS package
+name, schema prefix, Docker labels, and C adapter names are all `urirun`.
 
 ## Goal
 
@@ -82,13 +82,13 @@ or vendor the adapter folder directly into your repo.
 PyPI publishing is intentionally not required. Install directly from GitHub:
 
 ```bash
-pip install "git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
+pip install "git+https://github.com/tellmesh/urirun.git@v0.3.13#subdirectory=adapters/python"
 ```
 
 Or install a GitHub Release wheel:
 
 ```bash
-pip install "https://github.com/tellmesh/urirun/releases/download/v0.3.12/urirun-0.3.12-py3-none-any.whl"
+pip install "https://github.com/tellmesh/urirun/releases/download/v0.3.13/urirun-0.3.13-py3-none-any.whl"
 ```
 
 The distribution and import package are named `urirun`.
@@ -107,19 +107,19 @@ urirun-v2 --help
 Optional transports stay optional. For the v2 gRPC transport install:
 
 ```bash
-pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
+pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@v0.3.13#subdirectory=adapters/python"
 ```
 
 For planfile-backed host tasks install the optional task dependency:
 
 ```bash
-pip install "urirun[planfile] @ git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
+pip install "urirun[planfile] @ git+https://github.com/tellmesh/urirun.git@v0.3.13#subdirectory=adapters/python"
 ```
 
 For the full host task planner with optional LiteLLM support:
 
 ```bash
-pip install "urirun[host] @ git+https://github.com/tellmesh/urirun.git@v0.3.12#subdirectory=adapters/python"
+pip install "urirun[host] @ git+https://github.com/tellmesh/urirun.git@v0.3.13#subdirectory=adapters/python"
 ```
 
 ## Host / Node Mesh
@@ -364,7 +364,7 @@ make test
 Documentation now lives in the dedicated docs repository:
 
 - `https://github.com/if-uri/docs` - source repository
-- `https://tellmesh.github.io/urihandler/www` - published project site
+- `https://tellmesh.github.io/urirun/www` - published project site
 
 Runnable examples live in:
 
@@ -429,6 +429,26 @@ python -m urirun.v2_adopt init .   # scan project -> bindings + registry in one 
 python -m urirun.v2_mcp tools registry.json     # MCP tools/list manifest
 python -m urirun.v2_mcp card  registry.json     # A2A agent card
 python -m urirun.v2_mcp serve registry.json     # MCP stdio server (dry-run by default)
+```
+
+In Python the preferred way to author connector commands is the top-level
+`urirun.connector(...)` helper. It gives you short route paths, default
+`scheme://host/...` URI construction, automatic `meta.connector`, and
+serializable bindings through `.bindings()`. The lower-level
+`@urirun.command(...)`, `@urirun.shell(...)` and `urirun.connector_bindings()`
+remain available; `urirun.v2.uri_command` / `urirun.v2.uri_shell` remain
+supported for existing code.
+
+```python
+import urirun
+
+connector = urirun.connector("demo-tools", scheme="demo")
+
+@connector.command("http/query/status")
+def status(url: str):
+    return ["curl", "-sS", "{url}"]
+
+bindings = connector.bindings()
 ```
 
 Multi-language authoring examples live in `if-uri/examples/05-generators` (JS,
