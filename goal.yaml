@@ -22,7 +22,7 @@ versioning:
   files:
   - VERSION
   - package.json:version
-  - venv/lib/python3.13/site-packages/cryptography/__init__.py:__version__
+  - adapters/python/pyproject.toml:version
   bump_rules:
     patch: 10
     minor: 50
