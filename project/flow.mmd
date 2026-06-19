@@ -5,7 +5,6 @@ flowchart TD
     classDef entry fill:#4dabf7,stroke:#1971c2,color:#fff
 
     subgraph Core
-        www__docs__render_markdown["render_markdown"]
         adapters__js__index__test__result["result"]
         adapters__js__path["path"]
         adapters__js__segments["segments"]
@@ -18,12 +17,13 @@ flowchart TD
         adapters__c__urirun__copy_token["copy_token"]
         adapters__c__urirun__urirun_parse["urirun_parse"]
         adapters__c__urirun__memset["memset"]
-        adapters__python__urihandler__dispatch["dispatch"]
-        www__index__h["h"]
-        ...["+55 more"]
+        adapters__python__urirun__v2_service__call["call"]
+        adapters__python__urirun__v1__run_spawn["run_spawn"]
+        adapters__python__urirun__v1__run_shell_template["run_shell_template"]
+        ...["+53 more"]
     end
 
     subgraph Exporters
     end
 
-    class www__docs__render_markdown,adapters__js__index__test__result,adapters__js__path,adapters__js__segments,adapters__js__functionName,adapters__js__dispatch,adapters__js__descriptor,adapters__js__invocation,adapters__js__mod,adapters__c__urirun_test__main entry
+    class adapters__js__index__test__result,adapters__js__path,adapters__js__segments,adapters__js__functionName,adapters__js__dispatch,adapters__js__descriptor,adapters__js__invocation,adapters__js__mod,adapters__c__urirun_test__main,adapters__c__urirun__copy_token entry

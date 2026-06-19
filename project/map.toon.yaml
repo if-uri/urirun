@@ -1,10 +1,10 @@
-# urihandler | 65f 9875L | python:33,javascript:14,shell:12,css:4,less:1,typescript:1 | 2026-06-19
-# stats: 285 func | 26 cls | 65 mod | CC̄=4.4 | critical:33 | cycles:0
-# alerts[5]: CC parse_flow=24; CC main=21; CC evaluate_policy=16; CC expand_binding=16; CC scan_path=15
-# hotspots[5]: main fan=31; main fan=23; main fan=19; run_e2e fan=19; serve_http fan=19
+# urihandler | 69f 10847L | python:38,javascript:14,shell:12,css:3,less:1,typescript:1 | 2026-06-19
+# stats: 326 func | 32 cls | 69 mod | CC̄=4.5 | critical:36 | cycles:0
+# alerts[5]: CC fallback_steps=33; CC parse_flow=24; CC main=21; CC postprocess_flow=20; CC normalize_flow=20
+# hotspots[5]: main fan=31; main fan=24; main fan=23; main fan=19; run_e2e fan=19
 # evolution: baseline
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[65]:
+M[69]:
   adapters/js/index.js,31
   adapters/js/index.test.js,50
   adapters/python/tests/test_urihandler.py,57
@@ -38,9 +38,14 @@ M[65]:
   v1/examples/python/test_urihandler_v1.py,135
   v2/examples/artifacts/deploy.sh,4
   v2/examples/decorators/example.py,25
-  v2/examples/device_mesh_lab/www/app.js,556
+  v2/examples/device_mesh_lab/controller.py,483
+  v2/examples/device_mesh_lab/device_agent.py,391
+  v2/examples/device_mesh_lab/mesh_env.py,76
+  v2/examples/device_mesh_lab/tests/device_agent_policy.py,35
+  v2/examples/device_mesh_lab/tests/gui_smoke.py,425
+  v2/examples/device_mesh_lab/www/app.js,560
   v2/examples/device_mesh_lab/www/runtime-config.js,11
-  v2/examples/device_mesh_lab/www/styles.css,608
+  v2/examples/device_mesh_lab/www/styles.css,704
   v2/examples/docker_uri_flow/generate_registry.sh,27
   v2/examples/docker_uri_flow/node-worker/server.js,53
   v2/examples/docker_uri_flow/orchestrator/flow_runner.py,219
@@ -69,7 +74,6 @@ M[65]:
   v2/examples/transports/scan_and_run.py,50
   v2/examples/transports/test_transports.py,50
   v2/examples/transports/transport_lib.py,153
-  www/style.css,538
 D:
   adapters/python/tests/test_urihandler.py:
     e: UriHandlerTests
@@ -319,6 +323,63 @@ D:
     echo_message(text)
     transcode(input;output;width;height)
     shell_echo(text)
+  v2/examples/device_mesh_lab/controller.py:
+    e: json_get,json_post,slug,target_from_uri,route_binding,is_safe_route,discover_device,discover_mesh,build_registry,registry_route_count,route_summary,fallback_steps,fallback_flow,append_step_if_missing,postprocess_flow,json_from_text,normalize_flow,llm_messages,generate_with_litellm,generate_flow,execute_flow,nl_flow,main,Handler
+    Handler: __init__(0),do_OPTIONS(0),do_GET(0),do_POST(0)
+    json_get(url;timeout)
+    json_post(url;payload;timeout)
+    slug(value)
+    target_from_uri(uri)
+    route_binding(route)
+    is_safe_route(route)
+    discover_device(name;base_url)
+    discover_mesh()
+    build_registry(routes)
+    registry_route_count(registry)
+    route_summary(routes)
+    fallback_steps(prompt;routes)
+    fallback_flow(prompt;routes;reason)
+    append_step_if_missing(flow;uri;payload)
+    postprocess_flow(flow;prompt;routes)
+    json_from_text(text)
+    normalize_flow(flow;allowed_uris)
+    llm_messages(prompt;routes;devices)
+    generate_with_litellm(prompt;routes;devices)
+    generate_flow(prompt;mesh)
+    execute_flow(flow;mesh;registry)
+    nl_flow(prompt;execute)
+    main()
+  v2/examples/device_mesh_lab/device_agent.py:
+    e: object_schema,make_agent_from_env,main,DeviceAgent
+    DeviceAgent: __init__(4),log(2),recent_logs(1),append_note(1),routes(0),device_card(0),installable(0),processes(2),safe_command(2),open_browser(1),dispatch(2),handler(0),serve(2)
+    object_schema(properties;required)
+    make_agent_from_env()
+    main()
+  v2/examples/device_mesh_lab/mesh_env.py:
+    e: load_env,parse_peers,auth_token,auth_headers,check_auth,read_json,send_json
+    load_env()
+    parse_peers(value)
+    auth_token()
+    auth_headers()
+    check_auth(headers)
+    read_json(handler)
+    send_json(handler;status;payload)
+  v2/examples/device_mesh_lab/tests/device_agent_policy.py:
+    e: main
+    main()
+  v2/examples/device_mesh_lab/tests/gui_smoke.py:
+    e: route,free_port,find_chrome,recv_exact,wait_for_debugger,wait_for_page_ready,main,DemoHandler,ThreadedHTTPServer,WebSocket,CDP
+    DemoHandler: __init__(0),log_message(1),send_json(1),do_GET(0),do_POST(0)
+    ThreadedHTTPServer:
+    WebSocket: __init__(1),send_json(1),recv_json(0),close(0)
+    CDP: __init__(1),call(2),close(0)
+    route(uri;title;properties;required)
+    free_port()
+    find_chrome()
+    recv_exact(sock;length)
+    wait_for_debugger(port)
+    wait_for_page_ready(cdp)
+    main()
   v2/examples/docker_uri_flow/orchestrator/flow_runner.py:
     e: parse_scalar,parse_flow,get_path,resolve_payload,service_url,route_key,normalize_uri,registry_has_uri,registry_route_count,load_registry,validate_flow_registry,json_get,json_post,wait_for_services,run_flow,main
     parse_scalar(value)

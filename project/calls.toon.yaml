@@ -1,49 +1,49 @@
 # code2llm call graph | /home/tom/github/tellmesh/urihandler
 # generated in 0.18s
-# nodes: 391 | edges: 464 | modules: 30
-# CC̄=3.7
+# nodes: 410 | edges: 500 | modules: 32
+# CC̄=3.8
 
 HUBS[20]:
+  v2.examples.device_mesh_lab.controller.normalize_flow
+    CC=20  in:4  out:35  total:39
+  v2.examples.device_mesh_lab.device_agent.DeviceAgent.handler
+    CC=1  in:0  out:32  total:32
   adapters.python.urirun._scan.scan_path
     CC=15  in:4  out:27  total:31
+  v2.examples.device_mesh_lab.mesh_env.send_json
+    CC=1  in:18  out:12  total:30
   adapters.python.urirun._scan.normalize_binding
     CC=11  in:17  out:12  total:29
   v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
     CC=24  in:1  out:26  total:27
   adapters.python.urirun.v2.validate_binding_document
     CC=12  in:2  out:24  total:26
+  adapters.python.urirun.v1.run
+    CC=14  in:2  out:23  total:25
   v2.examples.transports.transport_lib.start_http_worker
     CC=1  in:1  out:24  total:25
-  adapters.python.urirun.v1.run
-    CC=14  in:1  out:23  total:24
+  v2.examples.device_mesh_lab.controller.Handler.do_POST
+    CC=12  in:0  out:24  total:24
   adapters.python.urirun.v2_mcp.serve_mcp
     CC=15  in:1  out:23  total:24
   adapters.python.urirun.v2.scan_artifacts
     CC=11  in:4  out:19  total:23
   adapters.python.urirun.v2.run
     CC=15  in:1  out:22  total:23
-  adapters.python.urirun._runtime.evaluate_policy
-    CC=16  in:3  out:19  total:22
   v2.examples.device_mesh_lab.www.app.escapeHtml
     CC=1  in:20  out:2  total:22
+  adapters.python.urirun._runtime.evaluate_policy
+    CC=16  in:3  out:19  total:22
   adapters.python.urirun._registry.discover_manifest
     CC=14  in:2  out:19  total:21
   adapters.python.urirun._runtime.run
     CC=10  in:1  out:20  total:21
   v2.examples.html_uri_app.backend.Handler.do_GET
     CC=8  in:0  out:21  total:21
+  v2.examples.device_mesh_lab.controller.fallback_steps
+    CC=33  in:1  out:19  total:20
   adapters.python.urirun._registry.discover_docker_labels
     CC=14  in:2  out:18  total:20
-  adapters.python.urirun._registry.coerce_route_source
-    CC=11  in:5  out:14  total:19
-  adapters.python.urirun._scan.load_bindings_from_manifest
-    CC=14  in:3  out:16  total:19
-  v2.examples.html_uri_app.backend.json_response
-    CC=1  in:10  out:9  total:19
-  v8.examples.docker_uri_flow.shell-worker.server.response
-    CC=1  in:10  out:9  total:19
-  adapters.python.urirun.v2.expand_binding
-    CC=16  in:9  out:9  total:18
 
 MODULES:
   adapters.c.urirun  [3 funcs]
@@ -156,23 +156,15 @@ MODULES:
     writeJson  CC=1  out:4
   examples.reference_adapters.python-server  [1 funcs]
     do_POST  CC=5  out:11
-  v1.examples.html_uri_app.app  [21 funcs]
-    active  CC=1  out:1
+  v1.examples.html_uri_app.app  [2 funcs]
     appendLog  CC=1  out:4
-    badge  CC=1  out:1
-    badgeFor  CC=5  out:1
-    currentPayload  CC=2  out:2
-    envelope  CC=2  out:3
-    escapeHtml  CC=1  out:2
-    executeMode  CC=5  out:0
-    inputs  CC=4  out:4
-    items  CC=4  out:4
+    text  CC=1  out:1
   v1.examples.html_uri_app.uri-runtime-v1  [29 funcs]
     activePolicy  CC=1  out:1
     adapter  CC=3  out:1
     allowed  CC=4  out:1
     compileBindings  CC=4  out:4
-    createUriRuntimeV7  CC=32  out:17
+    createUriRuntimeV1  CC=32  out:17
     defaultPolicy  CC=1  out:0
     dispatch  CC=17  out:8
     entries  CC=1  out:0
@@ -193,7 +185,30 @@ MODULES:
     echo_message  CC=1  out:1
     shell_echo  CC=1  out:1
     transcode  CC=1  out:1
-  v2.examples.device_mesh_lab.www.app  [48 funcs]
+  v2.examples.device_mesh_lab.controller  [26 funcs]
+    do_GET  CC=2  out:5
+    do_OPTIONS  CC=1  out:1
+    do_POST  CC=12  out:24
+    append_step_if_missing  CC=7  out:6
+    build_registry  CC=5  out:3
+    discover_device  CC=6  out:9
+    discover_mesh  CC=5  out:6
+    execute_flow  CC=9  out:15
+    fallback_flow  CC=1  out:4
+    fallback_steps  CC=33  out:19
+  v2.examples.device_mesh_lab.device_agent  [5 funcs]
+    handler  CC=1  out:32
+    routes  CC=1  out:12
+    main  CC=1  out:6
+    make_agent_from_env  CC=3  out:12
+    object_schema  CC=2  out:0
+  v2.examples.device_mesh_lab.mesh_env  [5 funcs]
+    auth_headers  CC=2  out:1
+    auth_token  CC=1  out:2
+    check_auth  CC=2  out:2
+    parse_peers  CC=8  out:14
+    send_json  CC=1  out:12
+  v2.examples.device_mesh_lab.www.app  [51 funcs]
     appendTimeline  CC=3  out:3
     data  CC=2  out:1
     defaultValueFor  CC=20  out:2
@@ -202,8 +217,8 @@ MODULES:
     escapeHtml  CC=1  out:2
     extractRunResult  CC=10  out:0
     filter  CC=3  out:1
-    frontendRows  CC=1  out:1
-    groups  CC=6  out:6
+    focusArea  CC=3  out:6
+    focusTargetFor  CC=2  out:0
   v2.examples.generators.php.example  [2 funcs]
     bindingFromFunction  CC=2  out:9
     schemaType  CC=2  out:3
@@ -218,8 +233,9 @@ MODULES:
     env_bool  CC=1  out:2
     json_response  CC=1  out:9
     load_env  CC=6  out:10
-  v2.examples.transports.transport_lib  [7 funcs]
+  v2.examples.transports.transport_lib  [8 funcs]
     available_transports  CC=4  out:1
+    build_registry  CC=1  out:3
     grpc_available  CC=2  out:0
     run_inprocess  CC=2  out:1
     run_queue  CC=1  out:10
@@ -266,9 +282,6 @@ MODULES:
     payloadDefaults  CC=4  out:0
     refreshLogs  CC=5  out:7
     renderActions  CC=5  out:5
-  www.docs  [2 funcs]
-    inline_markdown  CC=1  out:4
-    render_markdown  CC=15  out:13
 
 EDGES:
   examples.reference_adapters.node-server.server → examples.reference_adapters.node-server.writeJson
@@ -319,5 +332,5 @@ EDGES:
   v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.json_post
   v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
   v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow
-  v2.examples.device_mesh_lab.www.app.recordActivity → v2.examples.device_mesh_lab.www.app.renderActivityLog
-  v2.examples.device_mesh_lab.www.app.routeBadge → v2.examples.device_mesh_lab.www.app.isRouteSafe
+  v2.examples.generators.php.example.UriCommand.bindingFromFunction → v2.examples.generators.php.example.UriCommand.schemaType
+  v2.examples.transports.transport_lib.run_via → v2.examples.transports.transport_lib.run_inprocess

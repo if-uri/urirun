@@ -4,18 +4,18 @@
 ## Overview
 
 - **Project**: /home/tom/github/tellmesh/urihandler
-- **Primary Language**: json
-- **Languages**: json: 23, python: 21, javascript: 18, shell: 12, yaml: 5
+- **Primary Language**: python
+- **Languages**: python: 24, json: 23, javascript: 18, shell: 12, yaml: 5
 - **Analysis Mode**: static
-- **Total Functions**: 597
-- **Total Classes**: 8
+- **Total Functions**: 649
+- **Total Classes**: 10
 - **Modules**: 106
-- **Entry Points**: 295
+- **Entry Points**: 317
 
 ## Architecture by Module
 
 ### v2.examples.device_mesh_lab.www.app
-- **Functions**: 94
+- **Functions**: 99
 - **File**: `app.js`
 
 ### v1.examples.js.urirun-v1
@@ -46,6 +46,11 @@
 - **Functions**: 27
 - **File**: `app.js`
 
+### v2.examples.device_mesh_lab.controller
+- **Functions**: 27
+- **Classes**: 1
+- **File**: `controller.py`
+
 ### adapters.python.urirun.v1
 - **Functions**: 24
 - **File**: `v1.py`
@@ -63,6 +68,11 @@
 ### v8.examples.docker_uri_flow.orchestrator.flow_runner
 - **Functions**: 16
 - **File**: `flow_runner.py`
+
+### v2.examples.device_mesh_lab.device_agent
+- **Functions**: 16
+- **Classes**: 1
+- **File**: `device_agent.py`
 
 ### v1.examples.js.urirun-v1.test
 - **Functions**: 12
@@ -84,17 +94,9 @@
 - **Functions**: 11
 - **File**: `v2_grpc.py`
 
-### v1.examples.html_uri_app.test
-- **Functions**: 9
-- **File**: `test.mjs`
-
 ### adapters.python.urirun.v2_mcp
 - **Functions**: 9
 - **File**: `v2_mcp.py`
-
-### v2.examples.generators.js.uri-command
-- **Functions**: 8
-- **File**: `uri-command.mjs`
 
 ## Key Entry Points
 
@@ -115,14 +117,23 @@ Main execution flows into the system:
 ### adapters.python.urirun._runtime.main
 - **Calls**: list, argparse.ArgumentParser, parser.add_subparsers, subparsers.add_parser, add_source, run_parser.add_argument, run_parser.add_argument, run_parser.add_argument
 
+### v2.examples.device_mesh_lab.device_agent.DeviceAgent.handler
+- **Calls**: v2.examples.device_mesh_lab.mesh_env.send_json, v2.examples.device_mesh_lab.mesh_env.check_auth, v2.examples.device_mesh_lab.mesh_env.send_json, v2.examples.device_mesh_lab.mesh_env.send_json, agent.log, self._authorized, v2.examples.device_mesh_lab.mesh_env.send_json, v2.examples.device_mesh_lab.mesh_env.send_json
+
 ### adapters.python.urirun.v2_adopt.main
 - **Calls**: argparse.ArgumentParser, parser.add_subparsers, sub.add_parser, py.add_argument, py.add_argument, sub.add_parser, npm.add_argument, npm.add_argument
+
+### v2.examples.multi_transport.worker.serve_http
+- **Calls**: print, None.serve_forever, None.encode, self.send_response, self.send_header, self.send_header, self.end_headers, self.wfile.write
 
 ### adapters.python.urirun.v2_grpc.main
 - **Calls**: argparse.ArgumentParser, parser.add_subparsers, sub.add_parser, s.add_argument, s.add_argument, s.add_argument, s.add_argument, s.add_argument
 
-### v2.examples.multi_transport.worker.serve_http
-- **Calls**: print, None.serve_forever, None.encode, self.send_response, self.send_header, self.send_header, self.end_headers, self.wfile.write
+### v2.examples.device_mesh_lab.device_agent.DeviceAgent.dispatch
+- **Calls**: urllib.parse.urlparse, self.safe_command, self.open_browser, parsed.path.split, self.device_card, len, str, self.append_note
+
+### v2.examples.device_mesh_lab.controller.Handler.do_POST
+- **Calls**: v2.examples.device_mesh_lab.mesh_env.send_json, v2.examples.html_uri_app.backend.read_json, None.strip, v2.examples.device_mesh_lab.controller.nl_flow, v2.examples.device_mesh_lab.mesh_env.send_json, v2.examples.html_uri_app.backend.read_json, v2.examples.device_mesh_lab.controller.discover_mesh, v2.examples.transports.transport_lib.build_registry
 
 ### adapters.python.urirun._runtime.run_fetch
 - **Calls**: None.get, config.get, None.upper, dict, urllib.request.Request, ValueError, None.startswith, PolicyError
@@ -130,8 +141,11 @@ Main execution flows into the system:
 ### v2.examples.html_uri_app.backend.Handler.do_GET
 - **Calls**: urlparse, self.serve_static, v2.examples.html_uri_app.backend.json_response, v2.examples.html_uri_app.backend.json_response, int, v2.examples.html_uri_app.backend.json_response, v2.examples.html_uri_app.backend.json_response, v2.examples.html_uri_app.backend.json_response
 
-### v1.examples.html_uri_app.uri-runtime-v1.createUriRuntimeV7
+### v1.examples.html_uri_app.uri-runtime-v1.createUriRuntimeV1
 - **Calls**: v1.examples.html_uri_app.uri-runtime-v1.compileBindings, v1.examples.html_uri_app.uri-runtime-v1.mergePolicy, v1.examples.html_uri_app.uri-runtime-v1.values, v1.examples.html_uri_app.uri-runtime-v1.map, v1.examples.html_uri_app.uri-runtime-v1.translate, v1.examples.html_uri_app.uri-runtime-v1.parseUri, v1.examples.html_uri_app.uri-runtime-v1.evaluatePolicy, v1.examples.html_uri_app.uri-runtime-v1.sort
+
+### v2.examples.transports.transport_lib.run_via
+- **Calls**: ValueError, v2.examples.transports.transport_lib.run_inprocess, v2.examples.transports.transport_lib.run_queue, v2.examples.transports.transport_lib.serverless_handler, reglib.translate, v2.examples.transports.transport_lib.start_http_worker, json.dumps, v2_grpc.serve
 
 ### v2.examples.transports.scan_and_run.main
 - **Calls**: argparse.ArgumentParser, parser.add_argument, parser.add_argument, parser.add_argument, parser.add_argument, parser.add_argument, parser.add_argument, parser.parse_args
@@ -139,26 +153,23 @@ Main execution flows into the system:
 ### adapters.python.urirun.v2_mcp.main
 - **Calls**: argparse.ArgumentParser, parser.add_subparsers, parser.parse_args, v2.load_registry_arg, sub.add_parser, p.add_argument, reglib._emit_json, reglib._emit_json
 
-### v2.examples.transports.transport_lib.run_via
-- **Calls**: ValueError, v2.examples.transports.transport_lib.run_inprocess, v2.examples.transports.transport_lib.run_queue, v2.examples.transports.transport_lib.serverless_handler, reglib.translate, v2.examples.transports.transport_lib.start_http_worker, json.dumps, v2_grpc.serve
-
 ### v2.examples.html_uri_app.backend.Handler.serve_static
 - **Calls**: None.resolve, path.read_bytes, self.send_response, self.send_header, self.send_header, self.end_headers, self.wfile.write, request_path.lstrip
 
 ### v2.examples.html_uri_app.backend.dispatch
 - **Calls**: str, bool, v2.examples.html_uri_app.backend.add_log, body.get, body.get, bool, v2.examples.html_uri_app.backend.env_bool, run_uri
 
-### www.docs.render_markdown
-- **Calls**: www.docs.use, www.docs.inline_markdown, www.docs.implode, www.docs.flushListItem, www.docs.foreach, www.docs.preg_split, www.docs.str_starts_with, www.docs.flushParagraph
-
 ### adapters.python.urirun.v1.run_docker_run
 - **Calls**: None.get, config.get, adapters.python.urirun.v1.render_command, config.get, flags.extend, ValueError, os.path.abspath, flags.extend
 
-### v1.examples.html_uri_app.app.renderDetail
-- **Calls**: v1.examples.html_uri_app.app.listRoutes, v1.examples.html_uri_app.app.find, v1.examples.html_uri_app.app.entries, v1.examples.html_uri_app.app.map, v1.examples.html_uri_app.app.escapeHtml, v1.examples.html_uri_app.app.String, v1.examples.html_uri_app.app.join, v1.examples.html_uri_app.app.querySelectorAll
-
 ### adapters.python.urirun._registry.discover_entry_points
 - **Calls**: metadata.entry_points, hasattr, eps.select, eps.get, entry_point.load, getattr, dict, entries.append
+
+### v2.examples.device_mesh_lab.device_agent.DeviceAgent.routes
+- **Calls**: v2.examples.device_mesh_lab.device_agent.object_schema, v2.examples.device_mesh_lab.device_agent.object_schema, v2.examples.device_mesh_lab.device_agent.object_schema, v2.examples.device_mesh_lab.device_agent.object_schema, v2.examples.device_mesh_lab.device_agent.object_schema, v2.examples.device_mesh_lab.device_agent.object_schema, v2.examples.device_mesh_lab.device_agent.object_schema, v2.examples.device_mesh_lab.device_agent.object_schema
+
+### v1.examples.html_uri_app.app.renderDetail
+- **Calls**: v1.examples.html_uri_app.app.listRoutes, v1.examples.html_uri_app.app.find, v1.examples.html_uri_app.app.entries, v1.examples.html_uri_app.app.map, v1.examples.html_uri_app.app.escapeHtml, v1.examples.html_uri_app.app.String, v1.examples.html_uri_app.app.join, v1.examples.html_uri_app.app.querySelectorAll
 
 ### examples.reference_adapters.python-server.Handler.do_POST
 - **Calls**: self.write_json, int, json.loads, self.write_json, v8.examples.docker_uri_flow.shell-worker.server.dispatch, self.write_json, self.headers.get, None.decode
@@ -169,8 +180,8 @@ Main execution flows into the system:
 ### v8.examples.docker_uri_flow.python-worker.server.Handler.do_POST
 - **Calls**: int, v8.examples.docker_uri_flow.shell-worker.server.dispatch, v8.examples.docker_uri_flow.shell-worker.server.response, v8.examples.docker_uri_flow.shell-worker.server.response, json.loads, str, self.headers.get, None.decode
 
-### v2.examples.device_mesh_lab.www.app.runSelectedRoute
-- **Calls**: v2.examples.device_mesh_lab.www.app.reportValidity, v2.examples.device_mesh_lab.www.app.payloadFromForm, v2.examples.device_mesh_lab.www.app.showJson, v2.examples.device_mesh_lab.www.app.String, v2.examples.device_mesh_lab.www.app.recordActivity, v2.examples.device_mesh_lab.www.app.targetFromUri, v2.examples.device_mesh_lab.www.app.runUri, v2.examples.device_mesh_lab.www.app.appendTimeline
+### adapters.python.urirun._runtime.run_shell_template
+- **Calls**: None.get, enumerate, bool, subprocess.run, rendered.replace, policy.get, shlex.split, adapters.python.urirun._runtime._truncate
 
 ### v1.examples.js.urirun-v1.DEFAULT_TIMEOUT
 - **Calls**: v1.examples.js.urirun-v1.String, v1.examples.js.urirun-v1.match, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.split, v1.examples.js.urirun-v1.filter, v1.examples.js.urirun-v1.map, v1.examples.js.urirun-v1.fromEntries, v1.examples.js.urirun-v1.URLSearchParams
@@ -178,17 +189,8 @@ Main execution flows into the system:
 ### v1.examples.js.urirun-v1.OUTPUT_LIMIT
 - **Calls**: v1.examples.js.urirun-v1.String, v1.examples.js.urirun-v1.match, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.split, v1.examples.js.urirun-v1.filter, v1.examples.js.urirun-v1.map, v1.examples.js.urirun-v1.fromEntries, v1.examples.js.urirun-v1.URLSearchParams
 
-### adapters.python.urirun._runtime.run_shell_template
-- **Calls**: None.get, enumerate, bool, subprocess.run, rendered.replace, policy.get, shlex.split, adapters.python.urirun._runtime._truncate
-
-### v2.examples.device_mesh_lab.www.app.runNlFlow
-- **Calls**: v2.examples.device_mesh_lab.www.app.trim, v2.examples.device_mesh_lab.www.app.recordActivity, v2.examples.device_mesh_lab.www.app.showJson, v2.examples.device_mesh_lab.www.app.fetch, v2.examples.device_mesh_lab.www.app.stringify, v2.examples.device_mesh_lab.www.app.json, v2.examples.device_mesh_lab.www.app.appendTimeline, v2.examples.device_mesh_lab.www.app.refreshDevices
-
-### adapters.python.urihandler.dispatch
-- **Calls**: adapters.python.urihandler.parse_uri, adapters.python.urihandler.build_invocation, registry.get, adapters.js.fn, KeyError, getattr, mod.get, callable
-
-### v1.examples.html_uri_app.uri-runtime-v1.preview
-- **Calls**: v1.examples.html_uri_app.uri-runtime-v1.parseUri, v1.examples.html_uri_app.uri-runtime-v1.translate, v1.examples.html_uri_app.uri-runtime-v1.join, v1.examples.html_uri_app.uri-runtime-v1.Error, v1.examples.html_uri_app.uri-runtime-v1.resolveParams, v1.examples.html_uri_app.uri-runtime-v1.renderValue, v1.examples.html_uri_app.uri-runtime-v1.renderCommand, v1.examples.html_uri_app.uri-runtime-v1.hasPlaceholders
+### v2.examples.device_mesh_lab.www.app.runSelectedRoute
+- **Calls**: v2.examples.device_mesh_lab.www.app.reportValidity, v2.examples.device_mesh_lab.www.app.payloadFromForm, v2.examples.device_mesh_lab.www.app.showJson, v2.examples.device_mesh_lab.www.app.String, v2.examples.device_mesh_lab.www.app.recordActivity, v2.examples.device_mesh_lab.www.app.targetFromUri, v2.examples.device_mesh_lab.www.app.runUri, v2.examples.device_mesh_lab.www.app.appendTimeline
 
 ## Process Flows
 
@@ -199,26 +201,47 @@ Key execution flows identified:
 main [adapters.python.urirun.v2]
 ```
 
-### Flow 2: serve_http
+### Flow 2: handler
+```
+handler [v2.examples.device_mesh_lab.device_agent.DeviceAgent]
+  └─ →> send_json
+  └─ →> check_auth
+      └─> auth_token
+```
+
+### Flow 3: serve_http
 ```
 serve_http [v2.examples.multi_transport.worker]
 ```
 
-### Flow 3: run_fetch
+### Flow 4: dispatch
+```
+dispatch [v2.examples.device_mesh_lab.device_agent.DeviceAgent]
+```
+
+### Flow 5: do_POST
+```
+do_POST [v2.examples.device_mesh_lab.controller.Handler]
+  └─ →> send_json
+  └─ →> send_json
+  └─ →> read_json
+```
+
+### Flow 6: run_fetch
 ```
 run_fetch [adapters.python.urirun._runtime]
 ```
 
-### Flow 4: do_GET
+### Flow 7: do_GET
 ```
 do_GET [v2.examples.html_uri_app.backend.Handler]
   └─ →> json_response
   └─ →> json_response
 ```
 
-### Flow 5: createUriRuntimeV7
+### Flow 8: createUriRuntimeV1
 ```
-createUriRuntimeV7 [v1.examples.html_uri_app.uri-runtime-v1]
+createUriRuntimeV1 [v1.examples.html_uri_app.uri-runtime-v1]
   └─> compileBindings
       └─> entries
       └─> routeKey
@@ -228,38 +251,23 @@ createUriRuntimeV7 [v1.examples.html_uri_app.uri-runtime-v1]
       └─> entries
 ```
 
-### Flow 6: run_via
+### Flow 9: run_via
 ```
 run_via [v2.examples.transports.transport_lib]
   └─> run_inprocess
   └─> run_queue
 ```
 
-### Flow 7: serve_static
+### Flow 10: serve_static
 ```
 serve_static [v2.examples.html_uri_app.backend.Handler]
 ```
 
-### Flow 8: dispatch
-```
-dispatch [v2.examples.html_uri_app.backend]
-  └─> add_log
-```
-
-### Flow 9: render_markdown
-```
-render_markdown [www.docs]
-  └─> inline_markdown
-```
-
-### Flow 10: run_docker_run
-```
-run_docker_run [adapters.python.urirun.v1]
-  └─> render_command
-      └─> render_value
-```
-
 ## Key Classes
+
+### v2.examples.device_mesh_lab.device_agent.DeviceAgent
+- **Methods**: 13
+- **Key Methods**: v2.examples.device_mesh_lab.device_agent.DeviceAgent.__init__, v2.examples.device_mesh_lab.device_agent.DeviceAgent.log, v2.examples.device_mesh_lab.device_agent.DeviceAgent.recent_logs, v2.examples.device_mesh_lab.device_agent.DeviceAgent.append_note, v2.examples.device_mesh_lab.device_agent.DeviceAgent.routes, v2.examples.device_mesh_lab.device_agent.DeviceAgent.device_card, v2.examples.device_mesh_lab.device_agent.DeviceAgent.installable, v2.examples.device_mesh_lab.device_agent.DeviceAgent.processes, v2.examples.device_mesh_lab.device_agent.DeviceAgent.safe_command, v2.examples.device_mesh_lab.device_agent.DeviceAgent.open_browser
 
 ### v2.examples.html_uri_app.backend.Handler
 - **Methods**: 5
@@ -269,6 +277,11 @@ run_docker_run [adapters.python.urirun.v1]
 ### v2.examples.generators.php.example.UriCommand
 - **Methods**: 4
 - **Key Methods**: v2.examples.generators.php.example.UriCommand.__construct, v2.examples.generators.php.example.UriCommand.schemaType, v2.examples.generators.php.example.UriCommand.bindingFromFunction, v2.examples.generators.php.example.UriCommand.slug
+
+### v2.examples.device_mesh_lab.controller.Handler
+- **Methods**: 4
+- **Key Methods**: v2.examples.device_mesh_lab.controller.Handler.__init__, v2.examples.device_mesh_lab.controller.Handler.do_OPTIONS, v2.examples.device_mesh_lab.controller.Handler.do_GET, v2.examples.device_mesh_lab.controller.Handler.do_POST
+- **Inherits**: SimpleHTTPRequestHandler
 
 ### examples.reference_adapters.python-server.Handler
 - **Methods**: 3
@@ -311,46 +324,19 @@ Key functions that process and transform data:
 ### v8.examples.docker_uri_flow.orchestrator.flow_runner.validate_flow_registry
 - **Output to**: RuntimeError, v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_route_count, v8.examples.docker_uri_flow.orchestrator.flow_runner.registry_has_uri
 
-### v2.examples.device_mesh_lab.www.app.processes
-
-### v2.examples.device_mesh_lab.www.app.parsePayloadValue
-- **Output to**: v2.examples.device_mesh_lab.www.app.parseInt, v2.examples.device_mesh_lab.www.app.parseFloat, v2.examples.device_mesh_lab.www.app.trim, v2.examples.device_mesh_lab.www.app.parse
+### v2.examples.transports.transport_lib.run_inprocess
+- **Output to**: v2.run
 
 ### adapters.js.parseUri
 - **Output to**: adapters.js.String, adapters.js.match, adapters.js.Error, adapters.js.split, adapters.js.filter
 
 ### adapters.c.urirun.urirun_parse
 
-### adapters.python.urihandler.parse_uri
-- **Output to**: URI_RE.match, str, ValueError, m.group, unquote
-
-### v1.examples.js.urirun-v1.parseUri
-- **Output to**: v1.examples.js.urirun-v1.String, v1.examples.js.urirun-v1.match, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.split, v1.examples.js.urirun-v1.filter
-
-### v1.examples.js.urirun-v1.runProcess
-- **Output to**: v1.examples.js.urirun-v1.spawnSync, v1.examples.js.urirun-v1.renderedEnv, v1.examples.js.urirun-v1.truncate
-
-### v1.examples.html_uri_app.uri-runtime-v1.parseUri
-- **Output to**: v1.examples.html_uri_app.uri-runtime-v1.String, v1.examples.html_uri_app.uri-runtime-v1.match, v1.examples.html_uri_app.uri-runtime-v1.Error, v1.examples.html_uri_app.uri-runtime-v1.split, v1.examples.html_uri_app.uri-runtime-v1.filter
-
 ### adapters.python.urirun.v1._run_process
 - **Output to**: subprocess.run, runtime._truncate, runtime._truncate, config.get, config.get
 
-### adapters.python.urirun._runtime.format_route_table
-- **Output to**: out.extend, None.join, max, None.rstrip, line
-
-### adapters.python.urirun._scan.parse_compose_label_line
-- **Output to**: None.strip, value.startswith, value.split, key.strip, None.strip
-
-### adapters.python.urirun._scan.format_binding_table
-- **Output to**: output.extend, None.join, max, None.rstrip, line
-
-### adapters.python.urirun.v2_grpc._validate
-> Return an error envelope if the URI/payload is invalid, else None.
-- **Output to**: reglib.parse_uri, reglib.translate, reglib.resolve_route, v2.validate_input
-
-### v2.examples.transports.transport_lib.run_inprocess
-- **Output to**: v2.run
+### adapters.python.urihandler.parse_uri
+- **Output to**: URI_RE.match, str, ValueError, m.group, unquote
 
 ### adapters.python.urirun.v2.validate_input
 - **Output to**: adapters.python.urirun.v2._input_values, adapters.python.urirun.v2._schema_for, Draft202012Validator.check_schema, set, adapters.python.urirun.v2._apply_defaults
@@ -370,11 +356,44 @@ Supported forms:
 ### adapters.python.urirun.v2._parse_dockerfile_labels
 - **Output to**: re.compile, re.compile, None.splitlines, label_re.match, pair_re.findall
 
+### adapters.python.urirun._runtime.format_route_table
+- **Output to**: out.extend, None.join, max, None.rstrip, line
+
+### adapters.python.urirun.v2_grpc._validate
+> Return an error envelope if the URI/payload is invalid, else None.
+- **Output to**: reglib.parse_uri, reglib.translate, reglib.resolve_route, v2.validate_input
+
 ### adapters.python.urirun._registry.parse_uri
 - **Output to**: URI_RE.match, unquote, str, ValueError, unquote
 
 ### adapters.python.urirun._registry._parse_command
 - **Output to**: shlex.split, json.loads, isinstance, str
+
+### adapters.python.urirun._scan.parse_compose_label_line
+- **Output to**: None.strip, value.startswith, value.split, key.strip, None.strip
+
+### adapters.python.urirun._scan.format_binding_table
+- **Output to**: output.extend, None.join, max, None.rstrip, line
+
+### v1.examples.js.urirun-v1.parseUri
+- **Output to**: v1.examples.js.urirun-v1.String, v1.examples.js.urirun-v1.match, v1.examples.js.urirun-v1.Error, v1.examples.js.urirun-v1.split, v1.examples.js.urirun-v1.filter
+
+### v1.examples.js.urirun-v1.runProcess
+- **Output to**: v1.examples.js.urirun-v1.spawnSync, v1.examples.js.urirun-v1.renderedEnv, v1.examples.js.urirun-v1.truncate
+
+### v2.examples.device_mesh_lab.mesh_env.parse_peers
+- **Output to**: None.strip, raw.startswith, raw.split, json.loads, item.split
+
+### v2.examples.device_mesh_lab.controller.postprocess_flow
+- **Output to**: sorted, prompt.lower, any, any, v2.examples.device_mesh_lab.controller.is_safe_route
+
+### v2.examples.device_mesh_lab.device_agent.DeviceAgent.processes
+- **Output to**: subprocess.run, proc.stdout.splitlines, line.split, rows.append, len
+
+### v2.examples.device_mesh_lab.www.app.processes
+
+### v2.examples.device_mesh_lab.www.app.parsePayloadValue
+- **Output to**: v2.examples.device_mesh_lab.www.app.parseInt, v2.examples.device_mesh_lab.www.app.parseFloat, v2.examples.device_mesh_lab.www.app.trim, v2.examples.device_mesh_lab.www.app.parse
 
 ## Behavioral Patterns
 
@@ -401,42 +420,42 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun._scan.main` - 59 calls
 - `adapters.python.urirun._registry.main` - 56 calls
 - `adapters.python.urirun.v1.main` - 44 calls
+- `v2.examples.device_mesh_lab.controller.normalize_flow` - 35 calls
 - `adapters.python.urirun._runtime.main` - 33 calls
+- `v2.examples.device_mesh_lab.device_agent.DeviceAgent.handler` - 32 calls
 - `adapters.python.urirun.v2_adopt.main` - 31 calls
 - `adapters.python.urirun._scan.scan_path` - 27 calls
 - `v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow` - 26 calls
-- `adapters.python.urirun.v2_grpc.main` - 25 calls
 - `v2.examples.multi_transport.worker.serve_http` - 25 calls
+- `adapters.python.urirun.v2_grpc.main` - 25 calls
+- `v2.examples.device_mesh_lab.device_agent.DeviceAgent.dispatch` - 25 calls
 - `v2.examples.transports.transport_lib.start_http_worker` - 24 calls
 - `adapters.python.urirun.v2.validate_binding_document` - 24 calls
+- `v2.examples.device_mesh_lab.controller.Handler.do_POST` - 24 calls
 - `adapters.python.urirun.v1.run` - 23 calls
 - `adapters.python.urirun._runtime.run_fetch` - 23 calls
 - `adapters.python.urirun.v2_mcp.serve_mcp` - 23 calls
 - `adapters.python.urirun.v2.run` - 22 calls
 - `v2.examples.html_uri_app.backend.Handler.do_GET` - 21 calls
 - `adapters.python.urirun._runtime.run` - 20 calls
-- `adapters.python.urirun._runtime.evaluate_policy` - 19 calls
 - `adapters.python.urirun.v2.scan_artifacts` - 19 calls
+- `adapters.python.urirun._runtime.evaluate_policy` - 19 calls
 - `adapters.python.urirun._registry.discover_manifest` - 19 calls
+- `v2.examples.device_mesh_lab.controller.fallback_steps` - 19 calls
 - `adapters.python.urirun._registry.discover_docker_labels` - 18 calls
-- `v1.examples.html_uri_app.uri-runtime-v1.createUriRuntimeV7` - 17 calls
-- `adapters.python.urirun._scan.format_binding_table` - 17 calls
 - `adapters.python.urirun.v2_grpc.serve` - 17 calls
+- `adapters.python.urirun._scan.format_binding_table` - 17 calls
+- `v1.examples.html_uri_app.uri-runtime-v1.createUriRuntimeV1` - 17 calls
 - `v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow` - 16 calls
+- `v2.examples.transports.transport_lib.run_via` - 16 calls
 - `v2.examples.transports.scan_and_run.main` - 16 calls
 - `adapters.python.urirun.v2_mcp.main` - 16 calls
-- `adapters.python.urirun._scan.load_bindings_from_manifest` - 16 calls
-- `adapters.python.urirun._scan.scan_pyproject` - 16 calls
-- `v2.examples.transports.transport_lib.run_via` - 16 calls
 - `adapters.python.urirun._registry.parse_uri` - 16 calls
 - `adapters.python.urirun._registry.build_registry_document` - 16 calls
+- `adapters.python.urirun._scan.load_bindings_from_manifest` - 16 calls
+- `adapters.python.urirun._scan.scan_pyproject` - 16 calls
 - `adapters.python.urirun._runtime.format_route_table` - 15 calls
 - `adapters.python.urirun._registry.resolve_route` - 15 calls
-- `v2.examples.html_uri_app.backend.Handler.serve_static` - 15 calls
-- `adapters.python.urirun._scan.scan_package_json` - 14 calls
-- `adapters.python.urirun._registry.coerce_route_source` - 14 calls
-- `adapters.python.urirun._registry.discover_openapi` - 14 calls
-- `v2.examples.html_uri_app.backend.dispatch` - 14 calls
 
 ## System Interactions
 
@@ -450,11 +469,23 @@ graph TD
     main --> add_parser
     main --> add_argument
     main --> add_source
+    handler --> send_json
+    handler --> check_auth
+    handler --> log
     serve_http --> print
     serve_http --> serve_forever
     serve_http --> encode
     serve_http --> send_response
     serve_http --> send_header
+    dispatch --> urlparse
+    dispatch --> safe_command
+    dispatch --> open_browser
+    dispatch --> split
+    dispatch --> device_card
+    do_POST --> send_json
+    do_POST --> read_json
+    do_POST --> strip
+    do_POST --> nl_flow
     run_fetch --> get
     run_fetch --> upper
     run_fetch --> dict
@@ -462,18 +493,6 @@ graph TD
     do_GET --> urlparse
     do_GET --> serve_static
     do_GET --> json_response
-    do_GET --> int
-    createUriRuntimeV7 --> compileBindings
-    createUriRuntimeV7 --> mergePolicy
-    createUriRuntimeV7 --> values
-    createUriRuntimeV7 --> map
-    createUriRuntimeV7 --> translate
-    main --> parse_args
-    main --> load_registry_arg
-    run_via --> ValueError
-    run_via --> run_inprocess
-    run_via --> run_queue
-    run_via --> serverless_handler
 ```
 
 ## Reverse Engineering Guidelines

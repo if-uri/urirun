@@ -1,52 +1,52 @@
-# urihandler | 597 func | 48f | 9924L | json | 2026-06-19
+# urihandler | 649 func | 49f | 10137L | python | 2026-06-19
 # generated in 0.00s
 
 HEALTH:
-  CC̄=3.7  critical=52 (limit:10)  dup=1  cycles=0
+  CC̄=3.8  critical=56 (limit:10)  dup=1  cycles=0
 
 ALERTS[20]:
   !!! high_fan_out     main = 39 (limit:10)
-  !!! cc_exceeded      createUriRuntimeV7 = 32 (limit:15)
+  !!! cc_exceeded      fallback_steps = 33 (limit:15)
+  !!! cc_exceeded      createUriRuntimeV1 = 32 (limit:15)
+  !!! cc_exceeded      DeviceAgent.dispatch = 27 (limit:15)
   !!! high_fan_out     main = 26 (limit:10)
   !!! high_fan_out     main = 25 (limit:10)
   !!! high_fan_out     main = 23 (limit:10)
-  !!! high_fan_out     main = 20 (limit:10)
-  !!! high_fan_out     start_http_worker = 20 (limit:10)
   !!! high_fan_out     serve_http = 20 (limit:10)
-  !!  cc_exceeded      parse_flow = 24 (limit:15)
-  !!  cc_exceeded      main = 21 (limit:15)
+  !!! high_fan_out     start_http_worker = 20 (limit:10)
+  !!! high_fan_out     main = 20 (limit:10)
 
 MODULES[107] (top by size):
   M[adapters/python/urirun/v2.py] 955L C:0 F:49 CC↑21 D:2 (python)
   M[v2/examples/novnc_lan_flow/generated/registry.json] 806L C:0 F:0 CC↑0 D:0 (json)
   M[adapters/python/urirun/_registry.py] 679L C:0 F:41 CC↑14 D:0 (python)
   M[adapters/python/urirun/_scan.py] 667L C:0 F:36 CC↑15 D:0 (python)
-  M[goal.yaml] 524L C:0 F:0 CC↑0 D:0 (yaml)
-  M[v2/examples/docker_uri_flow/generated/bindings.v2.json] 521L C:0 F:0 CC↑0 D:0 (json)
-  M[v2/examples/device_mesh_lab/www/app.js] 516L C:0 F:86 CC↑20 D:3 (javascript)
-  M[adapters/python/urirun/v1.py] 420L C:0 F:24 CC↑14 D:1 (python)
+  M[v2/examples/device_mesh_lab/www/app.js] 559L C:0 F:91 CC↑20 D:5 (javascript)
+  M[goal.yaml] 526L C:0 F:0 CC↑0 D:0 (yaml)
+  M[planfile.yaml] 487L C:0 F:0 CC↑0 D:0 (yaml)
+  M[v2/examples/device_mesh_lab/controller.py] 482L C:1 F:27 CC↑33 D:0 (python)
+  M[adapters/python/urirun/v1.py] 420L C:0 F:24 CC↑14 D:2 (python)
   M[adapters/python/urirun/_runtime.py] 418L C:1 F:18 CC↑16 D:0 (python)
-  M[planfile.yaml] 383L C:0 F:0 CC↑0 D:0 (yaml)
-  M[v1/examples/js/urirun-v1.js] 331L C:0 F:54 CC↑19 D:5 (javascript)
+  M[v2/examples/device_mesh_lab/device_agent.py] 390L C:1 F:16 CC↑27 D:0 (python)
+  M[v1/examples/js/urirun-v1.js] 331L C:0 F:54 CC↑19 D:4 (javascript)
   M[v1/examples/html_uri_app/uri-runtime-v1.js] 238L C:0 F:47 CC↑32 D:0 (javascript)
-  M[v2/examples/html_uri_app/backend.py] 227L C:1 F:18 CC↑8 D:0 (python)
+  M[v2/examples/html_uri_app/backend.py] 227L C:1 F:18 CC↑8 D:2 (python)
   M[adapters/python/urirun/v2_grpc.py] 202L C:0 F:11 CC↑9 D:0 (python)
-  M[adapters/python/urirun/v2_adopt.py] 192L C:0 F:8 CC↑7 D:0 (python)
-  LANGS: json:23/python:21/javascript:18/other:12/shell:12/yaml:5/php:4/c:4/yml:3/toml:2/txt:2/typescript:1
+  LANGS: python:24/json:23/javascript:18/other:12/shell:12/yaml:5/c:4/yml:3/toml:2/txt:2/php:1/typescript:1
 
 HOTSPOTS[10]:
   ★ main fan=39  // Orchestrates 39 calls
   ★ main fan=26  // Orchestrates 26 calls
   ★ main fan=25  // Orchestrates 25 calls
   ★ main fan=23  // Orchestrates 23 calls
-  ★ main fan=20  // Orchestrates 20 calls
+  ★ serve_http fan=20  // Orchestrates 20 calls
 
 REFACTOR[15]:
-  [1] H/L Split createUriRuntimeV7 (CC=32)
-  [2] H/H Split god module adapters/python/urirun/v2.py (955L, 0 classes)
-  [3] H/H Split god module v2/examples/device_mesh_lab/www/app.js (516L, 0 classes)
-  [4] H/H Split god module adapters/python/urirun/_scan.py (667L, 0 classes)
-  [5] H/H Split god module adapters/python/urirun/_registry.py (679L, 0 classes)
+  [1] H/L Split fallback_steps (CC=33)
+  [2] H/L Split DeviceAgent.dispatch (CC=27)
+  [3] H/L Split createUriRuntimeV1 (CC=32)
+  [4] H/H Split god module adapters/python/urirun/v2.py (955L, 0 classes)
+  [5] H/H Split god module v2/examples/device_mesh_lab/www/app.js (559L, 0 classes)
 
 EVOLUTION:
-  2026-06-19 CC̄=3.7 crit=52 9924L // Automated analysis
+  2026-06-19 CC̄=3.8 crit=56 10137L // Automated analysis

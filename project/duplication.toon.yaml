@@ -1,16 +1,16 @@
-# redup/duplication | 1 groups | 8f 826L | 2026-06-19
+# redup/duplication | 1 groups | 11f 1773L | 2026-06-19
 
 SUMMARY:
-  files_scanned: 8
-  total_lines:   826
+  files_scanned: 11
+  total_lines:   1773
   dup_groups:    1
   dup_fragments: 2
   saved_lines:   7
-  scan_ms:       2827
+  scan_ms:       2533
 
 HOTSPOTS[2] (files with most duplication):
-  v2/examples/multi_transport/worker.py  dup=7L  groups=1  frags=1  (0.8%)
-  v2/examples/transports/transport_lib.py  dup=7L  groups=1  frags=1  (0.8%)
+  v2/examples/multi_transport/worker.py  dup=7L  groups=1  frags=1  (0.4%)
+  v2/examples/transports/transport_lib.py  dup=7L  groups=1  frags=1  (0.4%)
 
 DUPLICATES[1] (ranked by impact):
   [adcbcce722c5fe8d]   EXAC  _send  L=7 N=2 saved=7 sim=1.00

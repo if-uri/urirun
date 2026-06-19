@@ -24,9 +24,9 @@ flowchart TD
         adapters__js__fn["fn"]
     end
     subgraph adapters__python
-        adapters__python__urihandler__parse_uri["parse_uri"]
-        adapters__python__urihandler__build_invocation["build_invocation"]
-        adapters__python__urihandler__dispatch["dispatch"]
+        adapters__python__urirun__v2_service__service_base["service_base"]
+        adapters__python__urirun__v2_service___post["_post"]
+        adapters__python__urirun__v2_service__call("call CC=9")
         adapters__python__urirun__v1___params_spec["_params_spec"]
         adapters__python__urirun__v1__resolve_params("resolve_params CC=11")
         adapters__python__urirun__v1__render_value["render_value"]
@@ -51,39 +51,39 @@ flowchart TD
         adapters__python__urirun__v1__compile_registry["compile_registry"]
         adapters__python__urirun__v1__load_registry_arg["load_registry_arg"]
         adapters__python__urirun__v1__main("main CC=13")
-        adapters__python__urirun__v2_adopt__passthrough_schema["passthrough_schema"]
-        adapters__python__urirun__v2_adopt___command_binding["_command_binding"]
-        adapters__python__urirun__v2_adopt__python_package_bindings["python_package_bindings"]
-        adapters__python__urirun__v2_adopt__installed_python_bindings["installed_python_bindings"]
-        adapters__python__urirun__v2_adopt__npm_package_bindings["npm_package_bindings"]
-        adapters__python__urirun__v2_adopt__init_project["init_project"]
-        adapters__python__urirun__v2_adopt__merge_into["merge_into"]
-        adapters__python__urirun__v2_adopt__main["main"]
-        adapters__python__urirun___runtime__default_policy["default_policy"]
-        adapters__python__urirun___runtime__merge_policy["merge_policy"]
-        adapters__python__urirun___runtime___matches_any["_matches_any"]
-        adapters__python__urirun___runtime___looks_destructive["_looks_destructive"]
-        adapters__python__urirun___runtime__evaluate_policy{{evaluate_policy CC=16}}
-        adapters__python__urirun___runtime___truncate["_truncate"]
-        adapters__python__urirun___runtime__run_spawn["run_spawn"]
-        adapters__python__urirun___runtime__run_shell_template["run_shell_template"]
-        adapters__python__urirun___runtime__run_fetch["run_fetch"]
-        adapters__python__urirun___runtime__run_local_function["run_local_function"]
-        adapters__python__urirun___runtime__run_mqtt_publish["run_mqtt_publish"]
-        adapters__python__urirun___runtime__run("run CC=10")
-        adapters__python__urirun___runtime__check["check"]
-        adapters__python__urirun___runtime__load_registry_arg["load_registry_arg"]
-        adapters__python__urirun___runtime__build_policy("build_policy CC=10")
-        adapters__python__urirun___runtime__list_routes["list_routes"]
-        adapters__python__urirun___runtime__format_route_table("format_route_table CC=13")
-        adapters__python__urirun___runtime__main("main CC=10")
-        adapters__python__urirun__v2_mcp__tool_name["tool_name"]
-        adapters__python__urirun__v2_mcp___input_schema["_input_schema"]
-        adapters__python__urirun__v2_mcp__to_mcp_tools["to_mcp_tools"]
-        adapters__python__urirun__v2_mcp__to_mcp_manifest["to_mcp_manifest"]
-        adapters__python__urirun__v2_mcp__to_a2a_card["to_a2a_card"]
-        adapters__python__urirun__v2_mcp__build_tool_index["build_tool_index"]
-        adapters__python__urirun__v2_mcp__call_tool["call_tool"]
+        adapters__python__urihandler__parse_uri["parse_uri"]
+        adapters__python__urihandler__build_invocation["build_invocation"]
+        adapters__python__urihandler__dispatch["dispatch"]
+        adapters__python__urirun__v2__model_from_function["model_from_function"]
+        adapters__python__urirun__v2___placeholder_kwargs["_placeholder_kwargs"]
+        adapters__python__urirun__v2__uri_command["uri_command"]
+        adapters__python__urirun__v2__uri_shell["uri_shell"]
+        adapters__python__urirun__v2__decorated_bindings["decorated_bindings"]
+        adapters__python__urirun__v2___schema_for["_schema_for"]
+        adapters__python__urirun__v2___apply_defaults("_apply_defaults CC=14")
+        adapters__python__urirun__v2___input_values["_input_values"]
+        adapters__python__urirun__v2__validate_input["validate_input"]
+        adapters__python__urirun__v2__render_value["render_value"]
+        adapters__python__urirun__v2__render_sequence["render_sequence"]
+        adapters__python__urirun__v2__render_argv["render_argv"]
+        adapters__python__urirun__v2__run_argv_template["run_argv_template"]
+        adapters__python__urirun__v2__run_shell_template["run_shell_template"]
+        adapters__python__urirun__v2__run{{run CC=15}}
+        adapters__python__urirun__v2__check["check"]
+        adapters__python__urirun__v2__list_routes["list_routes"]
+        adapters__python__urirun__v2___strip_runtime_only["_strip_runtime_only"]
+        adapters__python__urirun__v2__expand_binding{{expand_binding CC=16}}
+        adapters__python__urirun__v2___binding_pairs("_binding_pairs CC=8")
+        adapters__python__urirun__v2__expand_bindings["expand_bindings"]
+        adapters__python__urirun__v2__compile_registry["compile_registry"]
+        adapters__python__urirun__v2__build_binding_document["build_binding_document"]
+        adapters__python__urirun__v2___bindings_as_map["_bindings_as_map"]
+        adapters__python__urirun__v2__merge_binding_document["merge_binding_document"]
+        adapters__python__urirun__v2__write_or_emit_binding["write_or_emit_binding"]
+        adapters__python__urirun__v2___coerce_default["_coerce_default"]
+        adapters__python__urirun__v2__parse_param_declaration("parse_param_declaration CC=8")
+        adapters__python__urirun__v2__input_schema_from_params["input_schema_from_params"]
+        adapters__python__urirun__v2__command_binding_from_cli["command_binding_from_cli"]
     end
     subgraph examples__reference_adapters
         examples__reference_adapters__node_server__readJson["readJson"]
@@ -99,13 +99,6 @@ flowchart TD
         examples__reference_adapters__firmware_pseudo__handle_uri["handle_uri"]
     end
     subgraph v1__examples
-        v1__examples__extend__lib__greet["greet"]
-        v1__examples__extend__lib__disk_free["disk_free"]
-        v1__examples__js__example__registry["registry"]
-        v1__examples__js__example__preview["preview"]
-        v1__examples__js__example__result["result"]
-        v1__examples__js__urirun_v1__test__registry["registry"]
-        v1__examples__js__urirun_v1__test__result["result"]
         v1__examples__js__urirun_v1__DEFAULT_TIMEOUT["DEFAULT_TIMEOUT"]
         v1__examples__js__urirun_v1__OUTPUT_LIMIT["OUTPUT_LIMIT"]
         v1__examples__js__urirun_v1__parseUri["parseUri"]
@@ -159,68 +152,75 @@ flowchart TD
         v1__examples__js__urirun_v1__listRoutes["listRoutes"]
         v1__examples__js__urirun_v1__expandBinding("expandBinding CC=9")
         v1__examples__js__urirun_v1__expandBindings["expandBindings"]
+        v1__examples__js__urirun_v1__compileRegistry["compileRegistry"]
+        v1__examples__js__example__registry["registry"]
+        v1__examples__js__example__preview["preview"]
+        v1__examples__js__example__result["result"]
+        v1__examples__js__urirun_v1__test__registry["registry"]
+        v1__examples__js__urirun_v1__test__result["result"]
+        v1__examples__extend__lib__greet["greet"]
     end
     subgraph v2__examples
+        v2__examples__html_uri_app__test__bindings["bindings"]
+        v2__examples__html_uri_app__test__routes["routes"]
+        v2__examples__docker_uri_flow__run_tests__cleanup["cleanup"]
+        v2__examples__multi_transport__worker__discovery["discovery"]
+        v2__examples__multi_transport__worker__serve_http["serve_http"]
+        v2__examples__multi_transport__worker__serve_grpc["serve_grpc"]
+        v2__examples__generators__js__uri_command__string["string"]
+        v2__examples__generators__js__uri_command__integer["integer"]
+        v2__examples__generators__js__uri_command__boolean["boolean"]
+        v2__examples__generators__js__uri_command__uriCommand["uriCommand"]
+        v2__examples__generators__js__uri_command__placeholders["placeholders"]
+        v2__examples__generators__js__uri_command__required["required"]
+        v2__examples__generators__js__uri_command__properties["properties"]
+        v2__examples__generators__js__uri_command__bindingDocument["bindingDocument"]
+        v2__examples__generators__ts__decorators__uriCommand["uriCommand"]
+        v2__examples__generators__ts__decorators__method["method"]
+        v2__examples__generators__ts__decorators__placeholders["placeholders"]
+        v2__examples__generators__ts__decorators__properties["properties"]
+        v2__examples__generators__ts__decorators__MathCommands__add["add"]
+        v2__examples__generators__php__example__UriCommand____construct["__construct"]
+        v2__examples__generators__php__example__UriCommand__schemaType["schemaType"]
+        v2__examples__generators__php__example__UriCommand__bindingFromFunction["bindingFromFunction"]
+        v2__examples__generators__php__example__UriCommand__slug["slug"]
+        v2__examples__transports__transport_lib__build_registry["build_registry"]
+        v2__examples__transports__transport_lib__run_inprocess["run_inprocess"]
+        v2__examples__transports__transport_lib__run_queue["run_queue"]
+        v2__examples__transports__transport_lib__serverless_handler["serverless_handler"]
+        v2__examples__transports__transport_lib__start_http_worker["start_http_worker"]
+        v2__examples__transports__transport_lib__run_via["run_via"]
+        v2__examples__transports__transport_lib__grpc_available["grpc_available"]
+        v2__examples__transports__transport_lib__available_transports["available_transports"]
+        v2__examples__transports__scan_and_run__main["main"]
         v2__examples__device_mesh_lab__www__runtime_config__host["host"]
-        v2__examples__device_mesh_lab__www__app__promptInput["promptInput"]
-        v2__examples__device_mesh_lab__www__app__generatedFlow["generatedFlow"]
-        v2__examples__device_mesh_lab__www__app__output["output"]
-        v2__examples__device_mesh_lab__www__app__timeline["timeline"]
-        v2__examples__device_mesh_lab__www__app__devicesEl["devicesEl"]
-        v2__examples__device_mesh_lab__www__app__routesEl["routesEl"]
-        v2__examples__device_mesh_lab__www__app__routeFilter["routeFilter"]
-        v2__examples__device_mesh_lab__www__app__selectedCommand["selectedCommand"]
-        v2__examples__device_mesh_lab__www__app__payloadForm["payloadForm"]
-        v2__examples__device_mesh_lab__www__app__runSelectedButton["runSelectedButton"]
-        v2__examples__device_mesh_lab__www__app__runNlFlowButton["runNlFlowButton"]
-        v2__examples__device_mesh_lab__www__app__runNlFlowInlineButton["runNlFlowInlineButton"]
-        v2__examples__device_mesh_lab__www__app__refreshLogsButton["refreshLogsButton"]
-        v2__examples__device_mesh_lab__www__app__novncGrid["novncGrid"]
-        v2__examples__device_mesh_lab__www__app__activityLog["activityLog"]
-        v2__examples__device_mesh_lab__www__app__viewTabs["viewTabs"]
-        v2__examples__device_mesh_lab__www__app__viewPanes["viewPanes"]
-        v2__examples__device_mesh_lab__www__app__selectedRoute["selectedRoute"]
-        v2__examples__device_mesh_lab__www__app__showJson["showJson"]
-        v2__examples__device_mesh_lab__www__app__escapeHtml["escapeHtml"]
-        v2__examples__device_mesh_lab__www__app__showView["showView"]
-        v2__examples__device_mesh_lab__www__app__recordActivity["recordActivity"]
-        v2__examples__device_mesh_lab__www__app__targetFromUri["targetFromUri"]
-        v2__examples__device_mesh_lab__www__app__routeByUri["routeByUri"]
-        v2__examples__device_mesh_lab__www__app__runUri["runUri"]
-        v2__examples__device_mesh_lab__www__app__response["response"]
-        v2__examples__device_mesh_lab__www__app__isRouteSafe["isRouteSafe"]
-        v2__examples__device_mesh_lab__www__app__routeBadge["routeBadge"]
-        v2__examples__device_mesh_lab__www__app__safe["safe"]
-        v2__examples__device_mesh_lab__www__app__schemaFor["schemaFor"]
-        v2__examples__device_mesh_lab__www__app__requiredSet["requiredSet"]
-        v2__examples__device_mesh_lab__www__app__defaultValueFor{{defaultValueFor CC=20}}
-        v2__examples__device_mesh_lab__www__app__lower["lower"]
-        v2__examples__device_mesh_lab__www__app__valueToInput["valueToInput"]
-        v2__examples__device_mesh_lab__www__app__renderDevices("renderDevices CC=14")
-        v2__examples__device_mesh_lab__www__app__reachable("reachable CC=14")
-        v2__examples__device_mesh_lab__www__app__device["device"]
-        v2__examples__device_mesh_lab__www__app__processes["processes"]
-        v2__examples__device_mesh_lab__www__app__installable["installable"]
-        v2__examples__device_mesh_lab__www__app__novncEntryFor["novncEntryFor"]
-        v2__examples__device_mesh_lab__www__app__config["config"]
-        v2__examples__device_mesh_lab__www__app__pcs["pcs"]
-        v2__examples__device_mesh_lab__www__app__novncUrlFor("novncUrlFor CC=10")
-        v2__examples__device_mesh_lab__www__app__entry["entry"]
-        v2__examples__device_mesh_lab__www__app__host["host"]
-        v2__examples__device_mesh_lab__www__app__path["path"]
-        v2__examples__device_mesh_lab__www__app__renderNovnc("renderNovnc CC=10")
-        v2__examples__device_mesh_lab__www__app__devices["devices"]
-        v2__examples__device_mesh_lab__www__app__name["name"]
-        v2__examples__device_mesh_lab__www__app__url["url"]
-        v2__examples__device_mesh_lab__www__app__status["status"]
-        v2__examples__device_mesh_lab__www__app__renderRoutes("renderRoutes CC=9")
-        v2__examples__device_mesh_lab__www__app__filter["filter"]
-        v2__examples__device_mesh_lab__www__app__rows["rows"]
-        v2__examples__device_mesh_lab__www__app__selectRoute["selectRoute"]
-        v2__examples__device_mesh_lab__www__app__renderField{{renderField CC=15}}
-        v2__examples__device_mesh_lab__www__app__type["type"]
-        v2__examples__device_mesh_lab__www__app__value["value"]
-        v2__examples__device_mesh_lab__www__app__description["description"]
+        v2__examples__decorators__example__echo_message["echo_message"]
+        v2__examples__decorators__example__transcode["transcode"]
+        v2__examples__decorators__example__shell_echo["shell_echo"]
+        v2__examples__html_uri_app__backend__load_env["load_env"]
+        v2__examples__html_uri_app__backend__env_bool["env_bool"]
+        v2__examples__html_uri_app__backend__read_json["read_json"]
+        v2__examples__html_uri_app__backend__binding_document["binding_document"]
+        v2__examples__html_uri_app__backend__registry["registry"]
+        v2__examples__html_uri_app__backend__routes["routes"]
+        v2__examples__html_uri_app__backend__add_log["add_log"]
+        v2__examples__html_uri_app__backend__recent_logs["recent_logs"]
+        v2__examples__html_uri_app__backend__json_response["json_response"]
+        v2__examples__html_uri_app__backend__execute_policy["execute_policy"]
+        v2__examples__html_uri_app__backend__dispatch["dispatch"]
+        v2__examples__html_uri_app__backend__dispatch_tool["dispatch_tool"]
+        v2__examples__html_uri_app__backend__Handler__log_message["log_message"]
+        v2__examples__html_uri_app__backend__Handler__do_GET("do_GET CC=8")
+        v2__examples__html_uri_app__backend__Handler__do_POST["do_POST"]
+        v2__examples__html_uri_app__backend__Handler__read_body["read_body"]
+        v2__examples__html_uri_app__backend__Handler__serve_static["serve_static"]
+        v2__examples__html_uri_app__backend__main["main"]
+        v2__examples__device_mesh_lab__mesh_env__load_env("load_env CC=9")
+        v2__examples__device_mesh_lab__mesh_env__parse_peers("parse_peers CC=8")
+        v2__examples__device_mesh_lab__mesh_env__auth_token["auth_token"]
+        v2__examples__device_mesh_lab__mesh_env__auth_headers["auth_headers"]
+        v2__examples__device_mesh_lab__mesh_env__check_auth["check_auth"]
+        v2__examples__device_mesh_lab__mesh_env__read_json["read_json"]
     end
     subgraph v8__examples
         v8__examples__html_uri_app__app__routeResponse["routeResponse"]
@@ -284,13 +284,6 @@ flowchart TD
         v8__examples__docker_uri_flow__orchestrator__flow_runner__validate_flow_registry["validate_flow_registry"]
         v8__examples__docker_uri_flow__orchestrator__flow_runner__json_get["json_get"]
     end
-    subgraph www__docs
-        www__docs__render_markdown{{render_markdown CC=15}}
-        www__docs__inline_markdown["inline_markdown"]
-    end
-    subgraph www__index
-        www__index__h["h"]
-    end
     examples__reference_adapters__node_server__server --> examples__reference_adapters__node_server__writeJson
     examples__reference_adapters__node_server__server --> examples__reference_adapters__node_server__readJson
     examples__reference_adapters__python_server__Handler__do_POST --> v8__examples__docker_uri_flow__shell_worker__server__dispatch
@@ -339,79 +332,15 @@ flowchart TD
     v8__examples__docker_uri_flow__orchestrator__flow_runner__run_flow --> v8__examples__docker_uri_flow__orchestrator__flow_runner__json_post
     v8__examples__docker_uri_flow__orchestrator__flow_runner__main --> v8__examples__docker_uri_flow__orchestrator__flow_runner__parse_flow
     v8__examples__docker_uri_flow__orchestrator__flow_runner__main --> v8__examples__docker_uri_flow__orchestrator__flow_runner__run_flow
-    v2__examples__device_mesh_lab__www__app__recordActivity --> v2__examples__device_mesh_lab__www__app__renderActivityLog
-    v2__examples__device_mesh_lab__www__app__routeBadge --> v2__examples__device_mesh_lab__www__app__isRouteSafe
-    v2__examples__device_mesh_lab__www__app__renderDevices --> v2__examples__device_mesh_lab__www__app__filter
-    v2__examples__device_mesh_lab__www__app__renderDevices --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__reachable --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__installable --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__novncUrlFor --> v2__examples__device_mesh_lab__www__app__novncEntryFor
-    v2__examples__device_mesh_lab__www__app__renderNovnc --> v2__examples__device_mesh_lab__www__app__novncUrlFor
-    v2__examples__device_mesh_lab__www__app__renderNovnc --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__url --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__status --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__renderRoutes --> v2__examples__device_mesh_lab__www__app__filter
-    v2__examples__device_mesh_lab__www__app__renderRoutes --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__renderRoutes --> v2__examples__device_mesh_lab__www__app__routeBadge
-    v2__examples__device_mesh_lab__www__app__filter --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__rows --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__renderRoutes
-    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__renderPayloadForm
-    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__showJson
-    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__previewPayload
-    v2__examples__device_mesh_lab__www__app__renderField --> v2__examples__device_mesh_lab__www__app__defaultValueFor
-    v2__examples__device_mesh_lab__www__app__renderField --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__renderField --> v2__examples__device_mesh_lab__www__app__valueToInput
-    v2__examples__device_mesh_lab__www__app__description --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__inputType --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__step --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__isRouteSafe
-    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__schemaFor
-    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__requiredSet
-    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__routeBadge
-    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__renderField
-    v2__examples__device_mesh_lab__www__app__required --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__payloadFromForm --> v2__examples__device_mesh_lab__www__app__parsePayloadValue
-    v2__examples__device_mesh_lab__www__app__previewPayload --> v2__examples__device_mesh_lab__www__app__payloadFromForm
-    v2__examples__device_mesh_lab__www__app__appendTimeline --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__li --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__renderActivityLog --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__frontendRows --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__deviceRows --> v2__examples__device_mesh_lab__www__app__escapeHtml
-    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__renderActivityLog
-    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__routeByUri
-    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__runUri
-    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__extractRunResult
-    v2__examples__device_mesh_lab__www__app__groups --> v2__examples__device_mesh_lab__www__app__routeByUri
-    v2__examples__device_mesh_lab__www__app__groups --> v2__examples__device_mesh_lab__www__app__runUri
-    v2__examples__device_mesh_lab__www__app__groups --> v2__examples__device_mesh_lab__www__app__extractRunResult
-    v2__examples__device_mesh_lab__www__app__data --> v2__examples__device_mesh_lab__www__app__showJson
-    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderDevices
-    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderNovnc
-    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderRoutes
-    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderPayloadForm
-    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__showJson
-    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__filter
-    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderActivityLog
-    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__recordActivity
-    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__showJson
-    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__appendTimeline
-    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__refreshDevices
-    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__refreshLogs
-    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__showView
-    v2__examples__device_mesh_lab__www__app__prompt --> v2__examples__device_mesh_lab__www__app__recordActivity
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__payloadFromForm
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__showJson
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__recordActivity
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__targetFromUri
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__runUri
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__appendTimeline
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__refreshDevices
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__refreshLogs
-    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__showView
-    v2__examples__device_mesh_lab__www__app__row --> v2__examples__device_mesh_lab__www__app__recordActivity
-    www__docs__render_markdown --> www__docs__inline_markdown
+    v2__examples__generators__php__example__UriCommand__bindingFromFunction --> v2__examples__generators__php__example__UriCommand__schemaType
+    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__run_inprocess
+    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__run_queue
+    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__serverless_handler
+    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__start_http_worker
+    v2__examples__transports__transport_lib__available_transports --> v2__examples__transports__transport_lib__grpc_available
+    v2__examples__decorators__example__echo_message --> adapters__python__urirun__v2__uri_command
+    v2__examples__decorators__example__transcode --> adapters__python__urirun__v2__uri_command
+    v2__examples__decorators__example__shell_echo --> adapters__python__urirun__v2__uri_shell
     adapters__js__parseUri --> adapters__js__match
     adapters__js__dispatch --> adapters__js__parseUri
     adapters__js__dispatch --> adapters__js__buildInvocation
@@ -419,126 +348,8 @@ flowchart TD
     adapters__c__urirun_test__main --> adapters__c__urirun_test__assert
     adapters__c__urirun__copy_token --> adapters__c__urirun__memcpy
     adapters__c__urirun__memcpy --> adapters__c__urirun__is_path_end
-    adapters__python__urihandler__dispatch --> adapters__python__urihandler__parse_uri
-    adapters__python__urihandler__dispatch --> adapters__python__urihandler__build_invocation
-    adapters__python__urihandler__dispatch --> adapters__js__fn
-    v2__examples__generators__php__example__UriCommand__bindingFromFunction --> v2__examples__generators__php__example__UriCommand__schemaType
-    v1__examples__js__urirun_v1__DEFAULT_TIMEOUT --> v1__examples__js__urirun_v1__match
-    v1__examples__js__urirun_v1__OUTPUT_LIMIT --> v1__examples__js__urirun_v1__match
-    v1__examples__js__urirun_v1__parseUri --> v1__examples__js__urirun_v1__match
-    v1__examples__js__urirun_v1__setRoute --> v1__examples__js__urirun_v1__translate
-    v1__examples__js__urirun_v1__setRoute --> v1__examples__js__urirun_v1__parseUri
-    v1__examples__js__urirun_v1__compileRegistryDocument --> v1__examples__js__urirun_v1__setRoute
-    v1__examples__js__urirun_v1__routeRows --> v1__examples__js__urirun_v1__registryTree
-    v1__examples__js__urirun_v1__evaluatePolicy --> v1__examples__js__urirun_v1__mergePolicy
-    v1__examples__js__urirun_v1__evaluatePolicy --> v1__examples__js__urirun_v1__globMatch
-    v1__examples__js__urirun_v1__merged --> v1__examples__js__urirun_v1__routeRows
-    v1__examples__js__urirun_v1__merged --> v1__examples__js__urirun_v1__evaluatePolicy
-    v1__examples__js__urirun_v1__deny --> v1__examples__js__urirun_v1__globMatch
-    v1__examples__js__urirun_v1__allow --> v1__examples__js__urirun_v1__globMatch
-    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__parseUri
-    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__translate
-    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__registryTree
-    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__evaluatePolicy
-    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__mergePolicy
-    v1__examples__js__urirun_v1__renderCommand --> v1__examples__js__urirun_v1__renderValue
-    v1__examples__js__urirun_v1__renderedEnv --> v1__examples__js__urirun_v1__renderValue
-    v1__examples__js__urirun_v1__runProcess --> v1__examples__js__urirun_v1__renderedEnv
-    v1__examples__js__urirun_v1__runProcess --> v1__examples__js__urirun_v1__truncate
-    v1__examples__js__urirun_v1__envFlags --> v1__examples__js__urirun_v1__renderValue
-    v1__examples__js__urirun_v1__tokens --> v1__examples__js__urirun_v1__runProcess
-    v1__examples__js__urirun_v1__inner --> v1__examples__js__urirun_v1__renderValue
-    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__mergePolicy
-    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__parseUri
-    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__translate
-    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__registryTree
-    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__resolveParams
-    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__evaluatePolicy
-    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__executor
-    v1__examples__js__urirun_v1__listRoutes --> v1__examples__js__urirun_v1__mergePolicy
-    v1__examples__js__urirun_v1__listRoutes --> v1__examples__js__urirun_v1__routeRows
-    v1__examples__js__urirun_v1__listRoutes --> v1__examples__js__urirun_v1__evaluatePolicy
-    v1__examples__js__urirun_v1__expandBinding --> v1__examples__js__urirun_v1__tokenize
-    v1__examples__js__urirun_v1__expandBinding --> v1__examples__js__urirun_v1__inferKind
-    v1__examples__js__urirun_v1__expandBinding --> v1__examples__js__urirun_v1__defaultAdapter
-    v1__examples__js__urirun_v1__expandBindings --> v1__examples__js__urirun_v1__expandBinding
-    v1__examples__js__urirun_v1__compileRegistry --> v1__examples__js__urirun_v1__compileRegistryDocument
-    v1__examples__js__urirun_v1__compileRegistry --> v1__examples__js__urirun_v1__expandBindings
-    v1__examples__html_uri_app__uri_runtime_v1__parseUri --> v1__examples__html_uri_app__uri_runtime_v1__match
-    v1__examples__html_uri_app__uri_runtime_v1__routeKey --> v1__examples__html_uri_app__uri_runtime_v1__translate
-    v1__examples__html_uri_app__uri_runtime_v1__routeKey --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
-    v1__examples__html_uri_app__uri_runtime_v1__expandBinding --> v1__examples__html_uri_app__uri_runtime_v1__tokenize
-    v1__examples__html_uri_app__uri_runtime_v1__compileBindings --> v1__examples__html_uri_app__uri_runtime_v1__entries
-    v1__examples__html_uri_app__uri_runtime_v1__compileBindings --> v1__examples__html_uri_app__uri_runtime_v1__routeKey
-    v1__examples__html_uri_app__uri_runtime_v1__compileBindings --> v1__examples__html_uri_app__uri_runtime_v1__expandBinding
-    v1__examples__html_uri_app__uri_runtime_v1__resolveParams --> v1__examples__html_uri_app__uri_runtime_v1__entries
-    v1__examples__html_uri_app__uri_runtime_v1__renderCommand --> v1__examples__html_uri_app__uri_runtime_v1__renderValue
-    v1__examples__html_uri_app__uri_runtime_v1__mergePolicy --> v1__examples__html_uri_app__uri_runtime_v1__defaultPolicy
-    v1__examples__html_uri_app__uri_runtime_v1__mergePolicy --> v1__examples__html_uri_app__uri_runtime_v1__entries
-    v1__examples__html_uri_app__uri_runtime_v1__matchesAny --> v1__examples__html_uri_app__uri_runtime_v1__globToRegExp
-    v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy --> v1__examples__html_uri_app__uri_runtime_v1__matchesAny
-    v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy --> v1__examples__html_uri_app__uri_runtime_v1__looksDestructive
-    v1__examples__html_uri_app__uri_runtime_v1__allowed --> v1__examples__html_uri_app__uri_runtime_v1__matchesAny
-    v1__examples__html_uri_app__uri_runtime_v1__reason --> v1__examples__html_uri_app__uri_runtime_v1__matchesAny
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__compileBindings
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__translate
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__resolveParams
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__renderValue
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__renderCommand
-    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7 --> v1__examples__html_uri_app__uri_runtime_v1__hasPlaceholders
-    v1__examples__html_uri_app__uri_runtime_v1__routes --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__activePolicy --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__setPolicy --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__translate
-    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
-    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__translate
-    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
-    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
-    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__translate
-    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__resolveParams
-    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__renderValue
-    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__renderCommand
-    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__hasPlaceholders
-    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
-    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__translate
-    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__resolveParams
-    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
-    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__adapter
-    v1__examples__html_uri_app__app__text --> v1__examples__html_uri_app__app__appendLog
-    v1__examples__html_uri_app__app__selected --> v1__examples__html_uri_app__app__executeMode
-    v1__examples__html_uri_app__app__badgeFor --> v1__examples__html_uri_app__app__executeMode
-    v1__examples__html_uri_app__app__renderActions --> v1__examples__html_uri_app__app__executeMode
-    v1__examples__html_uri_app__app__renderActions --> v1__examples__html_uri_app__app__badgeFor
-    v1__examples__html_uri_app__app__renderActions --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__items --> v1__examples__html_uri_app__app__badgeFor
-    v1__examples__html_uri_app__app__items --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__badge --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__label --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__active --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__renderDetail --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__renderDetail --> v1__examples__html_uri_app__app__updatePreview
-    v1__examples__html_uri_app__app__params --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__inputs --> v1__examples__html_uri_app__app__escapeHtml
-    v1__examples__html_uri_app__app__updatePreview --> v1__examples__html_uri_app__app__currentPayload
-    v1__examples__html_uri_app__app__node --> v1__examples__html_uri_app__app__currentPayload
-    v1__examples__html_uri_app__app__runSelected --> v1__examples__html_uri_app__app__currentPayload
-    v1__examples__html_uri_app__app__runSelected --> v1__examples__html_uri_app__app__executeMode
-    v1__examples__html_uri_app__app__runSelected --> v1__examples__html_uri_app__app__renderLogs
-    v1__examples__html_uri_app__app__envelope --> v1__examples__html_uri_app__app__currentPayload
-    v1__examples__html_uri_app__app__envelope --> v1__examples__html_uri_app__app__executeMode
-    v1__examples__html_uri_app__app__target --> v1__examples__html_uri_app__app__renderActions
-    v1__examples__html_uri_app__app__renderLogs --> v1__examples__html_uri_app__app__escapeHtml
-    v2__examples__decorators__example__echo_message --> adapters__python__urirun__v2__uri_command
-    v2__examples__decorators__example__transcode --> adapters__python__urirun__v2__uri_command
-    v2__examples__decorators__example__shell_echo --> adapters__python__urirun__v2__uri_shell
+    adapters__python__urirun__v2_service__call --> adapters__python__urirun__v2_service___post
+    adapters__python__urirun__v2_service__call --> adapters__python__urirun__v2_service__service_base
     adapters__python__urirun__v1__resolve_params --> adapters__python__urirun__v1___params_spec
     adapters__python__urirun__v1__render_command --> adapters__python__urirun__v1__render_value
     adapters__python__urirun__v1___proc_env --> adapters__python__urirun__v1__render_value
@@ -563,10 +374,66 @@ flowchart TD
     adapters__python__urirun__v1__expand_bindings --> adapters__python__urirun__v1___binding_pairs
     adapters__python__urirun__v1__compile_registry --> adapters__python__urirun__v1__expand_bindings
     adapters__python__urirun__v1__load_registry_arg --> adapters__python__urirun__v1__compile_registry
-    adapters__python__urirun__v2_adopt___command_binding --> adapters__python__urirun__v2_adopt__passthrough_schema
-    adapters__python__urirun__v2_adopt__python_package_bindings --> adapters__python__urirun__v2_adopt___command_binding
-    adapters__python__urirun__v2_adopt__installed_python_bindings --> adapters__python__urirun__v2_adopt__python_package_bindings
-    adapters__python__urirun__v2_adopt__npm_package_bindings --> adapters__python__urirun__v2_adopt___command_binding
+    adapters__python__urihandler__dispatch --> adapters__python__urihandler__parse_uri
+    adapters__python__urihandler__dispatch --> adapters__python__urihandler__build_invocation
+    adapters__python__urihandler__dispatch --> adapters__js__fn
+    adapters__python__urirun__v2__uri_command --> adapters__python__urirun__v2__model_from_function
+    adapters__python__urirun__v2__uri_command --> adapters__js__fn
+    adapters__python__urirun__v2__uri_command --> adapters__python__urirun__v2___placeholder_kwargs
+    adapters__python__urirun__v2__uri_shell --> adapters__python__urirun__v2__uri_command
+    adapters__python__urirun__v2__validate_input --> adapters__python__urirun__v2___input_values
+    adapters__python__urirun__v2__validate_input --> adapters__python__urirun__v2___schema_for
+    adapters__python__urirun__v2__validate_input --> adapters__python__urirun__v2___apply_defaults
+    adapters__python__urirun__v2__render_sequence --> adapters__python__urirun__v2__render_value
+    adapters__python__urirun__v2__render_argv --> adapters__python__urirun__v2__render_value
+    adapters__python__urirun__v2__run_argv_template --> adapters__python__urirun__v2__render_argv
+    adapters__python__urirun__v2__run_shell_template --> adapters__python__urirun__v2__render_value
+    adapters__python__urirun__v2__run --> adapters__python__urirun__v2__validate_input
+    adapters__python__urirun__v2__run --> v1__examples__js__urirun_v1__executor
+    adapters__python__urirun__v2__expand_binding --> adapters__python__urirun__v2___strip_runtime_only
+    adapters__python__urirun__v2__expand_bindings --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2__expand_bindings --> adapters__python__urirun__v2___binding_pairs
+    adapters__python__urirun__v2__compile_registry --> adapters__python__urirun__v2__expand_bindings
+    adapters__python__urirun__v2__build_binding_document --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2___bindings_as_map --> adapters__python__urirun__v2__expand_bindings
+    adapters__python__urirun__v2___bindings_as_map --> adapters__python__urirun__v2___strip_runtime_only
+    adapters__python__urirun__v2__merge_binding_document --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2__merge_binding_document --> adapters__python__urirun__v2___bindings_as_map
+    adapters__python__urirun__v2__write_or_emit_binding --> adapters__python__urirun__v2__merge_binding_document
+    adapters__python__urirun__v2__write_or_emit_binding --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2__parse_param_declaration --> adapters__python__urirun__v2___coerce_default
+    adapters__python__urirun__v2__input_schema_from_params --> adapters__python__urirun__v2__parse_param_declaration
+    adapters__python__urirun__v2__command_binding_from_cli --> adapters__python__urirun__v2__input_schema_from_params
+    adapters__python__urirun__v2__load_registry_arg --> adapters__python__urirun__v2__compile_registry
+    adapters__python__urirun__v2__load_registry_arg --> adapters__python__urirun__v2__build_binding_document
+    adapters__python__urirun__v2__load_registry_arg --> adapters__python__urirun__v2__scan_artifacts
+    adapters__python__urirun__v2__validate_binding_document --> adapters__python__urirun__v2__expand_bindings
+    adapters__python__urirun__v2___load_manifest --> adapters__python__urirun__v2__expand_bindings
+    adapters__python__urirun__v2___scan_package_json --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2___scan_package_json --> adapters__python__urirun__v2___empty_input_schema
+    adapters__python__urirun__v2___scan_package_json --> adapters__python__urirun__v2___rel
+    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2___read_toml
+    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2___empty_input_schema
+    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2___rel
+    adapters__python__urirun__v2___scan_shell_script --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2___scan_shell_script --> adapters__python__urirun__v2___empty_input_schema
+    adapters__python__urirun__v2___scan_shell_script --> adapters__python__urirun__v2___rel
+    adapters__python__urirun__v2___scan_makefile --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2___scan_makefile --> adapters__python__urirun__v2___empty_input_schema
+    adapters__python__urirun__v2___scan_makefile --> adapters__python__urirun__v2___rel
+    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___rel
+    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___parse_dockerfile_labels
+    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___manifest_candidates
+    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2__expand_binding
+    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___load_manifest
+    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___iter_files
+    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___load_manifest
+    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___scan_package_json
+    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___scan_pyproject
+    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___scan_makefile
+    adapters__python__urirun__v2___load_many --> adapters__python__urirun__v2__scan_artifacts
+    adapters__python__urirun__v2___load_many --> adapters__python__urirun__v2__expand_bindings
     adapters__python__urirun___runtime__merge_policy --> adapters__python__urirun___runtime__default_policy
     adapters__python__urirun___runtime__evaluate_policy --> adapters__python__urirun___runtime___matches_any
     adapters__python__urirun___runtime__evaluate_policy --> adapters__python__urirun___runtime___looks_destructive
@@ -581,6 +448,19 @@ flowchart TD
     adapters__python__urirun___runtime__list_routes --> adapters__python__urirun___runtime__merge_policy
     adapters__python__urirun___runtime__list_routes --> adapters__python__urirun___runtime__evaluate_policy
     adapters__python__urirun___runtime__main --> adapters__python__urirun___runtime__load_registry_arg
+    adapters__python__urirun__v2_grpc__serve --> adapters__python__urirun__v2_grpc___route_list
+    adapters__python__urirun__v2_grpc__call --> adapters__python__urirun__v2_grpc__channel_target
+    adapters__python__urirun__v2_grpc__call --> adapters__python__urirun__v2_grpc___validate
+    adapters__python__urirun__v2_grpc__call --> adapters__python__urirun__v2_grpc___method
+    adapters__python__urirun__v2_grpc__call --> adapters__python__urirun__v1__run
+    adapters__python__urirun__v2_grpc__stream --> adapters__python__urirun__v2_grpc__channel_target
+    adapters__python__urirun__v2_grpc__stream --> adapters__python__urirun__v2_grpc___method
+    adapters__python__urirun__v2_grpc__list_routes --> adapters__python__urirun__v2_grpc__channel_target
+    adapters__python__urirun__v2_grpc__list_routes --> adapters__python__urirun__v2_grpc___method
+    adapters__python__urirun__v2_adopt___command_binding --> adapters__python__urirun__v2_adopt__passthrough_schema
+    adapters__python__urirun__v2_adopt__python_package_bindings --> adapters__python__urirun__v2_adopt___command_binding
+    adapters__python__urirun__v2_adopt__installed_python_bindings --> adapters__python__urirun__v2_adopt__python_package_bindings
+    adapters__python__urirun__v2_adopt__npm_package_bindings --> adapters__python__urirun__v2_adopt___command_binding
     adapters__python__urirun__v2_mcp__to_mcp_tools --> adapters__python__urirun__v2_mcp__tool_name
     adapters__python__urirun__v2_mcp__to_mcp_tools --> adapters__python__urirun__v2_mcp___input_schema
     adapters__python__urirun__v2_mcp__to_mcp_manifest --> adapters__python__urirun__v2_mcp__to_mcp_tools
@@ -592,6 +472,51 @@ flowchart TD
     adapters__python__urirun__v2_mcp__main --> adapters__python__urirun__v2_mcp__serve_mcp
     adapters__python__urirun__v2_mcp__main --> adapters__python__urirun__v2_mcp__to_mcp_manifest
     adapters__python__urirun__v2_mcp__main --> adapters__python__urirun__v2_mcp__to_a2a_card
+    adapters__python__urirun___registry__normalize_route_entry --> adapters__python__urirun___registry__default_adapter
+    adapters__python__urirun___registry__route_from_uri --> adapters__python__urirun___registry__parse_uri
+    adapters__python__urirun___registry__route_from_uri --> adapters__python__urirun___registry__translate
+    adapters__python__urirun___registry__route_from_uri --> adapters__python__urirun___registry__normalize_route_entry
+    adapters__python__urirun___registry__route_from_parts --> adapters__python__urirun___registry__route_from_uri
+    adapters__python__urirun___registry__coerce_route_source --> adapters__python__urirun___registry__route_from_uri
+    adapters__python__urirun___registry__coerce_route_source --> adapters__python__urirun___registry__route_from_parts
+    adapters__python__urirun___registry__add_route --> adapters__python__urirun___registry___route_entry_equal
+    adapters__python__urirun___registry__flatten_registry_tree --> adapters__python__urirun___registry__route_from_parts
+    adapters__python__urirun___registry__flatten_registry_document --> adapters__python__urirun___registry__flatten_registry_tree
+    adapters__python__urirun___registry__flatten_registry_document --> adapters__python__urirun___registry___get_route_entry
+    adapters__python__urirun___registry__flatten_registry_document --> adapters__python__urirun___registry__route_from_parts
+    adapters__python__urirun___registry__discover_manifest --> adapters__python__urirun___registry__flatten_registry_tree
+    adapters__python__urirun___registry__discover_manifest --> adapters__python__urirun___registry__flatten_registry_document
+    adapters__python__urirun___registry__discover_manifest --> adapters__python__urirun___registry__coerce_route_source
+    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry__coerce_route_source
+    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry__add_route
+    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry__hash_uri
+    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry___route_entry_equal
+    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry__default_adapter
+    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry___parse_command
+    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry__route_from_uri
+    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry__route_from_parts
+    adapters__python__urirun___registry__discover_docker_inspect --> adapters__python__urirun___registry__discover_docker_labels
+    adapters__python__urirun___registry___default_openapi_route --> adapters__python__urirun___registry___operation_from_method
+    adapters__python__urirun___registry__discover_openapi --> adapters__python__urirun___registry___default_openapi_route
+    adapters__python__urirun___registry__discover_openapi --> adapters__python__urirun___registry__route_from_uri
+    adapters__python__urirun___registry__uri_handler --> adapters__python__urirun___registry__normalize_route_entry
+    adapters__python__urirun___registry__discover_python_modules --> adapters__python__urirun___registry___iter_module_exports
+    adapters__python__urirun___registry__discover_python_modules --> adapters__python__urirun___registry__route_from_uri
+    adapters__python__urirun___registry__discover_entry_points --> adapters__python__urirun___registry__route_from_uri
+    adapters__python__urirun___registry__resolve_route --> adapters__python__urirun___registry__registry_tree
+    adapters__python__urirun___registry__resolve_route --> adapters__python__urirun___registry__hash_uri
+    adapters__python__urirun___registry__hydrate_registry --> adapters__python__urirun___registry___walk_route_entries
+    adapters__python__urirun___registry__hydrate_registry --> adapters__python__urirun___registry__registry_tree
+    adapters__python__urirun___registry__exec_local_function --> adapters__js__fn
+    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__parse_uri
+    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__translate
+    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__hash_uri
+    adapters__python__urirun___registry__dispatch_generated --> v1__examples__js__urirun_v1__executor
+    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__resolve_route
+    adapters__python__urirun___registry___emit_json --> adapters__python__urirun___registry__write_json
+    adapters__python__urirun___registry___load_sources --> adapters__python__urirun___registry__load_json
+    adapters__python__urirun___registry___load_sources --> adapters__python__urirun___registry__discover_manifest
+    adapters__python__urirun___registry___discover_python_module --> adapters__python__urirun___registry__discover_python_modules
     adapters__python__urirun___scan__emit_json --> adapters__python__urirun___scan__write_json
     adapters__python__urirun___scan__normalize_binding --> adapters__python__urirun___scan__infer_kind
     adapters__python__urirun___scan__binding_to_route_source --> adapters__python__urirun___scan__normalize_binding
@@ -653,124 +578,47 @@ flowchart TD
     adapters__python__urirun___scan__load_registry_arg --> adapters__python__urirun___scan__scan_path
     adapters__python__urirun___scan__list_bindings --> adapters__python__urirun___scan__load_binding_sources
     adapters__python__urirun___scan__list_bindings --> adapters__python__urirun___scan__normalize_binding
-    adapters__python__urirun__v2_grpc__serve --> adapters__python__urirun__v2_grpc___route_list
-    adapters__python__urirun__v2_grpc__call --> adapters__python__urirun__v2_grpc__channel_target
-    adapters__python__urirun__v2_grpc__call --> adapters__python__urirun__v2_grpc___validate
-    adapters__python__urirun__v2_grpc__call --> adapters__python__urirun__v2_grpc___method
-    adapters__python__urirun__v2_grpc__call --> v1__examples__js__urirun_v1__run
-    adapters__python__urirun__v2_grpc__stream --> adapters__python__urirun__v2_grpc__channel_target
-    adapters__python__urirun__v2_grpc__stream --> adapters__python__urirun__v2_grpc___method
-    adapters__python__urirun__v2_grpc__list_routes --> adapters__python__urirun__v2_grpc__channel_target
-    adapters__python__urirun__v2_grpc__list_routes --> adapters__python__urirun__v2_grpc___method
-    adapters__python__urirun__v2_service__call --> adapters__python__urirun__v2_service___post
-    adapters__python__urirun__v2_service__call --> adapters__python__urirun__v2_service__service_base
-    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__run_inprocess
-    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__run_queue
-    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__serverless_handler
-    v2__examples__transports__transport_lib__run_via --> v2__examples__transports__transport_lib__start_http_worker
-    v2__examples__transports__transport_lib__available_transports --> v2__examples__transports__transport_lib__grpc_available
-    adapters__python__urirun__v2__uri_command --> adapters__python__urirun__v2__model_from_function
-    adapters__python__urirun__v2__uri_command --> adapters__js__fn
-    adapters__python__urirun__v2__uri_command --> adapters__python__urirun__v2___placeholder_kwargs
-    adapters__python__urirun__v2__uri_shell --> adapters__python__urirun__v2__uri_command
-    adapters__python__urirun__v2__validate_input --> adapters__python__urirun__v2___input_values
-    adapters__python__urirun__v2__validate_input --> adapters__python__urirun__v2___schema_for
-    adapters__python__urirun__v2__validate_input --> adapters__python__urirun__v2___apply_defaults
-    adapters__python__urirun__v2__render_sequence --> adapters__python__urirun__v2__render_value
-    adapters__python__urirun__v2__render_argv --> adapters__python__urirun__v2__render_value
-    adapters__python__urirun__v2__run_argv_template --> adapters__python__urirun__v2__render_argv
-    adapters__python__urirun__v2__run_shell_template --> adapters__python__urirun__v2__render_value
-    adapters__python__urirun__v2__run --> adapters__python__urirun__v2__validate_input
-    adapters__python__urirun__v2__run --> v1__examples__js__urirun_v1__executor
-    adapters__python__urirun__v2__expand_binding --> adapters__python__urirun__v2___strip_runtime_only
-    adapters__python__urirun__v2__expand_bindings --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2__expand_bindings --> adapters__python__urirun__v2___binding_pairs
-    adapters__python__urirun__v2__compile_registry --> adapters__python__urirun__v2__expand_bindings
-    adapters__python__urirun__v2__build_binding_document --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2___bindings_as_map --> adapters__python__urirun__v2__expand_bindings
-    adapters__python__urirun__v2___bindings_as_map --> adapters__python__urirun__v2___strip_runtime_only
-    adapters__python__urirun__v2__merge_binding_document --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2__merge_binding_document --> adapters__python__urirun__v2___bindings_as_map
-    adapters__python__urirun__v2__write_or_emit_binding --> adapters__python__urirun__v2__merge_binding_document
-    adapters__python__urirun__v2__write_or_emit_binding --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2__parse_param_declaration --> adapters__python__urirun__v2___coerce_default
-    adapters__python__urirun__v2__input_schema_from_params --> adapters__python__urirun__v2__parse_param_declaration
-    adapters__python__urirun__v2__command_binding_from_cli --> adapters__python__urirun__v2__input_schema_from_params
-    adapters__python__urirun__v2__load_registry_arg --> adapters__python__urirun__v2__compile_registry
-    adapters__python__urirun__v2__load_registry_arg --> adapters__python__urirun__v2__build_binding_document
-    adapters__python__urirun__v2__load_registry_arg --> adapters__python__urirun__v2__scan_artifacts
-    adapters__python__urirun__v2__validate_binding_document --> adapters__python__urirun__v2__expand_bindings
-    adapters__python__urirun__v2___load_manifest --> adapters__python__urirun__v2__expand_bindings
-    adapters__python__urirun__v2___scan_package_json --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2___scan_package_json --> adapters__python__urirun__v2___empty_input_schema
-    adapters__python__urirun__v2___scan_package_json --> adapters__python__urirun__v2___rel
-    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2___read_toml
-    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2___empty_input_schema
-    adapters__python__urirun__v2___scan_pyproject --> adapters__python__urirun__v2___rel
-    adapters__python__urirun__v2___scan_shell_script --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2___scan_shell_script --> adapters__python__urirun__v2___empty_input_schema
-    adapters__python__urirun__v2___scan_shell_script --> adapters__python__urirun__v2___rel
-    adapters__python__urirun__v2___scan_makefile --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2___scan_makefile --> adapters__python__urirun__v2___empty_input_schema
-    adapters__python__urirun__v2___scan_makefile --> adapters__python__urirun__v2___rel
-    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___rel
-    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___parse_dockerfile_labels
-    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___manifest_candidates
-    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2__expand_binding
-    adapters__python__urirun__v2___scan_dockerfile --> adapters__python__urirun__v2___load_manifest
-    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___iter_files
-    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___load_manifest
-    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___scan_package_json
-    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___scan_pyproject
-    adapters__python__urirun__v2__scan_artifacts --> adapters__python__urirun__v2___scan_makefile
-    adapters__python__urirun__v2___load_many --> adapters__python__urirun__v2__scan_artifacts
-    adapters__python__urirun__v2___load_many --> adapters__python__urirun__v2__expand_bindings
-    adapters__python__urirun___registry__normalize_route_entry --> adapters__python__urirun___registry__default_adapter
-    adapters__python__urirun___registry__route_from_uri --> adapters__python__urirun___registry__parse_uri
-    adapters__python__urirun___registry__route_from_uri --> adapters__python__urirun___registry__translate
-    adapters__python__urirun___registry__route_from_uri --> adapters__python__urirun___registry__normalize_route_entry
-    adapters__python__urirun___registry__route_from_parts --> adapters__python__urirun___registry__route_from_uri
-    adapters__python__urirun___registry__coerce_route_source --> adapters__python__urirun___registry__route_from_uri
-    adapters__python__urirun___registry__coerce_route_source --> adapters__python__urirun___registry__route_from_parts
-    adapters__python__urirun___registry__add_route --> adapters__python__urirun___registry___route_entry_equal
-    adapters__python__urirun___registry__flatten_registry_tree --> adapters__python__urirun___registry__route_from_parts
-    adapters__python__urirun___registry__flatten_registry_document --> adapters__python__urirun___registry__flatten_registry_tree
-    adapters__python__urirun___registry__flatten_registry_document --> adapters__python__urirun___registry___get_route_entry
-    adapters__python__urirun___registry__flatten_registry_document --> adapters__python__urirun___registry__route_from_parts
-    adapters__python__urirun___registry__discover_manifest --> adapters__python__urirun___registry__flatten_registry_tree
-    adapters__python__urirun___registry__discover_manifest --> adapters__python__urirun___registry__flatten_registry_document
-    adapters__python__urirun___registry__discover_manifest --> adapters__python__urirun___registry__coerce_route_source
-    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry__coerce_route_source
-    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry__add_route
-    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry__hash_uri
-    adapters__python__urirun___registry__build_registry_document --> adapters__python__urirun___registry___route_entry_equal
-    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry__default_adapter
-    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry___parse_command
-    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry__route_from_uri
-    adapters__python__urirun___registry__discover_docker_labels --> adapters__python__urirun___registry__route_from_parts
-    adapters__python__urirun___registry__discover_docker_inspect --> adapters__python__urirun___registry__discover_docker_labels
-    adapters__python__urirun___registry___default_openapi_route --> adapters__python__urirun___registry___operation_from_method
-    adapters__python__urirun___registry__discover_openapi --> adapters__python__urirun___registry___default_openapi_route
-    adapters__python__urirun___registry__discover_openapi --> adapters__python__urirun___registry__route_from_uri
-    adapters__python__urirun___registry__uri_handler --> adapters__python__urirun___registry__normalize_route_entry
-    adapters__python__urirun___registry__discover_python_modules --> adapters__python__urirun___registry___iter_module_exports
-    adapters__python__urirun___registry__discover_python_modules --> adapters__python__urirun___registry__route_from_uri
-    adapters__python__urirun___registry__discover_entry_points --> adapters__python__urirun___registry__route_from_uri
-    adapters__python__urirun___registry__resolve_route --> adapters__python__urirun___registry__registry_tree
-    adapters__python__urirun___registry__resolve_route --> adapters__python__urirun___registry__hash_uri
-    adapters__python__urirun___registry__hydrate_registry --> adapters__python__urirun___registry___walk_route_entries
-    adapters__python__urirun___registry__hydrate_registry --> adapters__python__urirun___registry__registry_tree
-    adapters__python__urirun___registry__exec_local_function --> adapters__js__fn
-    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__parse_uri
-    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__translate
-    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__hash_uri
-    adapters__python__urirun___registry__dispatch_generated --> v1__examples__js__urirun_v1__executor
-    adapters__python__urirun___registry__dispatch_generated --> adapters__python__urirun___registry__resolve_route
-    adapters__python__urirun___registry___emit_json --> adapters__python__urirun___registry__write_json
-    adapters__python__urirun___registry___load_sources --> adapters__python__urirun___registry__load_json
-    adapters__python__urirun___registry___load_sources --> adapters__python__urirun___registry__discover_manifest
-    adapters__python__urirun___registry___discover_python_module --> adapters__python__urirun___registry__discover_python_modules
+    v1__examples__js__urirun_v1__DEFAULT_TIMEOUT --> v1__examples__js__urirun_v1__match
+    v1__examples__js__urirun_v1__OUTPUT_LIMIT --> v1__examples__js__urirun_v1__match
+    v1__examples__js__urirun_v1__parseUri --> v1__examples__js__urirun_v1__match
+    v1__examples__js__urirun_v1__setRoute --> v1__examples__js__urirun_v1__translate
+    v1__examples__js__urirun_v1__setRoute --> v1__examples__js__urirun_v1__parseUri
+    v1__examples__js__urirun_v1__compileRegistryDocument --> v1__examples__js__urirun_v1__setRoute
+    v1__examples__js__urirun_v1__routeRows --> v1__examples__js__urirun_v1__registryTree
+    v1__examples__js__urirun_v1__evaluatePolicy --> v1__examples__js__urirun_v1__mergePolicy
+    v1__examples__js__urirun_v1__evaluatePolicy --> v1__examples__js__urirun_v1__globMatch
+    v1__examples__js__urirun_v1__merged --> v1__examples__js__urirun_v1__routeRows
+    v1__examples__js__urirun_v1__merged --> v1__examples__js__urirun_v1__evaluatePolicy
+    v1__examples__js__urirun_v1__deny --> v1__examples__js__urirun_v1__globMatch
+    v1__examples__js__urirun_v1__allow --> v1__examples__js__urirun_v1__globMatch
+    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__parseUri
+    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__translate
+    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__registryTree
+    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__evaluatePolicy
+    v1__examples__js__urirun_v1__check --> v1__examples__js__urirun_v1__mergePolicy
+    v1__examples__js__urirun_v1__renderCommand --> v1__examples__js__urirun_v1__renderValue
+    v1__examples__js__urirun_v1__renderedEnv --> v1__examples__js__urirun_v1__renderValue
+    v1__examples__js__urirun_v1__runProcess --> v1__examples__js__urirun_v1__renderedEnv
+    v1__examples__js__urirun_v1__runProcess --> v1__examples__js__urirun_v1__truncate
+    v1__examples__js__urirun_v1__envFlags --> v1__examples__js__urirun_v1__renderValue
+    v1__examples__js__urirun_v1__tokens --> v1__examples__js__urirun_v1__runProcess
+    v1__examples__js__urirun_v1__inner --> v1__examples__js__urirun_v1__renderValue
+    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__mergePolicy
+    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__parseUri
+    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__translate
+    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__registryTree
+    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__resolveParams
+    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__evaluatePolicy
+    v1__examples__js__urirun_v1__run --> v1__examples__js__urirun_v1__executor
+    v1__examples__js__urirun_v1__listRoutes --> v1__examples__js__urirun_v1__mergePolicy
+    v1__examples__js__urirun_v1__listRoutes --> v1__examples__js__urirun_v1__routeRows
+    v1__examples__js__urirun_v1__listRoutes --> v1__examples__js__urirun_v1__evaluatePolicy
+    v1__examples__js__urirun_v1__expandBinding --> v1__examples__js__urirun_v1__tokenize
+    v1__examples__js__urirun_v1__expandBinding --> v1__examples__js__urirun_v1__inferKind
+    v1__examples__js__urirun_v1__expandBinding --> v1__examples__js__urirun_v1__defaultAdapter
+    v1__examples__js__urirun_v1__expandBindings --> v1__examples__js__urirun_v1__expandBinding
+    v1__examples__js__urirun_v1__compileRegistry --> v1__examples__js__urirun_v1__compileRegistryDocument
+    v1__examples__js__urirun_v1__compileRegistry --> v1__examples__js__urirun_v1__expandBindings
     v2__examples__html_uri_app__backend__binding_document --> v2__examples__html_uri_app__backend__read_json
     v2__examples__html_uri_app__backend__registry --> adapters__python__urirun__v1__compile_registry
     v2__examples__html_uri_app__backend__registry --> v2__examples__html_uri_app__backend__binding_document
@@ -796,8 +644,213 @@ flowchart TD
     v2__examples__html_uri_app__backend__Handler__do_POST --> v2__examples__html_uri_app__backend__dispatch_tool
     v2__examples__html_uri_app__backend__main --> v2__examples__html_uri_app__backend__load_env
     v2__examples__html_uri_app__backend__main --> v2__examples__html_uri_app__backend__add_log
+    v2__examples__device_mesh_lab__mesh_env__auth_headers --> v2__examples__device_mesh_lab__mesh_env__auth_token
+    v2__examples__device_mesh_lab__mesh_env__check_auth --> v2__examples__device_mesh_lab__mesh_env__auth_token
+    v2__examples__device_mesh_lab__controller__json_get --> v2__examples__device_mesh_lab__mesh_env__auth_headers
+    v2__examples__device_mesh_lab__controller__json_post --> v2__examples__device_mesh_lab__mesh_env__auth_headers
+    v2__examples__device_mesh_lab__controller__discover_device --> v2__examples__device_mesh_lab__controller__json_get
+    v2__examples__device_mesh_lab__controller__discover_mesh --> v2__examples__device_mesh_lab__mesh_env__parse_peers
+    v2__examples__device_mesh_lab__controller__discover_mesh --> v2__examples__device_mesh_lab__controller__discover_device
+    v2__examples__device_mesh_lab__controller__build_registry --> v2__examples__device_mesh_lab__controller__route_binding
+    v2__examples__device_mesh_lab__controller__route_summary --> v2__examples__device_mesh_lab__controller__is_safe_route
+    v2__examples__device_mesh_lab__controller__fallback_steps --> v2__examples__device_mesh_lab__controller__is_safe_route
+    v2__examples__device_mesh_lab__controller__fallback_steps --> v2__examples__device_mesh_lab__controller__target_from_uri
+    v2__examples__device_mesh_lab__controller__fallback_flow --> v2__examples__device_mesh_lab__controller__fallback_steps
+    v2__examples__device_mesh_lab__controller__fallback_flow --> v2__examples__device_mesh_lab__controller__slug
+    v2__examples__device_mesh_lab__controller__append_step_if_missing --> v2__examples__device_mesh_lab__controller__slug
+    v2__examples__device_mesh_lab__controller__postprocess_flow --> v2__examples__device_mesh_lab__controller__is_safe_route
+    v2__examples__device_mesh_lab__controller__postprocess_flow --> v2__examples__device_mesh_lab__controller__target_from_uri
+    v2__examples__device_mesh_lab__controller__postprocess_flow --> v2__examples__device_mesh_lab__controller__append_step_if_missing
+    v2__examples__device_mesh_lab__controller__normalize_flow --> v2__examples__device_mesh_lab__controller__slug
+    v2__examples__device_mesh_lab__controller__llm_messages --> v2__examples__device_mesh_lab__controller__route_summary
+    v2__examples__device_mesh_lab__controller__generate_with_litellm --> v2__examples__device_mesh_lab__controller__json_from_text
+    v2__examples__device_mesh_lab__controller__generate_with_litellm --> v2__examples__device_mesh_lab__controller__normalize_flow
+    v2__examples__device_mesh_lab__controller__generate_with_litellm --> v2__examples__device_mesh_lab__controller__postprocess_flow
+    v2__examples__device_mesh_lab__controller__generate_with_litellm --> v2__examples__device_mesh_lab__controller__llm_messages
+    v2__examples__device_mesh_lab__controller__generate_with_litellm --> v2__examples__device_mesh_lab__controller__is_safe_route
+    v2__examples__device_mesh_lab__controller__generate_flow --> v2__examples__device_mesh_lab__controller__fallback_flow
+    v2__examples__device_mesh_lab__controller__generate_flow --> v2__examples__device_mesh_lab__controller__postprocess_flow
+    v2__examples__device_mesh_lab__controller__generate_flow --> v2__examples__device_mesh_lab__controller__is_safe_route
+    v2__examples__device_mesh_lab__controller__generate_flow --> v2__examples__device_mesh_lab__controller__generate_with_litellm
+    v2__examples__device_mesh_lab__controller__generate_flow --> v2__examples__device_mesh_lab__controller__normalize_flow
+    v2__examples__device_mesh_lab__controller__execute_flow --> v2__examples__device_mesh_lab__controller__target_from_uri
+    v2__examples__device_mesh_lab__controller__execute_flow --> v2__examples__device_mesh_lab__controller__json_post
+    v2__examples__device_mesh_lab__controller__nl_flow --> v2__examples__device_mesh_lab__controller__discover_mesh
+    v2__examples__device_mesh_lab__controller__nl_flow --> v2__examples__device_mesh_lab__controller__build_registry
+    v2__examples__device_mesh_lab__controller__nl_flow --> v2__examples__device_mesh_lab__controller__generate_flow
+    v2__examples__device_mesh_lab__controller__nl_flow --> v2__examples__device_mesh_lab__controller__execute_flow
+    v2__examples__device_mesh_lab__controller__nl_flow --> v2__examples__device_mesh_lab__controller__is_safe_route
+    v2__examples__device_mesh_lab__controller__nl_flow --> v2__examples__device_mesh_lab__controller__registry_route_count
+    v2__examples__device_mesh_lab__controller__Handler__do_OPTIONS --> v2__examples__device_mesh_lab__mesh_env__send_json
+    v2__examples__device_mesh_lab__controller__Handler__do_GET --> v2__examples__device_mesh_lab__controller__discover_mesh
+    v2__examples__device_mesh_lab__controller__Handler__do_GET --> v2__examples__device_mesh_lab__mesh_env__send_json
+    v2__examples__device_mesh_lab__controller__Handler__do_GET --> v2__examples__device_mesh_lab__controller__route_summary
+    v2__examples__device_mesh_lab__controller__Handler__do_POST --> v2__examples__device_mesh_lab__mesh_env__send_json
+    v2__examples__device_mesh_lab__controller__Handler__do_POST --> v2__examples__html_uri_app__backend__read_json
+    v2__examples__device_mesh_lab__controller__Handler__do_POST --> v2__examples__device_mesh_lab__controller__nl_flow
+    v2__examples__device_mesh_lab__controller__Handler__do_POST --> v2__examples__device_mesh_lab__controller__discover_mesh
+    v2__examples__device_mesh_lab__controller__Handler__do_POST --> v2__examples__transports__transport_lib__build_registry
+    v2__examples__device_mesh_lab__controller__Handler__do_POST --> v2__examples__device_mesh_lab__controller__normalize_flow
+    v2__examples__device_mesh_lab__controller__Handler__do_POST --> v2__examples__device_mesh_lab__controller__execute_flow
+    v2__examples__device_mesh_lab__controller__main --> v2__examples__html_uri_app__backend__load_env
+    v2__examples__device_mesh_lab__controller__main --> v2__examples__device_mesh_lab__mesh_env__parse_peers
+    v2__examples__device_mesh_lab__device_agent__DeviceAgent__routes --> v2__examples__device_mesh_lab__device_agent__object_schema
+    v2__examples__device_mesh_lab__device_agent__DeviceAgent__handler --> v2__examples__device_mesh_lab__mesh_env__send_json
+    v2__examples__device_mesh_lab__device_agent__DeviceAgent__handler --> v2__examples__device_mesh_lab__mesh_env__check_auth
+    v2__examples__device_mesh_lab__device_agent__DeviceAgent__handler --> v2__examples__html_uri_app__backend__read_json
+    v2__examples__device_mesh_lab__device_agent__make_agent_from_env --> v2__examples__html_uri_app__backend__load_env
+    v2__examples__device_mesh_lab__device_agent__main --> v2__examples__device_mesh_lab__device_agent__make_agent_from_env
+    v2__examples__device_mesh_lab__www__app__showView --> v2__examples__device_mesh_lab__www__app__setMenuActive
+    v2__examples__device_mesh_lab__www__app__focusArea --> v2__examples__device_mesh_lab__www__app__showView
+    v2__examples__device_mesh_lab__www__app__focusArea --> v2__examples__device_mesh_lab__www__app__setMenuActive
+    v2__examples__device_mesh_lab__www__app__focusArea --> v2__examples__device_mesh_lab__www__app__focusTargetFor
+    v2__examples__device_mesh_lab__www__app__recordActivity --> v2__examples__device_mesh_lab__www__app__renderActivityLog
+    v2__examples__device_mesh_lab__www__app__routeBadge --> v2__examples__device_mesh_lab__www__app__isRouteSafe
+    v2__examples__device_mesh_lab__www__app__renderDevices --> v2__examples__device_mesh_lab__www__app__filter
+    v2__examples__device_mesh_lab__www__app__renderDevices --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__reachable --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__installable --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__novncUrlFor --> v2__examples__device_mesh_lab__www__app__novncEntryFor
+    v2__examples__device_mesh_lab__www__app__renderNovnc --> v2__examples__device_mesh_lab__www__app__novncUrlFor
+    v2__examples__device_mesh_lab__www__app__renderNovnc --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__url --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__status --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__renderRoutes --> v2__examples__device_mesh_lab__www__app__filter
+    v2__examples__device_mesh_lab__www__app__renderRoutes --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__renderRoutes --> v2__examples__device_mesh_lab__www__app__routeBadge
+    v2__examples__device_mesh_lab__www__app__filter --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__rows --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__renderRoutes
+    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__renderPayloadForm
+    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__setMenuActive
+    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__showJson
+    v2__examples__device_mesh_lab__www__app__selectRoute --> v2__examples__device_mesh_lab__www__app__previewPayload
+    v2__examples__device_mesh_lab__www__app__renderField --> v2__examples__device_mesh_lab__www__app__defaultValueFor
+    v2__examples__device_mesh_lab__www__app__renderField --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__renderField --> v2__examples__device_mesh_lab__www__app__valueToInput
+    v2__examples__device_mesh_lab__www__app__description --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__inputType --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__step --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__isRouteSafe
+    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__schemaFor
+    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__requiredSet
+    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__routeBadge
+    v2__examples__device_mesh_lab__www__app__renderPayloadForm --> v2__examples__device_mesh_lab__www__app__renderField
+    v2__examples__device_mesh_lab__www__app__required --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__payloadFromForm --> v2__examples__device_mesh_lab__www__app__parsePayloadValue
+    v2__examples__device_mesh_lab__www__app__previewPayload --> v2__examples__device_mesh_lab__www__app__payloadFromForm
+    v2__examples__device_mesh_lab__www__app__appendTimeline --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__li --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__renderActivityLog --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__frontendRows --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__deviceRows --> v2__examples__device_mesh_lab__www__app__escapeHtml
+    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__renderActivityLog
+    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__routeByUri
+    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__runUri
+    v2__examples__device_mesh_lab__www__app__refreshLogs --> v2__examples__device_mesh_lab__www__app__extractRunResult
+    v2__examples__device_mesh_lab__www__app__groups --> v2__examples__device_mesh_lab__www__app__routeByUri
+    v2__examples__device_mesh_lab__www__app__groups --> v2__examples__device_mesh_lab__www__app__runUri
+    v2__examples__device_mesh_lab__www__app__groups --> v2__examples__device_mesh_lab__www__app__extractRunResult
+    v2__examples__device_mesh_lab__www__app__data --> v2__examples__device_mesh_lab__www__app__showJson
+    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderDevices
+    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderNovnc
+    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderRoutes
+    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderPayloadForm
+    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__showJson
+    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__filter
+    v2__examples__device_mesh_lab__www__app__refreshDevices --> v2__examples__device_mesh_lab__www__app__renderActivityLog
+    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__recordActivity
+    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__showJson
+    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__appendTimeline
+    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__refreshDevices
+    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__refreshLogs
+    v2__examples__device_mesh_lab__www__app__runNlFlow --> v2__examples__device_mesh_lab__www__app__showView
+    v2__examples__device_mesh_lab__www__app__prompt --> v2__examples__device_mesh_lab__www__app__recordActivity
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__payloadFromForm
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__showJson
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__recordActivity
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__targetFromUri
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__runUri
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__appendTimeline
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__refreshDevices
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__refreshLogs
+    v2__examples__device_mesh_lab__www__app__runSelectedRoute --> v2__examples__device_mesh_lab__www__app__showView
+    v2__examples__device_mesh_lab__www__app__row --> v2__examples__device_mesh_lab__www__app__recordActivity
+    v1__examples__html_uri_app__uri_runtime_v1__parseUri --> v1__examples__html_uri_app__uri_runtime_v1__match
+    v1__examples__html_uri_app__uri_runtime_v1__routeKey --> v1__examples__html_uri_app__uri_runtime_v1__translate
+    v1__examples__html_uri_app__uri_runtime_v1__routeKey --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
+    v1__examples__html_uri_app__uri_runtime_v1__expandBinding --> v1__examples__html_uri_app__uri_runtime_v1__tokenize
+    v1__examples__html_uri_app__uri_runtime_v1__compileBindings --> v1__examples__html_uri_app__uri_runtime_v1__entries
+    v1__examples__html_uri_app__uri_runtime_v1__compileBindings --> v1__examples__html_uri_app__uri_runtime_v1__routeKey
+    v1__examples__html_uri_app__uri_runtime_v1__compileBindings --> v1__examples__html_uri_app__uri_runtime_v1__expandBinding
+    v1__examples__html_uri_app__uri_runtime_v1__resolveParams --> v1__examples__html_uri_app__uri_runtime_v1__entries
+    v1__examples__html_uri_app__uri_runtime_v1__renderCommand --> v1__examples__html_uri_app__uri_runtime_v1__renderValue
+    v1__examples__html_uri_app__uri_runtime_v1__mergePolicy --> v1__examples__html_uri_app__uri_runtime_v1__defaultPolicy
+    v1__examples__html_uri_app__uri_runtime_v1__mergePolicy --> v1__examples__html_uri_app__uri_runtime_v1__entries
+    v1__examples__html_uri_app__uri_runtime_v1__matchesAny --> v1__examples__html_uri_app__uri_runtime_v1__globToRegExp
+    v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy --> v1__examples__html_uri_app__uri_runtime_v1__matchesAny
+    v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy --> v1__examples__html_uri_app__uri_runtime_v1__looksDestructive
+    v1__examples__html_uri_app__uri_runtime_v1__allowed --> v1__examples__html_uri_app__uri_runtime_v1__matchesAny
+    v1__examples__html_uri_app__uri_runtime_v1__reason --> v1__examples__html_uri_app__uri_runtime_v1__matchesAny
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__compileBindings
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__translate
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__resolveParams
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__renderValue
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__renderCommand
+    v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1 --> v1__examples__html_uri_app__uri_runtime_v1__hasPlaceholders
+    v1__examples__html_uri_app__uri_runtime_v1__routes --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__activePolicy --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__setPolicy --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__translate
+    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
+    v1__examples__html_uri_app__uri_runtime_v1__getPolicy --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__translate
+    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
+    v1__examples__html_uri_app__uri_runtime_v1__listRoutes --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
+    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__translate
+    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__resolveParams
+    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__renderValue
+    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__renderCommand
+    v1__examples__html_uri_app__uri_runtime_v1__preview --> v1__examples__html_uri_app__uri_runtime_v1__hasPlaceholders
+    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__mergePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__parseUri
+    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__translate
+    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__resolveParams
+    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy
+    v1__examples__html_uri_app__uri_runtime_v1__dispatch --> v1__examples__html_uri_app__uri_runtime_v1__adapter
+    v1__examples__html_uri_app__app__text --> v1__examples__html_uri_app__app__appendLog
+    v1__examples__html_uri_app__app__selected --> v1__examples__html_uri_app__app__executeMode
+    v1__examples__html_uri_app__app__badgeFor --> v1__examples__html_uri_app__app__executeMode
+    v1__examples__html_uri_app__app__renderActions --> v1__examples__html_uri_app__app__executeMode
+    v1__examples__html_uri_app__app__renderActions --> v1__examples__html_uri_app__app__badgeFor
+    v1__examples__html_uri_app__app__renderActions --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__items --> v1__examples__html_uri_app__app__badgeFor
+    v1__examples__html_uri_app__app__items --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__badge --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__label --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__active --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__renderDetail --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__renderDetail --> v1__examples__html_uri_app__app__updatePreview
+    v1__examples__html_uri_app__app__params --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__inputs --> v1__examples__html_uri_app__app__escapeHtml
+    v1__examples__html_uri_app__app__updatePreview --> v1__examples__html_uri_app__app__currentPayload
+    v1__examples__html_uri_app__app__node --> v1__examples__html_uri_app__app__currentPayload
+    v1__examples__html_uri_app__app__runSelected --> v1__examples__html_uri_app__app__currentPayload
+    v1__examples__html_uri_app__app__runSelected --> v1__examples__html_uri_app__app__executeMode
+    v1__examples__html_uri_app__app__runSelected --> v1__examples__html_uri_app__app__renderLogs
+    v1__examples__html_uri_app__app__envelope --> v1__examples__html_uri_app__app__currentPayload
+    v1__examples__html_uri_app__app__envelope --> v1__examples__html_uri_app__app__executeMode
+    v1__examples__html_uri_app__app__target --> v1__examples__html_uri_app__app__renderActions
+    v1__examples__html_uri_app__app__renderLogs --> v1__examples__html_uri_app__app__escapeHtml
 
     classDef highCC fill:#ff6b6b,stroke:#c92a2a,color:#fff
     classDef medCC fill:#ffd43b,stroke:#f08c00,color:#000
-    class v8__examples__docker_uri_flow__orchestrator__flow_runner__parse_flow,v2__examples__device_mesh_lab__www__app__defaultValueFor,v2__examples__device_mesh_lab__www__app__renderField,www__docs__render_markdown,v1__examples__js__urirun_v1__resolveParams,v1__examples__js__urirun_v1__run,v1__examples__html_uri_app__uri_runtime_v1__resolveParams,v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy,v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV7,v1__examples__html_uri_app__uri_runtime_v1__dispatch,adapters__python__urirun___runtime__evaluate_policy,adapters__python__urirun__v2_mcp__serve_mcp,adapters__python__urirun___scan__scan_path,adapters__python__urirun__v2__run,adapters__python__urirun__v2__expand_binding,adapters__python__urirun__v2__main highCC
-    class v8__examples__html_uri_app__app__renderForm,v8__examples__html_uri_app__app__required,v8__examples__html_uri_app__app__defaults,v8__examples__docker_uri_flow__node_worker__server__server,v8__examples__docker_uri_flow__orchestrator__flow_runner__run_flow,v2__examples__device_mesh_lab__www__app__renderDevices,v2__examples__device_mesh_lab__www__app__reachable,v2__examples__device_mesh_lab__www__app__novncUrlFor,v2__examples__device_mesh_lab__www__app__renderNovnc,v2__examples__device_mesh_lab__www__app__renderRoutes,v2__examples__device_mesh_lab__www__app__parsePayloadValue,v2__examples__device_mesh_lab__www__app__extractRunResult,v2__examples__device_mesh_lab__www__app__manual,adapters__js__parseUri,v1__examples__js__urirun_v1__inferKind,v1__examples__js__urirun_v1__routeRows,v1__examples__js__urirun_v1__expandBinding,v1__examples__html_uri_app__uri_runtime_v1__expandBinding,v1__examples__html_uri_app__uri_runtime_v1__preview,adapters__python__urirun__v1__resolve_params,adapters__python__urirun__v1__run,adapters__python__urirun__v1___binding_pairs,adapters__python__urirun__v1__main,adapters__python__urirun___runtime__run,adapters__python__urirun___runtime__build_policy,adapters__python__urirun___runtime__format_route_table,adapters__python__urirun___runtime__main,adapters__python__urirun__v2_mcp__main,adapters__python__urirun___scan__infer_kind,adapters__python__urirun___scan__normalize_binding medCC
+    class v8__examples__docker_uri_flow__orchestrator__flow_runner__parse_flow,adapters__python__urirun__v2__run,adapters__python__urirun__v2__expand_binding,adapters__python__urirun__v2__main,adapters__python__urirun___runtime__evaluate_policy,adapters__python__urirun__v2_mcp__serve_mcp,adapters__python__urirun___scan__scan_path,v1__examples__js__urirun_v1__resolveParams,v1__examples__js__urirun_v1__run,v2__examples__device_mesh_lab__controller__fallback_steps,v2__examples__device_mesh_lab__controller__postprocess_flow,v2__examples__device_mesh_lab__controller__normalize_flow,v2__examples__device_mesh_lab__device_agent__DeviceAgent__dispatch,v2__examples__device_mesh_lab__www__app__defaultValueFor,v2__examples__device_mesh_lab__www__app__renderDevices,v2__examples__device_mesh_lab__www__app__reachable,v2__examples__device_mesh_lab__www__app__renderField,v1__examples__html_uri_app__uri_runtime_v1__resolveParams,v1__examples__html_uri_app__uri_runtime_v1__evaluatePolicy,v1__examples__html_uri_app__uri_runtime_v1__createUriRuntimeV1,v1__examples__html_uri_app__uri_runtime_v1__dispatch highCC
+    class v8__examples__html_uri_app__app__renderForm,v8__examples__html_uri_app__app__required,v8__examples__html_uri_app__app__defaults,v8__examples__docker_uri_flow__node_worker__server__server,v8__examples__docker_uri_flow__orchestrator__flow_runner__run_flow,adapters__js__parseUri,adapters__python__urirun__v2_service__call,adapters__python__urirun__v1__resolve_params,adapters__python__urirun__v1__run,adapters__python__urirun__v1___binding_pairs,adapters__python__urirun__v1__main,adapters__python__urirun__v2___apply_defaults,adapters__python__urirun__v2___binding_pairs,adapters__python__urirun__v2__parse_param_declaration,adapters__python__urirun__v2__validate_binding_document,adapters__python__urirun__v2__scan_artifacts,adapters__python__urirun___runtime__run,adapters__python__urirun___runtime__build_policy,adapters__python__urirun___runtime__format_route_table,adapters__python__urirun___runtime__main,adapters__python__urirun__v2_grpc__main,adapters__python__urirun__v2_mcp__main,adapters__python__urirun___registry__parse_uri,adapters__python__urirun___registry__normalize_route_entry,adapters__python__urirun___registry__coerce_route_source,adapters__python__urirun___registry__flatten_registry_tree,adapters__python__urirun___registry__flatten_registry_document,adapters__python__urirun___registry__discover_manifest,adapters__python__urirun___registry__build_registry_document,adapters__python__urirun___registry__discover_docker_labels medCC

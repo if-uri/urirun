@@ -39,7 +39,7 @@ SUMD (description) → DOQL/source (code) → taskfile (automation) → testql (
 
 app {
   name: urirun;
-  version: 0.3.6;
+  version: 0.3.7;
 }
 
 workflow[name="test"] {
@@ -48,8 +48,8 @@ workflow[name="test"] {
   step-2: depend target=test-python;
   step-3: depend target=test-c;
   step-4: depend target=test-examples;
-  step-5: depend target=test-v7;
-  step-6: depend target=test-v8;
+  step-5: depend target=test-v1;
+  step-6: depend target=test-v2;
 }
 
 workflow[name="test-js"] {
@@ -75,41 +75,41 @@ workflow[name="test-examples"] {
   step-3: run cmd=$(CC) -Wall -Wextra -Werror -Iadapters/c -c examples/reference_adapters/firmware-pseudo.c -o /tmp/urirun-firmware-example.o;
 }
 
-workflow[name="test-v7"] {
+workflow[name="test-v1"] {
   trigger: manual;
-  step-1: run cmd=$(NODE) --test v7/examples/js/*.test.js;
-  step-2: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v7/examples/python -p 'test_*.py';
-  step-3: run cmd=$(NODE) v7/examples/js/example.js;
-  step-4: run cmd=PYTHONPATH=adapters/python $(PYTHON) v7/examples/python/example.py;
-  step-5: run cmd=$(PYTHON) -m json.tool v7/examples/json/bindings.v7.example.json >/tmp/urirun-v7-bindings.json;
-  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 compile v7/examples/json/bindings.v7.example.json --out /tmp/urirun-v7.registry.json --generated-at 2026-06-19T00:00:00.000Z;
-  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 run 'media://local/video/transcode' --registry /tmp/urirun-v7.registry.json --payload '{"input":"a.mp4","output":"b.mp4"}' >/tmp/urirun-v7-ffmpeg.json;
-  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 list /tmp/urirun-v7.registry.json --allow 'media://**';
-  step-9: run cmd=$(NODE) v7/examples/html_uri_app/test.mjs;
+  step-1: run cmd=$(NODE) --test v1/examples/js/*.test.js;
+  step-2: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v1/examples/python -p 'test_*.py';
+  step-3: run cmd=$(NODE) v1/examples/js/example.js;
+  step-4: run cmd=PYTHONPATH=adapters/python $(PYTHON) v1/examples/python/example.py;
+  step-5: run cmd=$(PYTHON) -m json.tool v1/examples/json/bindings.v1.example.json >/tmp/urirun-v1-bindings.json;
+  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v1 compile v1/examples/json/bindings.v1.example.json --out /tmp/urirun-v1.registry.json --generated-at 2026-06-19T00:00:00.000Z;
+  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v1 run 'media://local/video/transcode' --registry /tmp/urirun-v1.registry.json --payload '{"input":"a.mp4","output":"b.mp4"}' >/tmp/urirun-v1-ffmpeg.json;
+  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v1 list /tmp/urirun-v1.registry.json --allow 'media://**';
+  step-9: run cmd=$(NODE) v1/examples/html_uri_app/test.mjs;
 }
 
-workflow[name="test-v8"] {
+workflow[name="test-v2"] {
   trigger: manual;
-  step-1: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v8/examples/python -p 'test_*.py';
-  step-2: run cmd=$(NODE) v8/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v8-gen.json;
-  step-3: run cmd=$(NODE) v8/examples/html_uri_app/test.mjs;
-  step-4: run cmd=$(PYTHON) -m json.tool v8/examples/json/bindings.v8.example.json >/tmp/urirun-v8-bindings.json;
-  step-5: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile v8/examples/json/bindings.v8.example.json --out /tmp/urirun-v8.registry.json;
-  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp tools /tmp/urirun-v8.registry.json >/tmp/urirun-v8-mcp.json;
-  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp card /tmp/urirun-v8.registry.json >/tmp/urirun-v8-a2a.json;
-  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_adopt add-python-package pip --out /tmp/urirun-v8-adopt.bindings.json;
-  step-9: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile /tmp/urirun-v8-adopt.bindings.json --out /tmp/urirun-v8-adopt.registry.json;
-  step-10: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 run 'cli://pip/pip/run' --registry /tmp/urirun-v8-adopt.registry.json --payload '{"args":["--version"]}' >/tmp/urirun-v8-adopt-run.json;
-  step-11: run cmd=command -v php >/dev/null 2>&1 && php v8/examples/generators/php/example.php >/tmp/urirun-v8-php.json || echo "php not installed; skipping PHP generator";
-  step-12: run cmd=$(PYTHON) v8/examples/docker_uri_flow/test_flow_runner.py;
-  step-13: run cmd=$(PYTHON) v8/examples/docker_uri_flow/test_flow_e2e.py;
-  step-14: run cmd=PYTHONPATH=adapters/python $(PYTHON) v8/examples/docker_uri_flow/test_service_adapter.py;
-  step-15: run cmd=PYTHONPATH=adapters/python $(PYTHON) v8/examples/transports/test_transports.py;
+  step-1: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v2/examples/python -p 'test_*.py';
+  step-2: run cmd=$(NODE) v2/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v2-gen.json;
+  step-3: run cmd=$(NODE) v2/examples/html_uri_app/test.mjs;
+  step-4: run cmd=$(PYTHON) -m json.tool v2/examples/json/bindings.v2.example.json >/tmp/urirun-v2-bindings.json;
+  step-5: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2 compile v2/examples/json/bindings.v2.example.json --out /tmp/urirun-v2.registry.json;
+  step-6: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_mcp tools /tmp/urirun-v2.registry.json >/tmp/urirun-v2-mcp.json;
+  step-7: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_mcp card /tmp/urirun-v2.registry.json >/tmp/urirun-v2-a2a.json;
+  step-8: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_adopt add-python-package pip --out /tmp/urirun-v2-adopt.bindings.json;
+  step-9: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2 compile /tmp/urirun-v2-adopt.bindings.json --out /tmp/urirun-v2-adopt.registry.json;
+  step-10: run cmd=PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2 run 'cli://pip/pip/run' --registry /tmp/urirun-v2-adopt.registry.json --payload '{"args":["--version"]}' >/tmp/urirun-v2-adopt-run.json;
+  step-11: run cmd=command -v php >/dev/null 2>&1 && php v2/examples/generators/php/example.php >/tmp/urirun-v2-php.json || echo "php not installed; skipping PHP generator";
+  step-12: run cmd=$(PYTHON) v2/examples/docker_uri_flow/test_flow_runner.py;
+  step-13: run cmd=$(PYTHON) v2/examples/docker_uri_flow/test_flow_e2e.py;
+  step-14: run cmd=PYTHONPATH=adapters/python $(PYTHON) v2/examples/docker_uri_flow/test_service_adapter.py;
+  step-15: run cmd=PYTHONPATH=adapters/python $(PYTHON) v2/examples/transports/test_transports.py;
 }
 
 workflow[name="clean"] {
   trigger: manual;
-  step-1: run cmd=rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v7/examples/python/__pycache__ v8/examples/python/__pycache__ v8/examples/docker_uri_flow/__pycache__ v8/examples/transports/__pycache__ __pycache__;
+  step-1: run cmd=rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v1/examples/python/__pycache__ v2/examples/python/__pycache__ v2/examples/docker_uri_flow/__pycache__ v2/examples/transports/__pycache__ __pycache__;
 }
 
 tests {
@@ -206,8 +206,8 @@ npm install urirun
 - `test-python`
 - `test-c`
 - `test-examples`
-- `test-v7`
-- `test-v8`
+- `test-v1`
+- `test-v2`
 - `clean`
 
 ## Node.js Scripts (`package.json`)
@@ -221,13 +221,13 @@ Language-agnostic URI to handler adapter
 ### `project/map.toon.yaml`
 
 ```toon markpact:analysis path=project/map.toon.yaml
-# urihandler | 65f 9836L | python:33,javascript:14,shell:12,css:4,less:1,typescript:1 | 2026-06-19
-# stats: 285 func | 26 cls | 65 mod | CC̄=4.4 | critical:33 | cycles:0
-# alerts[5]: CC parse_flow=24; CC main=21; CC evaluate_policy=16; CC expand_binding=16; CC scan_path=15
-# hotspots[5]: main fan=31; main fan=23; main fan=19; run_e2e fan=19; serve_http fan=19
+# urihandler | 69f 10847L | python:38,javascript:14,shell:12,css:3,less:1,typescript:1 | 2026-06-19
+# stats: 326 func | 32 cls | 69 mod | CC̄=4.5 | critical:36 | cycles:0
+# alerts[5]: CC fallback_steps=33; CC parse_flow=24; CC main=21; CC postprocess_flow=20; CC normalize_flow=20
+# hotspots[5]: main fan=31; main fan=24; main fan=23; main fan=19; run_e2e fan=19
 # evolution: baseline
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[65]:
+M[69]:
   adapters/js/index.js,31
   adapters/js/index.test.js,50
   adapters/python/tests/test_urihandler.py,57
@@ -261,9 +261,14 @@ M[65]:
   v1/examples/python/test_urihandler_v1.py,135
   v2/examples/artifacts/deploy.sh,4
   v2/examples/decorators/example.py,25
-  v2/examples/device_mesh_lab/www/app.js,517
+  v2/examples/device_mesh_lab/controller.py,483
+  v2/examples/device_mesh_lab/device_agent.py,391
+  v2/examples/device_mesh_lab/mesh_env.py,76
+  v2/examples/device_mesh_lab/tests/device_agent_policy.py,35
+  v2/examples/device_mesh_lab/tests/gui_smoke.py,425
+  v2/examples/device_mesh_lab/www/app.js,560
   v2/examples/device_mesh_lab/www/runtime-config.js,11
-  v2/examples/device_mesh_lab/www/styles.css,608
+  v2/examples/device_mesh_lab/www/styles.css,704
   v2/examples/docker_uri_flow/generate_registry.sh,27
   v2/examples/docker_uri_flow/node-worker/server.js,53
   v2/examples/docker_uri_flow/orchestrator/flow_runner.py,219
@@ -292,7 +297,6 @@ M[65]:
   v2/examples/transports/scan_and_run.py,50
   v2/examples/transports/test_transports.py,50
   v2/examples/transports/transport_lib.py,153
-  www/style.css,538
 D:
   adapters/python/tests/test_urihandler.py:
     e: UriHandlerTests
@@ -542,6 +546,63 @@ D:
     echo_message(text)
     transcode(input;output;width;height)
     shell_echo(text)
+  v2/examples/device_mesh_lab/controller.py:
+    e: json_get,json_post,slug,target_from_uri,route_binding,is_safe_route,discover_device,discover_mesh,build_registry,registry_route_count,route_summary,fallback_steps,fallback_flow,append_step_if_missing,postprocess_flow,json_from_text,normalize_flow,llm_messages,generate_with_litellm,generate_flow,execute_flow,nl_flow,main,Handler
+    Handler: __init__(0),do_OPTIONS(0),do_GET(0),do_POST(0)
+    json_get(url;timeout)
+    json_post(url;payload;timeout)
+    slug(value)
+    target_from_uri(uri)
+    route_binding(route)
+    is_safe_route(route)
+    discover_device(name;base_url)
+    discover_mesh()
+    build_registry(routes)
+    registry_route_count(registry)
+    route_summary(routes)
+    fallback_steps(prompt;routes)
+    fallback_flow(prompt;routes;reason)
+    append_step_if_missing(flow;uri;payload)
+    postprocess_flow(flow;prompt;routes)
+    json_from_text(text)
+    normalize_flow(flow;allowed_uris)
+    llm_messages(prompt;routes;devices)
+    generate_with_litellm(prompt;routes;devices)
+    generate_flow(prompt;mesh)
+    execute_flow(flow;mesh;registry)
+    nl_flow(prompt;execute)
+    main()
+  v2/examples/device_mesh_lab/device_agent.py:
+    e: object_schema,make_agent_from_env,main,DeviceAgent
+    DeviceAgent: __init__(4),log(2),recent_logs(1),append_note(1),routes(0),device_card(0),installable(0),processes(2),safe_command(2),open_browser(1),dispatch(2),handler(0),serve(2)
+    object_schema(properties;required)
+    make_agent_from_env()
+    main()
+  v2/examples/device_mesh_lab/mesh_env.py:
+    e: load_env,parse_peers,auth_token,auth_headers,check_auth,read_json,send_json
+    load_env()
+    parse_peers(value)
+    auth_token()
+    auth_headers()
+    check_auth(headers)
+    read_json(handler)
+    send_json(handler;status;payload)
+  v2/examples/device_mesh_lab/tests/device_agent_policy.py:
+    e: main
+    main()
+  v2/examples/device_mesh_lab/tests/gui_smoke.py:
+    e: route,free_port,find_chrome,recv_exact,wait_for_debugger,wait_for_page_ready,main,DemoHandler,ThreadedHTTPServer,WebSocket,CDP
+    DemoHandler: __init__(0),log_message(1),send_json(1),do_GET(0),do_POST(0)
+    ThreadedHTTPServer:
+    WebSocket: __init__(1),send_json(1),recv_json(0),close(0)
+    CDP: __init__(1),call(2),close(0)
+    route(uri;title;properties;required)
+    free_port()
+    find_chrome()
+    recv_exact(sock;length)
+    wait_for_debugger(port)
+    wait_for_page_ready(cdp)
+    main()
   v2/examples/docker_uri_flow/orchestrator/flow_runner.py:
     e: parse_scalar,parse_flow,get_path,resolve_payload,service_url,route_key,normalize_uri,registry_has_uri,registry_route_count,load_registry,validate_flow_registry,json_get,json_post,wait_for_services,run_flow,main
     parse_scalar(value)
@@ -675,7 +736,7 @@ D:
 
 ```prolog markpact:analysis path=project/logic.pl
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urihandler', '0.3.6', 'javascript').
+project_metadata('urihandler', '0.3.7', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/js/index.js', 31, 'javascript').
@@ -711,9 +772,14 @@ project_file('v1/examples/python/test_extend.py', 70, 'python').
 project_file('v1/examples/python/test_urihandler_v1.py', 135, 'python').
 project_file('v2/examples/artifacts/deploy.sh', 4, 'shell').
 project_file('v2/examples/decorators/example.py', 25, 'python').
-project_file('v2/examples/device_mesh_lab/www/app.js', 556, 'javascript').
+project_file('v2/examples/device_mesh_lab/controller.py', 483, 'python').
+project_file('v2/examples/device_mesh_lab/device_agent.py', 391, 'python').
+project_file('v2/examples/device_mesh_lab/mesh_env.py', 76, 'python').
+project_file('v2/examples/device_mesh_lab/tests/device_agent_policy.py', 35, 'python').
+project_file('v2/examples/device_mesh_lab/tests/gui_smoke.py', 425, 'python').
+project_file('v2/examples/device_mesh_lab/www/app.js', 560, 'javascript').
 project_file('v2/examples/device_mesh_lab/www/runtime-config.js', 11, 'javascript').
-project_file('v2/examples/device_mesh_lab/www/styles.css', 608, 'css').
+project_file('v2/examples/device_mesh_lab/www/styles.css', 704, 'css').
 project_file('v2/examples/docker_uri_flow/generate_registry.sh', 27, 'shell').
 project_file('v2/examples/docker_uri_flow/node-worker/server.js', 53, 'javascript').
 project_file('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 219, 'python').
@@ -742,7 +808,6 @@ project_file('v2/examples/transports/demo.py', 16, 'python').
 project_file('v2/examples/transports/scan_and_run.py', 50, 'python').
 project_file('v2/examples/transports/test_transports.py', 50, 'python').
 project_file('v2/examples/transports/transport_lib.py', 153, 'python').
-project_file('www/style.css', 538, 'css').
 
 % ── Python Functions ─────────────────────────────────────
 python_function('adapters/python/urirun/__init__.py', 'parse_uri', 1, 7, 8).
@@ -952,6 +1017,47 @@ python_function('v1/examples/python/test_urihandler_v1.py', 'registry', 0, 1, 3)
 python_function('v2/examples/decorators/example.py', 'echo_message', 1, 1, 1).
 python_function('v2/examples/decorators/example.py', 'transcode', 4, 1, 1).
 python_function('v2/examples/decorators/example.py', 'shell_echo', 1, 1, 1).
+python_function('v2/examples/device_mesh_lab/controller.py', 'json_get', 2, 1, 6).
+python_function('v2/examples/device_mesh_lab/controller.py', 'json_post', 3, 3, 8).
+python_function('v2/examples/device_mesh_lab/controller.py', 'slug', 1, 2, 3).
+python_function('v2/examples/device_mesh_lab/controller.py', 'target_from_uri', 1, 1, 1).
+python_function('v2/examples/device_mesh_lab/controller.py', 'route_binding', 1, 2, 2).
+python_function('v2/examples/device_mesh_lab/controller.py', 'is_safe_route', 1, 4, 4).
+python_function('v2/examples/device_mesh_lab/controller.py', 'discover_device', 2, 6, 4).
+python_function('v2/examples/device_mesh_lab/controller.py', 'discover_mesh', 0, 5, 5).
+python_function('v2/examples/device_mesh_lab/controller.py', 'build_registry', 1, 5, 3).
+python_function('v2/examples/device_mesh_lab/controller.py', 'registry_route_count', 1, 3, 3).
+python_function('v2/examples/device_mesh_lab/controller.py', 'route_summary', 1, 3, 3).
+python_function('v2/examples/device_mesh_lab/controller.py', 'fallback_steps', 2, 33, 10).
+python_function('v2/examples/device_mesh_lab/controller.py', 'fallback_flow', 3, 1, 4).
+python_function('v2/examples/device_mesh_lab/controller.py', 'append_step_if_missing', 3, 7, 6).
+python_function('v2/examples/device_mesh_lab/controller.py', 'postprocess_flow', 3, 20, 8).
+python_function('v2/examples/device_mesh_lab/controller.py', 'json_from_text', 1, 5, 7).
+python_function('v2/examples/device_mesh_lab/controller.py', 'normalize_flow', 2, 20, 9).
+python_function('v2/examples/device_mesh_lab/controller.py', 'llm_messages', 3, 4, 4).
+python_function('v2/examples/device_mesh_lab/controller.py', 'generate_with_litellm', 3, 4, 9).
+python_function('v2/examples/device_mesh_lab/controller.py', 'generate_flow', 2, 6, 7).
+python_function('v2/examples/device_mesh_lab/controller.py', 'execute_flow', 3, 9, 8).
+python_function('v2/examples/device_mesh_lab/controller.py', 'nl_flow', 2, 4, 8).
+python_function('v2/examples/device_mesh_lab/controller.py', 'main', 0, 1, 8).
+python_function('v2/examples/device_mesh_lab/device_agent.py', 'object_schema', 2, 2, 0).
+python_function('v2/examples/device_mesh_lab/device_agent.py', 'make_agent_from_env', 0, 3, 7).
+python_function('v2/examples/device_mesh_lab/device_agent.py', 'main', 0, 1, 5).
+python_function('v2/examples/device_mesh_lab/mesh_env.py', 'load_env', 0, 9, 6).
+python_function('v2/examples/device_mesh_lab/mesh_env.py', 'parse_peers', 1, 8, 8).
+python_function('v2/examples/device_mesh_lab/mesh_env.py', 'auth_token', 0, 1, 2).
+python_function('v2/examples/device_mesh_lab/mesh_env.py', 'auth_headers', 0, 2, 1).
+python_function('v2/examples/device_mesh_lab/mesh_env.py', 'check_auth', 1, 2, 2).
+python_function('v2/examples/device_mesh_lab/mesh_env.py', 'read_json', 1, 3, 5).
+python_function('v2/examples/device_mesh_lab/mesh_env.py', 'send_json', 3, 1, 8).
+python_function('v2/examples/device_mesh_lab/tests/device_agent_policy.py', 'main', 0, 8, 6).
+python_function('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'route', 4, 4, 0).
+python_function('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'free_port', 0, 1, 5).
+python_function('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'find_chrome', 0, 5, 3).
+python_function('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'recv_exact', 2, 3, 5).
+python_function('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'wait_for_debugger', 1, 5, 7).
+python_function('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'wait_for_page_ready', 1, 5, 6).
+python_function('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'main', 0, 5, 24).
 python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'parse_scalar', 1, 3, 2).
 python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'parse_flow', 1, 24, 12).
 python_function('v2/examples/docker_uri_flow/orchestrator/flow_runner.py', 'get_path', 2, 2, 1).
@@ -1073,6 +1179,41 @@ python_method('ExecutionTests', 'test_stdin_is_passed_to_the_process', 0, 1, 4).
 python_method('ExecutionTests', 'test_execute_is_denied_by_default', 0, 1, 4).
 python_class('v1/examples/python/test_urihandler_v1.py', 'CliTests').
 python_method('CliTests', 'test_cli_compile_and_run_dry', 0, 1, 6).
+python_class('v2/examples/device_mesh_lab/controller.py', 'Handler').
+python_method('Handler', '__init__', 0, 1, 3).
+python_method('Handler', 'do_OPTIONS', 0, 1, 1).
+python_method('Handler', 'do_GET', 0, 2, 5).
+python_method('Handler', 'do_POST', 0, 12, 13).
+python_class('v2/examples/device_mesh_lab/device_agent.py', 'DeviceAgent').
+python_method('DeviceAgent', '__init__', 4, 1, 0).
+python_method('DeviceAgent', 'log', 2, 2, 6).
+python_method('DeviceAgent', 'recent_logs', 1, 4, 5).
+python_method('DeviceAgent', 'append_note', 1, 1, 6).
+python_method('DeviceAgent', 'routes', 0, 1, 1).
+python_method('DeviceAgent', 'device_card', 0, 1, 5).
+python_method('DeviceAgent', 'installable', 0, 1, 0).
+python_method('DeviceAgent', 'processes', 2, 6, 7).
+python_method('DeviceAgent', 'safe_command', 2, 4, 4).
+python_method('DeviceAgent', 'open_browser', 1, 3, 2).
+python_method('DeviceAgent', 'dispatch', 2, 27, 15).
+python_method('DeviceAgent', 'handler', 0, 1, 14).
+python_method('DeviceAgent', 'serve', 2, 2, 4).
+python_class('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'DemoHandler').
+python_method('DemoHandler', '__init__', 0, 1, 3).
+python_method('DemoHandler', 'log_message', 1, 1, 0).
+python_method('DemoHandler', 'send_json', 1, 4, 8).
+python_method('DemoHandler', 'do_GET', 0, 2, 4).
+python_method('DemoHandler', 'do_POST', 0, 5, 9).
+python_class('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'ThreadedHTTPServer').
+python_class('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'WebSocket').
+python_method('WebSocket', '__init__', 1, 1, 10).
+python_method('WebSocket', 'send_json', 1, 4, 11).
+python_method('WebSocket', 'recv_json', 0, 9, 7).
+python_method('WebSocket', 'close', 0, 1, 1).
+python_class('v2/examples/device_mesh_lab/tests/gui_smoke.py', 'CDP').
+python_method('CDP', '__init__', 1, 1, 1).
+python_method('CDP', 'call', 2, 5, 4).
+python_method('CDP', 'close', 0, 1, 1).
 python_class('v2/examples/docker_uri_flow/python-worker/server.py', 'Handler').
 python_method('Handler', 'log_message', 1, 1, 0).
 python_method('Handler', 'do_GET', 0, 3, 1).
@@ -1137,8 +1278,8 @@ makefile_target('test-js', '').
 makefile_target('test-python', '').
 makefile_target('test-c', '').
 makefile_target('test-examples', '').
-makefile_target('test-v7', '').
-makefile_target('test-v8', '').
+makefile_target('test-v1', '').
+makefile_target('test-v2', '').
 makefile_target('clean', '').
 
 % ── Taskfile Tasks ───────────────────────────────────────
@@ -1177,91 +1318,91 @@ sumd_workflow('test-examples', 'manual').
 sumd_workflow_step('test-examples', 1, '$(NODE) --check examples/reference_adapters/node-server.js').
 sumd_workflow_step('test-examples', 2, '$(PYTHON) -m py_compile examples/reference_adapters/python-server.py').
 sumd_workflow_step('test-examples', 3, '$(CC) -Wall -Wextra -Werror -Iadapters/c -c examples/reference_adapters/firmware-pseudo.c -o /tmp/urirun-firmware-example.o').
-sumd_workflow('test-v7', 'manual').
-sumd_workflow_step('test-v7', 1, '$(NODE) --test v7/examples/js/*.test.js').
-sumd_workflow_step('test-v7', 2, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v7/examples/python -p \'test_*.py\'').
-sumd_workflow_step('test-v7', 3, '$(NODE) v7/examples/js/example.js').
-sumd_workflow_step('test-v7', 4, 'PYTHONPATH=adapters/python $(PYTHON) v7/examples/python/example.py').
-sumd_workflow_step('test-v7', 5, '$(PYTHON) -m json.tool v7/examples/json/bindings.v7.example.json >/tmp/urirun-v7-bindings.json').
-sumd_workflow_step('test-v7', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v7 compile v7/examples/json/bindings.v7.example.json --out /tmp/urirun-v7.registry.json --generated-at 2026-06-19T00:00:00.000Z').
-sumd_workflow('test-v8', 'manual').
-sumd_workflow_step('test-v8', 1, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v8/examples/python -p \'test_*.py\'').
-sumd_workflow_step('test-v8', 2, '$(NODE) v8/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v8-gen.json').
-sumd_workflow_step('test-v8', 3, '$(NODE) v8/examples/html_uri_app/test.mjs').
-sumd_workflow_step('test-v8', 4, '$(PYTHON) -m json.tool v8/examples/json/bindings.v8.example.json >/tmp/urirun-v8-bindings.json').
-sumd_workflow_step('test-v8', 5, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile v8/examples/json/bindings.v8.example.json --out /tmp/urirun-v8.registry.json').
-sumd_workflow_step('test-v8', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp tools /tmp/urirun-v8.registry.json >/tmp/urirun-v8-mcp.json').
-sumd_workflow_step('test-v8', 7, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_mcp card /tmp/urirun-v8.registry.json >/tmp/urirun-v8-a2a.json').
-sumd_workflow_step('test-v8', 8, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8_adopt add-python-package pip --out /tmp/urirun-v8-adopt.bindings.json').
-sumd_workflow_step('test-v8', 9, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v8 compile /tmp/urirun-v8-adopt.bindings.json --out /tmp/urirun-v8-adopt.registry.json').
+sumd_workflow('test-v1', 'manual').
+sumd_workflow_step('test-v1', 1, '$(NODE) --test v1/examples/js/*.test.js').
+sumd_workflow_step('test-v1', 2, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v1/examples/python -p \'test_*.py\'').
+sumd_workflow_step('test-v1', 3, '$(NODE) v1/examples/js/example.js').
+sumd_workflow_step('test-v1', 4, 'PYTHONPATH=adapters/python $(PYTHON) v1/examples/python/example.py').
+sumd_workflow_step('test-v1', 5, '$(PYTHON) -m json.tool v1/examples/json/bindings.v1.example.json >/tmp/urirun-v1-bindings.json').
+sumd_workflow_step('test-v1', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v1 compile v1/examples/json/bindings.v1.example.json --out /tmp/urirun-v1.registry.json --generated-at 2026-06-19T00:00:00.000Z').
+sumd_workflow('test-v2', 'manual').
+sumd_workflow_step('test-v2', 1, 'PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v2/examples/python -p \'test_*.py\'').
+sumd_workflow_step('test-v2', 2, '$(NODE) v2/examples/generators/nodejs/generate-bindings.mjs >/tmp/urirun-v2-gen.json').
+sumd_workflow_step('test-v2', 3, '$(NODE) v2/examples/html_uri_app/test.mjs').
+sumd_workflow_step('test-v2', 4, '$(PYTHON) -m json.tool v2/examples/json/bindings.v2.example.json >/tmp/urirun-v2-bindings.json').
+sumd_workflow_step('test-v2', 5, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2 compile v2/examples/json/bindings.v2.example.json --out /tmp/urirun-v2.registry.json').
+sumd_workflow_step('test-v2', 6, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_mcp tools /tmp/urirun-v2.registry.json >/tmp/urirun-v2-mcp.json').
+sumd_workflow_step('test-v2', 7, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_mcp card /tmp/urirun-v2.registry.json >/tmp/urirun-v2-a2a.json').
+sumd_workflow_step('test-v2', 8, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2_adopt add-python-package pip --out /tmp/urirun-v2-adopt.bindings.json').
+sumd_workflow_step('test-v2', 9, 'PYTHONPATH=adapters/python $(PYTHON) -m urirun.v2 compile /tmp/urirun-v2-adopt.bindings.json --out /tmp/urirun-v2-adopt.registry.json').
 sumd_workflow('clean', 'manual').
-sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v7/examples/python/__pycache__ v8/examples/python/__pycache__ v8/examples/docker_uri_flow/__pycache__ v8/examples/transports/__pycache__ __pycache__').
+sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ examples/reference_adapters/__pycache__ v1/examples/python/__pycache__ v2/examples/python/__pycache__ v2/examples/docker_uri_flow/__pycache__ v2/examples/transports/__pycache__ __pycache__').
 ```
 
 ## Call Graph
 
-*391 nodes · 464 edges · 30 modules · CC̄=3.7*
+*410 nodes · 500 edges · 32 modules · CC̄=3.8*
 
 ### Hubs (by degree)
 
 | Function | CC | in | out | total |
 |----------|----|----|-----|-------|
+| `normalize_flow` *(in v2.examples.device_mesh_lab.controller)* | 20 ⚠ | 4 | 35 | **39** |
+| `handler` *(in v2.examples.device_mesh_lab.device_agent.DeviceAgent)* | 1 | 0 | 32 | **32** |
 | `scan_path` *(in adapters.python.urirun._scan)* | 15 ⚠ | 4 | 27 | **31** |
+| `send_json` *(in v2.examples.device_mesh_lab.mesh_env)* | 1 | 18 | 12 | **30** |
 | `normalize_binding` *(in adapters.python.urirun._scan)* | 11 ⚠ | 17 | 12 | **29** |
 | `parse_flow` *(in v8.examples.docker_uri_flow.orchestrator.flow_runner)* | 24 ⚠ | 1 | 26 | **27** |
 | `validate_binding_document` *(in adapters.python.urirun.v2)* | 12 ⚠ | 2 | 24 | **26** |
-| `start_http_worker` *(in v2.examples.transports.transport_lib)* | 1 | 1 | 24 | **25** |
-| `run` *(in adapters.python.urirun.v1)* | 14 ⚠ | 1 | 23 | **24** |
-| `serve_mcp` *(in adapters.python.urirun.v2_mcp)* | 15 ⚠ | 1 | 23 | **24** |
-| `scan_artifacts` *(in adapters.python.urirun.v2)* | 11 ⚠ | 4 | 19 | **23** |
+| `run` *(in adapters.python.urirun.v1)* | 14 ⚠ | 2 | 23 | **25** |
 
 ```toon markpact:analysis path=project/calls.toon.yaml
 # code2llm call graph | /home/tom/github/tellmesh/urihandler
 # generated in 0.18s
-# nodes: 391 | edges: 464 | modules: 30
-# CC̄=3.7
+# nodes: 410 | edges: 500 | modules: 32
+# CC̄=3.8
 
 HUBS[20]:
+  v2.examples.device_mesh_lab.controller.normalize_flow
+    CC=20  in:4  out:35  total:39
+  v2.examples.device_mesh_lab.device_agent.DeviceAgent.handler
+    CC=1  in:0  out:32  total:32
   adapters.python.urirun._scan.scan_path
     CC=15  in:4  out:27  total:31
+  v2.examples.device_mesh_lab.mesh_env.send_json
+    CC=1  in:18  out:12  total:30
   adapters.python.urirun._scan.normalize_binding
     CC=11  in:17  out:12  total:29
   v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
     CC=24  in:1  out:26  total:27
   adapters.python.urirun.v2.validate_binding_document
     CC=12  in:2  out:24  total:26
+  adapters.python.urirun.v1.run
+    CC=14  in:2  out:23  total:25
   v2.examples.transports.transport_lib.start_http_worker
     CC=1  in:1  out:24  total:25
-  adapters.python.urirun.v1.run
-    CC=14  in:1  out:23  total:24
+  v2.examples.device_mesh_lab.controller.Handler.do_POST
+    CC=12  in:0  out:24  total:24
   adapters.python.urirun.v2_mcp.serve_mcp
     CC=15  in:1  out:23  total:24
   adapters.python.urirun.v2.scan_artifacts
     CC=11  in:4  out:19  total:23
   adapters.python.urirun.v2.run
     CC=15  in:1  out:22  total:23
-  adapters.python.urirun._runtime.evaluate_policy
-    CC=16  in:3  out:19  total:22
   v2.examples.device_mesh_lab.www.app.escapeHtml
     CC=1  in:20  out:2  total:22
+  adapters.python.urirun._runtime.evaluate_policy
+    CC=16  in:3  out:19  total:22
   adapters.python.urirun._registry.discover_manifest
     CC=14  in:2  out:19  total:21
   adapters.python.urirun._runtime.run
     CC=10  in:1  out:20  total:21
   v2.examples.html_uri_app.backend.Handler.do_GET
     CC=8  in:0  out:21  total:21
+  v2.examples.device_mesh_lab.controller.fallback_steps
+    CC=33  in:1  out:19  total:20
   adapters.python.urirun._registry.discover_docker_labels
     CC=14  in:2  out:18  total:20
-  adapters.python.urirun._registry.coerce_route_source
-    CC=11  in:5  out:14  total:19
-  adapters.python.urirun._scan.load_bindings_from_manifest
-    CC=14  in:3  out:16  total:19
-  v2.examples.html_uri_app.backend.json_response
-    CC=1  in:10  out:9  total:19
-  v8.examples.docker_uri_flow.shell-worker.server.response
-    CC=1  in:10  out:9  total:19
-  adapters.python.urirun.v2.expand_binding
-    CC=16  in:9  out:9  total:18
 
 MODULES:
   adapters.c.urirun  [3 funcs]
@@ -1374,23 +1515,15 @@ MODULES:
     writeJson  CC=1  out:4
   examples.reference_adapters.python-server  [1 funcs]
     do_POST  CC=5  out:11
-  v1.examples.html_uri_app.app  [21 funcs]
-    active  CC=1  out:1
+  v1.examples.html_uri_app.app  [2 funcs]
     appendLog  CC=1  out:4
-    badge  CC=1  out:1
-    badgeFor  CC=5  out:1
-    currentPayload  CC=2  out:2
-    envelope  CC=2  out:3
-    escapeHtml  CC=1  out:2
-    executeMode  CC=5  out:0
-    inputs  CC=4  out:4
-    items  CC=4  out:4
+    text  CC=1  out:1
   v1.examples.html_uri_app.uri-runtime-v1  [29 funcs]
     activePolicy  CC=1  out:1
     adapter  CC=3  out:1
     allowed  CC=4  out:1
     compileBindings  CC=4  out:4
-    createUriRuntimeV7  CC=32  out:17
+    createUriRuntimeV1  CC=32  out:17
     defaultPolicy  CC=1  out:0
     dispatch  CC=17  out:8
     entries  CC=1  out:0
@@ -1411,7 +1544,30 @@ MODULES:
     echo_message  CC=1  out:1
     shell_echo  CC=1  out:1
     transcode  CC=1  out:1
-  v2.examples.device_mesh_lab.www.app  [48 funcs]
+  v2.examples.device_mesh_lab.controller  [26 funcs]
+    do_GET  CC=2  out:5
+    do_OPTIONS  CC=1  out:1
+    do_POST  CC=12  out:24
+    append_step_if_missing  CC=7  out:6
+    build_registry  CC=5  out:3
+    discover_device  CC=6  out:9
+    discover_mesh  CC=5  out:6
+    execute_flow  CC=9  out:15
+    fallback_flow  CC=1  out:4
+    fallback_steps  CC=33  out:19
+  v2.examples.device_mesh_lab.device_agent  [5 funcs]
+    handler  CC=1  out:32
+    routes  CC=1  out:12
+    main  CC=1  out:6
+    make_agent_from_env  CC=3  out:12
+    object_schema  CC=2  out:0
+  v2.examples.device_mesh_lab.mesh_env  [5 funcs]
+    auth_headers  CC=2  out:1
+    auth_token  CC=1  out:2
+    check_auth  CC=2  out:2
+    parse_peers  CC=8  out:14
+    send_json  CC=1  out:12
+  v2.examples.device_mesh_lab.www.app  [51 funcs]
     appendTimeline  CC=3  out:3
     data  CC=2  out:1
     defaultValueFor  CC=20  out:2
@@ -1420,8 +1576,8 @@ MODULES:
     escapeHtml  CC=1  out:2
     extractRunResult  CC=10  out:0
     filter  CC=3  out:1
-    frontendRows  CC=1  out:1
-    groups  CC=6  out:6
+    focusArea  CC=3  out:6
+    focusTargetFor  CC=2  out:0
   v2.examples.generators.php.example  [2 funcs]
     bindingFromFunction  CC=2  out:9
     schemaType  CC=2  out:3
@@ -1436,8 +1592,9 @@ MODULES:
     env_bool  CC=1  out:2
     json_response  CC=1  out:9
     load_env  CC=6  out:10
-  v2.examples.transports.transport_lib  [7 funcs]
+  v2.examples.transports.transport_lib  [8 funcs]
     available_transports  CC=4  out:1
+    build_registry  CC=1  out:3
     grpc_available  CC=2  out:0
     run_inprocess  CC=2  out:1
     run_queue  CC=1  out:10
@@ -1484,9 +1641,6 @@ MODULES:
     payloadDefaults  CC=4  out:0
     refreshLogs  CC=5  out:7
     renderActions  CC=5  out:5
-  www.docs  [2 funcs]
-    inline_markdown  CC=1  out:4
-    render_markdown  CC=15  out:13
 
 EDGES:
   examples.reference_adapters.node-server.server → examples.reference_adapters.node-server.writeJson
@@ -1537,8 +1691,8 @@ EDGES:
   v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow → v8.examples.docker_uri_flow.orchestrator.flow_runner.json_post
   v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.parse_flow
   v8.examples.docker_uri_flow.orchestrator.flow_runner.main → v8.examples.docker_uri_flow.orchestrator.flow_runner.run_flow
-  v2.examples.device_mesh_lab.www.app.recordActivity → v2.examples.device_mesh_lab.www.app.renderActivityLog
-  v2.examples.device_mesh_lab.www.app.routeBadge → v2.examples.device_mesh_lab.www.app.isRouteSafe
+  v2.examples.generators.php.example.UriCommand.bindingFromFunction → v2.examples.generators.php.example.UriCommand.schemaType
+  v2.examples.transports.transport_lib.run_via → v2.examples.transports.transport_lib.run_inprocess
 ```
 
 ## Test Contracts
