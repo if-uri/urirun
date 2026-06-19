@@ -1,80 +1,68 @@
-# urihandler | 69f 10847L | python:38,javascript:14,shell:12,css:3,less:1,typescript:1 | 2026-06-19
-# stats: 326 func | 32 cls | 69 mod | CC̄=4.5 | critical:36 | cycles:0
-# alerts[5]: CC fallback_steps=33; CC parse_flow=24; CC main=21; CC postprocess_flow=20; CC normalize_flow=20
-# hotspots[5]: main fan=31; main fan=24; main fan=23; main fan=19; run_e2e fan=19
+# urihandler | 32f 9637L | python:26,javascript:3,shell:2,less:1 | 2026-06-19
+# stats: 383 func | 13 cls | 32 mod | CC̄=5.0 | critical:50 | cycles:0
+# alerts[5]: CC task_command=52; CC run_uri_route=46; CC run_uri_route=45; CC build_ticket_payload=35; CC run_planfile_task=31
+# hotspots[5]: task_command fan=34; main fan=33; run_planfile_task fan=25; main fan=23; run_uri_route fan=22
 # evolution: baseline
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[69]:
+M[32]:
   adapters/js/index.js,31
   adapters/js/index.test.js,50
+  adapters/python/tests/test_domain_monitor.py,159
+  adapters/python/tests/test_host_dashboard.py,94
+  adapters/python/tests/test_host_db.py,110
+  adapters/python/tests/test_mesh.py,61
+  adapters/python/tests/test_namecheap_dns.py,156
+  adapters/python/tests/test_planfile_adapter.py,340
+  adapters/python/tests/test_scheduler.py,59
   adapters/python/tests/test_urihandler.py,57
   adapters/python/urirun/__init__.py,39
   adapters/python/urirun/_registry.py,680
   adapters/python/urirun/_runtime.py,419
   adapters/python/urirun/_scan.py,668
+  adapters/python/urirun/domain_monitor.py,381
+  adapters/python/urirun/host_dashboard.py,588
+  adapters/python/urirun/host_db.py,469
+  adapters/python/urirun/mesh.py,1072
+  adapters/python/urirun/namecheap_dns.py,289
+  adapters/python/urirun/planfile_adapter.py,259
+  adapters/python/urirun/scheduler.py,128
+  adapters/python/urirun/task_planner.py,342
   adapters/python/urirun/v1.py,421
-  adapters/python/urirun/v2.py,956
+  adapters/python/urirun/v2.py,1619
   adapters/python/urirun/v2_adopt.py,193
   adapters/python/urirun/v2_grpc.py,203
   adapters/python/urirun/v2_mcp.py,177
   adapters/python/urirun/v2_service.py,101
-  app.doql.less,98
-  examples/reference_adapters/node-server.js,44
-  examples/reference_adapters/python-server.py,52
+  app.doql.less,75
   project.sh,63
-  test/urirun.test.js,8
   tree.sh,2
-  v1/examples/extend/lib.sh,12
-  v1/examples/extend/notify.sh,7
-  v1/examples/html_uri_app/app.js,186
-  v1/examples/html_uri_app/run.sh,18
-  v1/examples/html_uri_app/styles.css,104
-  v1/examples/html_uri_app/uri-runtime-v1.js,239
-  v1/examples/js/example.js,23
-  v1/examples/js/urirun-v1.js,332
-  v1/examples/js/urirun-v1.test.js,65
-  v1/examples/python/example.py,22
-  v1/examples/python/test_extend.py,70
-  v1/examples/python/test_urihandler_v1.py,135
-  v2/examples/artifacts/deploy.sh,4
-  v2/examples/decorators/example.py,25
-  v2/examples/device_mesh_lab/controller.py,483
-  v2/examples/device_mesh_lab/device_agent.py,391
-  v2/examples/device_mesh_lab/mesh_env.py,76
-  v2/examples/device_mesh_lab/tests/device_agent_policy.py,35
-  v2/examples/device_mesh_lab/tests/gui_smoke.py,425
-  v2/examples/device_mesh_lab/www/app.js,560
-  v2/examples/device_mesh_lab/www/runtime-config.js,11
-  v2/examples/device_mesh_lab/www/styles.css,704
-  v2/examples/docker_uri_flow/generate_registry.sh,27
-  v2/examples/docker_uri_flow/node-worker/server.js,53
-  v2/examples/docker_uri_flow/orchestrator/flow_runner.py,219
-  v2/examples/docker_uri_flow/python-worker/server.py,69
-  v2/examples/docker_uri_flow/run.sh,14
-  v2/examples/docker_uri_flow/run_tests.sh,14
-  v2/examples/docker_uri_flow/shell-worker/server.py,65
-  v2/examples/docker_uri_flow/shell-worker/write_report.sh,10
-  v2/examples/docker_uri_flow/test_flow_e2e.py,100
-  v2/examples/docker_uri_flow/test_flow_runner.py,109
-  v2/examples/docker_uri_flow/test_service_adapter.py,108
-  v2/examples/docker_uri_flow/tester/run_compose_test.py,80
-  v2/examples/generators/ts/decorators.ts,63
-  v2/examples/html_uri_app/app.js,168
-  v2/examples/html_uri_app/backend.py,228
-  v2/examples/html_uri_app/run.sh,6
-  v2/examples/html_uri_app/styles.css,293
-  v2/examples/multi_transport/run_multi_test.py,106
-  v2/examples/multi_transport/run_tests.sh,14
-  v2/examples/multi_transport/worker.py,78
-  v2/examples/novnc_lan_flow/dashboard/runtime-config.js,10
-  v2/examples/python/test_adopt.py,101
-  v2/examples/python/test_mcp_a2a.py,140
-  v2/examples/python/test_urihandler_v2.py,314
-  v2/examples/transports/demo.py,16
-  v2/examples/transports/scan_and_run.py,50
-  v2/examples/transports/test_transports.py,50
-  v2/examples/transports/transport_lib.py,153
+  v1/js/urirun-v1.js,332
 D:
+  adapters/python/tests/test_domain_monitor.py:
+    e: local_http,_StatusHandler,DomainMonitorTests
+    _StatusHandler: do_GET(0),log_message(1)
+    DomainMonitorTests: test_http_200_writes_success_check(0),test_http_failure_creates_screenshot_artifact(0),test_dns_mismatch_creates_review_ticket_only(0),test_v2_domain_monitor_bindings(0),test_v2_domain_monitor_mismatch_sets_failed_envelope_and_review_ticket(0),test_cli_monitor_domain_dry_run(0)
+    local_http(status)
+  adapters/python/tests/test_host_dashboard.py:
+    e: get_json,post_json,HostDashboardTests
+    HostDashboardTests: test_dashboard_html_summary_and_task_action(0),test_v2_dashboard_url_command(0)
+    get_json(url)
+    post_json(url;payload)
+  adapters/python/tests/test_host_db.py:
+    e: HostDbTests
+    HostDbTests: test_dataset_schema_and_record_search(0),test_v2_data_uri_bindings(0),test_artifact_and_check_storage(0)
+  adapters/python/tests/test_mesh.py:
+    e: MeshTests
+    MeshTests: test_host_config_add_node(0),test_node_config_defaults(0),test_heuristic_flow_uses_all_reachable_nodes(0),test_registry_from_remote_routes(0)
+  adapters/python/tests/test_namecheap_dns.py:
+    e: NamecheapDnsTests
+    NamecheapDnsTests: test_parse_get_hosts_xml(0),test_plan_merges_ensure_and_remove_records(0),test_backup_writes_artifact_and_registers_it(0),test_apply_requires_backup_uri(0),test_apply_mock_refuses_current_drift_from_reviewed_plan(0),test_v2_dns_namecheap_uri_plan_backup_apply_mock(0)
+  adapters/python/tests/test_planfile_adapter.py:
+    e: PlanfileAdapterTests
+    PlanfileAdapterTests: test_create_next_and_complete_ticket(0),test_dsl_create_ticket(0),test_cli_host_task_create_and_list(0),test_host_task_run_updates_ticket(0),test_v2_task_uri_bindings_create_and_list_ticket(0),test_v2_task_uri_complete_and_fail_record_outputs(0),test_v2_task_uri_rejects_invalid_payload(0),test_host_task_run_dispatches_executor_handler(0),test_fail_or_retry_requeues_until_max_attempts(0),test_fail_or_retry_default_max_attempts_fails_terminally(0),test_host_task_loop_retries_failing_flow_until_exhausted(0),test_chat_plan_domain_prompt_creates_ticket(0),test_chat_plan_ambiguous_prompt_waits_for_input(0),test_chat_plan_destructive_prompt_requires_review(0)
+  adapters/python/tests/test_scheduler.py:
+    e: SchedulerTests
+    SchedulerTests: test_systemd_preview_and_install(0),test_cli_schedule_cron_preview(0)
   adapters/python/tests/test_urihandler.py:
     e: UriHandlerTests
     UriHandlerTests: test_parse_uri(0),test_build_invocation(0),test_dispatch(0),test_missing_registry_entries(0)
@@ -185,6 +173,192 @@ D:
     list_bindings(paths;include_shell;openapi_base_url)
     format_binding_table(bindings)
     main(argv)
+  adapters/python/urirun/domain_monitor.py:
+    e: now_id,_list,_domain,default_url,http_status,dns_records,expected_records,dns_mismatches,capture_screenshot_artifact,create_dns_repair_ticket,check_domain,run_daily,_db,_project,_screenshot_dir,_provider,run_uri_route
+    now_id()
+    _list(value)
+    _domain(target;payload)
+    default_url(domain)
+    http_status(url;timeout;expected_status)
+    dns_records(domain;record_types)
+    expected_records(payload)
+    dns_mismatches(current;expected)
+    capture_screenshot_artifact()
+    create_dns_repair_ticket()
+    check_domain()
+    run_daily()
+    _db(ctx;payload)
+    _project(ctx;payload)
+    _screenshot_dir(ctx;payload)
+    _provider(ctx;payload)
+    run_uri_route(ctx;execute)
+  adapters/python/urirun/host_dashboard.py:
+    e: _json_response,_html_response,_read_json,_first,_safe_tickets,_task_counts,summary,task_action,create_handler,serve,command,default_host
+    _json_response(handler;status;payload)
+    _html_response(handler;html)
+    _read_json(handler)
+    _first(query;name;default)
+    _safe_tickets(project;sprint;status;queue)
+    _task_counts(tickets)
+    summary(project;db;config)
+    task_action(project;ticket_id;action;payload)
+    create_handler(project;db;config)
+    serve(project;db;config;host;port)
+    command(args)
+    default_host()
+  adapters/python/urirun/host_db.py:
+    e: db_path,now_iso,new_id,connect,connection,row_dict,rows_dict,init_db,_schema_json,create_dataset,list_datasets,get_dataset,_validate_record,upsert_record,_sync_record_fts,search_records,register_artifact,list_artifacts,add_check,recent_checks,add_log,recent_logs,create_llm_session,add_llm_message,read_only_sql,route_db_path,run_uri_route
+    db_path(path)
+    now_iso()
+    new_id(prefix)
+    connect(path)
+    connection(path)
+    row_dict(row)
+    rows_dict(rows)
+    init_db(path)
+    _schema_json(schema)
+    create_dataset(path;name;description;schema)
+    list_datasets(path)
+    get_dataset(path;name_or_id)
+    _validate_record(dataset;data)
+    upsert_record(path;dataset;key;data)
+    _sync_record_fts(conn;record;dataset_id)
+    search_records(path;query;dataset;limit)
+    register_artifact(path;kind;uri;artifact_path;meta)
+    list_artifacts(path;kind;limit)
+    add_check(path;subject;check_uri;status;result)
+    recent_checks(path;subject;limit)
+    add_log(path;stream;event;detail)
+    recent_logs(path;stream;limit)
+    create_llm_session(path;title)
+    add_llm_message(path;session_id;role;content;extracted)
+    read_only_sql(path;query;params;limit)
+    route_db_path(ctx;payload)
+    run_uri_route(ctx;execute)
+  adapters/python/urirun/mesh.py:
+    e: now_id,slug,json_load,json_write,host_config_path,node_config_path,default_host_config,load_host_config,save_host_config,init_host,add_node,default_node_config,load_node_config,save_node_config,init_node,http_json,routes_from_registry,safe_route,route_target,discover_node,discover_mesh,binding_for_remote_route,registry_from_routes,target_nodes,first_url,append_if_available,heuristic_flow,json_from_text,normalize_flow,llm_flow,make_flow,execute_flow,format_nodes,format_routes,format_tickets,format_table,_parse_json_option,data_command,monitor_command,_task_prompt,_ticket_payload,_host_local_registry,_run_executor_handler,_resolves_locally,_run_task_flow,task_command,host_command,send_json,read_json,serve_node,node_command
+    now_id()
+    slug(value)
+    json_load(path)
+    json_write(path;data)
+    host_config_path(path)
+    node_config_path(path)
+    default_host_config(name)
+    load_host_config(path)
+    save_host_config(config;path)
+    init_host(path;name)
+    add_node(path;name;url;tags)
+    default_node_config(name;registry)
+    load_node_config(path)
+    save_node_config(config;path)
+    init_node(path;name;registry;host;port;execute)
+    http_json(method;url;body;timeout)
+    routes_from_registry(registry)
+    safe_route(route)
+    route_target(uri)
+    discover_node(node)
+    discover_mesh(config)
+    binding_for_remote_route(route)
+    registry_from_routes(routes)
+    target_nodes(prompt;nodes;explicit)
+    first_url(prompt)
+    append_if_available(steps;route_uris;uri;payload;previous)
+    heuristic_flow(prompt;routes;nodes;selected_nodes)
+    json_from_text(text)
+    normalize_flow(flow;allowed_uris)
+    llm_flow(prompt;routes;nodes)
+    make_flow(prompt;mesh;selected_nodes;use_llm)
+    execute_flow(flow;mesh;registry;execute)
+    format_nodes(mesh)
+    format_routes(routes)
+    format_tickets(tickets)
+    format_table(rows;columns;headers)
+    _parse_json_option(value;default)
+    data_command(args)
+    monitor_command(args)
+    _task_prompt(ticket)
+    _ticket_payload(ticket)
+    _host_local_registry(args)
+    _run_executor_handler(args;ticket;handler)
+    _resolves_locally(args;handler)
+    _run_task_flow(args;ticket)
+    task_command(args)
+    host_command(args)
+    send_json(handler;status;payload)
+    read_json(handler)
+    serve_node(name;registry;host;port;execute;public_url)
+    node_command(args)
+  adapters/python/urirun/namecheap_dns.py:
+    e: split_domain,env_name,config_from_env,auth_params,request_api,_strip_ns,parse_api_xml,normalize_record,normalize_records,record_key,record_identity,merge_records,diff_records,desired_from_payload,current_records,plan,sethosts_params,backup,apply,run_uri_route
+    split_domain(domain)
+    env_name(profile;name)
+    config_from_env(profile;env)
+    auth_params(config;command;domain)
+    request_api(config;command;domain;params;method)
+    _strip_ns(tag)
+    parse_api_xml(xml_text)
+    normalize_record(record)
+    normalize_records(records)
+    record_key(record)
+    record_identity(record)
+    merge_records(current;ensure;remove)
+    diff_records(current;desired)
+    desired_from_payload(current;payload)
+    current_records(domain;payload)
+    plan(domain;payload)
+    sethosts_params(records)
+    backup(domain;records;db;out_dir)
+    apply(domain;payload)
+    run_uri_route(ctx;execute)
+  adapters/python/urirun/planfile_adapter.py:
+    e: _imports,normalize_priority,project_root,_model_dict,load_planfile,ticket_to_dict,build_ticket_payload,create_ticket,list_tickets,next_ticket,get_ticket,claim_ticket,start_ticket,complete_ticket,fail_ticket,fail_or_retry,update_ticket,wait_for_input,ready_ticket,run_dsl,loads_json,PlanfileUnavailable
+    PlanfileUnavailable:  # Raised when the optional planfile package is not installed.
+    _imports()
+    normalize_priority(priority)
+    project_root(project)
+    _model_dict(obj)
+    load_planfile(project)
+    ticket_to_dict(ticket)
+    build_ticket_payload(payload)
+    create_ticket(project;payload)
+    list_tickets(project;sprint;status;label;queue)
+    next_ticket(project;sprint;queue)
+    get_ticket(project;ticket_id)
+    claim_ticket(project;ticket_id;assigned_to;lease_seconds)
+    start_ticket(project;ticket_id;assigned_to)
+    complete_ticket(project;ticket_id;note;result;artifacts)
+    fail_ticket(project;ticket_id;error)
+    fail_or_retry(project;ticket_id;error)
+    update_ticket(project;ticket_id;updates)
+    wait_for_input(project;ticket_id;prompt;env_keys;note)
+    ready_ticket(project;ticket_id;note)
+    run_dsl(project;command)
+    loads_json(value;default)
+  adapters/python/urirun/scheduler.py:
+    e: build_loop_command,shell_join,systemd_units,cron_line,preview,install_systemd_user
+    build_loop_command()
+    shell_join(command)
+    systemd_units()
+    cron_line(command;time_of_day)
+    preview()
+    install_systemd_user(files;out_dir)
+  adapters/python/urirun/task_planner.py:
+    e: normalize_text,slug,_json_from_text,is_ambiguous,is_destructive,_has_any,_unique,_short_name,heuristic_plan_chat_request,llm_plan_chat_request,plan_chat_request,ticket_payload,create_tickets_from_plan,PlannedTicket,TaskPlanningResult
+    PlannedTicket:
+    TaskPlanningResult:
+    normalize_text(value)
+    slug(value)
+    _json_from_text(text)
+    is_ambiguous(prompt)
+    is_destructive(prompt)
+    _has_any(prompt;words)
+    _unique(values)
+    _short_name(prompt;domains;daily)
+    heuristic_plan_chat_request(prompt)
+    llm_plan_chat_request(prompt)
+    plan_chat_request(prompt)
+    ticket_payload(ticket;plan)
+    create_tickets_from_plan(project;plan)
   adapters/python/urirun/v1.py:
     e: _params_spec,resolve_params,render_value,render_command,_has_placeholders,_proc_env,_run_process,_env_flags,run_spawn,run_shell_template,run_docker_exec,run_docker_run,run_fetch,run_local_function,run_mqtt_publish,run,check,list_routes,expand_binding,_binding_pairs,expand_bindings,compile_registry,load_registry_arg,main
     _params_spec(route_entry)
@@ -212,7 +386,7 @@ D:
     load_registry_arg(arg;openapi_base_url)
     main(argv)
   adapters/python/urirun/v2.py:
-    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,decorated_bindings,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,run,check,list_routes,_strip_runtime_only,expand_binding,_binding_pairs,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_iter_files,_rel,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_many,main
+    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,decorated_bindings,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,planfile_task_bindings,_list_param,_ticket_id,_planfile_action,_planfile_project,_simulate_planfile,run_planfile_task,host_data_bindings,run_host_data,domain_monitor_bindings,run_domain_monitor,run,check,list_routes,_strip_runtime_only,expand_binding,_binding_pairs,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_iter_files,_rel,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_many,main
     model_from_function(fn)
     _placeholder_kwargs(fn)
     uri_command(uri)
@@ -227,6 +401,17 @@ D:
     render_argv(argv;params)
     run_argv_template(ctx;policy;execute)
     run_shell_template(ctx;policy;execute)
+    planfile_task_bindings(target;project)
+    _list_param(value)
+    _ticket_id(payload;args)
+    _planfile_action(ctx)
+    _planfile_project(ctx;payload)
+    _simulate_planfile(ctx;action;payload;project)
+    run_planfile_task(ctx;policy;execute)
+    host_data_bindings(target;db)
+    run_host_data(ctx;policy;execute)
+    domain_monitor_bindings(target;db;project;screenshot_dir)
+    run_domain_monitor(ctx;policy;execute)
     run(uri;registry;payload;mode;policy;confirm;executors)
     check(uri;registry;policy)
     list_routes(registry;policy)
@@ -301,209 +486,3 @@ D:
     service_base(target)
     _post(url;body;timeout)
     call(uri;payload;registry;mode;timeout;validate)
-  examples/reference_adapters/python-server.py:
-    e: DeviceModule,Handler
-    DeviceModule: led_set(4)
-    Handler: do_POST(0),log_message(1),write_json(2)
-  v1/examples/python/example.py:
-  v1/examples/python/test_extend.py:
-    e: merged_registry,ExtendRegistryTests
-    ExtendRegistryTests: setUp(0),test_all_endpoints_live_in_one_registry(0),test_bash_function_dry_run_renders_safe_argv(0),test_http_request_url_is_templated(0),test_http_missing_param_is_a_params_error(0),test_bash_function_executes_for_real(0),test_new_script_executes_with_env(0),test_shell_template_is_gated(0)
-    merged_registry()
-  v1/examples/python/test_urihandler_v1.py:
-    e: registry,ParamBindingTests,ShorthandTests,DockerAdapterTests,ExecutionTests,CliTests
-    ParamBindingTests: setUp(0),test_named_params_from_payload_render_into_command(0),test_defaults_apply_when_param_missing(0),test_missing_required_param_is_an_error_even_in_dry_run(0),test_query_string_supplies_params(0),test_legacy_positional_append_when_no_placeholders(0)
-    ShorthandTests: test_string_binding_expands_to_spawn(0)
-    DockerAdapterTests: setUp(0),test_docker_exec_builds_command_with_target_as_container(0),test_docker_run_builds_command_with_mount_and_image(0)
-    ExecutionTests: test_spawn_executes_with_bound_params(0),test_env_is_injected_into_the_process(0),test_stdin_is_passed_to_the_process(0),test_execute_is_denied_by_default(0)
-    CliTests: test_cli_compile_and_run_dry(0)
-    registry()
-  v2/examples/decorators/example.py:
-    e: echo_message,transcode,shell_echo
-    echo_message(text)
-    transcode(input;output;width;height)
-    shell_echo(text)
-  v2/examples/device_mesh_lab/controller.py:
-    e: json_get,json_post,slug,target_from_uri,route_binding,is_safe_route,discover_device,discover_mesh,build_registry,registry_route_count,route_summary,fallback_steps,fallback_flow,append_step_if_missing,postprocess_flow,json_from_text,normalize_flow,llm_messages,generate_with_litellm,generate_flow,execute_flow,nl_flow,main,Handler
-    Handler: __init__(0),do_OPTIONS(0),do_GET(0),do_POST(0)
-    json_get(url;timeout)
-    json_post(url;payload;timeout)
-    slug(value)
-    target_from_uri(uri)
-    route_binding(route)
-    is_safe_route(route)
-    discover_device(name;base_url)
-    discover_mesh()
-    build_registry(routes)
-    registry_route_count(registry)
-    route_summary(routes)
-    fallback_steps(prompt;routes)
-    fallback_flow(prompt;routes;reason)
-    append_step_if_missing(flow;uri;payload)
-    postprocess_flow(flow;prompt;routes)
-    json_from_text(text)
-    normalize_flow(flow;allowed_uris)
-    llm_messages(prompt;routes;devices)
-    generate_with_litellm(prompt;routes;devices)
-    generate_flow(prompt;mesh)
-    execute_flow(flow;mesh;registry)
-    nl_flow(prompt;execute)
-    main()
-  v2/examples/device_mesh_lab/device_agent.py:
-    e: object_schema,make_agent_from_env,main,DeviceAgent
-    DeviceAgent: __init__(4),log(2),recent_logs(1),append_note(1),routes(0),device_card(0),installable(0),processes(2),safe_command(2),open_browser(1),dispatch(2),handler(0),serve(2)
-    object_schema(properties;required)
-    make_agent_from_env()
-    main()
-  v2/examples/device_mesh_lab/mesh_env.py:
-    e: load_env,parse_peers,auth_token,auth_headers,check_auth,read_json,send_json
-    load_env()
-    parse_peers(value)
-    auth_token()
-    auth_headers()
-    check_auth(headers)
-    read_json(handler)
-    send_json(handler;status;payload)
-  v2/examples/device_mesh_lab/tests/device_agent_policy.py:
-    e: main
-    main()
-  v2/examples/device_mesh_lab/tests/gui_smoke.py:
-    e: route,free_port,find_chrome,recv_exact,wait_for_debugger,wait_for_page_ready,main,DemoHandler,ThreadedHTTPServer,WebSocket,CDP
-    DemoHandler: __init__(0),log_message(1),send_json(1),do_GET(0),do_POST(0)
-    ThreadedHTTPServer:
-    WebSocket: __init__(1),send_json(1),recv_json(0),close(0)
-    CDP: __init__(1),call(2),close(0)
-    route(uri;title;properties;required)
-    free_port()
-    find_chrome()
-    recv_exact(sock;length)
-    wait_for_debugger(port)
-    wait_for_page_ready(cdp)
-    main()
-  v2/examples/docker_uri_flow/orchestrator/flow_runner.py:
-    e: parse_scalar,parse_flow,get_path,resolve_payload,service_url,route_key,normalize_uri,registry_has_uri,registry_route_count,load_registry,validate_flow_registry,json_get,json_post,wait_for_services,run_flow,main
-    parse_scalar(value)
-    parse_flow(path)
-    get_path(data;dotted)
-    resolve_payload(payload;results)
-    service_url(uri)
-    route_key(uri)
-    normalize_uri(uri)
-    registry_has_uri(registry;uri)
-    registry_route_count(registry)
-    load_registry(path)
-    validate_flow_registry(flow;registry)
-    json_get(url)
-    json_post(url;payload)
-    wait_for_services(uris)
-    run_flow(flow)
-    main(argv)
-  v2/examples/docker_uri_flow/python-worker/server.py:
-    e: response,normalize,summary,dispatch,Handler
-    Handler: log_message(1),do_GET(0),do_POST(0)
-    response(handler;status;payload)
-    normalize(payload)
-    summary(payload)
-    dispatch(uri;payload)
-  v2/examples/docker_uri_flow/shell-worker/server.py:
-    e: response,dispatch,Handler
-    Handler: log_message(1),do_GET(0),do_POST(0)
-    response(handler;status;payload)
-    dispatch(uri;payload)
-  v2/examples/docker_uri_flow/test_flow_e2e.py:
-    e: load_runner,free_port,start,wait_health,run_e2e,test_cross_service_flow_runs_without_docker
-    load_runner()
-    free_port()
-    start(cmd;port;extra_env)
-    wait_health(port;timeout)
-    run_e2e()
-    test_cross_service_flow_runs_without_docker()
-  v2/examples/docker_uri_flow/test_flow_runner.py:
-    e: load_runner,test_parse_compact_uri_flow,test_registry_uri_lookup,test_registry_uri_lookup_prefers_full_uri_index,test_registry_dispatch_distinguishes_targets_with_same_segments
-    load_runner()
-    test_parse_compact_uri_flow()
-    test_registry_uri_lookup()
-    test_registry_uri_lookup_prefers_full_uri_index()
-    test_registry_dispatch_distinguishes_targets_with_same_segments()
-  v2/examples/docker_uri_flow/test_service_adapter.py:
-    e: registry,free_port,wait_health,test_dry_run_plans_the_http_call_without_network,test_schema_validation_runs_before_dispatch,test_unknown_uri_is_a_registry_error,test_service_dispatch_calls_live_workers
-    registry()
-    free_port()
-    wait_health(port;timeout)
-    test_dry_run_plans_the_http_call_without_network()
-    test_schema_validation_runs_before_dispatch()
-    test_unknown_uri_is_a_registry_error()
-    test_service_dispatch_calls_live_workers()
-  v2/examples/docker_uri_flow/tester/run_compose_test.py:
-    e: get,wait_healthy,main
-    get(url)
-    wait_healthy(host;timeout)
-    main()
-  v2/examples/html_uri_app/backend.py:
-    e: load_env,env_bool,read_json,binding_document,registry,routes,add_log,recent_logs,json_response,execute_policy,dispatch,dispatch_tool,main,Handler
-    Handler: log_message(1),do_GET(0),do_POST(0),read_body(0),serve_static(1)
-    load_env(path)
-    env_bool(name;default)
-    read_json(path)
-    binding_document()
-    registry()
-    routes()
-    add_log(event;detail;source)
-    recent_logs(limit)
-    json_response(handler;status;payload)
-    execute_policy(uri;allow_shell)
-    dispatch(body)
-    dispatch_tool(body)
-    main()
-  v2/examples/multi_transport/run_multi_test.py:
-    e: http_get,wait_http,wait_grpc,route_key,detect_conflicts,main
-    http_get(url)
-    wait_http(host;port;timeout)
-    wait_grpc(host;timeout)
-    route_key(uri)
-    detect_conflicts(sources)
-    main()
-  v2/examples/multi_transport/worker.py:
-    e: discovery,serve_http,serve_grpc
-    discovery()
-    serve_http()
-    serve_grpc()
-  v2/examples/python/test_adopt.py:
-    e: SpreadArgsTests,PythonPackageAdoptionTests,NpmPackageAdoptionTests,InitTests,CliTests
-    SpreadArgsTests: test_spread_array_param_expands_into_argv(0),test_spread_defaults_to_empty(0),test_validate_accepts_spread_placeholder(0)
-    PythonPackageAdoptionTests: test_console_scripts_become_passthrough_commands(0),test_adopted_command_runs_with_passthrough_args(0)
-    NpmPackageAdoptionTests: test_bin_field_becomes_npx_command(0)
-    InitTests: test_init_builds_binding_document_from_project(0)
-    CliTests: test_add_python_package_compile_and_run(0)
-  v2/examples/python/test_mcp_a2a.py:
-    e: registry,McpProjectionTests,A2aCardTests,McpServerTests,BackendInteropTests
-    McpProjectionTests: setUp(0),test_mcp_manifest_exposes_tools_with_json_schema(0),test_tool_index_maps_back_to_uris(0),test_call_tool_dry_run_renders_command(0),test_call_unknown_tool_raises(0)
-    A2aCardTests: test_agent_card_lists_skills(0)
-    McpServerTests: test_jsonrpc_roundtrip_over_streams(0)
-    BackendInteropTests: test_backend_serves_mcp_tools_and_calls(0)
-    registry()
-  v2/examples/python/test_urihandler_v2.py:
-    e: DecoratorTests,SchemaRuntimeTests,ArtifactAdoptionTests,HtmlAppTests
-    DecoratorTests: test_decorator_generates_schema_and_argv_runtime(0),test_shell_decorator_executes_only_when_shell_policy_allows_it(0)
-    SchemaRuntimeTests: setUp(0),test_json_schema_defaults_are_applied_before_rendering(0),test_missing_required_input_is_schema_error(0),test_shell_binding_is_real_shell_runtime_when_allowed(0),test_document_validation_catches_unresolved_placeholders(0)
-    ArtifactAdoptionTests: test_artifact_scan_builds_v2_bindings_from_common_standards(0),test_cli_scan_validate_compile_and_run(0),test_cli_add_pypi_and_command_binding_in_one_line(0)
-    HtmlAppTests: test_html_backend_dispatches_v2_runtime(0)
-  v2/examples/transports/demo.py:
-  v2/examples/transports/scan_and_run.py:
-    e: main
-    main(argv)
-  v2/examples/transports/test_transports.py:
-    e: test_all_transports_agree,test_schema_validation_is_uniform,test_scan_and_run_cli
-    test_all_transports_agree()
-    test_schema_validation_is_uniform()
-    test_scan_and_run_cli()
-  v2/examples/transports/transport_lib.py:
-    e: build_registry,run_inprocess,run_queue,serverless_handler,start_http_worker,run_via,grpc_available,available_transports
-    build_registry()
-    run_inprocess(uri;payload;registry;mode)
-    run_queue(uri;payload;registry;timeout)
-    serverless_handler(event;registry)
-    start_http_worker(registry;host)
-    run_via(transport;uri;payload;registry)
-    grpc_available()
-    available_transports()

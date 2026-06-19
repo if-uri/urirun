@@ -10,7 +10,7 @@ build/
 *.o
 *.out
 **/.urihandler/*.json
-
+.planfile
 # Environment variables
 .env
 # Byte-compiled / optimized / DLL files

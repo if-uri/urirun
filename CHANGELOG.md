@@ -8,6 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.10] - 2026-06-19
 
 ### Fixed
+- Fix duplicate-imports issues (ticket-1665d840)
+- Fix string-concat issues (ticket-b8e19801)
+- Fix unused-imports issues (ticket-70da4470)
+- Fix magic-numbers issues (ticket-04441770)
+- Fix smart-return-type issues (ticket-049184c6)
+- Fix string-concat issues (ticket-ae623e62)
+- Fix unused-imports issues (ticket-1d79c661)
+- Fix magic-numbers issues (ticket-9dfc6c44)
+- Fix smart-return-type issues (ticket-4df269e8)
+- Fix string-concat issues (ticket-8e187d8c)
+- Fix unused-imports issues (ticket-b28370b0)
+- Fix magic-numbers issues (ticket-39f6c4f8)
+- Fix duplicate-imports issues (ticket-28c5084d)
+- Fix smart-return-type issues (ticket-6181097b)
+- Fix string-concat issues (ticket-9cd0b999)
+- Fix unused-imports issues (ticket-190dff5c)
+- Fix magic-numbers issues (ticket-f1115b33)
+- Fix duplicate-imports issues (ticket-643daa64)
+- Fix string-concat issues (ticket-351dac12)
+- Fix unused-imports issues (ticket-4c9cff33)
+- Fix magic-numbers issues (ticket-aec33ab4)
+- Fix unused-imports issues (ticket-00a4088f)
+- Fix magic-numbers issues (ticket-9d63e233)
+- Fix smart-return-type issues (ticket-f800d394)
+- Fix unused-imports issues (ticket-4e563569)
+- Fix string-concat issues (ticket-e452c4be)
+- Fix unused-imports issues (ticket-14b02b68)
+- Fix magic-numbers issues (ticket-ca0604aa)
+
+## [0.1.10] - 2026-06-19
+
+### Fixed
 - Fix smart-return-type issues (ticket-eb869bc1)
 - Fix duplicate-imports issues (ticket-99718c09)
 - Fix smart-return-type issues (ticket-eaa1a1f7)

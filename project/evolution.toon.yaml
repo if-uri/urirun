@@ -1,50 +1,58 @@
-# code2llm/evolution | 221 func | 15f | 2026-06-19
+# code2llm/evolution | 453 func | 24f | 2026-06-19
 # generated in 0.00s
 
-NEXT[8] (ranked by impact):
-  [1] !! SPLIT           adapters/python/urirun/v2.py
-      WHY: 955L, 0 classes, max CC=21
-      EFFORT: ~4h  IMPACT: 20055
+NEXT[10] (ranked by impact):
+  [1] !! SPLIT           adapters/python/urirun/mesh.py
+      WHY: 1071L, 0 classes, max CC=52
+      EFFORT: ~4h  IMPACT: 55692
 
-  [2] !! SPLIT           adapters/python/urirun/_scan.py
-      WHY: 667L, 0 classes, max CC=15
-      EFFORT: ~4h  IMPACT: 10005
+  [2] !! SPLIT           adapters/python/urirun/v2.py
+      WHY: 1618L, 0 classes, max CC=31
+      EFFORT: ~4h  IMPACT: 50158
 
   [3] !! SPLIT           adapters/python/urirun/_registry.py
       WHY: 679L, 0 classes, max CC=14
       EFFORT: ~4h  IMPACT: 9506
 
-  [4] !  SPLIT-FUNC      main  CC=21  fan=39
-      WHY: CC=21 exceeds 15
-      EFFORT: ~1h  IMPACT: 819
+  [4] !  SPLIT-FUNC      main  CC=23  fan=100
+      WHY: CC=23 exceeds 15
+      EFFORT: ~1h  IMPACT: 2300
 
-  [5] !  SPLIT-FUNC      scan_path  CC=15  fan=19
-      WHY: CC=15 exceeds 15
-      EFFORT: ~1h  IMPACT: 285
+  [5] !! SPLIT-FUNC      task_command  CC=52  fan=35
+      WHY: CC=52 exceeds 15
+      EFFORT: ~1h  IMPACT: 1820
 
-  [6] !  SPLIT-FUNC      run  CC=15  fan=14
-      WHY: CC=15 exceeds 15
-      EFFORT: ~1h  IMPACT: 210
+  [6] !! SPLIT-FUNC      run_uri_route  CC=46  fan=23
+      WHY: CC=46 exceeds 15
+      EFFORT: ~1h  IMPACT: 1058
 
-  [7] !  SPLIT-FUNC      serve_mcp  CC=15  fan=14
-      WHY: CC=15 exceeds 15
-      EFFORT: ~1h  IMPACT: 210
+  [7] !! SPLIT-FUNC      run_uri_route  CC=45  fan=19
+      WHY: CC=45 exceeds 15
+      EFFORT: ~1h  IMPACT: 855
 
-  [8] !  SPLIT-FUNC      evaluate_policy  CC=16  fan=8
-      WHY: CC=16 exceeds 15
-      EFFORT: ~1h  IMPACT: 128
+  [8] !! SPLIT-FUNC      run_planfile_task  CC=31  fan=25
+      WHY: CC=31 exceeds 15
+      EFFORT: ~1h  IMPACT: 775
+
+  [9] !! SPLIT-FUNC      build_ticket_payload  CC=35  fan=13
+      WHY: CC=35 exceeds 15
+      EFFORT: ~1h  IMPACT: 455
+
+  [10] !  SPLIT-FUNC      host_command  CC=19  fan=18
+      WHY: CC=19 exceeds 15
+      EFFORT: ~1h  IMPACT: 342
 
 
 RISKS[3]:
-  ⚠ Splitting adapters/python/urirun/v2.py may break 49 import paths
+  ⚠ Splitting adapters/python/urirun/v2.py may break 60 import paths
+  ⚠ Splitting adapters/python/urirun/mesh.py may break 51 import paths
   ⚠ Splitting adapters/python/urirun/_registry.py may break 41 import paths
-  ⚠ Splitting adapters/python/urirun/_scan.py may break 36 import paths
 
 METRICS-TARGET:
-  CC̄:          4.6 → ≤3.2
-  max-CC:      21 → ≤10
-  god-modules: 4 → 0
-  high-CC(≥15): 6 → ≤3
+  CC̄:          4.7 → ≤3.3
+  max-CC:      52 → ≤20
+  god-modules: 6 → 0
+  high-CC(≥15): 22 → ≤11
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
@@ -72,4 +80,4 @@ PATTERNS (language parser shared logic):
     - Standardized FunctionInfo/ClassInfo models
 
 HISTORY:
-  prev CC̄=4.6 → now CC̄=4.6
+  prev CC̄=4.6 → now CC̄=4.7
