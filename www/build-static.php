@@ -11,9 +11,9 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES);
 }
 
-function doc_url(string $slug): string
+function doc_url(string $slug, string $base = 'docs/'): string
 {
-    return 'docs/' . rawurlencode($slug) . '.html';
+    return $base . rawurlencode($slug) . '.html';
 }
 
 function inline_md(string $text): string
@@ -116,47 +116,71 @@ function docs_file_map(): array
     ];
 }
 
-/**
- * Build one HTML page per doc under www/docs/. Asset/home links use ../ because
- * the pages live in a subfolder.
- */
-function build_doc_pages(array $site, string $repoUrl): array
+function doc_titles(string $lang): array
 {
-    $docFiles = docs_file_map();
-    $titles = ['index' => 'Docs index'];
-    foreach ($site['docs'] as $slug => $doc) {
-        $titles[$slug] = $doc['title'];
+    if ($lang === 'pl') {
+        return [
+            'index' => 'Dokumentacja', 'getting-started' => 'Pierwsze kroki', 'naming' => 'Nazewnictwo',
+            'commands' => 'Komendy', 'registry-and-bindings' => 'Registry', 'transports' => 'Transporty',
+            'logo' => 'Logo', 'roadmap' => 'Roadmap',
+        ];
     }
+    return [
+        'index' => 'Docs index', 'getting-started' => 'Getting started', 'naming' => 'Naming',
+        'commands' => 'Commands', 'registry-and-bindings' => 'Registry', 'transports' => 'Transports',
+        'logo' => 'Logo', 'roadmap' => 'Roadmap',
+    ];
+}
+
+/**
+ * Build one HTML page per doc for a language. EN pages live in www/docs/ and PL
+ * pages in www/docs/pl/, so asset/home links use the right relative prefix and a
+ * PL/EN switch points at the sibling translation.
+ */
+function build_doc_pages(array $site, string $repoUrl, string $lang): array
+{
+    $isPl = $lang === 'pl';
+    $assetPrefix = $isPl ? '../../' : '../';        // www/docs/pl/* vs www/docs/*
+    $srcDir = __DIR__ . '/../docs/' . ($isPl ? 'pl/' : '');
+    $titles = doc_titles($lang);
+    $homeLabel = $isPl ? 'Strona główna' : 'Home';
 
     $sidebar = "    <aside>\n";
-    foreach ($docFiles as $slug => $file) {
+    foreach (docs_file_map() as $slug => $file) {
         $sidebar .= '      <a data-slug="' . h($slug) . '" href="' . h($slug) . '.html"><span>' . h($titles[$slug] ?? $slug) . "</span></a>\n";
     }
     $sidebar .= "    </aside>\n";
 
     $pages = [];
-    foreach ($docFiles as $slug => $file) {
-        $path = __DIR__ . '/../docs/' . $file;
+    foreach (docs_file_map() as $slug => $file) {
+        $path = $srcDir . $file;
         $markdown = is_file($path) ? file_get_contents($path) : '# Missing document';
         $title = $titles[$slug] ?? $slug;
+        $plHref = $isPl ? ($slug . '.html') : ('pl/' . $slug . '.html');
+        $enHref = $isPl ? ('../' . $slug . '.html') : ($slug . '.html');
 
-        $html = "<!doctype html>\n<html lang=\"en\">\n<head>\n";
+        $html = '<!doctype html>' . "\n" . '<html lang="' . $lang . '">' . "\n<head>\n";
         $html .= "  <meta charset=\"utf-8\">\n";
         $html .= "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n";
         $html .= '  <title>urirun docs: ' . h($title) . "</title>\n";
         $html .= '  <meta name="description" content="urirun documentation - ' . h($title) . "\">\n";
-        $html .= "  <link rel=\"icon\" href=\"../assets/urirun-favicon.svg\" type=\"image/svg+xml\">\n";
-        $html .= "  <link rel=\"stylesheet\" href=\"../style.css\">\n";
+        $html .= '  <link rel="icon" href="' . $assetPrefix . "assets/urirun-favicon.svg\" type=\"image/svg+xml\">\n";
+        $html .= '  <link rel="alternate" hreflang="en" href="' . h($enHref) . "\">\n";
+        $html .= '  <link rel="alternate" hreflang="pl" href="' . h($plHref) . "\">\n";
+        $html .= '  <link rel="stylesheet" href="' . $assetPrefix . "style.css\">\n";
         $html .= "</head>\n<body>\n";
         $html .= "  <header class=\"topbar\">\n";
-        $html .= "    <a class=\"brand\" href=\"../index.html\" aria-label=\"urirun home\"><img src=\"../assets/urirun-horizontal.svg\" alt=\"urirun\"></a>\n";
+        $html .= '    <a class="brand" href="' . $assetPrefix . 'index.html" aria-label="urirun home"><img src="' . $assetPrefix . "assets/urirun-horizontal.svg\" alt=\"urirun\"></a>\n";
         $html .= "    <nav>\n";
-        $html .= "      <a href=\"../index.html\">Home</a>\n";
+        $html .= '      <a href="' . $assetPrefix . 'index.html">' . h($homeLabel) . "</a>\n";
         $html .= "      <a href=\"index.html\">Docs</a>\n";
         $html .= "      <a href=\"" . h($repoUrl) . "\">GitHub</a>\n";
+        $html .= "      <span class=\"language-switch\">\n";
+        $html .= '        <a class="' . (!$isPl ? 'active' : '') . '" href="' . h($enHref) . "\" hreflang=\"en\" lang=\"en\">EN</a>\n";
+        $html .= '        <a class="' . ($isPl ? 'active' : '') . '" href="' . h($plHref) . "\" hreflang=\"pl\" lang=\"pl\">PL</a>\n";
+        $html .= "      </span>\n";
         $html .= "    </nav>\n";
         $html .= "  </header>\n";
-        // mark the active sidebar entry for this page
         $aside = str_replace('data-slug="' . $slug . '" href', 'class="active" data-slug="' . $slug . '" href', $sidebar);
         $html .= "  <main class=\"docs-layout\">\n" . $aside;
         $html .= "    <article class=\"doc-body\">\n" . render_md($markdown) . "    </article>\n";
@@ -166,11 +190,11 @@ function build_doc_pages(array $site, string $repoUrl): array
     return $pages;
 }
 
-function render_doc_cards(array $docs): string
+function render_doc_cards(array $docs, string $base = 'docs/'): string
 {
     $html = '';
     foreach ($docs as $slug => $doc) {
-        $html .= '          <a class="doc-card" href="' . h(doc_url((string) $slug)) . '">' . "\n";
+        $html .= '          <a class="doc-card" href="' . h(doc_url((string) $slug, $base)) . '">' . "\n";
         $html .= '            <span>' . h($doc['title']) . '</span>' . "\n";
         $html .= '            <small>' . h($doc['description']) . '</small>' . "\n";
         $html .= "          </a>\n";
@@ -302,10 +326,11 @@ function render_page(array $page, array $site, string $baseUrl, string $repoUrl)
     $canonical = $baseUrl . ($isPl ? '' : 'index.en.html');
     $plUrl = $baseUrl;
     $enUrl = $baseUrl . 'index.en.html';
-    $docsUrl = 'docs/index.html';
-    $quickstartUrl = 'docs/getting-started.html';
-    $commandsUrl = 'docs/commands.html';
-    $namingUrl = 'docs/naming.html';
+    $docsBase = $isPl ? 'docs/pl/' : 'docs/';
+    $docsUrl = $docsBase . 'index.html';
+    $quickstartUrl = $docsBase . 'getting-started.html';
+    $commandsUrl = $docsBase . 'commands.html';
+    $namingUrl = $docsBase . 'naming.html';
 
     $nav = $page['nav'];
     $html = '<!doctype html>' . "\n";
@@ -405,7 +430,7 @@ function render_page(array $page, array $site, string $baseUrl, string $repoUrl)
     $html .= '        <h2 id="doc-list">' . h($page['docs_title']) . "</h2>\n";
     $html .= "      </div>\n";
     $html .= "      <div class=\"grid\">\n";
-    $html .= render_doc_cards($page['docs']);
+    $html .= render_doc_cards($page['docs'], $docsBase);
     $html .= "      </div>\n";
     $html .= "    </section>\n";
     $html .= "\n";
@@ -842,11 +867,13 @@ foreach ($pages as $page) {
     echo 'Wrote ' . basename($page['file']) . PHP_EOL;
 }
 
-$docsDir = __DIR__ . '/docs';
-if (!is_dir($docsDir)) {
-    mkdir($docsDir, 0o755, true);
-}
-foreach (build_doc_pages($site, $repoUrl) as $slug => $docHtml) {
-    file_put_contents($docsDir . '/' . $slug . '.html', $docHtml);
-    echo 'Wrote docs/' . $slug . '.html' . PHP_EOL;
+foreach (['en' => __DIR__ . '/docs', 'pl' => __DIR__ . '/docs/pl'] as $lang => $docsDir) {
+    if (!is_dir($docsDir)) {
+        mkdir($docsDir, 0o755, true);
+    }
+    $rel = $lang === 'pl' ? 'docs/pl/' : 'docs/';
+    foreach (build_doc_pages($site, $repoUrl, $lang) as $slug => $docHtml) {
+        file_put_contents($docsDir . '/' . $slug . '.html', $docHtml);
+        echo 'Wrote ' . $rel . $slug . '.html' . PHP_EOL;
+    }
 }

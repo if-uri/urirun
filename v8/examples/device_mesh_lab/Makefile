@@ -21,11 +21,9 @@ URIRUN_MESH_STATE_DIR ?= .run
 
 start: stop
 	@mkdir -p $(URIRUN_MESH_STATE_DIR)
-	@URIRUN_MESH_DEVICE_NAME=desktop URIRUN_MESH_DEVICE_ROLE=controller URIRUN_MESH_AGENT_PORT=18765 \
-		$(PYTHON) device_agent.py > $(URIRUN_MESH_STATE_DIR)/desktop-agent.log 2>&1 & echo $$! > $(URIRUN_MESH_STATE_DIR)/desktop-agent.pid
-	@URIRUN_MESH_DEVICE_NAME=laptop URIRUN_MESH_DEVICE_ROLE=remote-laptop URIRUN_MESH_AGENT_PORT=18766 \
-		$(PYTHON) device_agent.py > $(URIRUN_MESH_STATE_DIR)/laptop-agent.log 2>&1 & echo $$! > $(URIRUN_MESH_STATE_DIR)/laptop-agent.pid
-	@$(PYTHON) controller.py > $(URIRUN_MESH_STATE_DIR)/dashboard.log 2>&1 & echo $$! > $(URIRUN_MESH_STATE_DIR)/dashboard.pid
+	@setsid -f sh -c 'echo $$$$ > "$(URIRUN_MESH_STATE_DIR)/desktop-agent.pid"; exec env PYTHONPATH="$(PYTHONPATH)" URIRUN_MESH_DEVICE_NAME=desktop URIRUN_MESH_DEVICE_ROLE=controller URIRUN_MESH_AGENT_PORT=18765 $(PYTHON) device_agent.py > "$(URIRUN_MESH_STATE_DIR)/desktop-agent.log" 2>&1'
+	@setsid -f sh -c 'echo $$$$ > "$(URIRUN_MESH_STATE_DIR)/laptop-agent.pid"; exec env PYTHONPATH="$(PYTHONPATH)" URIRUN_MESH_DEVICE_NAME=laptop URIRUN_MESH_DEVICE_ROLE=remote-laptop URIRUN_MESH_AGENT_PORT=18766 $(PYTHON) device_agent.py > "$(URIRUN_MESH_STATE_DIR)/laptop-agent.log" 2>&1'
+	@setsid -f sh -c 'echo $$$$ > "$(URIRUN_MESH_STATE_DIR)/dashboard.pid"; exec env PYTHONPATH="$(PYTHONPATH)" $(PYTHON) controller.py > "$(URIRUN_MESH_STATE_DIR)/dashboard.log" 2>&1'
 	@echo "Dashboard: http://127.0.0.1:$(URIRUN_MESH_DASHBOARD_PORT)/"
 	@echo "Agents: desktop http://127.0.0.1:18765, laptop http://127.0.0.1:18766"
 

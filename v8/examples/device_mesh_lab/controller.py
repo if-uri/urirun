@@ -205,6 +205,52 @@ def fallback_flow(prompt: str, routes: list[dict], reason: str = "heuristic") ->
     }
 
 
+def append_step_if_missing(flow: dict, uri: str, payload: dict) -> None:
+    if any(step["uri"] == uri for step in flow["steps"]):
+        return
+    previous = flow["steps"][-1]["id"] if flow["steps"] else None
+    parsed = urllib.parse.urlparse(uri)
+    step_id = slug(f"{parsed.netloc}_{'_'.join(part for part in parsed.path.split('/') if part)}")
+    flow["steps"].append({
+        "id": step_id,
+        "uri": uri,
+        "payload": payload,
+        "depends_on": [previous] if previous else [],
+    })
+
+
+def postprocess_flow(flow: dict, prompt: str, routes: list[dict]) -> dict:
+    route_uris = {route["uri"] for route in routes if is_safe_route(route)}
+    devices = sorted({target_from_uri(route["uri"]) for route in routes if is_safe_route(route)})
+    prompt_lower = prompt.lower()
+
+    if "python3" in prompt_lower:
+        for step in flow["steps"]:
+            if step["uri"].startswith("shell://") and step["uri"].endswith("/command/which"):
+                step["payload"] = {"binary": "python3"}
+
+    wants_all_devices = any(word in prompt_lower for word in ("oba", "obie", "all", "both", "wszystkie"))
+    wants_processes = any(word in prompt_lower for word in ("proces", "process", "aplikac", "program"))
+    wants_python3 = "python3" in prompt_lower
+
+    if wants_all_devices:
+        for device in devices:
+            uri = f"env://{device}/runtime/query/health"
+            if uri in route_uris:
+                append_step_if_missing(flow, uri, {})
+        if wants_processes:
+            for device in devices:
+                uri = f"proc://{device}/process/query/list"
+                if uri in route_uris:
+                    append_step_if_missing(flow, uri, {"limit": 8})
+        if wants_python3:
+            for device in devices:
+                uri = f"shell://{device}/command/which"
+                if uri in route_uris:
+                    append_step_if_missing(flow, uri, {"binary": "python3"})
+    return flow
+
+
 def json_from_text(text: str) -> dict:
     stripped = text.strip()
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", stripped, re.S)
@@ -308,7 +354,8 @@ def generate_with_litellm(prompt: str, routes: list[dict], devices: list[dict]) 
     content = response.choices[0].message.content
     flow = json_from_text(content)
     allowed = {route["uri"] for route in routes if is_safe_route(route)}
-    return normalize_flow(flow, allowed), {"provider": "litellm", "model": model, "fallback": False}
+    normalized = normalize_flow(flow, allowed)
+    return postprocess_flow(normalized, prompt, routes), {"provider": "litellm", "model": model, "fallback": False}
 
 
 def generate_flow(prompt: str, mesh: dict) -> tuple[dict, dict]:
@@ -320,14 +367,15 @@ def generate_flow(prompt: str, mesh: dict) -> tuple[dict, dict]:
             return generate_with_litellm(prompt, routes, mesh["devices"])
         except Exception as exc:  # noqa: BLE001 - local orchestration should still work without LLM.
             flow = fallback_flow(prompt, routes, reason="heuristic")
-            return normalize_flow(flow, allowed), {
+            normalized = postprocess_flow(normalize_flow(flow, allowed), prompt, routes)
+            return normalized, {
                 "provider": "heuristic",
                 "model": os.getenv("LLM_MODEL", ""),
                 "fallback": True,
                 "reason": str(exc),
             }
     flow = fallback_flow(prompt, routes, reason="heuristic")
-    return normalize_flow(flow, allowed), {"provider": "heuristic", "fallback": True, "reason": "LLM disabled"}
+    return postprocess_flow(normalize_flow(flow, allowed), prompt, routes), {"provider": "heuristic", "fallback": True, "reason": "LLM disabled"}
 
 
 def execute_flow(flow: dict, mesh: dict, registry: dict) -> dict:
