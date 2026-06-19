@@ -9,7 +9,7 @@ help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: test
-test: test-js test-python test-c test-examples test-v2 test-v3 test-v4 ## Run all checks.
+test: test-js test-python test-c test-examples test-v2 test-v3 test-v4 test-v5 ## Run all checks.
 
 .PHONY: test-js
 test-js: ## Run JavaScript adapter tests.
@@ -64,6 +64,17 @@ test-v4: ## Run urihandler v4 discovery and registry checks.
 	PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v4 build-registry /tmp/urihandler-v4-manifest.registry.json /tmp/urihandler-v4-docker.registry.json /tmp/urihandler-v4-openapi.registry.json --out /tmp/urihandler-v4-registry.merged.json --on-conflict keep
 	PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v4 call 'cli://local/git/status' --registry /tmp/urihandler-v4-registry.merged.json >/tmp/urihandler-v4-call.json
 
+.PHONY: test-v5
+test-v5: ## Run urihandler v5 binding scanner checks.
+	$(NODE) --test v5/examples/js/*.test.js
+	PYTHONPATH=adapters/python $(PYTHON) -m unittest discover -s v5/examples/python -p 'test_*.py'
+	$(NODE) v5/examples/js/example.js
+	PYTHONPATH=adapters/python $(PYTHON) v5/examples/python/example.py
+	PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v5 scan v5/examples/project --out /tmp/urihandler-v5.bindings.json --registry-out /tmp/urihandler-v5.registry.json --generated-at 2026-06-19T00:00:00.000Z
+	PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v5 compile /tmp/urihandler-v5.bindings.json --out /tmp/urihandler-v5.registry.compiled.json --generated-at 2026-06-19T00:00:00.000Z
+	PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v5 call 'cli://local/npm/test' --registry /tmp/urihandler-v5.registry.compiled.json >/tmp/urihandler-v5-call.json
+	PYTHONPATH=adapters/python $(PYTHON) -m urihandler.v5 discover manifest v4/examples/json/manifest.routes.json --out /tmp/urihandler-v5-v4-compat.registry.json
+
 .PHONY: clean
 clean: ## Remove local generated cache files.
-	rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urihandler/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ v2/examples/python/__pycache__ v3/examples/python/__pycache__ v4/examples/python/__pycache__ __pycache__
+	rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urihandler/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ v2/examples/python/__pycache__ v3/examples/python/__pycache__ v4/examples/python/__pycache__ v5/examples/python/__pycache__ __pycache__

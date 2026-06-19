@@ -1,0 +1,14 @@
+{
+  "bindings": {
+    "shell://local/system/restart/nginx": {
+      "kind": "shell",
+      "adapter": "shell-template",
+      "template": "systemctl restart {0}"
+    },
+    "mqtt://broker/publish/home": {
+      "kind": "mqtt",
+      "adapter": "mqtt-publish",
+      "topicPrefix": "home"
+    }
+  }
+}

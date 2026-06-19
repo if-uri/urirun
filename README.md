@@ -36,6 +36,7 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - `v2/` - route descriptor model with registry tree lookup
 - `v3/` - route entry model with executor adapters for function/http/cli/shell/mqtt/artifact
 - `v4/` - auto-discovery, generated registry documents, and CLI `discover/build-registry/call`
+- `v5/` - simple bindings-first scanner for existing projects, services, CLI, shell, code, and GitHub repos
 - `examples/` - end-to-end examples
 - `github/` - GitHub integration notes
 
@@ -51,6 +52,7 @@ npm install github:tellmesh/urihandler
 import { parseUri } from "urihandler";
 import { dispatch } from "urihandler/v3/js";
 import { buildRegistryDocument } from "urihandler/v4/js";
+import { buildBindingDocument } from "urihandler/v5/js";
 ```
 
 or vendor the adapter folder directly into your repo.
@@ -61,9 +63,12 @@ or vendor the adapter folder directly into your repo.
 pip install "git+https://github.com/tellmesh/urihandler.git@main#subdirectory=adapters/python"
 ```
 
-The Python package also installs the v4 CLI:
+The Python package also installs the v5 CLI. It keeps v4 commands such as
+`discover` and `build-registry` compatible:
 
 ```bash
+urihandler scan ./project --out .urihandler/bindings.v5.json --registry-out .urihandler/registry.merged.json
+urihandler compile .urihandler/bindings.v5.json --out .urihandler/registry.merged.json
 urihandler discover manifest ./urihandler-routes.json --out /tmp/routes.registry.json
 urihandler build-registry /tmp/routes.registry.json --out .urihandler/registry.merged.json
 urihandler call 'cli://local/git/status' --registry .urihandler/registry.merged.json
@@ -89,6 +94,15 @@ PYTHONPATH=adapters/python python -m urihandler.v4 build-registry /tmp/manifest.
 ```
 
 The generated `.urihandler/registry.merged.json` has a v3-compatible `routes` tree plus URI hash index and source metadata.
+
+## v5 bindings workflow
+
+```bash
+PYTHONPATH=adapters/python python -m urihandler.v5 scan v5/examples/project --out /tmp/urihandler-v5.bindings.json --registry-out /tmp/urihandler-v5.registry.json
+PYTHONPATH=adapters/python python -m urihandler.v5 call 'cli://local/npm/test' --registry /tmp/urihandler-v5.registry.json
+```
+
+v5 scans existing project artifacts into flat URI bindings first, then compiles those bindings to the same v4 registry runtime.
 
 ## License
 
