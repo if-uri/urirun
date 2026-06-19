@@ -107,6 +107,44 @@ Optional transports stay optional. For the v2 gRPC transport install:
 pip install "urirun[grpc] @ git+https://github.com/tellmesh/urirun.git@main#subdirectory=adapters/python"
 ```
 
+## Host / Node Mesh
+
+`urirun host` is the control side. It keeps a list of nodes, discovers their
+URI routes, MCP tools and A2A cards, and can turn a natural-language request
+into a URI flow.
+
+```bash
+# on the host machine
+urirun host init --name operator
+urirun host add-node desktop http://desktop.local:8765
+urirun host add-node laptop  http://laptop.local:8765
+
+urirun host nodes
+urirun host routes
+urirun host agents
+
+# dry-run by default
+urirun host ask "pokaż procesy i logi na wszystkich komputerach"
+
+# execute after review
+URIRUN_LLM_MODEL=openrouter/qwen/qwen3-coder-next \
+urirun host ask "otwórz https://example.com na wszystkich komputerach" --execute
+```
+
+`urirun node` is the machine side. A node serves a local registry over HTTP:
+`/routes`, `/mcp/tools`, `/a2a/card`, `/run` and `/health`.
+
+```bash
+# on each node machine
+urirun node init --name desktop --registry .urirun/registry.merged.json --port 8765
+urirun node routes
+urirun node serve --execute
+```
+
+Execution remains explicit: `host ask` is dry-run unless `--execute` is passed,
+and `node serve` executes only when started with `--execute` or configured with
+`execute: true`.
+
 ### C / firmware
 
 Copy `adapters/c/urirun.c` and `adapters/c/urirun.h` into your firmware project.

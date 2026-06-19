@@ -868,6 +868,62 @@ def main(argv: list[str] | None = None) -> int:
     add_pypi_parser.add_argument("--uri")
     add_pypi_parser.add_argument("--out", default="urirun.bindings.v2.json")
 
+    host_parser = subparsers.add_parser("host", help="Configure a host that controls URI nodes")
+    host_sub = host_parser.add_subparsers(dest="host_command", required=True)
+    host_common = argparse.ArgumentParser(add_help=False)
+    host_common.add_argument("--config", default=None, help="host mesh config path; default .urirun/mesh.json")
+
+    host_init = host_sub.add_parser("init", parents=[host_common], help="Create host mesh config")
+    host_init.add_argument("--name")
+
+    host_add = host_sub.add_parser("add-node", parents=[host_common], help="Add or update a node endpoint")
+    host_add.add_argument("name")
+    host_add.add_argument("url")
+    host_add.add_argument("--tag", action="append", default=[])
+
+    host_sub.add_parser("config", parents=[host_common], help="Print host mesh config")
+
+    host_nodes = host_sub.add_parser("nodes", parents=[host_common], help="List configured nodes and agent counts")
+    host_nodes.add_argument("--json", action="store_true")
+
+    host_routes = host_sub.add_parser("routes", parents=[host_common], help="List URI processes exposed by nodes")
+    host_routes.add_argument("--json", action="store_true")
+
+    host_sub.add_parser("agents", parents=[host_common], help="List A2A cards, MCP tools and URI processes")
+
+    host_ask = host_sub.add_parser("ask", parents=[host_common], help="Generate a URI flow from natural language and dispatch it")
+    host_ask.add_argument("prompt", nargs="+")
+    host_ask.add_argument("--node", action="append", default=[], help="restrict execution to a node name; repeatable")
+    host_ask.add_argument("--execute", action="store_true", help="execute on nodes; default is dry-run")
+    host_ask.add_argument("--no-llm", action="store_true", help="use heuristic flow generation only")
+
+    node_parser = subparsers.add_parser("node", help="Configure or serve a URI node")
+    node_sub = node_parser.add_subparsers(dest="node_command", required=True)
+    node_common = argparse.ArgumentParser(add_help=False)
+    node_common.add_argument("--config", default=None, help="node config path; default .urirun/node.json")
+
+    node_init = node_sub.add_parser("init", parents=[node_common], help="Create node config")
+    node_init.add_argument("--name")
+    node_init.add_argument("--registry", default=".urirun/registry.merged.json")
+    node_init.add_argument("--host", default="0.0.0.0")
+    node_init.add_argument("--port", type=int, default=8765)
+    node_init.add_argument("--execute", action="store_true")
+
+    node_sub.add_parser("config", parents=[node_common], help="Print node config")
+
+    node_routes = node_sub.add_parser("routes", parents=[node_common], help="List URI routes in the node registry")
+    node_routes.add_argument("--registry")
+    node_routes.add_argument("--name")
+    node_routes.add_argument("--json", action="store_true")
+
+    node_serve = node_sub.add_parser("serve", parents=[node_common], help="Serve this node over HTTP")
+    node_serve.add_argument("--name")
+    node_serve.add_argument("--registry")
+    node_serve.add_argument("--host")
+    node_serve.add_argument("--port", type=int)
+    node_serve.add_argument("--execute", action="store_true")
+    node_serve.add_argument("--public-url")
+
     def add_source(p, with_uri=True):
         if with_uri:
             p.add_argument("uri")
@@ -924,6 +980,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "add-pypi":
         write_or_emit_binding(args.out, pypi_binding(args.name, version=args.version, uri=args.uri))
         return 0
+
+    if args.command == "host":
+        from urirun import mesh
+
+        return mesh.host_command(args)
+
+    if args.command == "node":
+        from urirun import mesh
+
+        return mesh.node_command(args)
 
     registry = load_registry_arg(args.source or args.registry)
     policy = runtime.build_policy(getattr(args, "policy", None), args.allow, args.deny)

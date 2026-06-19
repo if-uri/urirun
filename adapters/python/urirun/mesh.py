@@ -1,0 +1,607 @@
+"""Host/node orchestration for URI-addressed machines.
+
+The mesh layer is intentionally thin:
+
+- a host keeps a list of node HTTP endpoints,
+- each node exposes URI routes plus MCP/A2A projections,
+- natural-language requests become URI flows and are dispatched through the
+  existing v2 service runtime.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import socket
+import time
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+
+from urirun import _registry as reglib, v2, v2_mcp, v2_service
+
+CONFIG_VERSION = "urirun.mesh.v1"
+DEFAULT_CONFIG = ".urirun/mesh.json"
+DEFAULT_NODE_CONFIG = ".urirun/node.json"
+UNSAFE_URI_PARTS = ("/terminal/command/run", "://sudo", "/command/install", "/command/upgrade")
+
+
+def now_id() -> str:
+    return str(int(time.time()))
+
+
+def slug(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")[:64] or "step"
+
+
+def json_load(path: str | Path) -> dict:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def json_write(path: str | Path, data: dict) -> None:
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def host_config_path(path: str | None = None) -> Path:
+    return Path(path or os.getenv("URIRUN_MESH_CONFIG", DEFAULT_CONFIG))
+
+
+def node_config_path(path: str | None = None) -> Path:
+    return Path(path or os.getenv("URIRUN_NODE_CONFIG", DEFAULT_NODE_CONFIG))
+
+
+def default_host_config(name: str | None = None) -> dict:
+    return {
+        "version": CONFIG_VERSION,
+        "host": {
+            "name": name or socket.gethostname(),
+            "llmModel": os.getenv("URIRUN_LLM_MODEL") or os.getenv("LLM_MODEL", ""),
+        },
+        "nodes": [],
+    }
+
+
+def load_host_config(path: str | None = None) -> dict:
+    config_path = host_config_path(path)
+    if not config_path.exists():
+        return default_host_config()
+    config = json_load(config_path)
+    config.setdefault("version", CONFIG_VERSION)
+    config.setdefault("host", {"name": socket.gethostname()})
+    config.setdefault("nodes", [])
+    return config
+
+
+def save_host_config(config: dict, path: str | None = None) -> dict:
+    json_write(host_config_path(path), config)
+    return config
+
+
+def init_host(path: str | None = None, name: str | None = None) -> dict:
+    config = default_host_config(name)
+    return save_host_config(config, path)
+
+
+def add_node(path: str | None, name: str, url: str, tags: list[str] | None = None) -> dict:
+    config = load_host_config(path)
+    node = {"name": name, "url": url.rstrip("/")}
+    if tags:
+        node["tags"] = tags
+    nodes = [item for item in config.get("nodes", []) if item.get("name") != name]
+    nodes.append(node)
+    config["nodes"] = sorted(nodes, key=lambda item: item["name"])
+    return save_host_config(config, path)
+
+
+def default_node_config(name: str | None = None, registry: str = ".urirun/registry.merged.json") -> dict:
+    return {
+        "version": CONFIG_VERSION,
+        "node": {
+            "name": name or socket.gethostname(),
+            "registry": registry,
+            "host": "0.0.0.0",
+            "port": 8765,
+            "execute": False,
+        },
+    }
+
+
+def load_node_config(path: str | None = None) -> dict:
+    config_path = node_config_path(path)
+    if not config_path.exists():
+        return default_node_config()
+    config = json_load(config_path)
+    config.setdefault("version", CONFIG_VERSION)
+    config.setdefault("node", {})
+    return config
+
+
+def save_node_config(config: dict, path: str | None = None) -> dict:
+    json_write(node_config_path(path), config)
+    return config
+
+
+def init_node(
+    path: str | None = None,
+    name: str | None = None,
+    registry: str = ".urirun/registry.merged.json",
+    host: str = "0.0.0.0",
+    port: int = 8765,
+    execute: bool = False,
+) -> dict:
+    config = default_node_config(name, registry)
+    config["node"].update({"host": host, "port": port, "execute": execute})
+    return save_node_config(config, path)
+
+
+def http_json(method: str, url: str, body: dict | None = None, timeout: float = 8.0) -> dict:
+    data = None if body is None else json.dumps(body).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read().decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return {"ok": False, "error": {"type": "http", "status": exc.code, "message": str(exc)}}
+
+
+def routes_from_registry(registry: dict) -> list[dict]:
+    routes = []
+    for item in reglib.flatten_registry_document(registry):
+        entry = item["routeEntry"]
+        config = entry.get("config") or {}
+        meta = entry.get("meta") or {}
+        routes.append(
+            {
+                "uri": item["uri"],
+                "kind": entry.get("kind"),
+                "adapter": entry.get("adapter"),
+                "safe": not any(part in item["uri"] for part in UNSAFE_URI_PARTS),
+                "title": meta.get("label") or meta.get("title") or item["uri"],
+                "inputSchema": config.get("inputSchema") or entry.get("inputSchema") or {"type": "object"},
+            }
+        )
+    return sorted(routes, key=lambda item: item["uri"])
+
+
+def safe_route(route: dict) -> bool:
+    uri = str(route.get("uri", ""))
+    return bool(uri and route.get("safe", True) is not False and not any(part in uri for part in UNSAFE_URI_PARTS))
+
+
+def route_target(uri: str) -> str:
+    return reglib.parse_uri(uri)["target"]
+
+
+def discover_node(node: dict) -> dict:
+    base = str(node["url"]).rstrip("/")
+    info = {"name": node["name"], "url": base, "reachable": False, "routes": [], "mcp": None, "a2a": None, "error": None}
+    try:
+        health = http_json("GET", f"{base}/health")
+        routes = http_json("GET", f"{base}/routes").get("routes", [])
+        mcp = http_json("GET", f"{base}/mcp/tools")
+        a2a = http_json("GET", f"{base}/a2a/card")
+        info.update({"reachable": True, "health": health, "routes": routes, "mcp": mcp, "a2a": a2a})
+    except Exception as exc:  # noqa: BLE001 - discovery should report partial/offline nodes.
+        info["error"] = str(exc)
+    return info
+
+
+def discover_mesh(config: dict) -> dict:
+    nodes = [discover_node(node) for node in config.get("nodes", [])]
+    routes = []
+    service_map = {}
+    for node in nodes:
+        if node.get("reachable"):
+            service_map[node["name"]] = node["url"]
+        for route in node.get("routes") or []:
+            item = dict(route)
+            item["node"] = node["name"]
+            item["nodeUrl"] = node["url"]
+            routes.append(item)
+            try:
+                service_map.setdefault(route_target(item["uri"]), node["url"])
+            except ValueError:
+                pass
+    return {"nodes": nodes, "routes": routes, "serviceMap": service_map}
+
+
+def binding_for_remote_route(route: dict) -> dict:
+    return {
+        "kind": "service",
+        "adapter": "http-service",
+        "inputSchema": route.get("inputSchema") or {"type": "object"},
+        "meta": {
+            "label": route.get("title") or route.get("uri"),
+            "node": route.get("node"),
+            "sourceAdapter": route.get("adapter"),
+        },
+    }
+
+
+def registry_from_routes(routes: list[dict]) -> dict:
+    bindings = {route["uri"]: binding_for_remote_route(route) for route in routes if safe_route(route)}
+    return v2.compile_registry({"version": v2.VERSION, "bindings": bindings}, on_conflict="keep")
+
+
+def target_nodes(prompt: str, nodes: list[dict], explicit: list[str] | None = None) -> list[str]:
+    reachable = [node["name"] for node in nodes if node.get("reachable")]
+    if explicit:
+        selected = [name for name in explicit if name in reachable]
+        return selected or explicit
+    lowered = prompt.lower()
+    mentioned = [name for name in reachable if name.lower() in lowered]
+    if mentioned:
+        return mentioned
+    return reachable
+
+
+def first_url(prompt: str) -> str | None:
+    match = re.search(r"https?://[^\s\"']+", prompt)
+    return match.group(0) if match else None
+
+
+def append_if_available(steps: list[dict], route_uris: set[str], uri: str, payload: dict, previous: str | None) -> str | None:
+    if uri not in route_uris:
+        return previous
+    step_id = slug(uri.replace("://", "_").replace("/", "_"))
+    if any(step["id"] == step_id for step in steps):
+        step_id = f"{step_id}_{len(steps) + 1}"
+    steps.append({"id": step_id, "uri": uri, "payload": payload, "depends_on": [previous] if previous else []})
+    return step_id
+
+
+def heuristic_flow(prompt: str, routes: list[dict], nodes: list[dict], selected_nodes: list[str] | None = None) -> dict:
+    route_uris = {route["uri"] for route in routes if safe_route(route)}
+    targets = target_nodes(prompt, nodes, selected_nodes)
+    lowered = prompt.lower()
+    steps: list[dict] = []
+    previous = None
+
+    wants_browser = any(word in lowered for word in ("browser", "przeglad", "stron", "url", "otworz", "open"))
+    wants_processes = any(word in lowered for word in ("proces", "process", "aplikac", "program"))
+    wants_logs = any(word in lowered for word in ("log", "logi"))
+    wants_python = "python3" in lowered or "python" in lowered
+    wants_git = "git" in lowered
+    wants_date = "date" in lowered or "data" in lowered
+    wants_uname = "uname" in lowered or "system" in lowered
+
+    if not any((wants_browser, wants_processes, wants_logs, wants_python, wants_git, wants_date, wants_uname)):
+        wants_processes = True
+
+    url = first_url(prompt) or "https://example.com/"
+    for target in targets:
+        previous = append_if_available(steps, route_uris, f"env://{target}/runtime/query/health", {}, previous)
+        if wants_processes:
+            previous = append_if_available(steps, route_uris, f"proc://{target}/process/query/list", {"limit": 12}, previous)
+        if wants_browser:
+            previous = append_if_available(steps, route_uris, f"browser://{target}/page/command/open", {"url": url}, previous)
+        for binary, enabled in (("python3", wants_python), ("git", wants_git)):
+            if enabled:
+                previous = append_if_available(steps, route_uris, f"shell://{target}/command/which", {"binary": binary}, previous)
+        if wants_date:
+            previous = append_if_available(steps, route_uris, f"shell://{target}/command/date", {}, previous)
+        if wants_uname:
+            previous = append_if_available(steps, route_uris, f"shell://{target}/command/uname", {}, previous)
+        if wants_logs:
+            previous = append_if_available(steps, route_uris, f"log://{target}/session/query/recent", {"limit": 20}, previous)
+
+    return {
+        "task": {"id": f"nl_uri_flow_{now_id()}", "title": "NL to URI host flow", "source": "heuristic"},
+        "steps": steps,
+    }
+
+
+def json_from_text(text: str) -> dict:
+    stripped = text.strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", stripped, re.S)
+    if fenced:
+        stripped = fenced.group(1)
+    elif not stripped.startswith("{"):
+        start = stripped.find("{")
+        end = stripped.rfind("}")
+        if start >= 0 and end > start:
+            stripped = stripped[start : end + 1]
+    return json.loads(stripped)
+
+
+def normalize_flow(flow: dict, allowed_uris: set[str]) -> dict:
+    task = flow.get("task") if isinstance(flow.get("task"), dict) else {}
+    raw_steps = flow.get("steps")
+    if not isinstance(raw_steps, list) or not raw_steps:
+        raise ValueError("flow must contain non-empty steps")
+    steps = []
+    used = set()
+    for index, step in enumerate(raw_steps, start=1):
+        uri = str(step.get("uri", ""))
+        if uri not in allowed_uris:
+            raise ValueError(f"URI is not available: {uri}")
+        step_id = slug(str(step.get("id") or f"step_{index}"))
+        if step_id in used:
+            step_id = f"{step_id}_{index}"
+        used.add(step_id)
+        payload = step.get("payload") if isinstance(step.get("payload"), dict) else {}
+        deps = [slug(str(dep)) for dep in step.get("depends_on", []) if isinstance(dep, str)]
+        steps.append({"id": step_id, "uri": uri, "payload": payload, "depends_on": deps})
+    return {
+        "task": {
+            "id": slug(str(task.get("id") or task.get("title") or "nl_uri_flow")),
+            "title": str(task.get("title") or "NL to URI host flow"),
+            "source": str(task.get("source") or "llm"),
+        },
+        "steps": steps,
+    }
+
+
+def llm_flow(prompt: str, routes: list[dict], nodes: list[dict]) -> dict:
+    model = os.getenv("URIRUN_LLM_MODEL") or os.getenv("LLM_MODEL")
+    if not model:
+        raise RuntimeError("URIRUN_LLM_MODEL or LLM_MODEL is not set")
+    from litellm import completion
+
+    allowed_routes = [
+        {
+            "uri": route["uri"],
+            "node": route.get("node"),
+            "kind": route.get("kind"),
+            "title": route.get("title"),
+            "inputSchema": route.get("inputSchema") or {"type": "object"},
+        }
+        for route in routes
+        if safe_route(route)
+    ]
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Return strict JSON only. Build a safe urirun flow for a host that controls nodes. "
+                "Use only allowedRoutes. If the request mentions all nodes, use every matching node. "
+                "Do not invent URIs."
+            ),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(
+                {
+                    "request": prompt,
+                    "nodes": [{"name": node["name"], "reachable": node.get("reachable")} for node in nodes],
+                    "allowedRoutes": allowed_routes,
+                    "shape": {"task": {"id": "short_id", "title": "title"}, "steps": [{"id": "id", "uri": "uri", "payload": {}, "depends_on": []}]},
+                },
+                ensure_ascii=False,
+            ),
+        },
+    ]
+    response = completion(model=model, messages=messages, temperature=0, response_format={"type": "json_object"})
+    return json_from_text(response.choices[0].message.content)
+
+
+def make_flow(prompt: str, mesh: dict, selected_nodes: list[str] | None = None, use_llm: bool = True) -> tuple[dict, dict]:
+    routes = [route for route in mesh["routes"] if safe_route(route)]
+    allowed = {route["uri"] for route in routes}
+    if use_llm:
+        try:
+            return normalize_flow(llm_flow(prompt, routes, mesh["nodes"]), allowed), {"provider": "litellm", "fallback": False}
+        except Exception as exc:  # noqa: BLE001 - host should still be usable without an LLM.
+            flow = heuristic_flow(prompt, routes, mesh["nodes"], selected_nodes)
+            return normalize_flow(flow, allowed), {"provider": "heuristic", "fallback": True, "reason": str(exc)}
+    flow = heuristic_flow(prompt, routes, mesh["nodes"], selected_nodes)
+    return normalize_flow(flow, allowed), {"provider": "heuristic", "fallback": True, "reason": "LLM disabled"}
+
+
+def execute_flow(flow: dict, mesh: dict, registry: dict, execute: bool) -> dict:
+    old_map = os.environ.get("URI_SERVICE_MAP")
+    os.environ["URI_SERVICE_MAP"] = json.dumps(mesh["serviceMap"])
+    results = {}
+    timeline = []
+    try:
+        for step in flow["steps"]:
+            missing = [dep for dep in step.get("depends_on", []) if dep not in results]
+            if missing:
+                raise RuntimeError(f"{step['id']} missing dependencies: {missing}")
+            env = v2_service.call(
+                step["uri"],
+                step.get("payload") or {},
+                registry,
+                mode="execute" if execute else "dry-run",
+            )
+            results[step["id"]] = env
+            timeline.append({"id": step["id"], "uri": step["uri"], "target": route_target(step["uri"]), "ok": bool(env.get("ok"))})
+            if not env.get("ok"):
+                return {"ok": False, "timeline": timeline, "results": results}
+        return {"ok": True, "timeline": timeline, "results": results}
+    finally:
+        if old_map is None:
+            os.environ.pop("URI_SERVICE_MAP", None)
+        else:
+            os.environ["URI_SERVICE_MAP"] = old_map
+
+
+def format_nodes(mesh: dict) -> str:
+    rows = []
+    for node in mesh["nodes"]:
+        mcp_tools = len((node.get("mcp") or {}).get("tools") or [])
+        a2a_skills = len((node.get("a2a") or {}).get("skills") or [])
+        rows.append(
+            {
+                "name": node["name"],
+                "url": node["url"],
+                "state": "up" if node.get("reachable") else "down",
+                "routes": str(len(node.get("routes") or [])),
+                "mcp": str(mcp_tools),
+                "a2a": str(a2a_skills),
+            }
+        )
+    return format_table(rows, ["name", "state", "routes", "mcp", "a2a", "url"], {"name": "NODE", "state": "STATE", "routes": "URI", "mcp": "MCP", "a2a": "A2A", "url": "URL"})
+
+
+def format_routes(routes: list[dict]) -> str:
+    rows = [
+        {
+            "uri": route["uri"],
+            "node": route.get("node") or "",
+            "kind": route.get("kind") or "",
+            "adapter": route.get("adapter") or "",
+        }
+        for route in sorted(routes, key=lambda item: item["uri"])
+        if safe_route(route)
+    ]
+    return format_table(rows, ["uri", "node", "kind", "adapter"], {"uri": "URI", "node": "NODE", "kind": "KIND", "adapter": "ADAPTER"})
+
+
+def format_table(rows: list[dict], columns: list[str], headers: dict[str, str]) -> str:
+    if not rows:
+        return "(none)"
+    widths = {
+        column: max(len(headers[column]), *(len(str(row.get(column, ""))) for row in rows))
+        for column in columns
+    }
+
+    def line(row: dict) -> str:
+        return "  ".join(str(row.get(column, "")).ljust(widths[column]) for column in columns).rstrip()
+
+    output = [line(headers), line({column: "-" * widths[column] for column in columns})]
+    output.extend(line(row) for row in rows)
+    return "\n".join(output)
+
+
+def host_command(args: argparse.Namespace) -> int:
+    if args.host_command == "init":
+        reglib._emit_json(init_host(args.config, args.name), "-")
+        return 0
+    if args.host_command == "add-node":
+        reglib._emit_json(add_node(args.config, args.name, args.url, args.tag), "-")
+        return 0
+
+    config = load_host_config(args.config)
+    mesh = discover_mesh(config)
+
+    if args.host_command == "config":
+        reglib._emit_json(config, "-")
+        return 0
+    if args.host_command == "nodes":
+        reglib._emit_json(mesh, "-") if args.json else print(format_nodes(mesh))
+        return 0
+    if args.host_command == "routes":
+        reglib._emit_json({"routes": mesh["routes"]}, "-") if args.json else print(format_routes(mesh["routes"]))
+        return 0
+    if args.host_command == "agents":
+        payload = {
+            "nodes": mesh["nodes"],
+            "mcpTools": {node["name"]: (node.get("mcp") or {}).get("tools") or [] for node in mesh["nodes"]},
+            "a2aCards": {node["name"]: node.get("a2a") for node in mesh["nodes"]},
+            "uriProcesses": mesh["routes"],
+        }
+        reglib._emit_json(payload, "-")
+        return 0
+    if args.host_command == "ask":
+        prompt = " ".join(args.prompt)
+        flow, generator = make_flow(prompt, mesh, selected_nodes=args.node, use_llm=not args.no_llm)
+        registry = registry_from_routes(mesh["routes"])
+        execution = execute_flow(flow, mesh, registry, execute=args.execute)
+        result = {"ok": execution["ok"], "prompt": prompt, "generator": generator, "flow": flow, **execution}
+        reglib._emit_json(result, "-")
+        return 0 if result["ok"] else 1
+    return 1
+
+
+def send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> None:
+    body = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Access-Control-Allow-Origin", "*")
+    handler.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+def read_json(handler: BaseHTTPRequestHandler) -> dict:
+    length = int(handler.headers.get("Content-Length", "0"))
+    if length <= 0:
+        return {}
+    return json.loads(handler.rfile.read(length).decode("utf-8") or "{}")
+
+
+def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, public_url: str | None = None) -> ThreadingHTTPServer:
+    routes = routes_from_registry(registry)
+    public_url = public_url or f"http://{socket.gethostname()}:{port}"
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_OPTIONS(self):
+            send_json(self, 200, {"ok": True})
+
+        def do_GET(self):
+            if self.path == "/health":
+                send_json(self, 200, {"ok": True, "name": name, "execute": execute, "routeCount": len(routes)})
+                return
+            if self.path == "/routes" or self.path == "/uri-processes":
+                send_json(self, 200, {"ok": True, "name": name, "routes": routes})
+                return
+            if self.path == "/mcp/tools":
+                send_json(self, 200, v2_mcp.to_mcp_manifest(registry))
+                return
+            if self.path == "/a2a/card":
+                send_json(self, 200, v2_mcp.to_a2a_card(registry, name=name, url=public_url))
+                return
+            send_json(self, 404, {"ok": False, "error": "not found"})
+
+        def do_POST(self):
+            if self.path != "/run":
+                send_json(self, 404, {"ok": False, "error": "not found"})
+                return
+            body = read_json(self)
+            result = v2.run(
+                str(body["uri"]),
+                registry,
+                payload=body.get("payload") or {},
+                mode="execute" if execute else "dry-run",
+            )
+            result["service"] = name
+            send_json(self, 200 if result.get("ok") else 400, result)
+
+        def log_message(self, fmt, *args: Any):
+            return
+
+    server = ThreadingHTTPServer((host, port), Handler)
+    print(json.dumps({"event": "urirun.node.started", "name": name, "host": host, "port": port, "execute": execute, "routes": len(routes)}), flush=True)
+    return server
+
+
+def node_command(args: argparse.Namespace) -> int:
+    if args.node_command == "init":
+        reglib._emit_json(init_node(args.config, args.name, args.registry, args.host, args.port, args.execute), "-")
+        return 0
+
+    config = load_node_config(args.config)
+    node = dict(config.get("node") or {})
+    if args.node_command == "config":
+        reglib._emit_json(config, "-")
+        return 0
+
+    name = args.name or node.get("name") or socket.gethostname()
+    registry_source = args.registry or node.get("registry") or ".urirun/registry.merged.json"
+    registry = v2.load_registry_arg(registry_source)
+
+    if args.node_command == "routes":
+        routes = routes_from_registry(registry)
+        reglib._emit_json({"routes": routes}, "-") if args.json else print(format_routes(routes))
+        return 0
+    if args.node_command == "serve":
+        host = args.host or node.get("host") or "0.0.0.0"
+        port = args.port or int(node.get("port") or 8765)
+        execute = bool(args.execute or node.get("execute"))
+        server = serve_node(name, registry, host, port, execute, public_url=args.public_url)
+        server.serve_forever()
+        return 0
+    return 1

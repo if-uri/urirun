@@ -177,6 +177,43 @@ urirun compile /tmp/v2.bindings.json --out /tmp/v2.registry.json
 urirun run tool://local/report/render --registry /tmp/v2.registry.json --payload '{"name":"Ada"}'
 ```
 
+## Host / Node mesh
+
+The v2 CLI can also act as a small URI mesh coordinator.
+
+On a node, serve a registry over HTTP:
+
+```bash
+urirun node init --name pc1 --registry .urirun/registry.merged.json --port 8765
+urirun node serve --execute
+```
+
+The node exposes:
+
+- `GET /health`
+- `GET /routes`
+- `GET /mcp/tools`
+- `GET /a2a/card`
+- `POST /run`
+
+On a host, register nodes and ask for work in natural language:
+
+```bash
+urirun host init --name operator
+urirun host add-node pc1 http://pc1.local:8765
+urirun host add-node pc2 http://pc2.local:8765
+
+urirun host agents   # A2A cards, MCP tools, URI processes
+urirun host routes   # URI routes from all reachable nodes
+
+URIRUN_LLM_MODEL=openrouter/qwen/qwen3-coder-next \
+urirun host ask "sprawdź procesy na wszystkich komputerach" --execute
+```
+
+If the LLM is unavailable, `host ask` falls back to a deterministic heuristic
+for common requests such as process listing, logs, browser open, `which python3`,
+`date` and `uname`.
+
 ## Standards used
 
 - JSON Schema Draft 2020-12 for input validation.
