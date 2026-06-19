@@ -9,7 +9,7 @@ help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: test
-test: test-js test-python test-c test-examples test-v2 ## Run all checks.
+test: test-js test-python test-c test-examples test-v2 test-v3 ## Run all checks.
 
 .PHONY: test-js
 test-js: ## Run JavaScript adapter tests.
@@ -41,6 +41,14 @@ test-v2: ## Run urihandler v2 checks.
 	$(CC) -Wall -Wextra -Werror -Iv2/examples/c v2/examples/c/urihandler_v2.c v2/examples/c/example.c -o /tmp/urihandler-v2-c-example
 	/tmp/urihandler-v2-c-example
 
+.PHONY: test-v3
+test-v3: ## Run urihandler v3 checks.
+	$(NODE) --test v3/examples/js/*.test.js
+	PYTHONPATH=v3/examples/python $(PYTHON) -m unittest discover -s v3/examples/python -p 'test_*.py'
+	$(NODE) v3/examples/js/example.js
+	PYTHONPATH=v3/examples/python $(PYTHON) v3/examples/python/example.py
+	$(PYTHON) -m json.tool v3/examples/json/registry.example.json >/tmp/urihandler-v3-registry.json
+
 .PHONY: clean
 clean: ## Remove local generated cache files.
-	rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urihandler/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ v2/examples/python/__pycache__ __pycache__
+	rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urihandler/__pycache__ adapters/python/*.egg-info adapters/python/build examples/__pycache__ v2/examples/python/__pycache__ v3/examples/python/__pycache__ __pycache__

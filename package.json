@@ -6,13 +6,16 @@
   "main": "./adapters/js/index.js",
   "exports": {
     ".": "./adapters/js/index.js",
-    "./v2/js": "./v2/examples/js/urihandler-v2.js"
+    "./v2/js": "./v2/examples/js/urihandler-v2.js",
+    "./v3/js": "./v3/examples/js/urihandler-v3.js"
   },
   "files": [
     "adapters/js/index.js",
     "v2/examples/js/urihandler-v2.js",
+    "v3/examples/js/urihandler-v3.js",
     "spec/urihandler-spec.md",
     "v2/spec/urihandler-v2.md",
+    "v3/spec/urihandler-v3.md",
     "README.md",
     "LICENSE"
   ],

@@ -33,6 +33,8 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - `adapters/js/` - JavaScript reference adapter
 - `adapters/python/` - Python reference adapter
 - `adapters/c/` - C firmware-style reference adapter
+- `v2/` - route descriptor model with registry tree lookup
+- `v3/` - route entry model with executor adapters for function/http/cli/shell/mqtt/artifact
 - `examples/` - end-to-end examples
 - `github/` - GitHub integration notes
 
@@ -42,6 +44,11 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 
 ```bash
 npm install github:tellmesh/urihandler
+```
+
+```js
+import { parseUri } from "urihandler";
+import { dispatch } from "urihandler/v3/js";
 ```
 
 or vendor the adapter folder directly into your repo.
