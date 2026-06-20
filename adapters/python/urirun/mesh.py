@@ -21,11 +21,12 @@ import socket
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from urirun import _registry as reglib, v2, v2_mcp, v2_service
+from urirun import _registry as reglib, errors as uri_errors, v2, v2_mcp, v2_service
 
 CONFIG_VERSION = "urirun.mesh.v1"
 DEFAULT_CONFIG = ".urirun/mesh.json"
@@ -1021,6 +1022,21 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             if self.path == "/a2a/card":
                 send_json(self, 200, v2_mcp.to_a2a_card(registry, name=name, url=public_url))
                 return
+            path, _, query = self.path.partition("?")
+            if path == "/errors":
+                send_json(self, 200, {"ok": True, "name": name, "errors": uri_errors.recent()})
+                return
+            if path == "/errors/search":
+                q = ""
+                for part in query.split("&"):
+                    if part.startswith("q="):
+                        q = unquote(part[2:].replace("+", " "))
+                send_json(self, 200, {"ok": True, "query": q, "errors": uri_errors.search(q)})
+                return
+            if path.startswith("/errors/"):
+                code = path[len("/errors/"):]
+                send_json(self, 200, uri_errors.info(code))
+                return
             send_json(self, 404, {"ok": False, "error": "not found"})
 
         def do_POST(self):
@@ -1034,6 +1050,8 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
                 payload=body.get("payload") or {},
                 mode="execute" if execute else "dry-run",
             )
+            if not result.get("ok"):
+                uri_errors.record(result)  # stamp error:// address + record for /errors
             result["service"] = name
             send_json(self, 200 if result.get("ok") else 400, result)
 
