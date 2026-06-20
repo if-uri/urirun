@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.14] - 2026-06-20
+
+### Fixed
+- Make MCP tool names and A2A skill ids unique when CQRS URI routes share the
+  same resource/operation prefix and differ only by trailing path arguments.
+
 ## [0.3.13] - 2026-06-20
 
 ### Added

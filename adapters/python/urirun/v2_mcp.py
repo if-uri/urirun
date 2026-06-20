@@ -36,6 +36,30 @@ def tool_name(uri: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "_", "_".join(parts))[:64]
 
 
+def unique_tool_name(uri: str, used: set[str]) -> str:
+    base = tool_name(uri)
+    if base not in used:
+        used.add(base)
+        return base
+
+    descriptor = reglib.parse_uri(uri)
+    suffix = "_".join(descriptor["segments"][2:]) or descriptor["normalized"]
+    suffix = re.sub(r"[^a-zA-Z0-9_-]", "_", suffix).strip("_") or "route"
+    candidate = f"{base}_{suffix}"[:64]
+    if candidate not in used:
+        used.add(candidate)
+        return candidate
+
+    index = 2
+    while True:
+        tail = f"_{index}"
+        candidate = f"{base[:64 - len(tail)]}{tail}"
+        if candidate not in used:
+            used.add(candidate)
+            return candidate
+        index += 1
+
+
 def _input_schema(entry: dict) -> dict:
     config = entry.get("config") or {}
     schema = config.get("inputSchema") or entry.get("inputSchema")
@@ -44,12 +68,13 @@ def _input_schema(entry: dict) -> dict:
 
 def to_mcp_tools(registry: dict) -> list[dict]:
     tools: list[dict] = []
+    used_names: set[str] = set()
     for route in reglib.flatten_registry_document(registry):
         entry = route["routeEntry"]
         uri = route["uri"]
         meta = entry.get("meta") or {}
         tools.append({
-            "name": tool_name(uri),
+            "name": unique_tool_name(uri, used_names),
             "description": meta.get("label") or f"{entry.get('kind')} route {uri}",
             "inputSchema": _input_schema(entry),
             "_uri": uri,
@@ -65,12 +90,13 @@ def to_mcp_manifest(registry: dict) -> dict:
 def to_a2a_card(registry: dict, name: str = "urirun-agent", url: str = "http://localhost:8080",
                 version: str = "0.8.0") -> dict:
     skills = []
+    used_names: set[str] = set()
     for route in reglib.flatten_registry_document(registry):
         entry = route["routeEntry"]
         uri = route["uri"]
         meta = entry.get("meta") or {}
         skills.append({
-            "id": tool_name(uri),
+            "id": unique_tool_name(uri, used_names),
             "name": meta.get("label") or uri,
             "description": f"{entry.get('kind')} route exposed as a URI",
             "tags": [entry.get("kind"), reglib.parse_uri(uri)["package"]],
