@@ -9,7 +9,7 @@ help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: test
-test: version-check test-js test-python test-c test-v1 test-v2 ## Run all runtime checks.
+test: version-check test-js test-python test-c conformance test-v1 test-v2 ## Run all runtime checks.
 
 .PHONY: version-check
 version-check: ## Verify root, Python and JavaScript package versions match.
@@ -27,6 +27,10 @@ test-python: ## Run Python adapter tests.
 test-c: ## Compile and run C adapter tests.
 	$(CC) -Wall -Wextra -Werror -Iadapters/c adapters/c/urirun.c adapters/c/urirun_test.c -o /tmp/urirun-c-test
 	/tmp/urirun-c-test
+
+.PHONY: conformance
+conformance: ## Verify every language SDK emits the same urirun.bindings.v2 contract.
+	$(PYTHON) adapters/conformance.py
 
 .PHONY: test-v1
 test-v1: ## Run urirun v1 parameter-binding smoke checks.
