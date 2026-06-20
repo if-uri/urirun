@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """Scheduler snippets for urirun host task queues."""
 
 from __future__ import annotations

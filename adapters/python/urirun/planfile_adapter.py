@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """Planfile-backed task operations for urirun host.
 
 The adapter keeps planfile as the source of truth for tasks, sprints, status

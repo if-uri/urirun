@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """Safe Namecheap DNS plan/apply adapter.
 
 Namecheap ``setHosts`` replaces the host record set.  This adapter therefore

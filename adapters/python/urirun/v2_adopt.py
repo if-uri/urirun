@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """urirun v2 adoption helpers - turn installed packages into URI commands.
 
 The decorator path covers code you own. This module covers code you *install*:

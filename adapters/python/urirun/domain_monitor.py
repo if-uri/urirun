@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """Domain monitoring URI runtime.
 
 This module intentionally stops at observe/plan:

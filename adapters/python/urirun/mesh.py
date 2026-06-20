@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """Host/node orchestration for URI-addressed machines.
 
 The mesh layer is intentionally thin:

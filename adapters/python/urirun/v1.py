@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """urirun v1 - parameter binding, Docker adapters, richer process control.
 
 - **Named parameter binding.** `{name}` placeholders in commands/templates/urls

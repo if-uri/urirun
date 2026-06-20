@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """Optional host/domain integration bindings for urirun v2.
 
 The core v2 runtime should stay focused on ``URI -> binding -> adapter ->

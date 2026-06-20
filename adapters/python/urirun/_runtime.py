@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """Execution and policy runtime shared by urirun v1/v2.
 
 - it actually executes routes (spawn / fetch / shell / local function),

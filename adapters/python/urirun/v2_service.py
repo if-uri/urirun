@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """urirun v2 service dispatch - call a URI implemented by a remote worker.
 
 In a polyglot deployment each worker implements its own URI resources natively

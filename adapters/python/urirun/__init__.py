@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 import re
 from dataclasses import dataclass, field
 from typing import Any

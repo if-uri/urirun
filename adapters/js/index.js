@@ -1,3 +1,6 @@
+// Author: Tom Sapletta · https://tom.sapletta.com
+// Part of the ifURI solution.
+
 export function parseUri(uri) {
   const match = String(uri).match(/^(?<scheme>[a-z][a-z0-9+.-]*):\/\/(?<target>[^/?#]+)(?<path>\/[^?#]*)?(?:\?(?<query>[^#]*))?(?:#(?<fragment>.*))?$/i);
   if (!match) throw new Error(`Invalid URI: ${uri}`);

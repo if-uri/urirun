@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """urirun v2 interop - project a registry to MCP tools and an A2A agent card.
 
 The v2 binding already carries a JSON Schema (``inputSchema``), which is exactly

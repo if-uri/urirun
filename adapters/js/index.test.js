@@ -1,3 +1,6 @@
+// Author: Tom Sapletta · https://tom.sapletta.com
+// Part of the ifURI solution.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildInvocation, dispatch, parseUri } from './index.js';

@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """urirun v2 gRPC transport - the HTTP `v2_service` story over gRPC.
 
 The registry, JSON Schema and policy gate stay the source of truth; gRPC is just

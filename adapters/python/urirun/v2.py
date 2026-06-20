@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """urirun v2 - schema-first command packages and decorator runtime.
 
 v2 keeps the v1 execution model, but makes command declarations portable:

@@ -1,3 +1,6 @@
+# Author: Tom Sapletta · https://tom.sapletta.com
+# Part of the ifURI solution.
+
 """SQLite context store for urirun host.
 
 Planfile remains the task store.  This database keeps context records,
