@@ -8,6 +8,8 @@ from __future__ import annotations
 import shlex
 from pathlib import Path
 
+from urirun import errors
+
 
 def build_loop_command(
     *,
@@ -119,6 +121,7 @@ def preview(
     return result
 
 
+@errors.capture(scheme="schedule")
 def install_systemd_user(files: dict[str, str], out_dir: str | None = None) -> list[str]:
     target = Path(out_dir or "~/.config/systemd/user").expanduser()
     target.mkdir(parents=True, exist_ok=True)

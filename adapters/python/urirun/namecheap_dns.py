@@ -18,6 +18,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+from urirun import errors
+
 
 API_PROD = "https://api.namecheap.com/xml.response"
 API_SANDBOX = "https://api.sandbox.namecheap.com/xml.response"
@@ -43,6 +45,7 @@ def env_name(profile: str | None, name: str) -> str:
     return f"NAMECHEAP_{name}"
 
 
+@errors.capture(scheme="dns")
 def config_from_env(profile: str | None = None, env: dict | None = None) -> dict:
     env = env or os.environ
     sandbox = env.get(env_name(profile, "SANDBOX"), env.get("NAMECHEAP_SANDBOX", "false")).lower() in {"1", "true", "yes", "on"}
@@ -74,6 +77,7 @@ def auth_params(config: dict, command: str, domain: str) -> dict[str, str]:
     }
 
 
+@errors.capture(scheme="dns")
 def request_api(config: dict, command: str, domain: str, params: dict | None = None, method: str = "GET") -> str:
     body = {**auth_params(config, command, domain), **(params or {})}
     encoded = urllib.parse.urlencode(body).encode("utf-8")
