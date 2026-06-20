@@ -39,6 +39,11 @@ Each language SDK MUST expose, in its own idiom, three operations:
 | JavaScript | `connector(id, {scheme})` | `c.command(route, {input, argv})` | `c.bindings()` |
 | Go | `urirun.NewConnector(id, scheme)` | `c.Command(route, Schema{…}, argv)` | `c.Bindings()` |
 | PHP | `new Urirun\Connector(id, scheme)` | `$c->command(route, $schema, $argv)` | `$c->bindings()` |
+| Ruby | `Urirun::Connector.new(id, scheme)` | `c.command(route, schema, argv)` | `c.bindings` |
+| Perl | `Urirun->new(id, scheme)` | `$c->command(route, $schema, $argv)` | `$c->bindings` |
+| Rust | `urirun::Connector::new(id, scheme)` | `c.command(route, schema_json, argv_json)` | `c.bindings_json()` |
+| Bash | `urirun_command scheme target route schema argv` | (same call) | `urirun_document "$members"` |
+| C | (see `adapters/c`) | | |
 
 ## Invariants (what conformance checks)
 

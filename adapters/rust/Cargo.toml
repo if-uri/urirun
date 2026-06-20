@@ -1,0 +1,10 @@
+[package]
+name = "urirun"
+version = "0.1.0"
+edition = "2021"
+description = "urirun SDK for Rust — build urirun.bindings.v2 connector documents"
+license = "MIT"
+
+[[example]]
+name = "hash_connector"
+path = "examples/hash_connector.rs"
