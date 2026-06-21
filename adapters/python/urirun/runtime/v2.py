@@ -1124,6 +1124,13 @@ def main(argv: list[str] | None = None) -> int:
     add_pypi_parser.add_argument("--uri")
     add_pypi_parser.add_argument("--out", default="urirun.bindings.v2.json")
 
+    adopt_pack_parser = subparsers.add_parser("adopt-pack", help="Adopt a capability-pack manifest (file, project dir, or installed package) as bindings")
+    adopt_pack_parser.add_argument("target", help="manifest file, project dir ([tool.urirun]), or installed package name")
+    adopt_pack_parser.add_argument("--out", default="-")
+    adopt_pack_parser.add_argument("--registry-out")
+    adopt_pack_parser.add_argument("--generated-at")
+    adopt_pack_parser.add_argument("--on-conflict", choices=["error", "keep", "replace"], default="keep")
+
     connectors_parser = subparsers.add_parser("connectors", help="Browse and install connectors from connect.ifuri.com")
     connectors_sub = connectors_parser.add_subparsers(dest="connectors_command", required=True)
     connectors_common = argparse.ArgumentParser(add_help=False)
@@ -1458,6 +1465,8 @@ def main(argv: list[str] | None = None) -> int:
     node_serve.add_argument("--port", type=int)
     node_serve.add_argument("--execute", action="store_true")
     node_serve.add_argument("--public-url")
+    node_serve.add_argument("--allow-secrets", action="store_true",
+                            help="permit secret:// resolution on this node (off by default; a remote /run must not read the host's local secrets)")
 
     def add_source(p, with_uri=True):
         if with_uri:
@@ -1510,6 +1519,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "discover":
         doc = entry_point_binding_document(group=args.entry_point_group, generated_at=args.generated_at)
+        reglib._emit_json(doc, args.out)
+        if args.registry_out:
+            reglib.write_json(
+                args.registry_out,
+                compile_registry(doc, generated_at=args.generated_at, on_conflict=args.on_conflict),
+            )
+        return 0
+
+    if args.command == "adopt-pack":
+        from urirun.runtime import adopt_pack as _adopt_pack
+
+        doc = _adopt_pack.adopt(args.target)
         reglib._emit_json(doc, args.out)
         if args.registry_out:
             reglib.write_json(
