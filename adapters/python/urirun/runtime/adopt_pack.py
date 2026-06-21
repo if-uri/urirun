@@ -100,31 +100,32 @@ def _tool_urirun(pyproject: Path) -> dict:
 
 
 def installed_manifest_path(package: str) -> Path | None:
-    """Locate an installed package's manifest: a ``urirun.packs`` entry point
-    first, then the conventional ``<importable>/manifest.yaml`` package data."""
-    from importlib import metadata, resources
+    """Locate an installed package's manifest *without importing it* (so a pack's
+    own dependencies need not be present to adopt its URI surface). Prefers a
+    ``urirun.packs`` entry point, then a ``manifest.yaml`` recorded by the dist."""
+    from importlib import metadata
+
+    candidates = {package, package.replace("-", "_"), package.replace("_", "-")}
 
     try:
         eps = metadata.entry_points(group="urirun.packs")
     except TypeError:  # pragma: no cover - older API
         eps = metadata.entry_points().get("urirun.packs", [])  # type: ignore
-    for ep in eps:
-        if ep.name == package:
-            module, _, rel = ep.value.partition(":")
-            try:
-                base = resources.files(module)
-                target = base / (rel or "manifest.yaml")
-                if target.is_file():
-                    return Path(str(target))
-            except (ModuleNotFoundError, FileNotFoundError):
-                pass
-    for module in (package, package.replace("-", "_")):
+    wanted = {ep.value.partition(":")[2] or "manifest.yaml" for ep in eps if ep.name in candidates}
+
+    for name in candidates:
         try:
-            target = resources.files(module) / "manifest.yaml"
-            if target.is_file():
-                return Path(str(target))
-        except (ModuleNotFoundError, FileNotFoundError, TypeError):
+            dist = metadata.distribution(name)
+        except metadata.PackageNotFoundError:
             continue
+        files = dist.files or []
+        # entry-point-named manifest first, then any manifest.yaml in the dist
+        for target in list(wanted) + ["manifest.yaml"]:
+            for f in files:
+                if f.name == Path(target).name or str(f).endswith(target):
+                    located = Path(dist.locate_file(f))
+                    if located.is_file():
+                        return located
     return None
 
 
