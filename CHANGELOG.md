@@ -228,6 +228,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compatibility modules from core after downstream migration.
 - Point active runtime install references at the `if-uri/urirun` namespace.
 
+## [0.4.2] - 2026-06-21
+
+### Other
+- Update adapters/python/urirun/runtime/introspect.py
+- Update adapters/python/urirun/runtime/v2.py
+
 ## [0.4.1] - 2026-06-21
 
 ### Docs

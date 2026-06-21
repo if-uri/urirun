@@ -446,6 +446,8 @@ def run_domain_monitor(ctx: dict, policy: dict, execute: bool) -> dict:
     return _host_integrations().run_domain_monitor(ctx, policy, execute)
 
 
+from urirun.runtime.introspect import run_registry_introspect
+
 EXECUTORS = {
     **v1.EXECUTORS,
     "argv-template": run_argv_template,
@@ -454,6 +456,7 @@ EXECUTORS = {
     "error-store": run_error_store,
     "host-sqlite-data": run_host_data,
     "planfile-task": run_planfile_task,
+    "registry-introspect": run_registry_introspect,
     "shell-template": run_shell_template,
 }
 
@@ -472,6 +475,15 @@ def _builtin_error_route_entry(translation: dict) -> dict | None:
         }
     if operation == "command":
         return {"kind": "command", "adapter": "error-store", "config": {}, "meta": {"connector": "urirun-core"}}
+    return None
+
+
+def _builtin_registry_route_entry(translation: dict) -> dict | None:
+    if translation.get("package") != "registry":
+        return None
+    if translation.get("operation") == "query":
+        return {"kind": "query", "adapter": "registry-introspect", "config": {},
+                "policy": {"allowExecute": True}, "meta": {"connector": "urirun-core"}}
     return None
 
 
@@ -507,7 +519,7 @@ def run(
     try:
         route_entry = reglib.resolve_route(translation, registry)
     except KeyError as err:
-        route_entry = _builtin_error_route_entry(translation)
+        route_entry = _builtin_error_route_entry(translation) or _builtin_registry_route_entry(translation)
         if route_entry is None:
             envelope = {
                 "uri": descriptor["normalized"],
