@@ -111,6 +111,35 @@ def main() -> int:
             print(f"ok   {name}: matches python and validates")
     print("ok   python: reference, validates")
 
+    # Functional check: the standardized contract must not just validate, it must
+    # actually run. Compile each language's bindings and execute the hash route
+    # against a known file; the real sha256 must match.
+    import hashlib
+    import tempfile
+    import urirun
+
+    data = b"urirun conformance\n"
+    expected = hashlib.sha256(data).hexdigest()
+    fd, path = tempfile.mkstemp(suffix=".txt")
+    os.write(fd, data)
+    os.close(fd)
+    executed = 0
+    try:
+        for name in sorted(contracts):
+            reg = urirun.compile_registry(outputs[name])
+            env = urirun.run(ROUTE, reg, payload={"path": path}, mode="execute",
+                             policy={"execute": {"allow": ["hash://*"]}})
+            res = env.get("result") or {}
+            out = str(res.get("stdout") or res.get("output") or res)
+            if env.get("ok") and expected in out:
+                executed += 1
+            else:
+                print(f"FAIL {name}: hash connector did not execute correctly")
+                errors += 1
+    finally:
+        os.unlink(path)
+    print(f"exec: {executed}/{len(contracts)} connectors ran and produced the correct sha256")
+
     print(f"\n{len(contracts)} SDK(s) checked, {errors} error(s)")
     return 1 if errors else 0
 
