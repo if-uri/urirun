@@ -63,29 +63,37 @@ def run_registry_introspect(ctx: dict, policy: dict, execute: bool = True) -> di
     except (FileNotFoundError, ValueError) as exc:
         return {"ok": False, "type": "registry", "error": f"cannot load registry: {exc}"}
 
-    routes = _runtime.list_routes(registry)
-    args = ctx.get("args") or (ctx.get("descriptor") or {}).get("args") or []
-    resource = args[0] if args else (ctx.get("descriptor") or {}).get("normalized", "")
+    flat = reglib.flatten_registry_document(registry)  # [{uri, routeEntry}, ...]
+    resource = (ctx.get("translation") or {}).get("resource") or ""
 
-    if resource == "bindings" or "/bindings/" in resource:
+    if resource == "bindings":
         wanted = payload.get("uri")
-        match = next((route for route in routes if route["uri"] == wanted), None)
-        return {"ok": bool(match), "type": "binding", "uri": wanted, "binding": match}
+        match = next((route for route in flat if route["uri"] == wanted), None)
+        if not match:
+            return {"ok": False, "type": "binding", "uri": wanted, "binding": None}
+        entry = match["routeEntry"]
+        return {"ok": True, "type": "binding", "uri": wanted, "binding": {
+            "uri": wanted, "kind": entry.get("kind"), "adapter": entry.get("adapter"),
+            "connector": (entry.get("meta") or {}).get("connector"),
+            "inputSchema": (entry.get("config") or {}).get("inputSchema") or entry.get("inputSchema"),
+            "meta": entry.get("meta"), "policy": entry.get("policy"),
+        }}
 
     scheme = payload.get("scheme")
     needle = payload.get("q")
     items = []
-    for route in routes:
+    for route in flat:
         route_uri = route["uri"]
         if scheme and not route_uri.startswith(f"{scheme}://"):
             continue
         if needle and needle not in route_uri:
             continue
+        entry = route["routeEntry"]
         items.append({
             "uri": route_uri,
             "kind": "query" if "/query/" in route_uri else "command",
-            "adapter": route.get("adapter"),
-            "connector": (route.get("meta") or {}).get("connector"),
-            "label": (route.get("meta") or {}).get("label", ""),
+            "adapter": entry.get("adapter"),
+            "connector": (entry.get("meta") or {}).get("connector"),
+            "label": (entry.get("meta") or {}).get("label", ""),
         })
     return {"ok": True, "type": "registry", "count": len(items), "routes": items}

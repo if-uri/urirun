@@ -123,6 +123,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `registry://` self-introspection: urirun now exposes its own registry over URI,
+  alongside the existing `error://` (error store) and `log://` routes —
+  `registry://local/routes/query/list` (filter by `scheme`/`q`) and
+  `registry://local/bindings/query/show` (one binding by uri). Read-only `query`
+  routes backed by the `registry-introspect` executor; the registry to inspect is
+  passed in the payload (`registry: <path>`). In `urirun/runtime/introspect.py`.
 - secret:// providers `vault` (HashiCorp Vault KV v2 via `VAULT_ADDR`/`VAULT_TOKEN`)
   and `oauth` (cached access token with in-place refresh, bundle in keyring). The
   `browser` provider deliberately refuses (infostealer pattern the OS blocks by
@@ -227,6 +233,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Record IFURI-015 follow-up work: remove remaining host/domain/app
   compatibility modules from core after downstream migration.
 - Point active runtime install references at the `if-uri/urirun` namespace.
+
+## [0.4.3] - 2026-06-21
+
+### Docs
+- Update CHANGELOG.md
+
+### Other
+- Update adapters/python/tests/test_introspect.py
+- Update adapters/python/urirun/runtime/introspect.py
 
 ## [0.4.2] - 2026-06-21
 
