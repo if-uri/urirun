@@ -1,5 +1,5 @@
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urirun', '0.4.34', 'javascript').
+project_metadata('urirun', '0.4.40', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/bash/example/hash-connector.sh', 10, 'shell').
@@ -33,7 +33,7 @@ project_file('adapters/python/tests/test_host_dashboard.py', 97, 'python').
 project_file('adapters/python/tests/test_host_db.py', 113, 'python').
 project_file('adapters/python/tests/test_install_upgrade.py', 109, 'python').
 project_file('adapters/python/tests/test_introspect.py', 76, 'python').
-project_file('adapters/python/tests/test_mesh.py', 481, 'python').
+project_file('adapters/python/tests/test_mesh.py', 510, 'python').
 project_file('adapters/python/tests/test_minimal_imports.py', 91, 'python').
 project_file('adapters/python/tests/test_node_diagnostics.py', 46, 'python').
 project_file('adapters/python/tests/test_openapi_import.py', 49, 'python').
@@ -48,7 +48,7 @@ project_file('adapters/python/tests/test_urihandler.py', 350, 'python').
 project_file('adapters/python/tests/test_v2_mcp.py', 49, 'python').
 project_file('adapters/python/tests/test_worker.py', 66, 'python').
 project_file('adapters/python/tests/test_worker_pool.py', 84, 'python').
-project_file('adapters/python/urirun/__init__.py', 601, 'python').
+project_file('adapters/python/urirun/__init__.py', 619, 'python').
 project_file('adapters/python/urirun/_registry.py', 9, 'python').
 project_file('adapters/python/urirun/_runtime.py', 9, 'python').
 project_file('adapters/python/urirun/_scan.py', 9, 'python').
@@ -83,7 +83,7 @@ project_file('adapters/python/urirun/mesh.py', 6, 'python').
 project_file('adapters/python/urirun/node/__init__.py', 2, 'python').
 project_file('adapters/python/urirun/node/keyauth.py', 157, 'python').
 project_file('adapters/python/urirun/node/manage.py', 108, 'python').
-project_file('adapters/python/urirun/node/mesh.py', 2171, 'python').
+project_file('adapters/python/urirun/node/mesh.py', 2243, 'python').
 project_file('adapters/python/urirun/planfile_adapter.py', 6, 'python').
 project_file('adapters/python/urirun/runtime/__init__.py', 2, 'python').
 project_file('adapters/python/urirun/runtime/_registry.py', 719, 'python').
@@ -99,14 +99,14 @@ project_file('adapters/python/urirun/runtime/dispatch_protocol.py', 184, 'python
 project_file('adapters/python/urirun/runtime/errors.py', 564, 'python').
 project_file('adapters/python/urirun/runtime/introspect.py', 113, 'python').
 project_file('adapters/python/urirun/runtime/secrets.py', 235, 'python').
-project_file('adapters/python/urirun/runtime/tree.py', 87, 'python').
+project_file('adapters/python/urirun/runtime/tree.py', 92, 'python').
 project_file('adapters/python/urirun/runtime/v1.py', 432, 'python').
-project_file('adapters/python/urirun/runtime/v2.py', 2477, 'python').
+project_file('adapters/python/urirun/runtime/v2.py', 2498, 'python').
 project_file('adapters/python/urirun/runtime/v2_adopt.py', 194, 'python').
 project_file('adapters/python/urirun/runtime/v2_grpc.py', 205, 'python').
 project_file('adapters/python/urirun/runtime/v2_mcp.py', 208, 'python').
 project_file('adapters/python/urirun/runtime/v2_service.py', 110, 'python').
-project_file('adapters/python/urirun/runtime/worker.py', 261, 'python').
+project_file('adapters/python/urirun/runtime/worker.py', 267, 'python').
 project_file('adapters/python/urirun/scheduler.py', 6, 'python').
 project_file('adapters/python/urirun/task_planner.py', 6, 'python').
 project_file('adapters/python/urirun/testing.py', 190, 'python').
@@ -315,7 +315,9 @@ python_function('adapters/python/urirun/__init__.py', 'connector', 1, 2, 2).
 python_function('adapters/python/urirun/__init__.py', 'load_manifest', 2, 1, 1).
 python_function('adapters/python/urirun/__init__.py', 'connector_emit', 1, 1, 1).
 python_function('adapters/python/urirun/__init__.py', 'connector_cli', 1, 1, 1).
-python_function('adapters/python/urirun/__init__.py', 'connector_main', 0, 25, 20).
+python_function('adapters/python/urirun/__init__.py', 'connector_main', 0, 6, 12).
+python_function('adapters/python/urirun/__init__.py', '_connector_cli_routes', 2, 12, 9).
+python_function('adapters/python/urirun/__init__.py', '_connector_run_command', 3, 9, 6).
 python_function('adapters/python/urirun/connectors/connect_catalog.py', '_get_json', 2, 2, 5).
 python_function('adapters/python/urirun/connectors/connect_catalog.py', 'fetch_catalog', 2, 1, 3).
 python_function('adapters/python/urirun/connectors/connect_catalog.py', 'fetch_connector', 3, 1, 3).
@@ -616,7 +618,8 @@ python_function('adapters/python/urirun/node/mesh.py', '_task_run', 2, 6, 6).
 python_function('adapters/python/urirun/node/mesh.py', '_task_loop', 2, 10, 11).
 python_function('adapters/python/urirun/node/mesh.py', 'task_command', 1, 2, 2).
 python_function('adapters/python/urirun/node/mesh.py', '_host_delegated_command', 1, 10, 10).
-python_function('adapters/python/urirun/node/mesh.py', 'watch_command', 1, 23, 17).
+python_function('adapters/python/urirun/node/mesh.py', '_print_event', 2, 6, 4).
+python_function('adapters/python/urirun/node/mesh.py', 'watch_command', 1, 17, 18).
 python_function('adapters/python/urirun/node/mesh.py', '_host_mesh_command', 3, 13, 9).
 python_function('adapters/python/urirun/node/mesh.py', 'copy_id_command', 1, 12, 12).
 python_function('adapters/python/urirun/node/mesh.py', 'copy_id_cli', 1, 7, 7).
@@ -627,12 +630,16 @@ python_function('adapters/python/urirun/node/mesh.py', 'read_raw', 1, 3, 4).
 python_function('adapters/python/urirun/node/mesh.py', 'read_json', 1, 2, 3).
 python_function('adapters/python/urirun/node/mesh.py', '_pool_executors', 1, 1, 5).
 python_function('adapters/python/urirun/node/mesh.py', 'node_state_dir', 0, 1, 3).
-python_function('adapters/python/urirun/node/mesh.py', 'deploy_dir', 0, 2, 4).
+python_function('adapters/python/urirun/node/mesh.py', 'deploy_dir', 0, 5, 7).
 python_function('adapters/python/urirun/node/mesh.py', 'node_token_path', 0, 1, 1).
 python_function('adapters/python/urirun/node/mesh.py', 'resolve_admin_token', 3, 11, 11).
-python_function('adapters/python/urirun/node/mesh.py', 'apply_deploy', 2, 21, 26).
-python_function('adapters/python/urirun/node/mesh.py', 'serve_node', 13, 12, 65).
-python_function('adapters/python/urirun/node/mesh.py', '_node_serve', 4, 17, 12).
+python_function('adapters/python/urirun/node/mesh.py', '_write_pushed_code', 2, 9, 13).
+python_function('adapters/python/urirun/node/mesh.py', '_apply_deploy_env', 2, 4, 4).
+python_function('adapters/python/urirun/node/mesh.py', '_deploy_registry', 1, 4, 3).
+python_function('adapters/python/urirun/node/mesh.py', 'apply_deploy', 2, 8, 16).
+python_function('adapters/python/urirun/node/mesh.py', 'serve_node', 13, 12, 19).
+python_function('adapters/python/urirun/node/mesh.py', '_resolve_serve_opts', 2, 17, 10).
+python_function('adapters/python/urirun/node/mesh.py', '_node_serve', 4, 1, 4).
 python_function('adapters/python/urirun/node/mesh.py', 'node_list_command', 1, 7, 7).
 python_function('adapters/python/urirun/node/mesh.py', 'node_stop_command', 1, 14, 9).
 python_function('adapters/python/urirun/node/mesh.py', 'node_command', 1, 13, 13).
@@ -853,7 +860,7 @@ python_function('adapters/python/urirun/runtime/secrets.py', 'has_secret', 1, 1,
 python_function('adapters/python/urirun/runtime/tree.py', 'collect_uris', 1, 11, 6).
 python_function('adapters/python/urirun/runtime/tree.py', 'uri_tree', 1, 4, 4).
 python_function('adapters/python/urirun/runtime/tree.py', 'build', 1, 1, 2).
-python_function('adapters/python/urirun/runtime/tree.py', 'main', 1, 2, 8).
+python_function('adapters/python/urirun/runtime/tree.py', 'main', 1, 3, 9).
 python_function('adapters/python/urirun/runtime/v1.py', '_params_spec', 1, 4, 1).
 python_function('adapters/python/urirun/runtime/v1.py', 'resolve_params', 4, 11, 11).
 python_function('adapters/python/urirun/runtime/v1.py', 'render_value', 2, 1, 4).
@@ -892,7 +899,8 @@ python_function('adapters/python/urirun/runtime/v2.py', '_load_entry_point_bindi
 python_function('adapters/python/urirun/runtime/v2.py', 'entry_point_bindings', 1, 6, 7).
 python_function('adapters/python/urirun/runtime/v2.py', '_entry_point_script_issues', 1, 5, 4).
 python_function('adapters/python/urirun/runtime/v2.py', 'connector_health', 1, 5, 11).
-python_function('adapters/python/urirun/runtime/v2.py', 'connector_collisions', 1, 17, 12).
+python_function('adapters/python/urirun/runtime/v2.py', '_collision_index', 1, 7, 8).
+python_function('adapters/python/urirun/runtime/v2.py', 'connector_collisions', 1, 11, 6).
 python_function('adapters/python/urirun/runtime/v2.py', 'entry_point_binding_document', 2, 2, 2).
 python_function('adapters/python/urirun/runtime/v2.py', 'entry_point_registry', 3, 1, 2).
 python_function('adapters/python/urirun/runtime/v2.py', '_schema_for', 1, 3, 1).
@@ -972,7 +980,7 @@ python_function('adapters/python/urirun/runtime/v2.py', '_cmd_scan', 2, 3, 7).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_compile', 2, 3, 5).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_discover', 2, 2, 4).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_adopt_pack', 2, 2, 4).
-python_function('adapters/python/urirun/runtime/v2.py', '_cmd_tree', 2, 2, 5).
+python_function('adapters/python/urirun/runtime/v2.py', '_cmd_tree', 2, 3, 5).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_validate', 2, 7, 10).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_add_command', 2, 2, 4).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_add_pypi', 2, 1, 2).
@@ -985,9 +993,11 @@ python_function('adapters/python/urirun/runtime/v2.py', '_pip_install_args', 1, 
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_install', 2, 2, 8).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_upgrade', 2, 14, 12).
 python_function('adapters/python/urirun/runtime/v2.py', '_pipspec_version', 1, 4, 3).
-python_function('adapters/python/urirun/runtime/v2.py', '_cmd_outdated', 2, 16, 15).
+python_function('adapters/python/urirun/runtime/v2.py', '_outdated_rows', 2, 9, 10).
+python_function('adapters/python/urirun/runtime/v2.py', '_cmd_outdated', 2, 8, 7).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_agent', 2, 1, 1).
-python_function('adapters/python/urirun/runtime/v2.py', '_cmd_connectors_doctor', 2, 18, 9).
+python_function('adapters/python/urirun/runtime/v2.py', '_print_doctor_report', 4, 7, 4).
+python_function('adapters/python/urirun/runtime/v2.py', '_cmd_connectors_doctor', 2, 11, 8).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_connectors', 2, 3, 5).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_errors', 2, 1, 1).
 python_function('adapters/python/urirun/runtime/v2.py', '_cmd_compat', 2, 1, 1).
@@ -1174,6 +1184,7 @@ python_method('MeshTests', 'test_copy_id_gives_actionable_error_not_bare_404', 0
 python_method('MeshTests', 'test_node_config_defaults', 0, 1, 6).
 python_method('MeshTests', 'test_manage_bindings_and_install', 0, 4, 6).
 python_method('MeshTests', 'test_node_management_routes_admin_gated', 0, 2, 21).
+python_method('MeshTests', 'test_run_with_broken_handler_returns_json_not_dropped_connection', 0, 2, 17).
 python_method('MeshTests', 'test_event_topic_mapping', 0, 1, 2).
 python_method('MeshTests', 'test_fanout_to_mqtt_publishes_each_event', 0, 1, 4).
 python_method('MeshTests', 'test_event_hub_ids_and_replay', 0, 2, 4).
@@ -1272,6 +1283,26 @@ python_method('EventHub', 'unsubscribe', 1, 1, 1).
 python_method('EventHub', 'replay_since', 1, 3, 1).
 python_method('EventHub', 'current_id', 0, 1, 0).
 python_method('EventHub', 'count', 0, 1, 1).
+python_class('adapters/python/urirun/node/mesh.py', 'NodeContext').
+python_method('NodeContext', '__init__', 0, 1, 1).
+python_class('adapters/python/urirun/node/mesh.py', 'NodeHandler').
+python_method('NodeHandler', 'ctx', 0, 1, 0).
+python_method('NodeHandler', 'do_OPTIONS', 0, 1, 1).
+python_method('NodeHandler', '_guarded', 1, 3, 3).
+python_method('NodeHandler', 'do_GET', 0, 1, 1).
+python_method('NodeHandler', 'do_POST', 0, 1, 1).
+python_method('NodeHandler', '_get', 0, 12, 13).
+python_method('NodeHandler', '_get_errors', 2, 8, 12).
+python_method('NodeHandler', '_post', 0, 6, 6).
+python_method('NodeHandler', '_run_target', 2, 6, 6).
+python_method('NodeHandler', '_publish_run', 2, 5, 4).
+python_method('NodeHandler', '_handle_run', 0, 12, 12).
+python_method('NodeHandler', '_stream_events', 0, 17, 23).
+python_method('NodeHandler', '_admin_ok', 1, 5, 4).
+python_method('NodeHandler', '_run_ok', 1, 5, 4).
+python_method('NodeHandler', '_handle_deploy', 0, 5, 9).
+python_method('NodeHandler', '_handle_enroll', 0, 9, 12).
+python_method('NodeHandler', 'log_message', 1, 1, 0).
 python_class('adapters/python/urirun/runtime/_runtime.py', 'PolicyError').
 python_class('adapters/python/urirun/runtime/secrets.py', 'SecretStr').
 python_method('SecretStr', '__init__', 2, 1, 0).
@@ -1297,7 +1328,9 @@ python_method('HandlerPool', '__enter__', 0, 1, 0).
 python_method('HandlerPool', '__exit__', 0, 1, 1).
 python_class('adapters/python/urirun/runtime/worker.py', 'ConnectorPools').
 python_method('ConnectorPools', '__init__', 0, 1, 0).
-python_method('ConnectorPools', 'run_route', 2, 16, 9).
+python_method('ConnectorPools', 'run_route', 2, 3, 3).
+python_method('ConnectorPools', '_run_handler', 2, 5, 3).
+python_method('ConnectorPools', '_run_argv', 2, 10, 7).
 python_method('ConnectorPools', 'close', 0, 3, 3).
 
 % ── Dependencies ─────────────────────────────────────────

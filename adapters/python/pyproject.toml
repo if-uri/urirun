@@ -19,6 +19,7 @@ grpc = ["grpcio>=1.60"]
 planfile = ["planfile>=0.1.103"]
 llm = ["litellm>=1.60"]
 keyauth = ["cryptography>=41"]  # SSH-key admin auth (uri-copy-id, signed /deploy)
+yaml = ["pyyaml>=6"]  # YAML manifests (adopt-pack) + `urirun tree --format yaml`
 host = ["planfile>=0.1.103", "litellm>=1.60"]
 test = ["planfile>=0.1.103", "pytest>=7"]
 

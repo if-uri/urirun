@@ -1666,11 +1666,21 @@ def node_state_dir() -> Path:
 
 
 def deploy_dir() -> Path:
-    """Where /deploy writes pushed handler code so the node can import it."""
+    """Where /deploy writes pushed handler code so the node can import it.
+
+    Added to ``sys.path`` (for in-process ``local-function`` handlers) AND to
+    ``PYTHONPATH`` so the out-of-process ``python -m urirun.exec`` runner used by
+    ``isolated`` (``local-function-subprocess``) handlers can import deployed
+    modules too — without it a deployed isolated connector fails with
+    ``ModuleNotFoundError``."""
     d = node_state_dir() / "deploy"
     d.mkdir(parents=True, exist_ok=True)
-    if str(d) not in sys.path:
-        sys.path.insert(0, str(d))
+    ds = str(d)
+    if ds not in sys.path:
+        sys.path.insert(0, ds)
+    parts = [p for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p]
+    if ds not in parts:
+        os.environ["PYTHONPATH"] = os.pathsep.join([ds, *parts])
     return d
 
 
@@ -2088,9 +2098,10 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
     _is_local = host in ("127.0.0.1", "localhost", "::1", "")
     if execute and not _is_local and not run_auth_enforced:
         sys.stderr.write(
-            f"[urirun] SECURITY: node '{name}' serves /run with NO authentication on {host}:{port} "
-            f"(reachable beyond localhost). Anyone who reaches this port can execute every --allow'ed "
-            f"route. Bind 127.0.0.1, or add --admin-token/--key-auth and --require-run-auth.\n"
+            f"[urirun] SECURITY: node '{name}' serves /run (and reads via /events) with NO "
+            f"authentication on {host}:{port} (reachable beyond localhost). Anyone who reaches this "
+            f"port can execute every --allow'ed route and watch its event stream. Bind 127.0.0.1, or "
+            f"add --admin-token/--key-auth and --require-run-auth (which also gates /events).\n"
         )
         sys.stderr.flush()
     # Mutable so POST /deploy can hot-swap what the node serves without a restart.

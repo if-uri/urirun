@@ -1,7 +1,7 @@
-# urirun | 136f 22218L | python:114,shell:10,javascript:4,go:3,rust:2,typescript:2,less:1 | 2026-06-22
-# stats: 921 func | 39 cls | 136 mod | CC̄=4.3 | critical:90 | cycles:0
-# alerts[5]: CC connector_main=25; CC watch_command=23; CC apply_deploy=21; CC _cmd_connectors_doctor=18; CC main=18
-# hotspots[5]: serve_node fan=65; serve fan=28; apply_deploy fan=26; main fan=23; main fan=23
+# urirun | 136f 22369L | python:114,shell:10,javascript:4,go:3,rust:2,typescript:2,less:1 | 2026-06-22
+# stats: 931 func | 41 cls | 136 mod | CC̄=4.3 | critical:88 | cycles:0
+# alerts[5]: CC main=18; CC main=17; CC watch_command=17; CC _resolve_serve_opts=17; CC normalize_flow=15
+# hotspots[5]: serve fan=28; main fan=23; main fan=23; serve_node fan=19; main fan=19
 # evolution: baseline
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
 M[136]:
@@ -36,7 +36,7 @@ M[136]:
   adapters/python/tests/test_host_db.py,113
   adapters/python/tests/test_install_upgrade.py,109
   adapters/python/tests/test_introspect.py,76
-  adapters/python/tests/test_mesh.py,481
+  adapters/python/tests/test_mesh.py,510
   adapters/python/tests/test_minimal_imports.py,91
   adapters/python/tests/test_node_diagnostics.py,46
   adapters/python/tests/test_openapi_import.py,49
@@ -51,7 +51,7 @@ M[136]:
   adapters/python/tests/test_v2_mcp.py,49
   adapters/python/tests/test_worker.py,66
   adapters/python/tests/test_worker_pool.py,84
-  adapters/python/urirun/__init__.py,601
+  adapters/python/urirun/__init__.py,619
   adapters/python/urirun/_registry.py,9
   adapters/python/urirun/_runtime.py,9
   adapters/python/urirun/_scan.py,9
@@ -86,7 +86,7 @@ M[136]:
   adapters/python/urirun/node/__init__.py,2
   adapters/python/urirun/node/keyauth.py,157
   adapters/python/urirun/node/manage.py,108
-  adapters/python/urirun/node/mesh.py,2171
+  adapters/python/urirun/node/mesh.py,2243
   adapters/python/urirun/planfile_adapter.py,6
   adapters/python/urirun/runtime/__init__.py,2
   adapters/python/urirun/runtime/_registry.py,719
@@ -102,14 +102,14 @@ M[136]:
   adapters/python/urirun/runtime/errors.py,564
   adapters/python/urirun/runtime/introspect.py,113
   adapters/python/urirun/runtime/secrets.py,235
-  adapters/python/urirun/runtime/tree.py,87
+  adapters/python/urirun/runtime/tree.py,92
   adapters/python/urirun/runtime/v1.py,432
-  adapters/python/urirun/runtime/v2.py,2477
+  adapters/python/urirun/runtime/v2.py,2498
   adapters/python/urirun/runtime/v2_adopt.py,194
   adapters/python/urirun/runtime/v2_grpc.py,205
   adapters/python/urirun/runtime/v2_mcp.py,208
   adapters/python/urirun/runtime/v2_service.py,110
-  adapters/python/urirun/runtime/worker.py,261
+  adapters/python/urirun/runtime/worker.py,267
   adapters/python/urirun/scheduler.py,6
   adapters/python/urirun/task_planner.py,6
   adapters/python/urirun/testing.py,190
@@ -319,7 +319,7 @@ D:
     test_zero_config_registry_carries_builtin_routes()
   adapters/python/tests/test_mesh.py:
     e: MeshTests
-    MeshTests: test_host_config_add_node(0),test_apply_deploy_hot_swaps_registry_code_and_allow(0),test_apply_deploy_requires_a_surface(0),test_apply_deploy_reloads_pushed_code_without_restart(0),test_resolve_admin_token_generate_reuse_and_precedence(0),test_verify_request_rejects_replay(0),test_apply_deploy_ignores_dangerous_env(0),test_oversized_body_rejected_with_413(0),test_run_rejects_malformed_body_with_400(0),test_parse_ports(0),test_node_list_running_discovers_a_live_node(0),test_require_run_auth_gates_run(0),test_keyauth_sign_verify_and_enrollment(0),test_stop_node_port_when_nothing_listening(0),test_copy_id_gives_actionable_error_not_bare_404(0),test_node_config_defaults(0),test_manage_bindings_and_install(0),test_node_management_routes_admin_gated(0),test_event_topic_mapping(0),test_fanout_to_mqtt_publishes_each_event(0),test_event_hub_ids_and_replay(0),test_events_endpoint_auth_gating(0),test_heuristic_flow_uses_all_reachable_nodes(0),test_registry_from_remote_routes(0),test_resolve_step_payload_chains_prior_results(0),test_dig_path_indexes_lists(0),test_resolve_step_payload_passthrough_without_from(0)
+    MeshTests: test_host_config_add_node(0),test_apply_deploy_hot_swaps_registry_code_and_allow(0),test_apply_deploy_requires_a_surface(0),test_apply_deploy_reloads_pushed_code_without_restart(0),test_resolve_admin_token_generate_reuse_and_precedence(0),test_verify_request_rejects_replay(0),test_apply_deploy_ignores_dangerous_env(0),test_oversized_body_rejected_with_413(0),test_run_rejects_malformed_body_with_400(0),test_parse_ports(0),test_node_list_running_discovers_a_live_node(0),test_require_run_auth_gates_run(0),test_keyauth_sign_verify_and_enrollment(0),test_stop_node_port_when_nothing_listening(0),test_copy_id_gives_actionable_error_not_bare_404(0),test_node_config_defaults(0),test_manage_bindings_and_install(0),test_node_management_routes_admin_gated(0),test_run_with_broken_handler_returns_json_not_dropped_connection(0),test_event_topic_mapping(0),test_fanout_to_mqtt_publishes_each_event(0),test_event_hub_ids_and_replay(0),test_events_endpoint_auth_gating(0),test_heuristic_flow_uses_all_reachable_nodes(0),test_registry_from_remote_routes(0),test_resolve_step_payload_chains_prior_results(0),test_dig_path_indexes_lists(0),test_resolve_step_payload_passthrough_without_from(0)
   adapters/python/tests/test_minimal_imports.py:
     e: MinimalImportTests
     MinimalImportTests: test_core_import_keeps_host_and_domain_modules_lazy(0),test_host_binding_generation_keeps_executors_lazy(0)
@@ -396,7 +396,7 @@ D:
     test_python_m_route_dispatches(tmp_path)
     test_local_function_subprocess_route_is_pooled(tmp_path)
   adapters/python/urirun/__init__.py:
-    e: parse_uri,build_invocation,dispatch,command,shell,handler,_example_payload,ok,fail,plan,policy,action_space,result_data,connector_bindings,entry_point_bindings,entry_point_binding_document,entry_point_registry,error_bindings,compat_report,compile_registry,list_routes,validate_binding_document,run,connector,load_manifest,connector_emit,connector_cli,connector_main,Connector
+    e: parse_uri,build_invocation,dispatch,command,shell,handler,_example_payload,ok,fail,plan,policy,action_space,result_data,connector_bindings,entry_point_bindings,entry_point_binding_document,entry_point_registry,error_bindings,compat_report,compile_registry,list_routes,validate_binding_document,run,connector,load_manifest,connector_emit,connector_cli,connector_main,_connector_cli_routes,_connector_run_command,Connector
     Connector: __post_init__(0),uri(1),_meta(1),command(1),shell(1),cli(1),_add_route_arguments(3),_build_cli_parser(2),_dispatch_cli(3),handler(1),registry(1),bindings(0),_live_bindings(0),manifest(1),mcp_tools(0),a2a_card(0)  # Small convention helper for connector packages.
     parse_uri(uri)
     build_invocation(descriptor)
@@ -426,6 +426,8 @@ D:
     connector_emit(payload)
     connector_cli(prog)
     connector_main()
+    _connector_cli_routes(sub;pairs)
+    _connector_run_command(conn;binding;args)
   adapters/python/urirun/_registry.py:
   adapters/python/urirun/_runtime.py:
   adapters/python/urirun/_scan.py:
@@ -695,8 +697,10 @@ D:
     runtime_info()
     bindings(name)
   adapters/python/urirun/node/mesh.py:
-    e: now_id,slug,json_load,json_write,host_config_path,node_config_path,default_host_config,load_host_config,save_host_config,init_host,add_node,default_node_config,load_node_config,save_node_config,init_node,current_version,_vtuple,latest_version,version_status,version_line,http_json,_probe_health,_listening_ports_local,node_list_running,_pids_on_port,stop_node_port,parse_ports,node_url,deploy_to_node,watch_node,event_topic,_mqtt_publish_fn,fanout_to_mqtt,copy_id,routes_from_registry,safe_route,route_target,discover_node,discover_mesh,binding_for_remote_route,registry_from_routes,target_nodes,first_url,append_if_available,_flow_intents,_append_target_steps,heuristic_flow,json_from_text,normalize_flow,llm_flow,make_flow,_dig_path,resolve_step_payload,execute_flow,format_nodes,format_routes,format_tickets,format_table,_parse_json_option,data_command,monitor_command,_task_prompt,_ticket_payload,_host_local_registry,_run_executor_handler,_resolves_locally,_run_task_flow,_emit_ticket_result,_task_plan,_task_bindings,_task_schedule,_task_list,_task_show,_task_next,_task_create,_task_claim,_task_start,_task_complete,_task_fail,_task_block,_task_ready,_task_wait,_task_dsl,_task_run,_task_loop,task_command,_host_delegated_command,watch_command,_host_mesh_command,copy_id_command,copy_id_cli,deploy_command,host_command,send_json,read_raw,read_json,_pool_executors,node_state_dir,deploy_dir,node_token_path,resolve_admin_token,apply_deploy,serve_node,_node_serve,node_list_command,node_stop_command,node_command,EventHub
+    e: now_id,slug,json_load,json_write,host_config_path,node_config_path,default_host_config,load_host_config,save_host_config,init_host,add_node,default_node_config,load_node_config,save_node_config,init_node,current_version,_vtuple,latest_version,version_status,version_line,http_json,_probe_health,_listening_ports_local,node_list_running,_pids_on_port,stop_node_port,parse_ports,node_url,deploy_to_node,watch_node,event_topic,_mqtt_publish_fn,fanout_to_mqtt,copy_id,routes_from_registry,safe_route,route_target,discover_node,discover_mesh,binding_for_remote_route,registry_from_routes,target_nodes,first_url,append_if_available,_flow_intents,_append_target_steps,heuristic_flow,json_from_text,normalize_flow,llm_flow,make_flow,_dig_path,resolve_step_payload,execute_flow,format_nodes,format_routes,format_tickets,format_table,_parse_json_option,data_command,monitor_command,_task_prompt,_ticket_payload,_host_local_registry,_run_executor_handler,_resolves_locally,_run_task_flow,_emit_ticket_result,_task_plan,_task_bindings,_task_schedule,_task_list,_task_show,_task_next,_task_create,_task_claim,_task_start,_task_complete,_task_fail,_task_block,_task_ready,_task_wait,_task_dsl,_task_run,_task_loop,task_command,_host_delegated_command,_print_event,watch_command,_host_mesh_command,copy_id_command,copy_id_cli,deploy_command,host_command,send_json,read_raw,read_json,_pool_executors,node_state_dir,deploy_dir,node_token_path,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_deploy_registry,apply_deploy,serve_node,_resolve_serve_opts,_node_serve,node_list_command,node_stop_command,node_command,EventHub,NodeContext,NodeHandler
     EventHub: __init__(1),publish(1),subscribe(0),unsubscribe(1),replay_since(1),current_id(0),count(0)  # In-memory pub/sub for a node's live event stream (SSE). Each
+    NodeContext: __init__(0)  # Everything a NodeHandler needs to serve one node — the mutab
+    NodeHandler: ctx(0),do_OPTIONS(0),_guarded(1),do_GET(0),do_POST(0),_get(0),_get_errors(2),_post(0),_run_target(2),_publish_run(2),_handle_run(0),_stream_events(0),_admin_ok(1),_run_ok(1),_handle_deploy(0),_handle_enroll(0),log_message(1)  # The node's HTTP surface. State/config live on `self.server.c
     now_id()
     slug(value)
     json_load(path)
@@ -784,6 +788,7 @@ D:
     _task_loop(args;pa)
     task_command(args)
     _host_delegated_command(args)
+    _print_event(ev;as_json)
     watch_command(args)
     _host_mesh_command(args;config;mesh)
     copy_id_command(args)
@@ -798,8 +803,12 @@ D:
     deploy_dir()
     node_token_path()
     resolve_admin_token(explicit;config_token;generate)
+    _write_pushed_code(code;summary)
+    _apply_deploy_env(env;summary)
+    _deploy_registry(body)
     apply_deploy(state;body)
     serve_node(name;registry;host;port;execute;public_url;allow_secrets;allow;pool;admin_token;key_auth;require_run_auth;manage)
+    _resolve_serve_opts(args;node)
     _node_serve(args;node;name;registry)
     node_list_command(args)
     node_stop_command(args)
@@ -1081,7 +1090,7 @@ D:
     load_registry_arg(arg;openapi_base_url)
     main(argv)
   adapters/python/urirun/runtime/v2.py:
-    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,_handler_kwargs,uri_handler,decorated_bindings,_document_binding_from_expanded,connector_bindings,_select_entry_points,_load_entry_point_bindings,entry_point_bindings,_entry_point_script_issues,connector_health,connector_collisions,entry_point_binding_document,entry_point_registry,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,_first_payload_value,_resolve_error_action,_error_recent,_error_search,_error_info,_error_ticket,run_error_store,_host_integrations,planfile_task_bindings,run_planfile_task,host_data_bindings,run_host_data,domain_monitor_bindings,run_domain_monitor,run_local_function_subprocess,_builtin_error_route_entry,_builtin_registry_route_entry,_record_error,_run_parse,_run_resolve_route,_run_validate,_run_executor,_run_dry,_run_execute,run,check,list_routes,_strip_runtime_only,_binding_config,_binding_adapter_kind,expand_binding,_binding_pairs,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_iter_files,_rel,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_json_arg,_load_many,_package_version,_is_pipx_env,_build_parser,_cmd_scan,_cmd_compile,_cmd_discover,_cmd_adopt_pack,_cmd_tree,_cmd_validate,_cmd_add_command,_cmd_add_pypi,_cmd_add_openapi,_cmd_gen,_cmd_doctor,_pip_command,_resolve_pip_targets,_pip_install_args,_cmd_install,_cmd_upgrade,_pipspec_version,_cmd_outdated,_cmd_agent,_cmd_connectors_doctor,_cmd_connectors,_cmd_errors,_cmd_compat,_cmd_host,_cmd_node,_builtin_binding_items,_registry_from_module,_resolve_list_registry,_cmd_run_or_list,_cmd_version,main,_RunAbort
+    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,_handler_kwargs,uri_handler,decorated_bindings,_document_binding_from_expanded,connector_bindings,_select_entry_points,_load_entry_point_bindings,entry_point_bindings,_entry_point_script_issues,connector_health,_collision_index,connector_collisions,entry_point_binding_document,entry_point_registry,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,_first_payload_value,_resolve_error_action,_error_recent,_error_search,_error_info,_error_ticket,run_error_store,_host_integrations,planfile_task_bindings,run_planfile_task,host_data_bindings,run_host_data,domain_monitor_bindings,run_domain_monitor,run_local_function_subprocess,_builtin_error_route_entry,_builtin_registry_route_entry,_record_error,_run_parse,_run_resolve_route,_run_validate,_run_executor,_run_dry,_run_execute,run,check,list_routes,_strip_runtime_only,_binding_config,_binding_adapter_kind,expand_binding,_binding_pairs,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_iter_files,_rel,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_json_arg,_load_many,_package_version,_is_pipx_env,_build_parser,_cmd_scan,_cmd_compile,_cmd_discover,_cmd_adopt_pack,_cmd_tree,_cmd_validate,_cmd_add_command,_cmd_add_pypi,_cmd_add_openapi,_cmd_gen,_cmd_doctor,_pip_command,_resolve_pip_targets,_pip_install_args,_cmd_install,_cmd_upgrade,_pipspec_version,_outdated_rows,_cmd_outdated,_cmd_agent,_print_doctor_report,_cmd_connectors_doctor,_cmd_connectors,_cmd_errors,_cmd_compat,_cmd_host,_cmd_node,_builtin_binding_items,_registry_from_module,_resolve_list_registry,_cmd_run_or_list,_cmd_version,main,_RunAbort
     _RunAbort: __init__(1)  # Carries a finished (error) envelope to the single exit point
     model_from_function(fn)
     _placeholder_kwargs(fn)
@@ -1097,6 +1106,7 @@ D:
     entry_point_bindings(group)
     _entry_point_script_issues(entry_point)
     connector_health(group)
+    _collision_index(group)
     connector_collisions(group)
     entry_point_binding_document(group;generated_at)
     entry_point_registry(group;generated_at;on_conflict)
@@ -1190,8 +1200,10 @@ D:
     _cmd_install(args;parser)
     _cmd_upgrade(args;parser)
     _pipspec_version(pipspec)
+    _outdated_rows(catalog;connect_catalog)
     _cmd_outdated(args;parser)
     _cmd_agent(args;parser)
+    _print_doctor_report(report;unhealthy;dup;shared)
     _cmd_connectors_doctor(args;parser)
     _cmd_connectors(args;parser)
     _cmd_errors(args;parser)
@@ -1248,7 +1260,7 @@ D:
     e: render_argv,_worker_main,_handler_worker_main,_cli_ref_for_script,WorkerPool,HandlerPool,ConnectorPools
     WorkerPool: __init__(1),run_argv(1),run_uri(3),close(0),__enter__(0),__exit__(0)  # A single long-lived connector worker. Reuse across many URI 
     HandlerPool: __init__(0),run_ref(2),close(0),__enter__(0),__exit__(0)  # A single long-lived worker that runs ``local-function`` hand
-    ConnectorPools: __init__(0),run_route(2),close(0)  # A set of warm workers, one per connector, keyed by CLI ref. 
+    ConnectorPools: __init__(0),run_route(2),_run_handler(2),_run_argv(2),close(0)  # A set of warm workers, one per connector, keyed by CLI ref. 
     render_argv(template;payload)
     _worker_main(cli_ref)
     _handler_worker_main()

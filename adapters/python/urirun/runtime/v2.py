@@ -1988,10 +1988,14 @@ def _cmd_tree(args, parser) -> int:
     document = _tree.build(reglib.load_json(args.source))
     if args.format == "json":
         reglib._emit_json(document, "-")
-    else:
+        return 0
+    try:
         import yaml
-
-        sys.stdout.write(yaml.safe_dump(document, sort_keys=False, allow_unicode=True, default_flow_style=False))
+    except ModuleNotFoundError:
+        sys.stderr.write("[urirun] PyYAML not installed — emitting JSON; `pip install pyyaml` for --format yaml.\n")
+        reglib._emit_json(document, "-")
+        return 0
+    sys.stdout.write(yaml.safe_dump(document, sort_keys=False, allow_unicode=True, default_flow_style=False))
     return 0
 
 

@@ -28,6 +28,15 @@ them back and hardens the node, with the test suite (267 passing) as the safety 
 auth (`uri-copy-id`), `node://` self-management (`--manage`), `/events` SSE + `host watch`
 (+ `--scheme`/`--mqtt-broker`), relay events lane, `node list`/`node stop`, `urirun version`.
 
+**Robustness (surfaced while inspecting a node's routes)**
+- `urirun tree` (and `_cmd_tree`) hard-imported PyYAML — a core command that **crashes on
+  a clean install** (yaml is not a declared dep; `adopt_pack` treats it as optional). Now
+  falls back to JSON with a clear stderr hint; added a `yaml` extra (`pip install
+  urirun[yaml]`). Inspecting a node's URIs: `GET /routes` (live surface = built-in +
+  host-deployed), `/mcp/tools`, `/a2a/card`; `urirun host routes`; `urirun node list`;
+  `urirun tree <registry>`. Provenance gap: `/routes` does not label built-in vs
+  host-deployed (a /deploy hot-swaps the whole registry) — a `source` tag is a future add.
+
 ## Proposed next (grounded in the same analysis, deferred as larger/riskier)
 
 1. **(done) `serve_node` fan=65 (top hotspot).** The ~250-line nested `Handler` closure is
@@ -43,7 +52,13 @@ auth (`uri-copy-id`), `node://` self-management (`--manage`), `/events` SSE + `h
    `NodeHandler._stream_events` (SSE loop), `_resolve_serve_opts` (flat option-merge),
    `watch_command` (reconnect loop) — cohesive; radon over-counts `or`/`and`; left as-is.
    Package average CC = A(4.4).
-3. **`/events` auth-by-default.** Currently open unless `--require-run-auth`. Consider
-   gating reads when the node is bound off-localhost, mirroring the `/run` warning.
-4. **Regenerate `project/*.toon.yaml`** after these (the committed snapshot predates this
-   pass, so it still lists the now-reduced `apply_deploy`/`watch_command`/`_node_serve`).
+3. **(done) `/events` auth.** `/events` is gated exactly like `/run` (by
+   `--require-run-auth`); making it stricter than the also-open `/run` would be
+   inconsistent, so the off-localhost startup SECURITY warning now names `/events` too
+   (readable telemetry) and points to `--require-run-auth` which gates both.
+4. **(done) Regenerated `project/analysis.toon.yaml` + `map.toon.yaml`** (against
+   `adapters/python/urirun`, excluding stale `build/`): critical CC **18 → 9**;
+   `apply_deploy`/`_node_serve`/`_cmd_connectors_doctor` off the list; `serve_node` no
+   longer a top fan-out hotspot. Remaining over-limit: the 3 cohesive mesh loops (radon
+   over-counts) + a few exactly at 15. Top fan-out is now `_build_parser=106` (a flat
+   argparse builder — high fan, trivial CC; not worth splitting).

@@ -75,10 +75,15 @@ def main(argv: list[str] | None = None) -> int:
     document = build(reglib.load_json(args.source))
     if args.format == "json":
         print(json.dumps(document, indent=2))
-    else:
+        return 0
+    try:
         import yaml
-
-        print(yaml.safe_dump(document, sort_keys=False, allow_unicode=True, default_flow_style=False))
+    except ModuleNotFoundError:
+        import sys
+        sys.stderr.write("[urirun] PyYAML not installed — emitting JSON; `pip install pyyaml` for --format yaml.\n")
+        print(json.dumps(document, indent=2))
+        return 0
+    print(yaml.safe_dump(document, sort_keys=False, allow_unicode=True, default_flow_style=False))
     return 0
 
 

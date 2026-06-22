@@ -1,18 +1,15 @@
-# code2llm | 134f 20461L | python:75,json:12,shell:10,yaml:4,csharp:4,txt:3,javascript:3,yml:2,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-22
+# code2llm | 134f 20487L | python:75,json:12,shell:10,yaml:4,csharp:4,txt:3,javascript:3,yml:2,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-22
 # generated in 0.04s
-# CC̅=4.3 | critical:16/954 | dups:0 | cycles:0
+# CC̅=4.2 | critical:13/958 | dups:0 | cycles:0
 
-HEALTH[16]:
+HEALTH[13]:
   🟡 CC    main CC=18 (limit:15)
   🟡 CC    main CC=17 (limit:15)
   🟡 CC    assign_rpc_names CC=15 (limit:15)
   🟡 CC    serve_mcp CC=15 (limit:15)
-  🟡 CC    run_route CC=16 (limit:15)
   🟡 CC    scan_path CC=15 (limit:15)
   🟡 CC    resolveParams CC=15 (limit:15)
   🟡 CC    run CC=19 (limit:15)
-  🟡 CC    _cmd_outdated CC=16 (limit:15)
-  🟡 CC    _cmd_connectors_doctor CC=18 (limit:15)
   🟡 CC    normalize_flow CC=15 (limit:15)
   🟡 CC    data_command CC=15 (limit:15)
   🟡 CC    watch_command CC=17 (limit:15)
@@ -21,9 +18,9 @@ HEALTH[16]:
   🟡 CC    _resolve_serve_opts CC=17 (limit:15)
 
 REFACTOR[1]:
-  1. split 16 high-CC methods  (CC>15)
+  1. split 13 high-CC methods  (CC>15)
 
-PIPELINES[326]:
+PIPELINES[327]:
   [1] Src [http]: http
       PURITY: 100% pure
   [2] Src [_attacker_key]: _attacker_key
@@ -92,37 +89,37 @@ PIPELINES[326]:
       PURITY: 100% pure
   [34] Src [main]: main → _resolve
       PURITY: 100% pure
-  [35] Src [connector_installed]: connector_installed
+  [35] Src [dispatch]: dispatch → parse_uri
       PURITY: 100% pure
-  [36] Src [assert_registry_portable]: assert_registry_portable → registry_portability → _nonportable_routes
+  [36] Src [command]: command → uri_command → model_from_function
       PURITY: 100% pure
-  [37] Src [assert_smoke]: assert_smoke → smoke → _resolve_bindings
+  [37] Src [shell]: shell → uri_shell → uri_command → model_from_function
       PURITY: 100% pure
-  [38] Src [assert_routes]: assert_routes
+  [38] Src [fail]: fail
       PURITY: 100% pure
-  [39] Src [run_query]: run_query
+  [39] Src [policy]: policy → build_policy
       PURITY: 100% pure
-  [40] Src [create_llm_session]: create_llm_session → init_db → connection → connect → ...(1 more)
+  [40] Src [action_space]: action_space
       PURITY: 100% pure
-  [41] Src [add_llm_message]: add_llm_message → init_db → connection → connect → ...(1 more)
+  [41] Src [result_data]: result_data
       PURITY: 100% pure
-  [42] Src [run_uri_route]: run_uri_route → route_db_path
+  [42] Src [connector_bindings]: connector_bindings
       PURITY: 100% pure
-  [43] Src [_route_monitor]: _route_monitor → _domain
+  [43] Src [entry_point_bindings]: entry_point_bindings
       PURITY: 100% pure
-  [44] Src [_route_dns]: _route_dns → _domain
+  [44] Src [entry_point_binding_document]: entry_point_binding_document
       PURITY: 100% pure
-  [45] Src [_route_browser]: _route_browser → _domain
+  [45] Src [entry_point_registry]: entry_point_registry
       PURITY: 100% pure
-  [46] Src [_route_log]: _route_log → _db
+  [46] Src [compat_report]: compat_report
       PURITY: 100% pure
-  [47] Src [_route_flow]: _route_flow → check_domain → http_status
+  [47] Src [list_routes]: list_routes
       PURITY: 100% pure
-  [48] Src [run_uri_route]: run_uri_route → handler → uri_handler → normalize_route_entry → ...(1 more)
+  [48] Src [__post_init__]: __post_init__
       PURITY: 100% pure
-  [49] Src [planfile_task_bindings]: planfile_task_bindings
+  [49] Src [uri]: uri
       PURITY: 100% pure
-  [50] Src [run_planfile_task]: run_planfile_task → _planfile_action
+  [50] Src [_meta]: _meta
       PURITY: 100% pure
 
 LAYERS:
@@ -133,24 +130,24 @@ LAYERS:
   │ sync-versions.sh            25L  0C    0m  CC=0.0    ←0
   │
   adapters/                       CC̄=4.3    ←in:9  →out:0
-  │ !! v2                        2484L  1C  123m  CC=18     ←2
-  │ !! mesh                      2231L  3C  136m  CC=17     ←1
+  │ !! v2                        2497L  1C  125m  CC=14     ←3
+  │ !! mesh                      2232L  3C  136m  CC=17     ←1
   │ !! _registry                  718L  0C   43m  CC=14     ←1
   │ !! _scan                      670L  0C   36m  CC=15     ←0
-  │ !! __init__                   618L  1C   46m  CC=12     ←9
+  │ !! __init__                   618L  1C   46m  CC=12     ←10
   │ !! host_dashboard             609L  0C   16m  CC=13     ←0
   │ !! errors                     563L  0C   31m  CC=13     ←1
   │ !! _runtime                   540L  1C   27m  CC=13     ←2
   │ host_db                    499L  0C   29m  CC=11     ←0
   │ domain_monitor             485L  1C   25m  CC=11     ←0
   │ !! codegen                    432L  0C   18m  CC=15     ←0
-  │ v1                         431L  0C   24m  CC=14     ←2
+  │ v1                         431L  0C   24m  CC=14     ←0
   │ connector_scaffold         412L  0C   11m  CC=3      ←0
   │ task_planner               358L  2C   16m  CC=12     ←0
   │ host_integrations          355L  0C   15m  CC=8      ←0
   │ connector_lint             295L  0C   15m  CC=14     ←1
   │ planfile_adapter           279L  1C   26m  CC=9      ←0
-  │ !! worker                     260L  3C   18m  CC=16     ←0
+  │ worker                     266L  3C   20m  CC=13     ←0
   │ connect_catalog            254L  0C   17m  CC=13     ←0
   │ adopt_pack                 245L  0C   12m  CC=13     ←0
   │ secrets                    234L  1C   17m  CC=7      ←1
@@ -172,13 +169,13 @@ LAYERS:
   │ manage                     107L  0C    6m  CC=7      ←0
   │ declarative                 95L  0C    3m  CC=14     ←0
   │ openapi_import              94L  0C    6m  CC=12     ←0
+  │ tree                        91L  0C    4m  CC=11     ←0
   │ connector_sdk               87L  0C    3m  CC=5      ←1
-  │ tree                        86L  0C    4m  CC=11     ←0
   │ connector_smoke             81L  0C    3m  CC=6      ←0
   │ urirun.go                   80L  3C    5m  CC=3      ←0
   │ Urirun.php                  73L  1C    5m  CC=3      ←0
   │ project.assets.json         71L  0C    0m  CC=0.0    ←0
-  │ pyproject.toml              69L  0C    0m  CC=0.0    ←0
+  │ pyproject.toml              70L  0C    0m  CC=0.0    ←0
   │ urirun-connector.csproj.nuget.dgspec.json    66L  0C    0m  CC=0.0    ←0
   │ exec                        54L  0C    2m  CC=10     ←0
   │ index.test.js               52L  0C    1m  CC=1      ←0
@@ -287,8 +284,8 @@ COUPLING:
   examples.matrix                1                                                                                   ──                 
           scripts                1                                                                                                    ──
   CYCLES: none
-  HUB: v1.js/ (fan-in=6)
   HUB: adapters/ (fan-in=9)
+  HUB: v1.js/ (fan-in=6)
   SMELL: adapters.python/ fan-out=17 → split needed
 
 EXTERNAL:
