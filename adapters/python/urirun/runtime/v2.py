@@ -1572,6 +1572,11 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
 
     host_sub.add_parser("agents", parents=[host_common], help="List A2A cards, MCP tools and URI processes")
 
+    host_watch = host_sub.add_parser("watch", parents=[host_common],
+                                     help="Stream a node's live events (run/error) as URIs over SSE")
+    host_watch.add_argument("node", help="configured node name or a node URL")
+    host_watch.add_argument("--json", action="store_true")
+
     host_dashboard = host_sub.add_parser("dashboard", parents=[host_common], help="Serve a local operator dashboard")
     dashboard_sub = host_dashboard.add_subparsers(dest="dashboard_command", required=True)
     dashboard_serve = dashboard_sub.add_parser("serve", parents=[host_common], help="Serve the host dashboard over HTTP")
@@ -1882,6 +1887,10 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     node_serve.add_argument("--key-auth", action="store_true",
                             help="enable SSH-key admin auth: accept ssh-copy-id enrollment and ed25519-signed "
                                  "/deploy (no shared token). First key on a fresh node is trust-on-first-use.")
+    node_serve.add_argument("--require-run-auth", action="store_true",
+                            help="require the same token/signature as /deploy on POST /run too "
+                                 "(needs --admin-token or --key-auth). Strongly recommended for any node "
+                                 "exposed beyond localhost, so /run is not an open execution endpoint.")
 
     def add_source(p, with_uri=True):
         if with_uri:

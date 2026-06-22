@@ -1,6 +1,7 @@
 # Author: Tom Sapletta · https://tom.sapletta.com
 # Part of the ifURI solution.
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -122,6 +123,38 @@ class MeshTests(unittest.TestCase):
             self.assertTrue(found[0]["deploy"])         # token set -> deploy enabled
             self.assertEqual(found[0]["url"], f"http://127.0.0.1:{port}")
             self.assertEqual(mesh.node_list_running("127.0.0.1", [port + 1]), [])  # nothing there
+        finally:
+            server.shutdown()
+
+    def test_require_run_auth_gates_run(self):
+        import socket as _socket
+        import threading
+        import urllib.error
+        import urllib.request
+
+        registry = mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
+            "env://probe/runtime/query/ping": {
+                "kind": "query", "adapter": "argv-template",
+                "inputSchema": {"type": "object"}, "argv": ["true"]},
+        }})
+        s = _socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+        server = mesh.serve_node("probe", registry, "127.0.0.1", port, execute=True,
+                                 allow=["env://*"], admin_token="t", require_run_auth=True)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        url = f"http://127.0.0.1:{port}/run"
+        body = json.dumps({"uri": "env://probe/runtime/query/ping", "payload": {}}).encode()
+        try:
+            # no credential -> 403 (the open-execution endpoint is closed)
+            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+            with self.assertRaises(urllib.error.HTTPError) as ctx:
+                urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(ctx.exception.code, 403)
+            # correct token -> runs
+            req = urllib.request.Request(url, data=body,
+                                         headers={"Content-Type": "application/json", "X-Urirun-Token": "t"},
+                                         method="POST")
+            resp = urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(resp.status, 200)
         finally:
             server.shutdown()
 

@@ -124,11 +124,33 @@ def verify(openssh: str, sig_b64: str, purpose: str, ts: str, body: bytes) -> bo
         return False
 
 
+_SEEN_SIGS: dict[str, float] = {}  # signature -> expiry; once-only acceptance defeats replay
+
+
+def _replay_seen(sig: str) -> bool:
+    """True if this exact signature was already accepted within the skew window.
+
+    The protocol has no nonce, so a captured signed request would otherwise replay
+    for ``MAX_SKEW`` seconds. Accepting each signature at most once closes that.
+    """
+    now = time.time()
+    for seen, expiry in list(_SEEN_SIGS.items()):
+        if expiry <= now:
+            del _SEEN_SIGS[seen]
+    if sig in _SEEN_SIGS:
+        return True
+    _SEEN_SIGS[sig] = now + MAX_SKEW
+    return False
+
+
 def verify_request(headers, body: bytes, purpose: str) -> bool:
-    """Validate the X-Urirun-Key/Sig/Date headers against an authorized key."""
+    """Validate the X-Urirun-Key/Sig/Date headers against an authorized key, and
+    reject a replay of an already-accepted signature."""
     key = headers.get("X-Urirun-Key")
     sig = headers.get("X-Urirun-Sig")
     ts = headers.get("X-Urirun-Date")
     if not (key and sig and ts and is_authorized(key)):
         return False
-    return verify(key, sig, purpose, ts, body)
+    if not verify(key, sig, purpose, ts, body):
+        return False
+    return not _replay_seen(sig)

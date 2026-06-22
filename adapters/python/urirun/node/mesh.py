@@ -14,12 +14,15 @@ The mesh layer is intentionally thin:
 from __future__ import annotations
 
 import argparse
+import hmac
 import importlib
 import json
 import os
+import queue
 import re
 import socket
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -27,6 +30,40 @@ from urllib.parse import unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+
+
+class EventHub:
+    """In-memory pub/sub for a node's live event stream (SSE). Each subscriber gets a
+    bounded queue; publish never blocks the request thread (drops on a full/slow client).
+    Events are plain dicts carrying a `uri` so the other side receives them in URI form."""
+
+    def __init__(self) -> None:
+        self._subs: set[queue.Queue] = set()
+        self._lock = threading.Lock()
+
+    def publish(self, event: dict) -> None:
+        payload = ("data: " + json.dumps(event, ensure_ascii=False) + "\n\n").encode("utf-8")
+        with self._lock:
+            subs = list(self._subs)
+        for q in subs:
+            try:
+                q.put_nowait(payload)
+            except queue.Full:
+                pass
+
+    def subscribe(self) -> queue.Queue:
+        q: queue.Queue = queue.Queue(maxsize=2000)
+        with self._lock:
+            self._subs.add(q)
+        return q
+
+    def unsubscribe(self, q: queue.Queue) -> None:
+        with self._lock:
+            self._subs.discard(q)
+
+    def count(self) -> int:
+        with self._lock:
+            return len(self._subs)
 
 from urirun import _registry as reglib, errors as uri_errors, v2, v2_mcp, v2_service
 from urirun.node import keyauth
@@ -405,6 +442,22 @@ def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | N
     elif token:
         headers = {"X-Urirun-Token": token}
     return http_json("POST", f"{url.rstrip('/')}/deploy", raw=raw, timeout=timeout, headers=headers)
+
+
+def watch_node(url: str, timeout: float | None = None):
+    """Yield the node's live events (SSE) as dicts — run/error/deploy in URI form. A
+    generator: iterate it to receive events as they happen until the stream closes."""
+    req = urllib.request.Request(url.rstrip("/") + "/events", headers={"Accept": "text/event-stream"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        for raw in resp:
+            line = raw.decode("utf-8", "replace").strip()
+            if line.startswith("data:"):
+                payload = line[5:].strip()
+                if payload:
+                    try:
+                        yield json.loads(payload)
+                    except Exception:
+                        continue
 
 
 def copy_id(url: str, identity: str, *, timeout: float = 10.0) -> dict:
@@ -1301,7 +1354,32 @@ def _host_delegated_command(args: argparse.Namespace) -> int | None:
         return deploy_command(args)
     if args.host_command == "copy-id":
         return copy_id_command(args)
+    if args.host_command == "watch":
+        return watch_command(args)
     return None
+
+
+def watch_command(args: argparse.Namespace) -> int:
+    """`urirun host watch <node>` — stream the node's live events (run/error) as URIs."""
+    config = load_host_config(args.config)
+    url = node_url(config, args.node)
+    sys.stderr.write(f"watching {url}/events — Ctrl-C to stop\n")
+    sys.stderr.flush()
+    try:
+        for ev in watch_node(url):
+            if getattr(args, "json", False):
+                print(json.dumps(ev, ensure_ascii=False), flush=True)
+            else:
+                tail = ev.get("category") or ev.get("message") or ""
+                ok = ev.get("ok")
+                mark = "" if ok is None else ("ok" if ok else "FAIL")
+                print(f"{ev.get('event', '?'):6} {ev.get('uri', '')}  {mark} {tail}".rstrip(), flush=True)
+    except KeyboardInterrupt:
+        return 0
+    except Exception as exc:  # noqa: BLE001
+        sys.stderr.write(f"watch ended: {exc}\n")
+        return 1
+    return 0
 
 
 def _host_mesh_command(args: argparse.Namespace, config: dict, mesh: dict) -> int | None:
@@ -1450,9 +1528,12 @@ def send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> No
     handler.wfile.write(body)
 
 
+MAX_BODY_BYTES = 4 * 1024 * 1024  # cap request bodies so a huge Content-Length can't OOM the node
+
+
 def read_raw(handler: BaseHTTPRequestHandler) -> bytes:
-    length = int(handler.headers.get("Content-Length", "0"))
-    return handler.rfile.read(length) if length > 0 else b""
+    length = int(handler.headers.get("Content-Length", "0") or "0")
+    return handler.rfile.read(min(length, MAX_BODY_BYTES)) if length > 0 else b""
 
 
 def read_json(handler: BaseHTTPRequestHandler) -> dict:
@@ -1563,7 +1644,10 @@ def apply_deploy(state: dict, body: dict) -> dict:
 
     # 2. env the handlers read (TELLMESH_DIR, URISYS_ALLOW_REAL, …) — set BEFORE the
     # eager re-import below, since a module may read it at import time.
+    _env_deny = {"PATH", "LD_PRELOAD", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONSTARTUP", "BASH_ENV", "IFS"}
     for key, val in (body.get("env") or {}).items():
+        if str(key).upper() in _env_deny:
+            continue  # a pushed deploy must not hijack the loader / interpreter / PATH
         os.environ[str(key)] = str(val)
         summary["env"].append(str(key))
 
@@ -1621,6 +1705,7 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
     # Mutable so POST /deploy can hot-swap what the node serves without a restart.
     state = {"name": name, "registry": registry,
              "routes": routes_from_registry(registry), "allow": list(allow or [])}
+    hub = EventHub()  # live event stream (SSE): run/error/deploy events as URIs
 
     pool_executors = None
     if pool:
@@ -1634,10 +1719,13 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
         def do_GET(self):
             if self.path == "/health":
                 send_json(self, 200, {"ok": True, "name": state["name"], "execute": execute,
-                                      "version": v2._package_version(),
+                                      "version": current_version(),
                                       "routeCount": len(state["routes"]),
-                                      "deploy": deploy_enabled,
+                                      "deploy": deploy_enabled, "events": hub.count(),
                                       "keyAuth": key_auth, "keyCount": len(keyauth.load_authorized()) if key_auth else 0})
+                return
+            if self.path == "/events":
+                self._stream_events()
                 return
             if self.path == "/routes" or self.path == "/uri-processes":
                 send_json(self, 200, {"ok": True, "name": state["name"], "routes": state["routes"]})
@@ -1650,6 +1738,9 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
                 return
             path, _, query = self.path.partition("?")
             if path == "/errors":
+                if admin_token and not hmac.compare_digest(self.headers.get("X-Urirun-Token") or "", admin_token):
+                    send_json(self, 403, {"ok": False, "error": "unauthorized (/errors needs X-Urirun-Token when --admin-token is set)"})
+                    return
                 send_json(self, 200, {"ok": True, "name": state["name"], "errors": uri_errors.recent()})
                 return
             if path == "/errors/search":
@@ -1666,6 +1757,9 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             send_json(self, 404, {"ok": False, "error": "not found"})
 
         def do_POST(self):
+            if int(self.headers.get("Content-Length", "0") or "0") > MAX_BODY_BYTES:
+                send_json(self, 413, {"ok": False, "error": "request body too large"})
+                return
             if self.path == "/deploy":
                 self._handle_deploy()
                 return
@@ -1697,11 +1791,49 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             if not result.get("ok"):
                 uri_errors.record(result)  # stamp error:// address + record for /errors
             result["service"] = state["name"]
+            # publish a live event (URI form) to any /events subscribers
+            uri = str(body.get("uri", ""))
+            hub.publish({"event": "run", "uri": uri, "ok": bool(result.get("ok")),
+                         "at": time.time(), "service": state["name"], "kind": result.get("kind")})
+            if not result.get("ok"):
+                err = result.get("error") or {}
+                hub.publish({"event": "error", "uri": err.get("uri") or "error://local/unknown",
+                             "for": uri, "code": err.get("code"), "category": err.get("category"),
+                             "message": err.get("message") or err, "at": time.time(),
+                             "service": state["name"]})
             send_json(self, 200 if result.get("ok") else 400, result)
+
+        def _stream_events(self):
+            # Server-Sent Events: a long-lived GET that streams the node's run/error/
+            # deploy events to the host as they happen (one-way node->host channel).
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "keep-alive")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(f": connected to {state['name']}\n\n".encode("utf-8"))
+                self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                return
+            q = hub.subscribe()
+            try:
+                while True:
+                    try:
+                        data = q.get(timeout=15)
+                    except queue.Empty:
+                        data = b": keep-alive\n\n"  # heartbeat so proxies/clients hold the stream
+                    self.wfile.write(data)
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                hub.unsubscribe(q)
 
         def _admin_ok(self, raw: bytes) -> bool:
             # token OR an ed25519 signature from an enrolled SSH key
-            if admin_token and self.headers.get("X-Urirun-Token") == admin_token:
+            if admin_token and hmac.compare_digest(self.headers.get("X-Urirun-Token") or "", admin_token):
                 return True
             if key_auth and keyauth.verify_request(self.headers, raw, keyauth.PURPOSE_DEPLOY):
                 return True
@@ -1710,7 +1842,7 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
         def _run_ok(self, raw: bytes) -> bool:
             # same credentials as deploy, but signed with PURPOSE_RUN so a captured
             # deploy request can't be replayed as a run (and vice versa)
-            if admin_token and self.headers.get("X-Urirun-Token") == admin_token:
+            if admin_token and hmac.compare_digest(self.headers.get("X-Urirun-Token") or "", admin_token):
                 return True
             if key_auth and keyauth.verify_request(self.headers, raw, keyauth.PURPOSE_RUN):
                 return True
@@ -1787,7 +1919,9 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
 
 
 def _node_serve(args: argparse.Namespace, node: dict, name: str, registry: dict) -> int:
-    host = args.host or node.get("host") or "0.0.0.0"
+    # default to localhost: exposing the node beyond this host (and its unauthenticated
+    # /run) must be an explicit choice (--host 0.0.0.0), not the default.
+    host = args.host or node.get("host") or "127.0.0.1"
     port = args.port or int(node.get("port") or 8765)
     execute = bool(args.execute or node.get("execute"))
     allow_secrets = bool(getattr(args, "allow_secrets", False) or node.get("allowSecrets"))
@@ -1798,9 +1932,11 @@ def _node_serve(args: argparse.Namespace, node: dict, name: str, registry: dict)
     # key-auth: explicit flag, node config, or implied by an existing authorized_keys file
     key_auth = bool(getattr(args, "key_auth", False) or node.get("keyAuth")
                     or keyauth.authorized_keys_path().exists())
+    require_run_auth = bool(getattr(args, "require_run_auth", False) or node.get("requireRunAuth"))
     server = serve_node(name, registry, host, port, execute, public_url=args.public_url,
                         allow_secrets=allow_secrets, allow=allow, pool=pool,
-                        admin_token=admin_token, key_auth=key_auth)
+                        admin_token=admin_token, key_auth=key_auth,
+                        require_run_auth=require_run_auth)
     server.serve_forever()
     return 0
 

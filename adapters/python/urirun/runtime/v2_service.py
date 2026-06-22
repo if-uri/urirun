@@ -47,7 +47,13 @@ def service_base(target: str) -> str:
 
 def _post(url: str, body: dict, timeout: float):
     data = json.dumps(body).encode("utf-8")
-    request = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    headers = {"Content-Type": "application/json"}
+    # opt-in auth for nodes started with --require-run-auth (token mode). No env → no
+    # header → unchanged behaviour against open nodes.
+    token = os.getenv("URIRUN_RUN_TOKEN")
+    if token:
+        headers["X-Urirun-Token"] = token
+    request = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8")), response.status
