@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import contextvars
 import hashlib
 import hmac
 import importlib
@@ -32,6 +33,23 @@ from urllib.parse import unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+
+# Streaming process control: an in-process handler can call `mesh.emit({...})` while it
+# runs to push incremental progress (a subprocess's stdout line, a percent, a stage) to
+# the node's event stream, correlated to the current /run by `run` id. The host streams it
+# live via GET /events?run=<id> — turning a blocking request/response URI into a streamed
+# process. Bound per-request by _handle_run; a no-op (returns False) outside a run or in an
+# out-of-process handler, so handlers can call it unconditionally.
+_RUN_EMIT: contextvars.ContextVar = contextvars.ContextVar("urirun_run_emit", default=None)
+
+
+def emit(event: dict) -> bool:
+    """Publish a progress event for the current run. Returns True if a sink was bound."""
+    fn = _RUN_EMIT.get()
+    if fn is None:
+        return False
+    fn(event)
+    return True
 
 
 class EventHub:
@@ -1694,6 +1712,8 @@ def probe_command(args: argparse.Namespace) -> int:
     import urllib.error
     import urllib.request
 
+    import urirun
+
     config = load_host_config(args.config)
     url = node_url(config, args.node).rstrip("/")
     snap = http_json("GET", f"{url}/routes")
@@ -1712,7 +1732,8 @@ def probe_command(args: argparse.Namespace) -> int:
         try:
             with urllib.request.urlopen(request, timeout=args.timeout) as resp:
                 env = json.loads(resp.read() or b"{}")
-            rows.append({"uri": uri, "ok": bool(env.get("ok")),
+            degraded = urirun.result_degraded(env) if env.get("ok") else None
+            rows.append({"uri": uri, "ok": bool(env.get("ok")), "degraded": degraded,
                          "error": (env.get("error") or {}) if not env.get("ok") else None})
         except urllib.error.HTTPError as exc:
             if exc.code == 409:
@@ -1727,19 +1748,28 @@ def probe_command(args: argparse.Namespace) -> int:
     etag1, gen1 = health.get("registryEtag"), health.get("registryGeneration")
     stable = etag0 == etag1 and gen0 == gen1 and churn == 0
     passed = sum(1 for r in rows if r["ok"])
+    degraded = sum(1 for r in rows if r.get("degraded"))
     report = {"ok": stable, "node": health.get("name"), "etag": etag0, "generation": gen0,
-              "stable": stable, "routes": len(rows), "passed": passed, "churn409": churn,
-              "etagAfter": etag1, "generationAfter": gen1,
+              "stable": stable, "routes": len(rows), "passed": passed, "degraded": degraded,
+              "churn409": churn, "etagAfter": etag1, "generationAfter": gen1,
               "mode": "execute" if args.execute else "dry-run", "results": rows}
     if getattr(args, "json", False):
         reglib._emit_json(report, "-")
         return 0 if stable else 1
-    print(f"probe {report['node']} — etag {etag0} gen {gen0} — {passed}/{len(rows)} routes ok ({report['mode']})")
+    deg_note = f", {degraded} degraded" if degraded else ""
+    print(f"probe {report['node']} — etag {etag0} gen {gen0} — {passed}/{len(rows)} routes ok{deg_note} ({report['mode']})")
     for r in rows:
-        mark = "CHURN" if r.get("churn") else ("ok" if r["ok"] else "FAIL")
-        print(f"  {mark:5} {r['uri']}" + (f"  {r['error']}" if r.get("error") else ""))
+        if r.get("churn"):
+            mark, extra = "CHURN", "registry changed"
+        elif not r["ok"]:
+            mark, extra = "FAIL", str(r.get("error") or "")
+        elif r.get("degraded"):
+            mark, extra = "DEGR", f"degraded: {r['degraded']} (route works but is mocked/simulated)"
+        else:
+            mark, extra = "ok", ""
+        print(f"  {mark:5} {r['uri']}" + (f"  {extra}" if extra else ""))
     if stable:
-        print(f"surface STABLE (generation {gen0})")
+        print(f"surface STABLE (generation {gen0})" + (f" — but {degraded} route(s) DEGRADED" if degraded else ""))
     else:
         print(f"⚠ surface CHURNED during probe: generation {gen0}->{gen1}, "
               f"etag {etag0}->{etag1}, {churn} route(s) hit 409 (registry changed)")
@@ -2077,11 +2107,24 @@ class NodeHandler(BaseHTTPRequestHandler):
         # — never escalate: a dry-run node stays dry-run. Lets `host probe` test a
         # surface safely.
         mode = "dry-run" if (body.get("mode") == "dry-run" or not c.execute) else "execute"
-        result = v2.run(uri, target_reg, payload=body.get("payload") or {},
-                        mode=mode, policy=run_policy, executors=c.pool_executors)
+        # bind a progress sink so an in-process handler can stream this run live to
+        # /events?run=<id> by calling mesh.emit({...}); the host correlates by run id.
+        run_id = self.headers.get("X-Urirun-Run-Id") or body.get("runId") or f"run-{c.hub.current_id() + 1}"
+
+        def _emit(ev: dict) -> None:
+            c.hub.publish({"event": "progress", "run": run_id, "uri": uri,
+                           "at": time.time(), "service": c.state["name"], **ev})
+
+        token = _RUN_EMIT.set(_emit)
+        try:
+            result = v2.run(uri, target_reg, payload=body.get("payload") or {},
+                            mode=mode, policy=run_policy, executors=c.pool_executors)
+        finally:
+            _RUN_EMIT.reset(token)
         if not result.get("ok"):
             uri_errors.record(result)  # stamp error:// address + record for /errors
         result["service"] = c.state["name"]
+        result["runId"] = run_id
         self._publish_run(uri, result)
         send_json(self, 200 if result.get("ok") else 400, result)
 
@@ -2099,6 +2142,7 @@ class NodeHandler(BaseHTTPRequestHandler):
                 k, v = part.split("=", 1)
                 params[k] = unquote(v.replace("+", " "))
         schemes = {s for s in (params.get("scheme", "").split(",")) if s}
+        runs = {r for r in (params.get("run", "").split(",")) if r}  # stream one run's progress
         cursor = params.get("last_event_id")
         if cursor is None:
             cursor = self.headers.get("Last-Event-ID")
@@ -2108,7 +2152,9 @@ class NodeHandler(BaseHTTPRequestHandler):
             last_id = c.hub.current_id()
 
         def matches(ev: dict) -> bool:
-            return not schemes or str(ev.get("uri", "")).split("://", 1)[0] in schemes
+            scheme_ok = not schemes or str(ev.get("uri", "")).split("://", 1)[0] in schemes
+            run_ok = not runs or ev.get("run") in runs
+            return scheme_ok and run_ok
 
         def frame(ev: dict) -> bytes:
             payload = {k: v for k, v in ev.items() if k != "_id"}
