@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `adopt-pack` now records a re-importable handler descriptor (`python: {module, export}`)
+  for each `python://` manifest handler, so an adopted capability pack **executes from a
+  plain file registry** (`urirun run <uri> <registry> --execute`), not only dry-runs. This
+  makes multi-step URI flows across adopted packs runnable straight from the CLI — see
+  `examples/25-tellmesh-uri-flow` (a `kvm → ocr → llm` chain driven by `urirun run` + `jq`).
 - Two-line ergonomics: `urirun run '<uri>'` now **auto-discovers installed connectors**
   via the `urirun.bindings` entry points when no source/registry is given — no compile
   step or registry path. `urirun install <id|package>` installs from the catalog

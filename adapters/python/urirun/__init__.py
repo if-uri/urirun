@@ -78,6 +78,10 @@ def handler(uri: str, **options):
         @urirun.handler("llm://host/chat/command/complete")
         def complete(prompt: str, model: str = "llama3") -> dict:
             return urirun.ok(response=...)
+
+    Pass ``isolated=True`` to run the handler in a fresh process via the shared
+    ``python -m urirun.exec`` runner (crash containment / untrusted code / a heavy
+    import kept off the host) — still one declaration, no per-connector shim.
     """
     from urirun.v2 import uri_handler
 
@@ -133,12 +137,28 @@ def policy(allow=None, deny=None, secret_allow=None, policy_file=None) -> dict |
 
 
 def action_space(registry: dict) -> list[dict]:
-    """The routes an agent/LLM can choose from — the same projection as the MCP
-    tool list: ``{uri, kind, label, inputs, required}`` per route. Lets callers
-    use the public API instead of re-deriving it from ``list_routes``."""
-    from urirun.runtime.agent import action_space as _action_space
+    """The routes an agent/LLM can choose from — ``{uri, kind, label, inputs,
+    required}`` per route, including the input schema (unlike ``list_routes``,
+    which omits it). Lets callers use the public API instead of reaching into the
+    runtime to re-derive an agent's action space."""
+    from urirun import _registry as reglib
 
-    return _action_space(registry)
+    space = []
+    for route in reglib.flatten_registry_document(registry):
+        entry = route.get("routeEntry") or {}
+        # compiled registries carry the schema under config.inputSchema; bindings
+        # docs carry it at the top level — accept either.
+        schema = entry.get("inputSchema") or (entry.get("config") or {}).get("inputSchema") or {}
+        uri = route["uri"]
+        space.append({
+            "uri": uri,
+            "kind": "query" if "/query/" in uri else "command",
+            "label": (entry.get("meta") or {}).get("label", ""),
+            "inputs": list((schema.get("properties") or {}).keys()),
+            "required": schema.get("required", []),
+        })
+    space.sort(key=lambda item: item["uri"])
+    return space
 
 
 def result_data(env: dict):
@@ -454,6 +474,22 @@ class Connector:
             ]
         rest = {k: v for k, v in prose.items() if k != "examples"}
         return {"id": self.id, **rest, **derived, "examples": examples}
+
+    def mcp_tools(self) -> list[dict]:
+        """Project this connector's routes to MCP tools — the same list the runtime
+        serves from a registry, but straight from the connector object (B5: one
+        definition, every projection)."""
+        from urirun import v2_mcp
+
+        return v2_mcp.to_mcp_tools(self.registry())
+
+    def a2a_card(self, *, name: str | None = None, url: str = "http://localhost:8080",
+                 version: str = "0.8.0") -> dict:
+        """Project this connector's routes to an A2A agent card (defaults the card
+        name to the connector id)."""
+        from urirun import v2_mcp
+
+        return v2_mcp.to_a2a_card(self.registry(), name=name or self.id, url=url, version=version)
 
 
 def connector(

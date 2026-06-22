@@ -22,7 +22,13 @@ URI_RE = re.compile(
     re.I,
 )
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "options", "head"}
-ROUTE_ENTRY_KEYS = {"kind", "adapter", "config", "ref", "policy", "meta"}
+# Single source of truth for route-entry fields. ``kind``/``adapter``/``config`` are
+# the structural triple every builder sets explicitly; ROUTE_ENTRY_CARRY are the
+# optional pass-through fields that the serialize→compile→route pipeline must carry
+# verbatim. Add a new route-entry field HERE only — every allowlist derives from it,
+# so a field can no longer be silently dropped in one stage (the `python` bug).
+ROUTE_ENTRY_CARRY = ("ref", "python", "policy", "meta")
+ROUTE_ENTRY_KEYS = {"kind", "adapter", "config", *ROUTE_ENTRY_CARRY}
 
 
 def parse_uri(uri: str) -> dict:

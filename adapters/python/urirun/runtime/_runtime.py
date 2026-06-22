@@ -268,10 +268,46 @@ def run_fetch(ctx: dict, policy: dict) -> dict:
     return _send_fetch(url, method, headers, body, policy)
 
 
+def _hydrate_local_function(route_entry: dict):
+    """Rebuild a callable handler from the serialized ``python: {module, export}``.
+
+    A bindings document drops the in-process ``ref`` closure on serialization but
+    keeps a re-importable ``python`` descriptor. This lets a ``local-function``
+    route run from a *file* registry (``urirun run <uri> <registry> --execute`` or a
+    served node) by importing the module the connector's ``pip install`` provides —
+    no console-script, no argv shim. Returns a callable or None.
+    """
+    py = route_entry.get("python") or {}
+    module, export = py.get("module"), py.get("export")
+    if py.get("type") != "python" or not module or not export:
+        return None
+    import importlib
+
+    raw = getattr(importlib.import_module(module), export, None)
+    if not callable(raw):
+        return None
+    from urirun.runtime.v2 import _handler_kwargs  # deferred: v2 imports this module
+
+    def _invoke(target, args, payload, descriptor):
+        return raw(**_handler_kwargs(raw, payload))
+
+    _invoke.__name__ = export
+    return _invoke
+
+
 def run_local_function(ctx: dict, policy: dict) -> dict:
     fn = ctx["routeEntry"].get("ref")
     if not callable(fn):
-        raise PolicyError(f"local function ref is not callable (hydrate the registry first): {fn!r}")
+        # A file registry carries no live closure, only a `python: {module, export}`
+        # hint. Importing + calling it makes the registry executable input, so it is
+        # operator-trusted by default; a hardened/multi-tenant node sets
+        # `policy.denyRefImport` to accept ONLY an in-process ref (run untrusted
+        # connectors out-of-process instead). The live-closure path is unaffected.
+        if isinstance(policy, dict) and policy.get("denyRefImport"):
+            raise PolicyError("local-function ref import from a file registry is disabled (policy.denyRefImport); serve this route from its own connector process")
+        fn = _hydrate_local_function(ctx["routeEntry"])
+    if not callable(fn):
+        raise PolicyError(f"local function ref is not callable (hydrate the registry first): {ctx['routeEntry'].get('ref')!r}")
     value = fn(ctx["target"], ctx["args"], ctx["payload"], ctx["descriptor"])
     return {"type": "function", "ref": getattr(fn, "__name__", str(fn)), "value": value}
 

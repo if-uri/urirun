@@ -103,8 +103,15 @@ def _python_files(cid: str, scheme: str, route: str) -> dict[str, str]:
     core = f'''"""Routes for the {cid} connector — one typed @handler per URI route.
 
 A single function declares the route, its input schema (from the signature) and its
-in-process implementation. No argv template, no hand-written CLI parser/dispatch:
-``conn.cli`` and ``conn.manifest`` derive both from the registered handlers.
+implementation. No argv template, no ``_exec.py``, no hand-written CLI parser /
+dispatch: ``conn.cli`` and ``conn.manifest`` derive everything from the handlers.
+
+``isolated=True`` runs the route out-of-process through the shared
+``python -m urirun.exec`` runner, so the binding stays **registry-portable** — it
+executes from a compiled/served registry (``urirun run <uri> registry.json``,
+``urirun node serve``, examples 12/19) with only the package importable, no
+console-script install and no per-connector shim. Drop ``isolated=True`` for a
+faster in-process route that only runs via this connector's own CLI/registry.
 """
 
 from __future__ import annotations
@@ -115,7 +122,7 @@ CONNECTOR_ID = "{cid}"
 conn = urirun.connector(CONNECTOR_ID, scheme="{scheme}")
 
 
-@conn.handler("{DEMO_ROUTE_SUFFIX}", meta={{"label": "Example ping"}})
+@conn.handler("{DEMO_ROUTE_SUFFIX}", isolated=True, meta={{"label": "Example ping"}})
 def ping(name: str = "world") -> dict:
     """The function *is* the route. Replace with a real operation; add
     ``external=True`` for routes that reach the outside world (dry-run by default)."""
@@ -180,11 +187,16 @@ include = ["{module}*"]
     )
     readme = (
         f"# urirun-connector-{cid}\n\n"
-        f"Scaffolded Python connector — one typed `@handler` per route (`{route}`), "
-        f"called in-process by urirun. No `cli.py`: `conn.cli` and `conn.manifest` "
-        f"are derived from the handlers.\n\n"
-        f"```bash\npip install -e .\n{bin_name} ping --name you      # run a route in-process\n"
-        f"{bin_name} bindings | urirun validate /dev/stdin\n{bin_name} manifest          # prose + machine fields derived from code\n```\n"
+        f"Scaffolded Python connector — one typed `@handler` per route (`{route}`). "
+        f"`isolated=True` runs each route out-of-process via the shared `urirun.exec` "
+        f"runner, so it works from a compiled/served registry with no `_exec.py`, no "
+        f"`cli.py` and no install. `conn.cli`/`conn.manifest` derive everything from "
+        f"the handlers.\n\n"
+        f"```bash\n{bin_name} ping --name you                 # run a route\n"
+        f"{bin_name} bindings | urirun validate /dev/stdin\n{bin_name} manifest                        # prose + derived machine fields\n"
+        f"# registry-portable (no install needed, just importable):\n"
+        f"{bin_name} bindings > b.json && urirun compile b.json --out reg.json\n"
+        f"urirun run '{route}' reg.json --execute --allow '{scheme}://*'\n```\n"
     )
     return {
         f"{module}/__init__.py": init,

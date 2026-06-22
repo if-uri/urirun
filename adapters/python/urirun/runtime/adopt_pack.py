@@ -83,6 +83,13 @@ def manifest_bindings(manifest: dict) -> list[dict]:
             },
             "source": {"type": "pack-manifest", "pack": pack, "scheme": scheme, "handler": raw},
         }
+        # A python:// handler carries a re-importable descriptor so the adopted route
+        # can EXECUTE from a file registry (urirun run <uri> <registry> --execute),
+        # not only dry-run — the runtime hydrates module:export at call time.
+        if raw.startswith("python://") and ":" in ref:
+            module, _, export = ref.partition(":")
+            if module and export:
+                binding["python"] = {"type": "python", "module": module, "export": export}
         policy = _policy(pat)
         if policy:
             binding["policy"] = policy
@@ -192,9 +199,23 @@ def adopt(target: str | Path) -> dict:
                 return _document(_package_json_manifest(package_json))
             except FileNotFoundError:
                 pass
-        for candidate in path.glob("*/manifest.yaml"):
-            return adopt_document(candidate)
-        raise FileNotFoundError(f"no [tool.urirun]/urirun config or */manifest.yaml under {path}")
+        # A tree of packs: adopt EVERY manifest.yaml (depth 1-2, matching the
+        # tellmesh layout) and MERGE into one document, so adopting a whole library
+        # tree is a single command instead of a per-pack loop + compile.
+        manifests = sorted(set(path.glob("*/manifest.yaml")) | set(path.glob("*/*/manifest.yaml")))
+        if not manifests:
+            raise FileNotFoundError(f"no [tool.urirun]/urirun config or */manifest.yaml under {path}")
+        if len(manifests) == 1:
+            return adopt_document(manifests[0])
+        from urirun import v2
+
+        merged: dict = {"version": v2.VERSION, "bindings": {}}
+        for manifest in manifests:
+            try:
+                merged["bindings"].update(adopt_document(manifest).get("bindings", {}))
+            except Exception:  # noqa: BLE001 - skip a non-connector / invalid pack, adopt the rest
+                continue
+        return merged
     manifest = installed_manifest_path(str(target))
     if manifest is None:
         raise FileNotFoundError(f"no manifest for installed package {target!r} (urirun.packs entry point or <pkg>/manifest.yaml)")

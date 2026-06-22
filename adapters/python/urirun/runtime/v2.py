@@ -160,7 +160,8 @@ def _handler_kwargs(fn: Callable, payload: dict | None) -> dict:
     return {k: v for k, v in (payload or {}).items() if k in params}
 
 
-def uri_handler(uri: str, *, external: bool = False, policy: dict | None = None, meta: dict | None = None):
+def uri_handler(uri: str, *, external: bool = False, isolated: bool = False,
+                policy: dict | None = None, meta: dict | None = None):
     """Register a typed function as the **in-process** handler for a URI route.
 
     Unlike :func:`uri_command` (whose body returns an argv/shell template that is
@@ -185,7 +186,10 @@ def uri_handler(uri: str, *, external: bool = False, policy: dict | None = None,
         binding = {
             "uri": uri,
             "kind": "local-function",
-            "adapter": "local-function",
+            # isolated=True runs the handler in a fresh process via the shared
+            # `python -m urirun.exec` runner (crash containment / untrusted code /
+            # heavy import off the host) — still one @handler, no per-connector shim.
+            "adapter": "local-function-subprocess" if isolated else "local-function",
             "inputModel": input_model,
             "inputSchema": input_model.model_json_schema(),
             "ref": _invoke,
@@ -600,6 +604,29 @@ def run_domain_monitor(ctx: dict, policy: dict, execute: bool) -> dict:
     return _host_integrations().run_domain_monitor(ctx, policy, execute)
 
 
+def run_local_function_subprocess(ctx: dict, policy: dict, execute: bool) -> dict:
+    """Run a ``local-function`` handler in a fresh process via the shared
+    ``python -m urirun.exec`` runner — for routes that want isolation (untrusted
+    code, crash containment, a heavy import kept off the host). No per-connector
+    ``_exec.py``: the handler is found from its ``python: {module, export}``."""
+    import subprocess
+
+    py = ctx["routeEntry"].get("python") or {}
+    module, export = py.get("module"), py.get("export")
+    if not module or not export:
+        raise runtime.PolicyError("local-function-subprocess needs a python:{module,export} descriptor")
+    ref = f"{module}:{export}"
+    payload = ctx.get("payload") if isinstance(ctx.get("payload"), dict) else {}
+    proc = subprocess.run([sys.executable, "-m", "urirun.exec", ref], input=json.dumps(payload),
+                          capture_output=True, text=True, timeout=policy.get("timeout", 30))
+    try:
+        value = json.loads(proc.stdout) if proc.stdout.strip() else {}
+    except json.JSONDecodeError:
+        value = {"stdout": proc.stdout}
+    return {"type": "function-subprocess", "ref": ref, "isolated": True,
+            "exitCode": proc.returncode, "value": value, "stderr": proc.stderr[-2000:]}
+
+
 from urirun.runtime.introspect import run_registry_introspect
 
 EXECUTORS = {
@@ -609,6 +636,7 @@ EXECUTORS = {
     "domain-monitor": run_domain_monitor,
     "error-store": run_error_store,
     "host-sqlite-data": run_host_data,
+    "local-function-subprocess": run_local_function_subprocess,
     "planfile-task": run_planfile_task,
     "registry-introspect": run_registry_introspect,
     "shell-template": run_shell_template,
@@ -825,7 +853,10 @@ def expand_binding(uri: str | None, binding) -> dict:
         "adapter": adapter,
         "config": config,
     }
-    for key in ("ref", "policy", "meta", "source"):
+    # Carry the canonical route-entry fields (incl. "python", the serializable
+    # {module, export} re-import hint that lets a file registry hydrate a
+    # local-function handler) plus "source"; single source of truth in _registry.
+    for key in (*reglib.ROUTE_ENTRY_CARRY, "source"):
         if key in expanded:
             normalized[key] = expanded[key]
     return normalized
@@ -1416,6 +1447,10 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     upgrade_parser.add_argument("--ref", help="git ref (tag/branch) for --from github")
     upgrade_parser.add_argument("--dry-run", action="store_true", help="print the command without running it")
     upgrade_parser.add_argument("--json", action="store_true")
+
+    outdated_parser = subparsers.add_parser("outdated", help="Report installed connectors with a newer version in the catalog")
+    outdated_parser.add_argument("--catalog", default="https://connect.ifuri.com", help="catalog base URL (on-prem override)")
+    outdated_parser.add_argument("--json", action="store_true")
     connectors_check = connectors_sub.add_parser("check", parents=[connectors_common], help="Check a local connector manifest against the hub catalog")
     connectors_check.add_argument("manifest", help="Path to a connector.manifest.json")
     connectors_check.add_argument("--json", action="store_true")
@@ -2037,6 +2072,65 @@ def _cmd_upgrade(args, parser) -> int:
     return subprocess.run(cmd).returncode
 
 
+def _pipspec_version(pipspec: str | None) -> str | None:
+    """Best-effort version from a catalog pipSpec — a git tag (``.git@<ref>``) or a
+    ``==`` pin. Returns None when neither is present (e.g. an unpinned package)."""
+    if not pipspec:
+        return None
+    match = re.search(r"\.git@([^#\s]+)", pipspec)
+    if match:
+        return match.group(1).lstrip("v")
+    match = re.search(r"==\s*([^\s,;]+)", pipspec)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _cmd_outdated(args, parser) -> int:
+    """Report installed connectors whose catalog version differs from what is installed.
+
+    Best-effort: installed versions come from dist metadata, available versions
+    from the catalog pipSpec (git tag or ``==`` pin). When either is unknown the
+    row is reported as ``unknown``; offline (catalog unreachable) -> all unknown.
+    """
+    from urirun.connectors import connect_catalog
+
+    try:
+        catalog = connect_catalog.fetch_catalog(args.catalog)
+    except Exception:  # noqa: BLE001 - offline/unreachable -> no available versions
+        catalog = {}
+
+    seen: set[str] = set()
+    rows = []
+    for entry_point in _select_entry_points(ENTRY_POINT_GROUP):
+        dist = getattr(entry_point, "dist", None)
+        package = getattr(dist, "name", None)
+        key = package or entry_point.name
+        if key in seen:
+            continue
+        seen.add(key)
+        installed = getattr(dist, "version", None)
+        connector = connect_catalog._find(catalog, entry_point.name) or {}
+        install = connector.get("install") if isinstance(connector.get("install"), dict) else {}
+        available = _pipspec_version(install.get("pipSpec"))
+        if installed and available:
+            status = "up-to-date" if installed == available else "outdated"
+        else:
+            status = "unknown"
+        rows.append({"id": entry_point.name, "package": package, "installed": installed,
+                     "available": available, "status": status})
+    rows.sort(key=lambda row: row["id"])
+    outdated = [r for r in rows if r["status"] == "outdated"]
+    if getattr(args, "json", False):
+        reglib._emit_json({"ok": True, "outdated": len(outdated), "connectors": rows}, "-")
+        return 0
+    marks = {"outdated": "↑", "up-to-date": " ", "unknown": "?"}
+    for row in rows:
+        print(f"  {marks[row['status']]} {row['id']:24s} {str(row['installed'] or '-'):12s} -> {row['available'] or '?'}")
+    print(f"\n{len(outdated)} outdated, {len(rows)} installed")
+    return 0
+
+
 def _cmd_agent(args, parser) -> int:
     from urirun.runtime import agent as agent_mod
 
@@ -2182,6 +2276,7 @@ _COMMANDS = {
     "doctor": _cmd_doctor,
     "install": _cmd_install,
     "upgrade": _cmd_upgrade,
+    "outdated": _cmd_outdated,
     "agent": _cmd_agent,
     "connectors": _cmd_connectors,
     "errors": _cmd_errors,

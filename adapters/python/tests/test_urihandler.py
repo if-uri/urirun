@@ -260,6 +260,24 @@ class UriHandlerTests(unittest.TestCase):
         finally:
             v2.metadata.entry_points = original
 
+    def test_local_function_hydrates_from_python_descriptor(self):
+        """A file registry carries no live ref — the executor imports python:{module,export}."""
+        from urirun.runtime import _runtime
+
+        # no "ref": only the serializable descriptor, as a file registry would have.
+        # urirun.ok(**payload) is a stable importable target: ok(x=1) -> {"ok": True, "x": 1}
+        entry = {"kind": "local-function", "adapter": "local-function", "config": {},
+                 "python": {"type": "python", "module": "urirun", "export": "ok"}}
+        ctx = {"routeEntry": entry, "target": "t", "args": [], "payload": {"x": 1}, "descriptor": {}}
+
+        out = _runtime.run_local_function(ctx, policy={})
+        self.assertTrue(out["value"]["ok"])
+        self.assertEqual(out["value"]["x"], 1)
+
+        # hardened/multi-tenant node: deny import-based hydration, require a live ref
+        with self.assertRaises(_runtime.PolicyError):
+            _runtime.run_local_function(ctx, policy={"denyRefImport": True})
+
 
 if __name__ == "__main__":
     unittest.main()

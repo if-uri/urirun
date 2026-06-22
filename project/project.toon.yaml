@@ -1,52 +1,52 @@
-# urirun | 813 func | 60f | 17762L | python | 2026-06-22
+# urirun | 839 func | 62f | 18048L | python | 2026-06-22
 # generated in 0.00s
 
 HEALTH:
-  CC̄=4.1  critical=75 (limit:10)  dup=2  cycles=0
+  CC̄=4.1  critical=79 (limit:10)  dup=2  cycles=0
 
 ALERTS[20]:
-  !!! high_fan_out     _build_parser = 95 (limit:10)
+  !!! high_fan_out     _build_parser = 100 (limit:10)
+  !!! high_fan_out     serve = 30 (limit:10)
   !!! high_fan_out     main = 29 (limit:10)
-  !!! cc_exceeded      _flags = 26 (limit:15)
+  !!! high_fan_out     serve_node = 28 (limit:10)
   !!! high_fan_out     main = 26 (limit:10)
-  !!! high_fan_out     serve_node = 26 (limit:10)
   !!! high_fan_out     main = 25 (limit:10)
   !!! high_fan_out     main = 23 (limit:10)
   !!! high_fan_out     main = 20 (limit:10)
-  !!! high_fan_out     proto_from_registry = 20 (limit:10)
-  !!  cc_exceeded      main = 24 (limit:15)
+  !!  high_fan_out     scan_path = 19 (limit:10)
+  !!  high_fan_out     _worker_main = 19 (limit:10)
 
-MODULES[126] (top by size):
-  M[adapters/python/urirun/runtime/v2.py] 2011L C:1 F:109 CC↑14 D:1 (python)
+MODULES[125] (top by size):
+  M[adapters/python/urirun/runtime/v2.py] 2273L C:1 F:118 CC↑16 D:4 (python)
   M[planfile.yaml] 1319L C:0 F:0 CC↑0 D:0 (yaml)
-  M[adapters/python/urirun/node/mesh.py] 1183L C:0 F:76 CC↑15 D:0 (python)
+  M[adapters/python/urirun/node/mesh.py] 1206L C:0 F:77 CC↑15 D:1 (python)
   M[adapters/python/urirun/runtime/_registry.py] 712L C:0 F:43 CC↑14 D:1 (python)
   M[adapters/python/urirun/runtime/_scan.py] 670L C:0 F:36 CC↑15 D:0 (python)
   M[adapters/python/urirun/host/host_dashboard.py] 609L C:0 F:16 CC↑13 D:0 (python)
   M[adapters/python/urirun/runtime/errors.py] 563L C:0 F:31 CC↑13 D:1 (python)
+  M[adapters/python/urirun/runtime/_runtime.py] 533L C:1 F:27 CC↑13 D:2 (python)
   M[goal.yaml] 533L C:0 F:0 CC↑0 D:0 (yaml)
-  M[adapters/python/urirun/runtime/_runtime.py] 504L C:1 F:26 CC↑13 D:1 (python)
+  M[adapters/python/urirun/__init__.py] 502L C:1 F:41 CC↑11 D:9 (python)
   M[adapters/python/urirun/host/host_db.py] 499L C:0 F:29 CC↑11 D:0 (python)
   M[adapters/python/urirun/host/domain_monitor.py] 485L C:1 F:25 CC↑11 D:0 (python)
-  M[adapters/python/urirun/__init__.py] 441L C:1 F:38 CC↑11 D:10 (python)
-  M[adapters/python/urirun/runtime/v1.py] 431L C:0 F:24 CC↑14 D:0 (python)
+  M[adapters/python/urirun/runtime/v1.py] 431L C:0 F:24 CC↑14 D:2 (python)
   M[adapters/python/urirun/connectors/connector_scaffold.py] 400L C:0 F:11 CC↑3 D:0 (python)
   M[adapters/python/urirun/runtime/codegen.py] 379L C:0 F:16 CC↑15 D:0 (python)
-  LANGS: python:68/json:12/shell:8/csharp:4/txt:4/yaml:4/javascript:3/c:3/java:3/ruby:2/typescript:2/go:2/php:2/rust:2/toml:2/other:1/proto:1/pm:1/perl:1/yml:1
+  LANGS: python:70/json:11/shell:9/csharp:4/yaml:4/javascript:3/c:3/txt:3/ruby:2/typescript:2/go:2/php:2/java:2/rust:2/toml:2/other:1/pm:1/perl:1/yml:1
 
 HOTSPOTS[10]:
-  ★ _build_parser fan=95  // Orchestrates 95 calls
+  ★ _build_parser fan=100  // Orchestrates 100 calls
+  ★ serve fan=30  // Run the daemon: warm registry + worker pool, one Unix socket, one process.
   ★ main fan=29  // Orchestrates 29 calls
+  ★ serve_node fan=28  // Orchestrates 28 calls
   ★ main fan=26  // Orchestrates 26 calls
-  ★ serve_node fan=26  // Orchestrates 26 calls
-  ★ main fan=25  // Orchestrates 25 calls
 
 REFACTOR[15]:
-  [1] H/L Split _flags (CC=26)
-  [2] H/H Split god module adapters/python/urirun/node/mesh.py (1183L, 0 classes)
+  [1] H/H Split god module adapters/python/urirun/runtime/v2.py (2273L, 1 classes)
+  [2] H/H Split god module adapters/python/urirun/node/mesh.py (1206L, 0 classes)
   [3] H/H Split god module adapters/python/urirun/runtime/_scan.py (670L, 0 classes)
   [4] H/H Split god module adapters/python/urirun/runtime/_registry.py (712L, 0 classes)
-  [5] H/H Split god module adapters/python/urirun/runtime/v2.py (2011L, 1 classes)
+  [5] H/H Split god module adapters/python/urirun/host/host_dashboard.py (609L, 0 classes)
 
 EVOLUTION:
-  2026-06-22 CC̄=4.1 crit=75 17762L // Automated analysis
+  2026-06-22 CC̄=4.1 crit=79 18048L // Automated analysis

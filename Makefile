@@ -36,6 +36,10 @@ test-c: ## Compile and run C adapter tests.
 conformance: ## Verify every language SDK emits the same urirun.bindings.v2 contract.
 	$(PYTHON) adapters/conformance.py
 
+.PHONY: lint
+lint: ## Ruff-lint the Python package (keeps main green; gated in CI).
+	$(PYTHON) -m ruff check adapters/python/urirun
+
 .PHONY: lint-connectors
 lint-connectors: ## Lint every sibling urirun-connector-* package; fail on code/manifest drift (--strict via STRICT=1).
 	$(PYTHON) scripts/lint_connectors.py $(if $(STRICT),--strict,)

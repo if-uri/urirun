@@ -225,7 +225,11 @@ git:
     prefix: v
     format: '{prefix}{version}'
 publishing:
-  enabled: true
+  # Release is owned by the Makefile + CI: `make release` tags v* and release.yml
+  # builds + publishes to PyPI via OIDC (no token). goal's own publish step both
+  # mangles the build command (global "python" -> interpreter replace corrupts the
+  # adapters/python path) and needs local auth, so it is disabled here.
+  enabled: false
   registries:
   - pypi
   dry_run: false
@@ -243,7 +247,7 @@ strategies:
     test: cd adapters/python && python -m pytest -q
     build: cd adapters/python && python -m build
     publish: twine upload --skip-existing adapters/python/dist/urirun-{version}*
-    publish_enabled: true
+    publish_enabled: false
     dependencies:
       file: adapters/python/requirements.txt
       lock: 'true'
@@ -251,7 +255,7 @@ strategies:
     test: npm test
     build: npm run build
     publish: npm publish
-    publish_enabled: true
+    publish_enabled: false
     dependencies:
       file: package-lock.json
       lock: npm install
@@ -259,7 +263,7 @@ strategies:
     test: cargo test
     build: cargo build --release
     publish: cargo publish
-    publish_enabled: true
+    publish_enabled: false
     dependencies:
       file: Cargo.lock
       lock: cargo update

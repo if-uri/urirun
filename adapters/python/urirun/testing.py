@@ -17,27 +17,127 @@ envelopes by hand::
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import urirun
 
 
-def smoke(bindings, *, run_uri: str | None = None, payload: str = "{}",
-          allow: str | None = None, name: str = "connector") -> dict:
-    """Run the validate -> compile -> (run) -> MCP/A2A pipeline over a bindings doc.
+def _resolve_bindings(bindings) -> dict:
+    """Accept a v2 bindings dict, a JSON file path, or a ``module:callable`` spec
+    (e.g. ``urirun_connector_time_tools:urirun_bindings``)."""
+    if isinstance(bindings, dict):
+        return bindings
+    spec = str(bindings)
+    if ":" in spec and "/" not in spec and not spec.endswith(".json"):
+        import importlib
 
-    ``bindings`` is anything ``connector_smoke`` accepts (a path, a ``module:callable``
-    entry-point spec, or a JSON string). Returns the structured smoke report.
+        module_name, _, attr = spec.partition(":")
+        return getattr(importlib.import_module(module_name), attr)()
+    with open(spec, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+# Adapters whose routes need a live function reference, so they CANNOT execute from
+# a compiled registry *file* without in-process hydration. Such a route passes a
+# test that hydrates in-process but fails `urirun run <uri> registry.json --execute`
+# with "local function ref is not callable" — the registry-portability regression
+# this module guards against. (examples 12/19 do compile_registry -> run(execute).)
+_NON_PORTABLE_ADAPTERS = {"local-function"}
+
+
+def _nonportable_routes(registry: dict, allow) -> list[dict]:
+    """Routes that would not execute from a serialized registry.json. Round-trips
+    the registry through JSON (as writing+reading a registry file does), then flags
+    routes whose adapter needs in-process hydration."""
+    blocked = set(_NON_PORTABLE_ADAPTERS) - set(allow or ())
+    try:
+        serialized = json.loads(json.dumps(registry))
+    except TypeError as exc:  # live refs/objects in the registry — not file-portable
+        return [{"uri": "<registry>", "adapter": "non-serializable", "detail": str(exc)}]
+    return [{"uri": route["uri"], "adapter": route.get("adapter")}
+            for route in urirun.list_routes(serialized) if route.get("adapter") in blocked]
+
+
+def registry_portability(bindings, *, allow=()) -> dict:
+    """Report routes that would NOT execute from a compiled registry *file*.
+
+    Compiles ``bindings`` and checks each route survives the registry.json
+    round-trip. ``allow`` opts adapter names back in (a connector meant for
+    in-process-hydrated use only). Returns ``{ok, nonPortable}``.
     """
-    from urirun.connectors.connector_smoke import smoke as _smoke
+    registry = urirun.compile_registry(_resolve_bindings(bindings))
+    offenders = _nonportable_routes(registry, allow)
+    return {"ok": not offenders, "nonPortable": offenders}
 
-    return _smoke(bindings, run_uri=run_uri, payload=payload, allow=allow, name=name)
+
+def assert_registry_portable(bindings, *, allow=()) -> dict:
+    """Assert every route executes from a compiled registry *file* (portable JSON),
+    not just in-process. Catches the ``local-function``-from-``registry.json``
+    regression — ``urirun run <uri> registry.json --execute`` failing
+    "local function ref is not callable". Pass adapter names in ``allow`` for an
+    intentionally in-process-only connector."""
+    report = registry_portability(bindings, allow=allow)
+    assert report["ok"], (
+        "non-portable routes — won't execute from a registry.json file "
+        f"(need in-process hydration): {report['nonPortable']}")
+    return report
 
 
-def assert_smoke(bindings, *, run_uri: str | None = None, payload: str = "{}",
-                 allow: str | None = None, name: str = "connector") -> dict:
+def smoke(bindings, *, run_uri: str | None = None, payload: dict | None = None,
+          allow: str | None = None, name: str = "connector",
+          require_portable: bool = True, portable_allow=()) -> dict:
+    """Run the validate -> compile -> portable -> (run) -> MCP/A2A pipeline.
+
+    ``bindings`` may be a v2 bindings dict, a JSON file path, or a ``module:callable``
+    entry-point spec. Returns a structured report ``{ok, stages, routes, nonPortable,
+    run?, mcpTools, a2aSkills}``.
+
+    ``require_portable`` (default True) fails the smoke if any route could not
+    execute from a serialized ``registry.json`` (a ``local-function`` route whose
+    ref can't survive the file); set False (or list adapters in ``portable_allow``)
+    for a connector intended for in-process-hydrated use only.
+    """
+    doc = _resolve_bindings(bindings)
+    report: dict = {"ok": True, "stages": []}
+
+    validation = urirun.validate_binding_document(doc)
+    report["stages"].append("validate")
+    if not validation.get("ok", False):
+        return {"ok": False, "stage": "validate", "errors": validation.get("errors", [])}
+
+    registry = urirun.compile_registry(doc)
+    report["routes"] = [route["uri"] for route in urirun.list_routes(registry)]
+    report["stages"].append("compile")
+
+    report["nonPortable"] = _nonportable_routes(registry, portable_allow)
+    report["stages"].append("portable")
+    if require_portable and report["nonPortable"]:
+        report["ok"] = False
+
+    if run_uri:
+        glob = allow or f"{run_uri.split('://', 1)[0]}://*"
+        env = urirun.run(run_uri, registry, payload or {}, mode="execute", policy=urirun.policy(allow=[glob]))
+        report["stages"].append("run")
+        report["run"] = {"uri": run_uri, "ok": bool(env.get("ok")), "data": urirun.result_data(env)}
+        if not env.get("ok"):
+            report["ok"] = False
+            report["run"]["detail"] = env
+
+    from urirun import v2_mcp
+
+    report["mcpTools"] = len(v2_mcp.to_mcp_tools(registry))
+    report["a2aSkills"] = len(v2_mcp.to_a2a_card(registry, name=name).get("skills", []))
+    report["stages"] += ["mcp", "a2a"]
+    return report
+
+
+def assert_smoke(bindings, *, run_uri: str | None = None, payload: dict | None = None,
+                 allow: str | None = None, name: str = "connector",
+                 require_portable: bool = True, portable_allow=()) -> dict:
     """Run :func:`smoke` and assert the whole pipeline passed; returns the report."""
-    report = smoke(bindings, run_uri=run_uri, payload=payload, allow=allow, name=name)
+    report = smoke(bindings, run_uri=run_uri, payload=payload, allow=allow, name=name,
+                   require_portable=require_portable, portable_allow=portable_allow)
     assert report.get("ok"), f"smoke failed: {report}"
     return report
 
@@ -45,7 +145,7 @@ def assert_smoke(bindings, *, run_uri: str | None = None, payload: str = "{}",
 def assert_routes(registry_or_bindings: dict, *uris: str) -> None:
     """Assert each URI is present in the (compiled or to-be-compiled) registry."""
     doc = registry_or_bindings
-    from urirun.v2 import REGISTRY_VERSION
+    from urirun._registry import REGISTRY_VERSION
 
     registry = doc if doc.get("version") == REGISTRY_VERSION else urirun.compile_registry(doc)
     present = {route["uri"] for route in urirun.list_routes(registry)}

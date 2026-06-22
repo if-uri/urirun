@@ -75,3 +75,34 @@ def test_pip_command_routes_through_pipx(monkeypatch):
 
 def test_package_version_is_a_string():
     assert isinstance(v2._package_version(), str) and v2._package_version()
+
+
+def test_pipspec_version_parsing():
+    assert v2._pipspec_version("pkg @ git+https://github.com/o/pkg.git@v1.2.3") == "1.2.3"
+    assert v2._pipspec_version("pkg @ git+https://github.com/o/pkg.git@main#subdirectory=x") == "main"
+    assert v2._pipspec_version("pkg==4.5.6") == "4.5.6"
+    assert v2._pipspec_version("pkg>=1.0") is None
+    assert v2._pipspec_version(None) is None
+
+
+def test_outdated_flags_version_mismatch(monkeypatch):
+    from urirun.connectors import connect_catalog
+
+    catalog = {"connectors": [
+        {"id": "alpha", "install": {"pipSpec": "urirun-connector-alpha @ git+https://h/a.git@v2.0.0"}},
+        {"id": "beta", "install": {"pipSpec": "urirun-connector-beta==1.0.0"}},
+    ]}
+    eps = [
+        types.SimpleNamespace(name="alpha", dist=types.SimpleNamespace(name="urirun-connector-alpha", version="1.0.0")),
+        types.SimpleNamespace(name="beta", dist=types.SimpleNamespace(name="urirun-connector-beta", version="1.0.0")),
+        types.SimpleNamespace(name="gamma", dist=types.SimpleNamespace(name="urirun-connector-gamma", version="0.1.0")),
+    ]
+    monkeypatch.setattr(connect_catalog, "fetch_catalog", lambda *a, **k: catalog)
+    monkeypatch.setattr(v2, "_select_entry_points", lambda group: eps)
+
+    out = _capture(v2._cmd_outdated, dict(catalog="x", json=True))
+    by_id = {r["id"]: r for r in out["connectors"]}
+    assert by_id["alpha"]["status"] == "outdated"       # installed 1.0.0 < catalog 2.0.0
+    assert by_id["beta"]["status"] == "up-to-date"      # both 1.0.0
+    assert by_id["gamma"]["status"] == "unknown"        # not in catalog
+    assert out["outdated"] == 1

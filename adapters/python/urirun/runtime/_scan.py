@@ -100,7 +100,7 @@ def normalize_binding(binding: dict, default_source: dict | None = None) -> dict
         "config": config,
         "source": source,
     }
-    for key in ("ref", "policy", "meta"):
+    for key in reglib.ROUTE_ENTRY_CARRY:
         if key in binding:
             normalized[key] = binding[key]
     return normalized
@@ -113,7 +113,7 @@ def binding_to_route_source(binding: dict) -> dict:
         "adapter": normalized["adapter"],
         "config": normalized.get("config", {}),
     }
-    for key in ("ref", "policy", "meta"):
+    for key in reglib.ROUTE_ENTRY_CARRY:
         if key in normalized:
             route_entry[key] = normalized[key]
     return {"uri": normalized["uri"], "routeEntry": route_entry, "source": normalized.get("source", {})}
@@ -128,7 +128,7 @@ def route_source_to_binding(route_source: dict) -> dict:
         "config": route_entry.get("config", {}),
         "source": route_source.get("source", {}),
     }
-    for key in ("ref", "policy", "meta"):
+    for key in reglib.ROUTE_ENTRY_CARRY:
         if key in route_entry:
             binding[key] = route_entry[key]
     return normalize_binding(binding)
