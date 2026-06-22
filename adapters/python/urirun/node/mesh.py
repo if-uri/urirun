@@ -1459,14 +1459,18 @@ def watch_command(args: argparse.Namespace) -> int:
     sys.stderr.write(f"watching {url}/events{' scheme=' + ','.join(scheme) if scheme else ''}"
                      f"{' -> mqtt ' + broker if broker else ''} — Ctrl-C to stop\n")
     sys.stderr.flush()
+
+    def emit(ev: dict) -> None:
+        if mqtt_pub:
+            mqtt_pub(event_topic(topic_prefix, ev), json.dumps(ev, ensure_ascii=False))
+        _print_event(ev, as_json)
+
     last_id = 0
     while True:
         try:
             for ev in watch_node(url, scheme=scheme, last_event_id=last_id, token=token, identity=identity):
                 last_id = ev.get("_id", last_id)
-                if mqtt_pub:
-                    mqtt_pub(event_topic(topic_prefix, ev), json.dumps(ev, ensure_ascii=False))
-                _print_event(ev, as_json)
+                emit(ev)
         except KeyboardInterrupt:
             return 0
         except Exception as exc:  # noqa: BLE001
@@ -1825,7 +1829,24 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
         def do_OPTIONS(self):
             send_json(self, 200, {"ok": True})
 
+        def _guarded(self, fn):
+            # never let an unhandled error kill the request thread / drop the connection:
+            # the node always answers with a 500 JSON envelope instead.
+            try:
+                fn()
+            except Exception as exc:  # noqa: BLE001
+                try:
+                    send_json(self, 500, {"ok": False, "error": f"node error: {type(exc).__name__}: {exc}"})
+                except Exception:
+                    pass  # headers/body already partly sent (e.g. mid-stream) — nothing to do
+
         def do_GET(self):
+            self._guarded(self._get)
+
+        def do_POST(self):
+            self._guarded(self._post)
+
+        def _get(self):
             if self.path == "/health":
                 send_json(self, 200, {"ok": True, "name": state["name"], "execute": execute,
                                       "version": current_version(),
@@ -1868,7 +1889,7 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
                 return
             send_json(self, 404, {"ok": False, "error": "not found"})
 
-        def do_POST(self):
+        def _post(self):
             if int(self.headers.get("Content-Length", "0") or "0") > MAX_BODY_BYTES:
                 send_json(self, 413, {"ok": False, "error": "request body too large"})
                 return

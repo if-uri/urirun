@@ -375,6 +375,35 @@ class MeshTests(unittest.TestCase):
         finally:
             server.shutdown()
 
+    def test_run_with_broken_handler_returns_json_not_dropped_connection(self):
+        import socket as _socket
+        import threading
+        import urllib.error
+        import urllib.request
+
+        # a local-function route whose module can't be imported -> resolution error
+        registry = mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
+            "boom://probe/x/query/go": {
+                "kind": "query", "adapter": "local-function", "ref": "nope_xyz:go",
+                "python": {"type": "python", "module": "nope_xyz_missing", "export": "go"},
+                "inputSchema": {"type": "object"}}}})
+        s = _socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+        server = mesh.serve_node("probe", registry, "127.0.0.1", port, execute=True, allow=["boom://**"])
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        url = f"http://127.0.0.1:{port}/run"
+        body = json.dumps({"uri": "boom://probe/x/query/go", "payload": {}}).encode()
+        try:
+            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+            try:
+                code, raw = 200, urllib.request.urlopen(req, timeout=5).read()
+            except urllib.error.HTTPError as e:
+                code, raw = e.code, e.read()      # 400/500 — a structured answer, NOT a dropped socket
+            payload = json.loads(raw)             # the key assertion: we got JSON back
+            self.assertIn("ok", payload)
+            self.assertFalse(payload["ok"])
+        finally:
+            server.shutdown()
+
     def test_event_topic_mapping(self):
         self.assertEqual(
             mesh.event_topic("urirun/events", {"node": "lab", "event": "run", "uri": "kvm://lab/x"}),

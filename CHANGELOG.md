@@ -71,6 +71,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Docker desktop from an NL intent; the desktop driver is a *connector*, the schema in
   the action space is the only core change).
 
+## [0.4.36] - 2026-06-22
+
+### Docs
+- Update README.md
+- Update code2llm_output/README.md
+- Update code2llm_output/context.md
+
+### Other
+- Update adapters/python/tests/test_mesh.py
+- Update adapters/python/urirun/node/mesh.py
+- Update code2llm_output/analysis.toon.yaml
+
 ## [0.4.35] - 2026-06-22
 
 ### Docs
