@@ -69,8 +69,8 @@ build: ## Build the Python adapter (wheel + sdist) into adapters/python/dist/. N
 	cd adapters/python && $(PYTHON) -m build
 
 .PHONY: publish
-publish: version-check build ## Build + upload the Python adapter to PyPI. Needs: pip install twine; TWINE_USERNAME=__token__ TWINE_PASSWORD=$$PYPI_API_TOKEN (or ~/.pypirc).
-	cd adapters/python && $(PYTHON) -m twine upload dist/*
+publish: version-check build ## Manual fallback upload to PyPI (CI release.yml auto-publishes on main). Needs: pip install twine; TWINE_USERNAME=__token__ TWINE_PASSWORD=$$PYPI_API_TOKEN (or ~/.pypirc).
+	cd adapters/python && $(PYTHON) -m twine upload --skip-existing dist/*
 
 .PHONY: release
 release: version-check ## Tag the current version and push it; CI (release.yml) then builds + publishes to PyPI.

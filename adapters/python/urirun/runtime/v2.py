@@ -1685,6 +1685,14 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
                              help="env var the node's handlers should read (repeatable)")
     host_deploy.add_argument("--name", help="rename the node on deploy")
     host_deploy.add_argument("--token", help="admin token (else URIRUN_NODE_TOKEN)")
+    host_deploy.add_argument("--identity", help="SSH private key to sign the deploy with (e.g. ~/.ssh/id_ed25519); "
+                                                "alternative to --token, enrolled via 'urirun host copy-id'")
+
+    host_copyid = host_sub.add_parser("copy-id", parents=[host_common],
+                                      help="Enroll your SSH public key on a node (ssh-copy-id for urirun)")
+    host_copyid.add_argument("node", nargs="?", help="configured node name or a node URL")
+    host_copyid.add_argument("--all", action="store_true", help="enroll on every node in the mesh config")
+    host_copyid.add_argument("--identity", help="SSH private key (default ~/.ssh/id_ed25519)")
 
     host_ask = host_sub.add_parser("ask", parents=[host_common], help="Generate a URI flow from natural language and dispatch it")
     host_ask.add_argument("prompt", nargs="+")
@@ -1828,6 +1836,20 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
 
     node_sub.add_parser("config", parents=[node_common], help="Print node config")
 
+    node_list = node_sub.add_parser("list", parents=[node_common],
+                                    help="List running urirun node instances (by probing /health)")
+    node_list.add_argument("--host", default="127.0.0.1", help="host to probe; default 127.0.0.1")
+    node_list.add_argument("--ports", help="port or range to probe, e.g. 8765 or 8765-8815 (default: auto)")
+    node_list.add_argument("--json", action="store_true")
+
+    node_stop = node_sub.add_parser("stop", parents=[node_common],
+                                    help="Stop running node instance(s) on this machine")
+    node_stop.add_argument("--port", type=int, action="append", metavar="N",
+                           help="port to stop (repeatable)")
+    node_stop.add_argument("--all", action="store_true", help="stop every running urirun node found")
+    node_stop.add_argument("--host", default="127.0.0.1", help="host to probe/stop; default 127.0.0.1")
+    node_stop.add_argument("--json", action="store_true")
+
     node_routes = node_sub.add_parser("routes", parents=[node_common], help="List URI routes in the node registry")
     node_routes.add_argument("--registry")
     node_routes.add_argument("--name")
@@ -1853,6 +1875,9 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     node_serve.add_argument("--generate-token", action="store_true",
                             help="if no token is given, mint one and persist it to ~/.urirun-node/admin-token "
                                  "(reused across restarts); enables POST /deploy")
+    node_serve.add_argument("--key-auth", action="store_true",
+                            help="enable SSH-key admin auth: accept ssh-copy-id enrollment and ed25519-signed "
+                                 "/deploy (no shared token). First key on a fresh node is trust-on-first-use.")
 
     def add_source(p, with_uri=True):
         if with_uri:

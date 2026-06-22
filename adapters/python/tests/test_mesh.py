@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from urirun import mesh
+from urirun.node import keyauth
 
 
 class MeshTests(unittest.TestCase):
@@ -72,6 +73,72 @@ class MeshTests(unittest.TestCase):
                     os.environ["HOME"] = old_home
                 if old_env is not None:
                     os.environ["URIRUN_NODE_TOKEN"] = old_env
+
+    def test_parse_ports(self):
+        self.assertEqual(mesh.parse_ports("8765-8767"), [8765, 8766, 8767])
+        self.assertEqual(mesh.parse_ports("8765,9000"), [8765, 9000])
+        self.assertEqual(mesh.parse_ports("8765"), [8765])
+
+    def test_node_list_running_discovers_a_live_node(self):
+        import socket as _socket
+        import threading
+
+        registry = mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
+            "env://probe/runtime/query/ping": {
+                "kind": "query", "adapter": "argv-template",
+                "inputSchema": {"type": "object"}, "argv": ["true"]},
+        }})
+        s = _socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+        server = mesh.serve_node("probe", registry, "127.0.0.1", port, execute=True, admin_token="t")
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            found = mesh.node_list_running("127.0.0.1", [port])
+            self.assertEqual(len(found), 1)
+            self.assertEqual(found[0]["name"], "probe")
+            self.assertTrue(found[0]["deploy"])         # token set -> deploy enabled
+            self.assertEqual(found[0]["url"], f"http://127.0.0.1:{port}")
+            self.assertEqual(mesh.node_list_running("127.0.0.1", [port + 1]), [])  # nothing there
+        finally:
+            server.shutdown()
+
+    @unittest.skipUnless(keyauth.available(), "cryptography not installed")
+    def test_keyauth_sign_verify_and_enrollment(self):
+        import os
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import (
+            Encoding, NoEncryption, PrivateFormat, PublicFormat)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            old_home = os.environ.get("HOME")
+            os.environ["HOME"] = tmp
+            try:
+                key = Ed25519PrivateKey.generate()
+                priv = Path(tmp) / "id_ed25519"
+                priv.write_bytes(key.private_bytes(Encoding.PEM, PrivateFormat.OpenSSH, NoEncryption()))
+                pub = key.public_key().public_bytes(Encoding.OpenSSH, PublicFormat.OpenSSH).decode()
+
+                # sign -> verify round-trip over an exact body
+                body = b'{"x":1}'
+                hdrs = keyauth.sign(str(priv), keyauth.PURPOSE_DEPLOY, body)
+                self.assertTrue(keyauth.verify(hdrs["X-Urirun-Key"], hdrs["X-Urirun-Sig"],
+                                               keyauth.PURPOSE_DEPLOY, hdrs["X-Urirun-Date"], body))
+                self.assertFalse(keyauth.verify(hdrs["X-Urirun-Key"], hdrs["X-Urirun-Sig"],
+                                                keyauth.PURPOSE_DEPLOY, hdrs["X-Urirun-Date"], b'tampered'))
+
+                # enrollment + authorized check + fingerprint stability
+                self.assertFalse(keyauth.is_authorized(pub))
+                res = keyauth.add_authorized(pub)
+                self.assertTrue(keyauth.is_authorized(pub))
+                self.assertEqual(res["fingerprint"], keyauth.fingerprint(pub))
+                self.assertEqual(res["count"], 1)
+                keyauth.add_authorized(pub)  # idempotent
+                self.assertEqual(len(keyauth.load_authorized()), 1)
+
+                # verify_request: authorized key + valid sig over the same body
+                self.assertTrue(keyauth.verify_request(hdrs, body, keyauth.PURPOSE_DEPLOY))
+            finally:
+                if old_home is not None:
+                    os.environ["HOME"] = old_home
 
     def test_node_config_defaults(self):
         with tempfile.TemporaryDirectory() as tmp:

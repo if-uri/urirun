@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from urirun import _registry as reglib, errors as uri_errors, v2, v2_mcp, v2_service
+from urirun.node import keyauth
 
 CONFIG_VERSION = "urirun.mesh.v1"
 DEFAULT_CONFIG = ".urirun/mesh.json"
@@ -158,8 +159,10 @@ def init_node(
 
 
 def http_json(method: str, url: str, body: dict | None = None, timeout: float = 8.0,
-              headers: dict | None = None) -> dict:
-    data = None if body is None else json.dumps(body).encode("utf-8")
+              headers: dict | None = None, raw: bytes | None = None) -> dict:
+    # `raw` sends pre-encoded bytes verbatim so a signature computed over them matches
+    # exactly what the server reads; otherwise the body dict is JSON-encoded here.
+    data = raw if raw is not None else (None if body is None else json.dumps(body).encode("utf-8"))
     request_headers = {"Content-Type": "application/json", **(headers or {})}
     request = urllib.request.Request(url, data=data, headers=request_headers, method=method)
     try:
@@ -170,6 +173,133 @@ def http_json(method: str, url: str, body: dict | None = None, timeout: float = 
             return json.loads(exc.read().decode("utf-8") or "{}")
         except json.JSONDecodeError:
             return {"ok": False, "error": {"type": "http", "status": exc.code, "message": str(exc)}}
+
+
+def _probe_health(host: str, port: int, timeout: float = 0.4) -> dict | None:
+    """Return a node summary if a urirun node answers /health on host:port, else None."""
+    try:
+        d = http_json("GET", f"http://{host}:{port}/health", timeout=timeout)
+    except Exception:
+        return None
+    if not (isinstance(d, dict) and d.get("ok") and ("routeCount" in d or "name" in d)):
+        return None
+    return {"port": port, "url": f"http://{host}:{port}", "name": d.get("name"),
+            "routeCount": d.get("routeCount"), "deploy": d.get("deploy"),
+            "execute": d.get("execute")}
+
+
+def _listening_ports_local() -> list[int]:
+    """Best-effort list of locally-listening TCP ports (so `node list` finds nodes on
+    ANY port, not a guessed range). Uses ss, then netstat; empty if neither is present."""
+    import re
+    import subprocess
+
+    for cmd in (["ss", "-ltnH"], ["ss", "-ltn"], ["netstat", "-ltn"]):
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+        except Exception:
+            continue
+        if not proc.stdout:
+            continue
+        ports = set()
+        for line in proc.stdout.splitlines():
+            m = re.search(r"[\d.*\[\]:]+:(\d+)\s", line)  # local-address column
+            if m:
+                ports.add(int(m.group(1)))
+        if ports:
+            return sorted(ports)
+    return []
+
+
+def node_list_running(host: str = "127.0.0.1", ports: list[int] | None = None) -> list[dict]:
+    """Discover running urirun nodes. With explicit ports, probe those. Otherwise probe
+    node.sh's fallback window (8765-8815), any ports in ~/.urirun-node configs, and —
+    for a local host — every actually-listening port, so duplicates on scattered ports
+    are all found."""
+    candidates: set[int] = set()
+    if ports:
+        candidates.update(ports)
+    else:
+        candidates.update(range(8765, 8816))
+        for cfg in node_state_dir().glob("*.json"):
+            try:
+                p = (json.loads(cfg.read_text(encoding="utf-8")).get("node") or {}).get("port")
+                if p:
+                    candidates.add(int(p))
+            except Exception:
+                pass
+        if host in ("127.0.0.1", "0.0.0.0", "localhost", "::1"):
+            candidates.update(_listening_ports_local())
+    return [r for p in sorted(candidates) if (r := _probe_health(host, p))]
+
+
+def _pids_on_port(port: int) -> list[int]:
+    """PIDs listening on a local TCP port (lsof, then ss); empty if none/undetectable."""
+    import re
+    import subprocess
+
+    try:
+        out = subprocess.run(["lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"],
+                             capture_output=True, text=True, timeout=3).stdout
+        pids = {int(x) for x in out.split() if x.strip().isdigit()}
+        if pids:
+            return sorted(pids)
+    except Exception:
+        pass
+    try:
+        out = subprocess.run(["ss", "-ltnpH"], capture_output=True, text=True, timeout=3).stdout
+        pids = set()
+        for line in out.splitlines():
+            if re.search(rf":{port}\b", line):
+                pids.update(int(m.group(1)) for m in re.finditer(r"pid=(\d+)", line))
+        return sorted(pids)
+    except Exception:
+        return []
+
+
+def stop_node_port(port: int, host: str = "127.0.0.1", timeout: float = 5.0) -> dict:
+    """Stop the local urirun node on a port: SIGTERM, wait for the port to free, then
+    SIGKILL as a last resort. Returns {port, pids, stopped, error?}."""
+    import os
+    import signal
+    import time
+
+    result: dict = {"port": port, "pids": _pids_on_port(port), "stopped": False}
+    if not result["pids"]:
+        result["error"] = "no local process listening on this port (remote, or already stopped)"
+        return result
+    for pid in result["pids"]:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            result["error"] = f"permission denied for pid {pid}"
+    for _ in range(int(timeout * 4)):
+        if _probe_health(host, port, 0.3) is None:
+            result["stopped"] = True
+            return result
+        time.sleep(0.25)
+    for pid in result["pids"]:  # last resort
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except Exception:
+            pass
+    time.sleep(0.5)
+    result["stopped"] = _probe_health(host, port, 0.3) is None
+    return result
+
+
+def parse_ports(spec: str) -> list[int]:
+    out: list[int] = []
+    for part in spec.split(","):
+        part = part.strip()
+        if "-" in part:
+            a, _, b = part.partition("-")
+            out.extend(range(int(a), int(b) + 1))
+        elif part:
+            out.append(int(part))
+    return out
 
 
 def node_url(config: dict, name_or_url: str) -> str:
@@ -185,10 +315,11 @@ def node_url(config: dict, name_or_url: str) -> str:
 def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | None = None,
                    allow: list[str] | None = None, code: dict | None = None,
                    env: dict | None = None, name: str | None = None,
-                   token: str | None = None, timeout: float = 30.0) -> dict:
-    """Push a registry (+ optional handler code/env) onto a running node's POST /deploy,
-    so a host can provision a node over the mesh without SSH. The node must have been
-    started with a matching --admin-token."""
+                   token: str | None = None, identity: str | None = None,
+                   timeout: float = 30.0) -> dict:
+    """Push a registry (+ optional handler code/env) onto a running node's POST /deploy.
+    Authenticate with either a shared `token` or an SSH `identity` (ed25519 private key
+    enrolled on the node via copy_id). The node must have /deploy enabled."""
     body: dict = {}
     if registry is not None:
         body["registry"] = registry
@@ -202,8 +333,28 @@ def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | N
         body["env"] = env
     if name:
         body["name"] = name
-    headers = {"X-Urirun-Token": token} if token else {}
-    return http_json("POST", f"{url.rstrip('/')}/deploy", body=body, timeout=timeout, headers=headers)
+    raw = json.dumps(body).encode("utf-8")
+    headers: dict = {}
+    if identity:
+        headers = keyauth.sign(identity, keyauth.PURPOSE_DEPLOY, raw)
+    elif token:
+        headers = {"X-Urirun-Token": token}
+    return http_json("POST", f"{url.rstrip('/')}/deploy", raw=raw, timeout=timeout, headers=headers)
+
+
+def copy_id(url: str, identity: str, *, timeout: float = 10.0) -> dict:
+    """ssh-copy-id for urirun: enroll an SSH public key as an admin on the node. On a
+    fresh node (empty authorized_keys) this is trust-on-first-use — no secret needed;
+    once keys exist, the enrollment is signed with the same identity so only an already
+    enrolled admin can add more. `identity` is the private key path (its .pub is sent)."""
+    pub = (Path(identity + ".pub").read_text(encoding="utf-8").strip()
+           if Path(identity + ".pub").exists() else keyauth.public_openssh(identity))
+    raw = json.dumps({"publicKey": pub}).encode("utf-8")
+    headers: dict = {}
+    if keyauth.available():  # sign so add-after-first works; ignored by a fresh node
+        headers = keyauth.sign(identity, keyauth.PURPOSE_ENROLL, raw)
+    return http_json("POST", f"{url.rstrip('/')}/authorized-keys", raw=raw,
+                     timeout=timeout, headers=headers)
 
 
 def routes_from_registry(registry: dict) -> list[dict]:
@@ -1068,6 +1219,8 @@ def _host_delegated_command(args: argparse.Namespace) -> int | None:
         return task_command(args)
     if args.host_command == "deploy":
         return deploy_command(args)
+    if args.host_command == "copy-id":
+        return copy_id_command(args)
     return None
 
 
@@ -1102,6 +1255,70 @@ def _host_mesh_command(args: argparse.Namespace, config: dict, mesh: dict) -> in
     return None
 
 
+DEFAULT_IDENTITY = os.path.expanduser("~/.ssh/id_ed25519")
+
+
+def copy_id_command(args: argparse.Namespace) -> int:
+    """`urirun host copy-id <node>|--all [--identity ~/.ssh/id_ed25519]` — ssh-copy-id for urirun."""
+    if not keyauth.available():
+        sys.stderr.write("this needs the 'cryptography' package: pip install cryptography\n")
+        return 1
+    identity = getattr(args, "identity", None) or DEFAULT_IDENTITY
+    config = load_host_config(args.config)
+
+    if getattr(args, "all", False):
+        nodes = config.get("nodes", [])
+        if not nodes:
+            sys.stderr.write("no nodes in the mesh config (urirun host add-node …)\n")
+            return 1
+        ok = 0
+        for node in nodes:
+            url = str(node["url"]).rstrip("/")
+            try:
+                res = copy_id(url, identity)
+            except Exception as exc:  # noqa: BLE001
+                res = {"ok": False, "error": str(exc)}
+            mark = res.get("fingerprint") if res.get("ok") else f"FAIL {res.get('error')}"
+            print(f"{node['name']:<14} {url:<32} {mark}")
+            ok += 1 if res.get("ok") else 0
+        sys.stderr.write(f"\nenrolled on {ok}/{len(nodes)} node(s) with {identity}\n")
+        return 0 if ok == len(nodes) else 1
+
+    if not getattr(args, "node", None):
+        sys.stderr.write("pass a node (name or URL) or --all\n")
+        return 2
+    url = node_url(config, args.node)
+    result = copy_id(url, identity)
+    reglib._emit_json(result, "-")
+    if result.get("ok"):
+        sys.stderr.write(f"enrolled {result.get('fingerprint')} on {url} "
+                         f"({result.get('count')} key(s)); deploy with: "
+                         f"urirun host deploy {args.node} --identity {identity} --bindings b.json\n")
+        return 0
+    return 1
+
+
+def copy_id_cli(argv: list[str] | None = None) -> int:
+    """Entry point for the standalone `uri-copy-id <node> [-i identity]` command."""
+    import argparse as _ap
+
+    p = _ap.ArgumentParser(prog="uri-copy-id",
+                           description="Enroll your SSH public key on a urirun node (ssh-copy-id for urirun)")
+    p.add_argument("node", help="node URL (e.g. 192.168.188.201) or a configured node name")
+    p.add_argument("-i", "--identity", default=DEFAULT_IDENTITY, help="SSH private key (default ~/.ssh/id_ed25519)")
+    p.add_argument("--config", default=None, help="host mesh config (to resolve a node name)")
+    args = p.parse_args(argv)
+    # bare host -> default urirun port
+    if "://" not in args.node and "/" not in args.node and ":" not in args.node:
+        try:
+            load_host_config(args.config)["nodes"]  # name resolution path still works below
+        except Exception:
+            pass
+        if not any(n.get("name") == args.node for n in load_host_config(args.config).get("nodes", [])):
+            args.node = f"http://{args.node}:8765"
+    return copy_id_command(args)
+
+
 def deploy_command(args: argparse.Namespace) -> int:
     """`urirun host deploy <node> --bindings F [--allow G] [--code F] [--env K=V]`."""
     config = load_host_config(args.config)
@@ -1120,10 +1337,13 @@ def deploy_command(args: argparse.Namespace) -> int:
         key, _, val = pair.partition("=")
         env[key] = val
     token = args.token or os.environ.get("URIRUN_NODE_TOKEN")
+    identity = getattr(args, "identity", None)
+    if identity and not token:
+        identity = os.path.expanduser(identity)
 
     result = deploy_to_node(url, bindings=bindings, registry=registry,
                             allow=args.allow or None, code=code or None, env=env or None,
-                            name=args.name, token=token)
+                            name=args.name, token=token, identity=identity)
     reglib._emit_json(result, "-")
     return 0 if result.get("ok") else 1
 
@@ -1150,11 +1370,13 @@ def send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> No
     handler.wfile.write(body)
 
 
-def read_json(handler: BaseHTTPRequestHandler) -> dict:
+def read_raw(handler: BaseHTTPRequestHandler) -> bytes:
     length = int(handler.headers.get("Content-Length", "0"))
-    if length <= 0:
-        return {}
-    return json.loads(handler.rfile.read(length).decode("utf-8") or "{}")
+    return handler.rfile.read(length) if length > 0 else b""
+
+
+def read_json(handler: BaseHTTPRequestHandler) -> dict:
+    return json.loads(read_raw(handler).decode("utf-8") or "{}")
 
 
 def _pool_executors(pools):
@@ -1277,8 +1499,10 @@ def apply_deploy(state: dict, body: dict) -> dict:
 
 def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, public_url: str | None = None,
                allow_secrets: bool = False, allow: list[str] | None = None, pool: bool = False,
-               admin_token: str | None = None) -> ThreadingHTTPServer:
+               admin_token: str | None = None, key_auth: bool = False) -> ThreadingHTTPServer:
     public_url = public_url or f"http://{socket.gethostname()}:{port}"
+    # /deploy is reachable when a token OR SSH key-auth is configured.
+    deploy_enabled = bool(admin_token) or key_auth
     # Mutable so POST /deploy can hot-swap what the node serves without a restart.
     state = {"name": name, "registry": registry,
              "routes": routes_from_registry(registry), "allow": list(allow or [])}
@@ -1296,7 +1520,8 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             if self.path == "/health":
                 send_json(self, 200, {"ok": True, "name": state["name"], "execute": execute,
                                       "routeCount": len(state["routes"]),
-                                      "deploy": bool(admin_token)})
+                                      "deploy": deploy_enabled,
+                                      "keyAuth": key_auth, "keyCount": len(keyauth.load_authorized()) if key_auth else 0})
                 return
             if self.path == "/routes" or self.path == "/uri-processes":
                 send_json(self, 200, {"ok": True, "name": state["name"], "routes": state["routes"]})
@@ -1328,6 +1553,9 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             if self.path == "/deploy":
                 self._handle_deploy()
                 return
+            if self.path == "/authorized-keys":
+                self._handle_enroll()
+                return
             if self.path != "/run":
                 send_json(self, 404, {"ok": False, "error": "not found"})
                 return
@@ -1347,18 +1575,28 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             result["service"] = state["name"]
             send_json(self, 200 if result.get("ok") else 400, result)
 
+        def _admin_ok(self, raw: bytes) -> bool:
+            # token OR an ed25519 signature from an enrolled SSH key
+            if admin_token and self.headers.get("X-Urirun-Token") == admin_token:
+                return True
+            if key_auth and keyauth.verify_request(self.headers, raw, keyauth.PURPOSE_DEPLOY):
+                return True
+            return False
+
         def _handle_deploy(self):
             # Remote provisioning: push a registry (+ optional handler code) onto a live
             # node, no SSH. It can write code and add executable routes, so it is OFF
-            # unless the node was started with an admin token, and every call must match.
-            if not admin_token:
-                send_json(self, 403, {"ok": False, "error": "deploy disabled (start node with --admin-token)"})
+            # unless the node enabled --admin-token and/or --key-auth, and every call
+            # must present a matching token or a signature from an enrolled key.
+            if not deploy_enabled:
+                send_json(self, 403, {"ok": False, "error": "deploy disabled (start node with --admin-token or --key-auth)"})
                 return
-            if self.headers.get("X-Urirun-Token") != admin_token:
-                send_json(self, 403, {"ok": False, "error": "bad or missing X-Urirun-Token"})
+            raw = read_raw(self)
+            if not self._admin_ok(raw):
+                send_json(self, 403, {"ok": False, "error": "unauthorized (need X-Urirun-Token or a signature from an enrolled key)"})
                 return
             try:
-                summary = apply_deploy(state, read_json(self))
+                summary = apply_deploy(state, json.loads(raw.decode("utf-8") or "{}"))
             except Exception as exc:  # noqa: BLE001
                 send_json(self, 400, {"ok": False, "error": str(exc)})
                 return
@@ -1366,12 +1604,44 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
                               "routes": summary["routeCount"], "schemes": summary["schemes"]}), flush=True)
             send_json(self, 200, summary)
 
+        def _handle_enroll(self):
+            # ssh-copy-id for urirun. Trust-on-first-use: the FIRST key on an empty
+            # authorized_keys claims a fresh node with no secret; after that, adding a
+            # key must be signed by an already-enrolled one.
+            if not key_auth:
+                send_json(self, 403, {"ok": False, "error": "key auth disabled (start node with --key-auth)"})
+                return
+            if not keyauth.available():
+                send_json(self, 501, {"ok": False, "error": "node lacks the 'cryptography' package; pip install cryptography"})
+                return
+            raw = read_raw(self)
+            try:
+                pub = json.loads(raw.decode("utf-8") or "{}").get("publicKey")
+            except Exception:
+                pub = None
+            if not pub:
+                send_json(self, 400, {"ok": False, "error": "missing publicKey"})
+                return
+            existing = keyauth.load_authorized()
+            if existing and not keyauth.verify_request(self.headers, raw, keyauth.PURPOSE_ENROLL):
+                send_json(self, 403, {"ok": False, "error": "node already enrolled; sign the request with an authorized key"})
+                return
+            try:
+                res = keyauth.add_authorized(pub)
+            except Exception as exc:  # noqa: BLE001
+                send_json(self, 400, {"ok": False, "error": str(exc)})
+                return
+            print(json.dumps({"event": "urirun.node.key.enrolled", "name": state["name"],
+                              "fingerprint": res["fingerprint"], "keys": res["count"]}), flush=True)
+            send_json(self, 200, {"ok": True, "name": state["name"], **res})
+
         def log_message(self, fmt, *args: Any):
             return
 
     server = ThreadingHTTPServer((host, port), Handler)
     print(json.dumps({"event": "urirun.node.started", "name": name, "host": host, "port": port,
-                      "execute": execute, "routes": len(state["routes"]), "deploy": bool(admin_token)}), flush=True)
+                      "execute": execute, "routes": len(state["routes"]),
+                      "deploy": deploy_enabled, "keyAuth": key_auth}), flush=True)
     return server
 
 
@@ -1384,16 +1654,70 @@ def _node_serve(args: argparse.Namespace, node: dict, name: str, registry: dict)
     pool = bool(getattr(args, "pool", False) or node.get("pool"))
     admin_token = resolve_admin_token(getattr(args, "admin_token", None), node.get("adminToken"),
                                       bool(getattr(args, "generate_token", False)))
+    # key-auth: explicit flag, node config, or implied by an existing authorized_keys file
+    key_auth = bool(getattr(args, "key_auth", False) or node.get("keyAuth")
+                    or keyauth.authorized_keys_path().exists())
     server = serve_node(name, registry, host, port, execute, public_url=args.public_url,
-                        allow_secrets=allow_secrets, allow=allow, pool=pool, admin_token=admin_token)
+                        allow_secrets=allow_secrets, allow=allow, pool=pool,
+                        admin_token=admin_token, key_auth=key_auth)
     server.serve_forever()
     return 0
+
+
+def node_list_command(args: argparse.Namespace) -> int:
+    host = getattr(args, "host", None) or "127.0.0.1"
+    ports = parse_ports(args.ports) if getattr(args, "ports", None) else None
+    found = node_list_running(host, ports)
+    if getattr(args, "json", False):
+        reglib._emit_json({"host": host, "nodes": found}, "-")
+        return 0
+    if not found:
+        print(f"no running urirun nodes on {host} (try --ports A-B)")
+        return 0
+    print(format_table(found, ["port", "name", "routeCount", "deploy", "execute", "url"],
+                       {"port": "PORT", "name": "NAME", "routeCount": "ROUTES",
+                        "deploy": "DEPLOY", "execute": "EXEC", "url": "URL"}))
+    names = {n["name"] for n in found}
+    if len(names) < len(found):
+        print(f"\nnote: {len(found)} instances share {len(names)} name(s) — duplicates from "
+              "node.sh's free-port fallback. Keep one (stop the rest) or give each a unique --name.")
+    print("\nregister one with a host:  urirun host add-node <name> <url>")
+    return 0
+
+
+def node_stop_command(args: argparse.Namespace) -> int:
+    host = getattr(args, "host", None) or "127.0.0.1"
+    if getattr(args, "all", False):
+        ports = [n["port"] for n in node_list_running(host)]
+        if not ports:
+            print("no running urirun nodes found")
+            return 0
+    elif getattr(args, "port", None):
+        ports = list(args.port)
+    else:
+        sys.stderr.write("pass --port N (repeatable) or --all\n")
+        return 2
+    results = [stop_node_port(p, host) for p in ports]
+    if getattr(args, "json", False):
+        reglib._emit_json({"stopped": results}, "-")
+    else:
+        for r in results:
+            state = "stopped" if r["stopped"] else "FAILED"
+            extra = f"  {r['error']}" if r.get("error") else ""
+            print(f"port {r['port']}: {state} (pids {r['pids'] or '-'}){extra}")
+        print("\nnote: a systemd --user service restarts on kill — for those use "
+              "`systemctl --user disable --now urirun-node`")
+    return 0 if all(r["stopped"] for r in results) else 1
 
 
 def node_command(args: argparse.Namespace) -> int:
     if args.node_command == "init":
         reglib._emit_json(init_node(args.config, args.name, args.registry, args.host, args.port, args.execute), "-")
         return 0
+    if args.node_command == "list":
+        return node_list_command(args)
+    if args.node_command == "stop":
+        return node_stop_command(args)
 
     config = load_node_config(args.config)
     node = dict(config.get("node") or {})

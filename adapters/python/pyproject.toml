@@ -25,6 +25,7 @@ test = ["planfile>=0.1.103", "pytest>=7"]
 urirun = "urirun.v2:main"
 urirun-v1 = "urirun.v1:main"
 urirun-v2 = "urirun.v2:main"
+uri-copy-id = "urirun.node.mesh:copy_id_cli"
 
 [tool.setuptools.packages.find]
 where = ["."]

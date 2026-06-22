@@ -247,3 +247,7 @@ __marimo__/
 
 # Markpact unpack output (urisys markpact run/materialize)
 .markpact/
+
+# urirun generated discovery cache (embeds per-run timestamps — not source)
+.urirun/discovered-registry.json
+**/.urirun/discovered-registry.json
