@@ -977,6 +977,23 @@ class MeshTests(unittest.TestCase):
             # a non-matching scheme filters it out
             self.assertEqual(manage.connector_discover(roots=tmp, scheme="nope")["local"], [])
 
+    def test_discover_derives_routes_from_uninstalled_local_connector(self):
+        # zero-install introspection: derive a local connector's real route URIs from source
+        # (if-uri via isolated import; tellmesh via manifest uri_patterns).
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp) / "urirun_connector_demo"
+            pkg.mkdir(parents=True)
+            (pkg / "__init__.py").write_text(
+                'def urirun_bindings():\n'
+                '    return {"version": "urirun.bindings.v2", "bindings": {\n'
+                '        "demo://h/thing/query/ping": {"kind": "query", "adapter": "argv-template"}}}\n',
+                encoding="utf-8")
+            (pkg / "connector.manifest.json").write_text(json.dumps({"id": "demo", "name": "Demo"}), encoding="utf-8")
+            out = manage.connector_discover(roots=tmp, include_routes=True)
+            hit = next(c for c in out["local"] if c["id"] == "demo")
+            self.assertIn("demo://h/thing/query/ping", hit.get("routes", []))
+            self.assertEqual(hit["schemes"], ["demo"])           # derived from the routes
+
     def test_node_management_routes_admin_gated(self):
         import socket as _socket
         import threading
@@ -1302,3 +1319,24 @@ def test_apply_deploy_bumps_generation_and_reports_etag():
     assert state["generation"] == 2                                  # surface change bumps generation
     assert summary["registryGeneration"] == 2
     assert summary["registryEtag"] == nodemesh.registry_fingerprint(state["routes"])
+
+
+def test_maybe_load_dotenv(tmp_path, monkeypatch):
+    """host ask --env-file / URIRUN_DOTENV loads LLM_MODEL etc. without clobbering the
+    real environment."""
+    from urirun.node import mesh as nodemesh
+    envf = tmp_path / ".env"
+    envf.write_text('LLM_MODEL=openrouter/x\nOPENROUTER_API_KEY="sk-or-1"\n# c\nBAD\n', encoding="utf-8")
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    loaded = nodemesh._maybe_load_dotenv(str(envf))
+    assert set(loaded) == {"LLM_MODEL", "OPENROUTER_API_KEY"}
+    import os
+    assert os.environ["LLM_MODEL"] == "openrouter/x"
+    assert os.environ["OPENROUTER_API_KEY"] == "sk-or-1"          # quotes stripped
+    monkeypatch.setenv("LLM_MODEL", "real")
+    nodemesh._maybe_load_dotenv(str(envf))
+    assert os.environ["LLM_MODEL"] == "real"                       # already-set wins
+    # no file / not enabled -> no-op
+    monkeypatch.delenv("URIRUN_DOTENV", raising=False)
+    assert nodemesh._maybe_load_dotenv(None) == []

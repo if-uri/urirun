@@ -1588,6 +1588,9 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     host_sub = host_parser.add_subparsers(dest="host_command", required=True)
     host_common = argparse.ArgumentParser(add_help=False)
     host_common.add_argument("--config", default=None, help="host mesh config path; default .urirun/mesh.json")
+    host_common.add_argument("--env-file", default=None, metavar="PATH",
+                             help="load KEY=VALUE from a .env (LLM_MODEL / OPENROUTER_API_KEY etc.) before running; "
+                                  "./.env is auto-loaded when URIRUN_DOTENV=1. Already-set vars win.")
 
     host_init = host_sub.add_parser("init", parents=[host_common], help="Create host mesh config")
     host_init.add_argument("--name")

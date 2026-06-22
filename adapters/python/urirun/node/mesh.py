@@ -1910,7 +1910,29 @@ def deploy_command(args: argparse.Namespace) -> int:
     return 0 if result.get("ok") else 1
 
 
+def _maybe_load_dotenv(path: str | None) -> list[str]:
+    """Load ``KEY=VALUE`` lines from an explicit ``--env-file`` (or ``./.env`` when
+    ``URIRUN_DOTENV=1``) into the environment — so ``host ask`` and the LLM planners
+    pick up ``LLM_MODEL`` / ``OPENROUTER_API_KEY`` without ``set -a; . .env``. An
+    already-set variable wins (the file never clobbers the real environment)."""
+    candidate = path or (".env" if os.environ.get("URIRUN_DOTENV") == "1" else None)
+    if not candidate or not os.path.exists(candidate):
+        return []
+    loaded = []
+    for line in Path(candidate).read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = val.strip().strip('"').strip("'")
+            loaded.append(key)
+    return loaded
+
+
 def host_command(args: argparse.Namespace) -> int:
+    _maybe_load_dotenv(getattr(args, "env_file", None))
     delegated = _host_delegated_command(args)
     if delegated is not None:
         return delegated
