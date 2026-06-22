@@ -1,58 +1,58 @@
-# code2llm/evolution | 948 func | 62f | 2026-06-22
-# generated in 0.00s
+# code2llm/evolution | 954 func | 62f | 2026-06-22
+# generated in 0.01s
 
 NEXT[10] (ranked by impact):
   [1] !! SPLIT           adapters/python/urirun/node/mesh.py
-      WHY: 2276L, 3 classes, max CC=17
-      EFFORT: ~4h  IMPACT: 38692
+      WHY: 2408L, 3 classes, max CC=25
+      EFFORT: ~4h  IMPACT: 60200
 
   [2] !! SPLIT           adapters/python/urirun/runtime/v2.py
-      WHY: 2500L, 1 classes, max CC=14
-      EFFORT: ~4h  IMPACT: 35000
+      WHY: 2524L, 1 classes, max CC=14
+      EFFORT: ~4h  IMPACT: 35336
 
-  [3] !  SPLIT-FUNC      main  CC=17  fan=29
+  [3] !! SPLIT-FUNC      probe_command  CC=25  fan=24
+      WHY: CC=25 exceeds 15
+      EFFORT: ~1h  IMPACT: 600
+
+  [4] !  SPLIT-FUNC      main  CC=17  fan=29
       WHY: CC=17 exceeds 15
       EFFORT: ~1h  IMPACT: 493
 
-  [4] !  SPLIT-FUNC      NodeHandler._stream_events  CC=17  fan=28
+  [5] !  SPLIT-FUNC      NodeHandler._stream_events  CC=17  fan=28
       WHY: CC=17 exceeds 15
       EFFORT: ~1h  IMPACT: 476
 
-  [5] !  SPLIT-FUNC      watch_command  CC=17  fan=19
+  [6] !  SPLIT-FUNC      verify_connector  CC=18  fan=25
+      WHY: CC=18 exceeds 15
+      EFFORT: ~1h  IMPACT: 450
+
+  [7] !  SPLIT-FUNC      NodeHandler._handle_run  CC=18  fan=21
+      WHY: CC=18 exceeds 15
+      EFFORT: ~1h  IMPACT: 378
+
+  [8] !  SPLIT-FUNC      watch_command  CC=17  fan=19
       WHY: CC=17 exceeds 15
       EFFORT: ~1h  IMPACT: 323
 
-  [6] !  SPLIT-FUNC      scan_path  CC=15  fan=19
+  [9] !  SPLIT-FUNC      scan_path  CC=15  fan=19
       WHY: CC=15 exceeds 15
       EFFORT: ~1h  IMPACT: 285
 
-  [7] !  SPLIT-FUNC      deploy_command  CC=15  fan=16
+  [10] !  SPLIT-FUNC      deploy_command  CC=15  fan=16
       WHY: CC=15 exceeds 15
       EFFORT: ~1h  IMPACT: 240
-
-  [8] !  SPLIT-FUNC      data_command  CC=15  fan=15
-      WHY: CC=15 exceeds 15
-      EFFORT: ~1h  IMPACT: 225
-
-  [9] !  SPLIT-FUNC      serve_mcp  CC=15  fan=14
-      WHY: CC=15 exceeds 15
-      EFFORT: ~1h  IMPACT: 210
-
-  [10] !! SPLIT           planfile.yaml
-      WHY: 1319L, 0 classes, max CC=0
-      EFFORT: ~4h  IMPACT: 0
 
 
 RISKS[3]:
   ⚠ Splitting adapters/python/urirun/runtime/v2.py may break 125 import paths
-  ⚠ Splitting adapters/python/urirun/node/mesh.py may break 137 import paths
+  ⚠ Splitting adapters/python/urirun/node/mesh.py may break 140 import paths
   ⚠ Splitting planfile.yaml may break 0 import paths
 
 METRICS-TARGET:
   CC̄:          4.3 → ≤3.0
-  max-CC:      19 → ≤9
+  max-CC:      25 → ≤12
   god-modules: 10 → 0
-  high-CC(≥15): 12 → ≤6
+  high-CC(≥15): 15 → ≤7
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
