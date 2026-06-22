@@ -1490,6 +1490,18 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     connectors_install.add_argument("ids", nargs="+")
     connectors_install.add_argument("--execute", action="store_true", help="Actually run pip (default: dry-run)")
     connectors_install.add_argument("--json", action="store_true")
+    connectors_index = connectors_sub.add_parser("index", help="Index local urirun-connector-* projects")
+    connectors_index.add_argument("--root", action="append", default=None,
+                                  help="Root to scan; repeatable. Default: ~/github")
+    connectors_index.add_argument("--org", default="if-uri", help="GitHub org for fallback git install specs")
+    connectors_index.add_argument("--json", action="store_true")
+    connectors_resolve = connectors_sub.add_parser("resolve", help="Resolve a needed capability to connector install candidates")
+    connectors_resolve.add_argument("capability", help="scheme, URI, or short phrase, e.g. browser, browser://..., 'send email'")
+    connectors_resolve.add_argument("--root", action="append", default=None,
+                                    help="Root to scan; repeatable. Default: ~/github")
+    connectors_resolve.add_argument("--org", default="if-uri", help="GitHub org for fallback git install specs")
+    connectors_resolve.add_argument("--limit", type=int, default=5)
+    connectors_resolve.add_argument("--json", action="store_true")
 
     install_parser = subparsers.add_parser("install", help="Install a connector (alias for 'connectors install', runs pip by default)")
     install_parser.add_argument("ids", nargs="+", help="connector ids or package names")
@@ -2324,6 +2336,8 @@ _CONNECTOR_SUBCOMMANDS = {
     "new": ("urirun.connector_scaffold", "new_command"),
     "smoke": ("urirun.connector_smoke", "smoke_command"),
     "from-spec": ("urirun.connectors.declarative", "from_spec_command"),
+    "index": ("urirun.connectors.resolver", "index_command"),
+    "resolve": ("urirun.connectors.resolver", "resolve_command"),
 }
 
 

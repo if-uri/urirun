@@ -91,6 +91,52 @@ class NodeClient:
     def status(self, run_id: str) -> dict:
         return self.run(f"run://{run_id}/query/status")
 
+    # --- self-management: deploy + acquire a capability on demand ---
+    def deploy(self, bindings: dict | None = None, code: dict | None = None, allow: list | None = None,
+               env: dict | None = None, merge: bool = False, timeout: float = 120.0) -> dict:
+        """Push a registry (+ optional handler code/env) onto the node; merge adds routes
+        to the existing surface instead of replacing it. Needs the node's admin token."""
+        body: dict = {}
+        if bindings is not None:
+            body["bindings"] = bindings
+        if code:
+            body["code"] = code
+        if allow:
+            body["allow"] = allow
+        if env:
+            body["env"] = env
+        if merge:
+            body["merge"] = True
+        return _post(self.base + "/deploy", body, headers=self._auth(), timeout=timeout)
+
+    def schemes(self) -> set:
+        return {str(r.get("uri", "")).split("://", 1)[0] for r in self.routes()}
+
+    def ensure_scheme(self, scheme: str, roots=None, install: bool = True) -> dict:
+        """Make `scheme://` live on the node, acquiring it if missing: use bindings already
+        installed in the node venv, else discover a connector (catalog/local ~/github/git)
+        via node:// management, install it, then merge-deploy its routes. Needs --manage +
+        admin token. Returns {ok, scheme, already?, deployed?}."""
+        if scheme in self.schemes():
+            return {"ok": True, "scheme": scheme, "already": True}
+        mgmt = f"node://{self.name}"
+        inst = self.value(self.run(f"{mgmt}/registry/query/installed", {"scheme": scheme})) or {}
+        binds = inst.get("bindings") or {}
+        if not binds and install:
+            disc = self.value(self.run(f"{mgmt}/connector/query/discover",
+                                       {"scheme": scheme, **({"roots": roots} if roots else {})})) or {}
+            sources = [c["source"] for c in disc.get("local", []) if c.get("source")]
+            if sources:
+                self.run(f"{mgmt}/connector/command/install", {"source": sources[0], "editable": True})
+                inst = self.value(self.run(f"{mgmt}/registry/query/installed", {"scheme": scheme})) or {}
+                binds = inst.get("bindings") or {}
+        if not binds:
+            return {"ok": False, "scheme": scheme, "error": "no installed bindings or local source for scheme"}
+        dep = self.deploy(bindings={"version": inst.get("version", "urirun.bindings.v2"), "bindings": binds},
+                          allow=[f"{scheme}://**"], merge=True)
+        return {"ok": scheme in self.schemes(), "scheme": scheme,
+                "deployed": dep.get("routeCount"), "acquired": True}
+
     @staticmethod
     def value(env: dict) -> Any:
         """Unwrap a /run envelope: local-function -> result.value; argv -> result.stdout(json)."""
