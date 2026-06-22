@@ -20,6 +20,7 @@ from pathlib import Path
 
 PURPOSE_DEPLOY = "deploy"
 PURPOSE_ENROLL = "enroll"
+PURPOSE_RUN = "run"  # signs POST /run when the node enforces --require-run-auth
 MAX_SKEW = 300  # seconds a signed request stays valid (replay window on a trusted LAN)
 
 

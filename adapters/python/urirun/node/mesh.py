@@ -158,6 +158,66 @@ def init_node(
     return save_node_config(config, path)
 
 
+def current_version() -> str:
+    """Installed urirun version (delegates to the canonical v2._package_version)."""
+    try:
+        return v2._package_version()
+    except Exception:
+        return "unknown"
+
+
+def _vtuple(v: str):
+    parts = []
+    for chunk in str(v).split("."):
+        num = "".join(c for c in chunk if c.isdigit())
+        parts.append(int(num) if num else 0)
+    return tuple(parts)
+
+
+def latest_version(timeout: float = 1.5, ttl: int = 21600) -> str | None:
+    """Newest urirun on PyPI, cached in ~/.urirun-node/.version-check.json (best-effort)."""
+    cache = node_state_dir() / ".version-check.json"
+    now = int(time.time())
+    try:
+        c = json.loads(cache.read_text(encoding="utf-8"))
+        if now - int(c.get("at", 0)) < ttl:
+            return c.get("latest")
+    except Exception:
+        pass
+    latest = None
+    try:
+        with urllib.request.urlopen("https://pypi.org/pypi/urirun/json", timeout=timeout) as r:
+            latest = json.loads(r.read().decode("utf-8")).get("info", {}).get("version")
+    except Exception:
+        latest = None
+    try:
+        cache.write_text(json.dumps({"at": now, "latest": latest}), encoding="utf-8")
+    except Exception:
+        pass
+    return latest
+
+
+def version_status(check_latest: bool = True) -> dict:
+    cur = current_version()
+    latest = latest_version() if check_latest else None
+    if latest and cur != "unknown":
+        status = "up-to-date" if _vtuple(cur) >= _vtuple(latest) else "update-available"
+    else:
+        status = "unknown"
+    return {"version": cur, "latest": latest, "status": status}
+
+
+def version_line(check_latest: bool = True) -> str:
+    s = version_status(check_latest)
+    if s["status"] == "up-to-date":
+        tail = f"(latest {s['latest']} — up to date)"
+    elif s["status"] == "update-available":
+        tail = f"(update available: {s['latest']} — pip install -U 'urirun[keyauth]')"
+    else:
+        tail = "(latest unknown — offline?)"
+    return f"urirun {s['version']} {tail}"
+
+
 def http_json(method: str, url: str, body: dict | None = None, timeout: float = 8.0,
               headers: dict | None = None, raw: bytes | None = None) -> dict:
     # `raw` sends pre-encoded bytes verbatim so a signature computed over them matches
@@ -1562,6 +1622,7 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
         def do_GET(self):
             if self.path == "/health":
                 send_json(self, 200, {"ok": True, "name": state["name"], "execute": execute,
+                                      "version": v2._package_version(),
                                       "routeCount": len(state["routes"]),
                                       "deploy": deploy_enabled,
                                       "keyAuth": key_auth, "keyCount": len(keyauth.load_authorized()) if key_auth else 0})
@@ -1682,9 +1743,17 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             return
 
     server = ThreadingHTTPServer((host, port), Handler)
+    vstatus = version_status()  # cached PyPI check; best-effort
+    sys.stderr.write(f"[urirun] {version_line()} starting node '{name}' on {host}:{port}\n")
+    if vstatus["status"] == "update-available":
+        sys.stderr.write(f"[urirun] a newer version is available: {vstatus['latest']} "
+                         f"(pip install -U 'urirun[keyauth]')\n")
+    sys.stderr.flush()
     print(json.dumps({"event": "urirun.node.started", "name": name, "host": host, "port": port,
                       "execute": execute, "routes": len(state["routes"]),
-                      "deploy": deploy_enabled, "keyAuth": key_auth}), flush=True)
+                      "deploy": deploy_enabled, "keyAuth": key_auth,
+                      "version": vstatus["version"], "latest": vstatus["latest"],
+                      "versionStatus": vstatus["status"]}), flush=True)
     return server
 
 
