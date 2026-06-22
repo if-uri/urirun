@@ -1599,6 +1599,7 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
                                      help="Stream a node's live events (run/error) as URIs over SSE")
     host_watch.add_argument("node", help="configured node name or a node URL")
     host_watch.add_argument("--scheme", help="only events whose URI scheme is in this comma list (e.g. kvm,him,error)")
+    host_watch.add_argument("--run", help="only the progress/result events of this run id")
     host_watch.add_argument("--follow", action="store_true", help="reconnect on drop, replaying missed events")
     host_watch.add_argument("--token", help="admin token if the node gates /events (--require-run-auth)")
     host_watch.add_argument("--identity", help="SSH key to sign with if the node gates /events")

@@ -522,13 +522,16 @@ def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | N
 
 
 def watch_node(url: str, scheme: list | str | None = None, last_event_id: int = 0,
-               token: str | None = None, identity: str | None = None, timeout: float | None = None):
+               token: str | None = None, identity: str | None = None, timeout: float | None = None,
+               run: str | None = None):
     """Yield the node's live events (SSE) as dicts — run/error in URI form, each with its
-    `_id`. `scheme` filters server-side; `last_event_id` replays what was missed; `token`
+    `_id`. `scheme`/`run` filter server-side; `last_event_id` replays what was missed; `token`
     or `identity` authenticate when the node gates /events (--require-run-auth)."""
     params = []
     if scheme:
         params.append("scheme=" + (",".join(scheme) if not isinstance(scheme, str) else scheme))
+    if run:
+        params.append("run=" + run)
     if last_event_id:
         params.append(f"last_event_id={last_event_id}")
     full = url.rstrip("/") + "/events" + ("?" + "&".join(params) if params else "")
@@ -1659,6 +1662,7 @@ def watch_command(args: argparse.Namespace) -> int:
     config = load_host_config(args.config)
     url = node_url(config, args.node)
     scheme = [s for s in (getattr(args, "scheme", None) or "").split(",") if s] or None
+    run = getattr(args, "run", None)
     token = getattr(args, "token", None) or os.environ.get("URIRUN_NODE_TOKEN")
     identity = os.path.expanduser(args.identity) if getattr(args, "identity", None) else None
     broker = getattr(args, "mqtt_broker", None)
@@ -1678,7 +1682,7 @@ def watch_command(args: argparse.Namespace) -> int:
     last_id = 0
     while True:
         try:
-            for ev in watch_node(url, scheme=scheme, last_event_id=last_id, token=token, identity=identity):
+            for ev in watch_node(url, scheme=scheme, last_event_id=last_id, token=token, identity=identity, run=run):
                 last_id = ev.get("_id", last_id)
                 emit(ev)
         except KeyboardInterrupt:
