@@ -104,6 +104,29 @@ class MeshTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             mesh.apply_deploy({"name": "n", "registry": {}, "routes": [], "allow": []}, {})
 
+    def test_watch_node_url_encodes_filters_and_replay_cursor(self):
+        from urllib.parse import parse_qs, urlparse
+
+        url = mesh._watch_node_url("http://node.local/", scheme=["shell", "log"], run="run 1", last_event_id=7)
+        parsed = urlparse(url)
+        self.assertEqual(parsed.scheme, "http")
+        self.assertEqual(parsed.netloc, "node.local")
+        self.assertEqual(parsed.path, "/events")
+        self.assertEqual(parse_qs(parsed.query), {"scheme": ["shell,log"], "run": ["run 1"], "last_event_id": ["7"]})
+
+    def test_parse_sse_line_tracks_event_id_and_ignores_bad_payloads(self):
+        cur_id, ev = mesh._parse_sse_line("id: 42", 0)
+        self.assertEqual(cur_id, 42)
+        self.assertIsNone(ev)
+
+        cur_id, ev = mesh._parse_sse_line('data: {"event":"progress"}', cur_id)
+        self.assertEqual(cur_id, 42)
+        self.assertEqual(ev, {"event": "progress", "_id": 42})
+
+        cur_id, ev = mesh._parse_sse_line("data: {bad-json", cur_id)
+        self.assertEqual(cur_id, 42)
+        self.assertIsNone(ev)
+
     def test_emit_streams_progress_to_events_by_run_id(self):
         # an in-process handler calls mesh.emit(...) while it runs; a /events?run=<id>
         # subscriber receives the progress live, correlated by run id.

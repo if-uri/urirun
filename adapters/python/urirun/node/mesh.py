@@ -28,7 +28,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from urllib.parse import unquote
+from urllib.parse import unquote, urlencode
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -521,20 +521,21 @@ def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | N
     return http_json("POST", f"{url.rstrip('/')}/deploy", raw=raw, timeout=timeout, headers=headers)
 
 
-def watch_node(url: str, scheme: list | str | None = None, last_event_id: int = 0,
-               token: str | None = None, identity: str | None = None, timeout: float | None = None,
-               run: str | None = None):
-    """Yield the node's live events (SSE) as dicts — run/error in URI form, each with its
-    `_id`. `scheme`/`run` filter server-side; `last_event_id` replays what was missed; `token`
-    or `identity` authenticate when the node gates /events (--require-run-auth)."""
+def _watch_node_url(url: str, scheme: list | str | None = None, run: str | None = None,
+                    last_event_id: int = 0) -> str:
     params = []
     if scheme:
-        params.append("scheme=" + (",".join(scheme) if not isinstance(scheme, str) else scheme))
+        params.append(("scheme", ",".join(scheme) if not isinstance(scheme, str) else scheme))
     if run:
-        params.append("run=" + run)
+        params.append(("run", run))
     if last_event_id:
-        params.append(f"last_event_id={last_event_id}")
-    full = url.rstrip("/") + "/events" + ("?" + "&".join(params) if params else "")
+        params.append(("last_event_id", str(last_event_id)))
+    query = urlencode(params)
+    return url.rstrip("/") + "/events" + (f"?{query}" if query else "")
+
+
+def _watch_node_headers(last_event_id: int = 0, token: str | None = None,
+                        identity: str | None = None) -> dict:
     headers = {"Accept": "text/event-stream"}
     if last_event_id:
         headers["Last-Event-ID"] = str(last_event_id)
@@ -542,22 +543,41 @@ def watch_node(url: str, scheme: list | str | None = None, last_event_id: int = 
         headers.update(keyauth.sign(identity, keyauth.PURPOSE_RUN, b""))
     elif token:
         headers["X-Urirun-Token"] = token
-    req = urllib.request.Request(full, headers=headers)
+    return headers
+
+
+def _parse_sse_line(line: str, cur_id: int) -> tuple[int, dict | None]:
+    if line.startswith("id:"):
+        try:
+            return int(line[3:].strip()), None
+        except ValueError:
+            return cur_id, None
+    if not (line.startswith("data:") and line[5:].strip()):
+        return cur_id, None
+    try:
+        ev = json.loads(line[5:].strip())
+    except Exception:  # noqa: BLE001 - malformed SSE payloads are ignored by watchers.
+        return cur_id, None
+    ev.setdefault("_id", cur_id)
+    return cur_id, ev
+
+
+def watch_node(url: str, scheme: list | str | None = None, last_event_id: int = 0,
+               token: str | None = None, identity: str | None = None, timeout: float | None = None,
+               run: str | None = None):
+    """Yield the node's live events (SSE) as dicts — run/error in URI form, each with its
+    `_id`. `scheme`/`run` filter server-side; `last_event_id` replays what was missed; `token`
+    or `identity` authenticate when the node gates /events (--require-run-auth)."""
+    req = urllib.request.Request(
+        _watch_node_url(url, scheme=scheme, run=run, last_event_id=last_event_id),
+        headers=_watch_node_headers(last_event_id=last_event_id, token=token, identity=identity),
+    )
     cur_id = last_event_id
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         for raw in resp:
             line = raw.decode("utf-8", "replace").strip()
-            if line.startswith("id:"):
-                try:
-                    cur_id = int(line[3:].strip())
-                except ValueError:
-                    pass
-            elif line.startswith("data:") and line[5:].strip():
-                try:
-                    ev = json.loads(line[5:].strip())
-                except Exception:
-                    continue
-                ev.setdefault("_id", cur_id)
+            cur_id, ev = _parse_sse_line(line, cur_id)
+            if ev is not None:
                 yield ev
 
 
