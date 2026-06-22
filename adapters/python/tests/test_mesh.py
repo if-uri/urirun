@@ -159,6 +159,30 @@ class MeshTests(unittest.TestCase):
         finally:
             server.shutdown()
 
+    def test_run_rejects_malformed_body_with_400(self):
+        import socket as _socket
+        import threading
+        import urllib.error
+        import urllib.request
+        registry = mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
+            "env://probe/runtime/query/ping": {"kind": "query", "adapter": "argv-template",
+                                                "inputSchema": {"type": "object"}, "argv": ["true"]}}})
+        s = _socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+        server = mesh.serve_node("probe", registry, "127.0.0.1", port, execute=True)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            def post(data):
+                req = urllib.request.Request(f"http://127.0.0.1:{port}/run", data=data, method="POST",
+                                             headers={"Content-Type": "application/json"})
+                try:
+                    return urllib.request.urlopen(req, timeout=3).status
+                except urllib.error.HTTPError as exc:
+                    return exc.code
+            self.assertEqual(post(b'{"not":"a uri"}'), 400)   # valid JSON, missing uri -> clean 400, not a crash
+            self.assertEqual(post(b"not json"), 400)            # invalid JSON -> 400
+        finally:
+            server.shutdown()
+
     def test_parse_ports(self):
         self.assertEqual(mesh.parse_ports("8765-8767"), [8765, 8766, 8767])
         self.assertEqual(mesh.parse_ports("8765,9000"), [8765, 9000])
@@ -302,6 +326,28 @@ class MeshTests(unittest.TestCase):
             self.assertEqual(config["node"]["registry"], "registry.json")
             self.assertEqual(config["node"]["port"], 9999)
             self.assertTrue(config["node"]["execute"])
+
+    def test_event_topic_mapping(self):
+        self.assertEqual(
+            mesh.event_topic("urirun/events", {"node": "lab", "event": "run", "uri": "kvm://lab/x"}),
+            "urirun/events/lab/run/kvm")
+        # falls back to `service` for the node, and to the event kind when uri has no scheme
+        self.assertEqual(
+            mesh.event_topic("urirun/events/", {"service": "lab", "event": "error", "uri": "error://local/E"}),
+            "urirun/events/lab/error/error")
+
+    def test_fanout_to_mqtt_publishes_each_event(self):
+        published = []
+        events = [
+            {"node": "lab", "event": "run", "uri": "him://lab/keyboard/command/type-text", "ok": True},
+            {"node": "lab", "event": "error", "uri": "error://local/E-1/query/info"},
+        ]
+        n = mesh.fanout_to_mqtt(events, broker="ignored", topic_prefix="urirun/events",
+                                publish_fn=lambda t, p: published.append((t, p)))
+        self.assertEqual(n, 2)
+        self.assertEqual(published[0][0], "urirun/events/lab/run/him")
+        self.assertEqual(published[1][0], "urirun/events/lab/error/error")
+        self.assertEqual(json.loads(published[1][1])["uri"], "error://local/E-1/query/info")
 
     def test_event_hub_ids_and_replay(self):
         hub = mesh.EventHub(buffer=10)

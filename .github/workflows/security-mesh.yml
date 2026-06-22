@@ -1,0 +1,40 @@
+name: security-mesh
+
+# Regression gate for the node mesh security posture. The probe (a separate
+# container with only network reach to the node) fails the run if a previously
+# CLOSED gap reopens — replay accepted twice, an 8 MB body ingested, /deploy without
+# auth, a malformed /run crashing, an unsigned 2nd-key enroll. Config/by-design
+# findings (plaintext, broad --allow, TOFU) are reported but do NOT fail CI.
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "adapters/python/urirun/node/**"
+      - "security/mesh-probe/**"
+      - ".github/workflows/security-mesh.yml"
+  pull_request:
+    paths:
+      - "adapters/python/urirun/node/**"
+      - "security/mesh-probe/**"
+  workflow_dispatch: {}
+
+jobs:
+  mesh-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Audit the SOURCE, not the published wheel (PyPI lags the mesh code).
+      - name: Build the audited wheel
+        working-directory: adapters/python
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel
+          cp dist/urirun-*.whl ../../security/mesh-probe/
+
+      - name: Run mesh security probe
+        working-directory: security/mesh-probe
+        run: docker compose up --build --abort-on-container-exit --exit-code-from probe

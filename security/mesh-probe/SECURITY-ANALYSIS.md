@@ -69,6 +69,12 @@ mitigations.
 | 7 | **Constant-time token compare** — `hmac.compare_digest` | `mesh.py` | code |
 | 8 | **`/deploy` env allowlist** — drops `PATH`/`LD_PRELOAD`/`PYTHONPATH`/… | `mesh.py` | `test_apply_deploy_ignores_dangerous_env` |
 | 6 | **`/errors` gated** behind `X-Urirun-Token` **when `--admin-token` is set** (open on a key-auth-only / no-token node — residual) | `mesh.py` | code |
+| 9 | **Malformed `/run` no longer crashes** — a body with no `uri` (or non-object) returns a clean 400 instead of an unhandled `KeyError` (connection reset). *Found by the extended probe.* | `mesh.py` | probe: `/run` no-uri → 400; `test_run_rejects_malformed_body_with_400` |
+
+The probe doubles as a **CI regression gate** (`.github/workflows/security-mesh.yml`):
+it exits non-zero only if a `fixed`/`defended` vector reopens (replay, body cap,
+`/deploy`-no-auth, malformed `/run`, unsigned-2nd-key enroll); the config/by-design
+findings are reported but don't fail CI.
 
 Still open (operational, not code): **#1** scope `--allow` to query routes (verified to
 deny the command route), **#2** TLS/overlay, **#4** enroll-on-provision to win the TOFU race.

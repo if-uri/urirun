@@ -1579,6 +1579,10 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     host_watch.add_argument("--follow", action="store_true", help="reconnect on drop, replaying missed events")
     host_watch.add_argument("--token", help="admin token if the node gates /events (--require-run-auth)")
     host_watch.add_argument("--identity", help="SSH key to sign with if the node gates /events")
+    host_watch.add_argument("--mqtt-broker", metavar="HOST[:PORT]",
+                            help="also republish each event to this MQTT broker (fan-out to many subscribers)")
+    host_watch.add_argument("--mqtt-topic", default="urirun/events",
+                            help="MQTT topic prefix; events go to <prefix>/<node>/<event>/<scheme> (default urirun/events)")
     host_watch.add_argument("--json", action="store_true")
 
     host_dashboard = host_sub.add_parser("dashboard", parents=[host_common], help="Serve a local operator dashboard")

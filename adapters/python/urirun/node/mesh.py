@@ -493,6 +493,43 @@ def watch_node(url: str, scheme: list | str | None = None, last_event_id: int = 
                 yield ev
 
 
+def event_topic(prefix: str, ev: dict) -> str:
+    """MQTT topic for a node event: <prefix>/<node>/<event>/<uri-scheme>, so subscribers
+    can wildcard by node (`urirun/events/lab/#`) or by kind (`urirun/events/+/error/#`)."""
+    node = ev.get("node") or ev.get("service") or "node"
+    kind = ev.get("event") or "event"
+    scheme = str(ev.get("uri", "")).split("://", 1)[0] or kind
+    return f"{prefix.rstrip('/')}/{node}/{kind}/{scheme}"
+
+
+def _mqtt_publish_fn(broker: str):
+    """Return publish(topic, payload) backed by paho-mqtt (broker = host[:port])."""
+    import paho.mqtt.publish as mqtt_publish
+
+    host, _, port = broker.partition(":")
+    port_n = int(port or 1883)
+
+    def publish(topic: str, payload: str) -> None:
+        mqtt_publish.single(topic, payload=payload, hostname=host, port=port_n)
+
+    return publish
+
+
+def fanout_to_mqtt(events, broker: str, topic_prefix: str = "urirun/events",
+                   publish_fn=None, on_publish=None) -> int:
+    """Consume an event iterable and publish each to MQTT (fan-out to many subscribers /
+    a UI). `publish_fn(topic, payload)` is injectable for tests; default uses paho."""
+    pub = publish_fn or _mqtt_publish_fn(broker)
+    n = 0
+    for ev in events:
+        topic = event_topic(topic_prefix, ev)
+        pub(topic, json.dumps(ev, ensure_ascii=False))
+        n += 1
+        if on_publish:
+            on_publish(topic, ev)
+    return n
+
+
 def copy_id(url: str, identity: str, *, timeout: float = 10.0) -> dict:
     """ssh-copy-id for urirun: enroll an SSH public key as an admin on the node. On a
     fresh node (empty authorized_keys) this is trust-on-first-use — no secret needed;
@@ -1402,13 +1439,19 @@ def watch_command(args: argparse.Namespace) -> int:
     identity = getattr(args, "identity", None)
     if identity:
         identity = os.path.expanduser(identity)
-    sys.stderr.write(f"watching {url}/events{' scheme=' + ','.join(scheme) if scheme else ''} — Ctrl-C to stop\n")
+    broker = getattr(args, "mqtt_broker", None)
+    topic_prefix = getattr(args, "mqtt_topic", None) or "urirun/events"
+    mqtt_pub = _mqtt_publish_fn(broker) if broker else None
+    sys.stderr.write(f"watching {url}/events{' scheme=' + ','.join(scheme) if scheme else ''}"
+                     f"{' -> mqtt ' + broker if broker else ''} — Ctrl-C to stop\n")
     sys.stderr.flush()
     last_id = 0
     while True:
         try:
             for ev in watch_node(url, scheme=scheme, last_event_id=last_id, token=token, identity=identity):
                 last_id = ev.get("_id", last_id)
+                if mqtt_pub:
+                    mqtt_pub(event_topic(topic_prefix, ev), json.dumps(ev, ensure_ascii=False))
                 if getattr(args, "json", False):
                     print(json.dumps(ev, ensure_ascii=False), flush=True)
                 else:
@@ -1822,6 +1865,9 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
                 body = json.loads(raw.decode("utf-8") or "{}")
             except Exception:
                 send_json(self, 400, {"ok": False, "error": "invalid JSON body"})
+                return
+            if not isinstance(body, dict) or "uri" not in body:
+                send_json(self, 400, {"ok": False, "error": "invalid request: expected JSON {uri, payload?}"})
                 return
             run_policy = v2.runtime.build_policy(None, list(state["allow"]), None) or {}
             run_policy["secretsDisabled"] = not allow_secrets
