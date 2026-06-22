@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `runtime/dispatch_protocol.py` — the single written contract every transport speaks.
+  HTTP `/run`, gRPC, MCP `tools/call` and the mesh relay all carry the same dispatch
+  (`{uri, payload, mode}` → the `v2.run` envelope), but each parsed/shaped it ad hoc.
+  This module formalizes it: `normalize_request` (tolerates the in-the-wild variants),
+  `validate_request`, `dispatch` (the one server-side entry: validate → `v2.run` →
+  envelope, so a bad body returns a structured 400 instead of a `KeyError`), and
+  `reply_fields` (projects the envelope to a stable `{ok, uri, mode, dryRun, data, error,
+  meta}` so clients read `data` without digging into `result.value` vs `result.stdout`).
+  `REQUEST_SCHEMA`/`REPLY_SCHEMA` are published as JSON Schemas for non-Python nodes.
+
 ### Changed
 - `urirun host …` now finds the mesh config from a `host.sh` install automatically:
   with no `--config` and no `URIRUN_MESH_CONFIG`, it uses `./.urirun/mesh.json` when
