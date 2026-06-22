@@ -1,0 +1,20 @@
+{
+  "version": "urirun.bindings.v2",
+  "bindings": {
+    "demo://host/echo/query/ping": {
+      "uri": "demo://host/echo/query/ping",
+      "kind": "query",
+      "adapter": "argv-template",
+      "argv": ["echo", "pong"],
+      "inputSchema": {"type": "object", "properties": {}}
+    },
+    "demo://host/shell/command/run": {
+      "uri": "demo://host/shell/command/run",
+      "kind": "command",
+      "adapter": "argv-template",
+      "argv": ["echo", "EXECUTED:{marker}"],
+      "inputSchema": {"type": "object", "required": ["marker"],
+                      "properties": {"marker": {"type": "string"}}}
+    }
+  }
+}

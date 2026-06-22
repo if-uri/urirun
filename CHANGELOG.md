@@ -62,6 +62,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Docker desktop from an NL intent; the desktop driver is a *connector*, the schema in
   the action space is the only core change).
 
+## [0.4.25] - 2026-06-22
+
+### Docs
+- Update README.md
+
+### Other
+- Update security/mesh-probe/Dockerfile
+- Update security/mesh-probe/docker-compose.yml
+- Update security/mesh-probe/node.bindings.json
+- Update security/mesh-probe/probe.py
+- Update security/mesh-probe/urirun-0.4.24-py3-none-any.whl
+
 ## [0.4.24] - 2026-06-22
 
 ### Docs

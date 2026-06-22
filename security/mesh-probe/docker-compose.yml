@@ -1,0 +1,17 @@
+services:
+  # The node under test — a deliberately permissive config (broad --allow incl. a
+  # command route, key-auth on, plaintext HTTP) so the probe can exercise each vector.
+  node:
+    build: .
+    networks: [mesh]
+
+  # The attacker: a separate container with ONLY network reach to the node — no
+  # shared volume, no token, no key. Mirrors a host on the same LAN.
+  probe:
+    build: .
+    depends_on: [node]
+    networks: [mesh]
+    entrypoint: ["sh", "-c", "sleep 3 && python /app/probe.py http://node:8765"]
+
+networks:
+  mesh: {}
