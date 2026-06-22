@@ -2214,20 +2214,8 @@ def _pipspec_version(pipspec: str | None) -> str | None:
     return None
 
 
-def _cmd_outdated(args, parser) -> int:
-    """Report installed connectors whose catalog version differs from what is installed.
-
-    Best-effort: installed versions come from dist metadata, available versions
-    from the catalog pipSpec (git tag or ``==`` pin). When either is unknown the
-    row is reported as ``unknown``; offline (catalog unreachable) -> all unknown.
-    """
-    from urirun.connectors import connect_catalog
-
-    try:
-        catalog = connect_catalog.fetch_catalog(args.catalog)
-    except Exception:  # noqa: BLE001 - offline/unreachable -> no available versions
-        catalog = {}
-
+def _outdated_rows(catalog, connect_catalog) -> list[dict]:
+    """One row per installed connector: id/package/installed/available/status."""
     seen: set[str] = set()
     rows = []
     for entry_point in _select_entry_points(ENTRY_POINT_GROUP):
@@ -2248,6 +2236,23 @@ def _cmd_outdated(args, parser) -> int:
         rows.append({"id": entry_point.name, "package": package, "installed": installed,
                      "available": available, "status": status})
     rows.sort(key=lambda row: row["id"])
+    return rows
+
+
+def _cmd_outdated(args, parser) -> int:
+    """Report installed connectors whose catalog version differs from what is installed.
+
+    Best-effort: installed versions come from dist metadata, available versions
+    from the catalog pipSpec (git tag or ``==`` pin). When either is unknown the
+    row is reported as ``unknown``; offline (catalog unreachable) -> all unknown.
+    """
+    from urirun.connectors import connect_catalog
+
+    try:
+        catalog = connect_catalog.fetch_catalog(args.catalog)
+    except Exception:  # noqa: BLE001 - offline/unreachable -> no available versions
+        catalog = {}
+    rows = _outdated_rows(catalog, connect_catalog)
     outdated = [r for r in rows if r["status"] == "outdated"]
     if getattr(args, "json", False):
         reglib._emit_json({"ok": True, "outdated": len(outdated), "connectors": rows}, "-")

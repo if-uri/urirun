@@ -35,9 +35,14 @@ auth (`uri-copy-id`), `node://` self-management (`--manage`), `/events` SSE + `h
    **`NodeContext`**). `serve_node` CC 65-fan → C(12); the handler is decomposed into
    focused methods (`_get`/`_get_errors`, `_post`/`_handle_run`/`_run_target`/`_publish_run`,
    `_stream_events`, `_handle_deploy`/`_handle_enroll`, `_admin_ok`/`_run_ok`). 267 tests green.
-2. **Pre-existing CC>15 not touched here** (not example-driven): `connector_main=25`,
-   `run=19`, `main=18/17`, `_cmd_connectors_doctor=18`, `connector_collisions=17`,
-   `normalize_flow=15`, `resolveParams=15`. Each is an isolated extract-method.
+2. **(done) Pre-existing CC>15.** Re-measured with radon (the `analysis.toon.yaml`
+   snapshot was stale — `connector_main`/`scan_path`/`serve_mcp`/`connector_collisions`
+   were already ≤15). Real offenders refactored: `_cmd_connectors_doctor` 18→11
+   (`_print_doctor_report`), `_cmd_outdated` 16→8 (`_outdated_rows`),
+   `ConnectorPools.run_route` 16→3 (`_run_handler`/`_run_argv`). Remaining radon-17:
+   `NodeHandler._stream_events` (SSE loop), `_resolve_serve_opts` (flat option-merge),
+   `watch_command` (reconnect loop) — cohesive; radon over-counts `or`/`and`; left as-is.
+   Package average CC = A(4.4).
 3. **`/events` auth-by-default.** Currently open unless `--require-run-auth`. Consider
    gating reads when the node is bound off-localhost, mirroring the `/run` warning.
 4. **Regenerate `project/*.toon.yaml`** after these (the committed snapshot predates this

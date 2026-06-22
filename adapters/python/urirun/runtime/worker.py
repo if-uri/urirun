@@ -222,15 +222,21 @@ class ConnectorPools:
         back to a normal spawn."""
         adapter = route_entry.get("adapter")
         if adapter == "local-function-subprocess":
-            py = route_entry.get("python") or {}
-            module, export = py.get("module"), py.get("export")
-            if not module or not export:
-                return None
-            if self._handler_pool is None:
-                self._handler_pool = HandlerPool()
-            return self._handler_pool.run_ref(f"{module}:{export}", payload)
-        if adapter != "argv-template":
+            return self._run_handler(route_entry, payload)
+        if adapter == "argv-template":
+            return self._run_argv(route_entry, payload)
+        return None
+
+    def _run_handler(self, route_entry: dict, payload: dict) -> dict | None:
+        py = route_entry.get("python") or {}
+        module, export = py.get("module"), py.get("export")
+        if not module or not export:
             return None
+        if self._handler_pool is None:
+            self._handler_pool = HandlerPool()
+        return self._handler_pool.run_ref(f"{module}:{export}", payload)
+
+    def _run_argv(self, route_entry: dict, payload: dict) -> dict | None:
         argv = route_entry.get("argv") or (route_entry.get("config") or {}).get("argv") or []
         if not argv:
             return None
