@@ -456,20 +456,41 @@ def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | N
     return http_json("POST", f"{url.rstrip('/')}/deploy", raw=raw, timeout=timeout, headers=headers)
 
 
-def watch_node(url: str, timeout: float | None = None):
-    """Yield the node's live events (SSE) as dicts — run/error/deploy in URI form. A
-    generator: iterate it to receive events as they happen until the stream closes."""
-    req = urllib.request.Request(url.rstrip("/") + "/events", headers={"Accept": "text/event-stream"})
+def watch_node(url: str, scheme: list | str | None = None, last_event_id: int = 0,
+               token: str | None = None, identity: str | None = None, timeout: float | None = None):
+    """Yield the node's live events (SSE) as dicts — run/error in URI form, each with its
+    `_id`. `scheme` filters server-side; `last_event_id` replays what was missed; `token`
+    or `identity` authenticate when the node gates /events (--require-run-auth)."""
+    params = []
+    if scheme:
+        params.append("scheme=" + (",".join(scheme) if not isinstance(scheme, str) else scheme))
+    if last_event_id:
+        params.append(f"last_event_id={last_event_id}")
+    full = url.rstrip("/") + "/events" + ("?" + "&".join(params) if params else "")
+    headers = {"Accept": "text/event-stream"}
+    if last_event_id:
+        headers["Last-Event-ID"] = str(last_event_id)
+    if identity:
+        headers.update(keyauth.sign(identity, keyauth.PURPOSE_RUN, b""))
+    elif token:
+        headers["X-Urirun-Token"] = token
+    req = urllib.request.Request(full, headers=headers)
+    cur_id = last_event_id
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         for raw in resp:
             line = raw.decode("utf-8", "replace").strip()
-            if line.startswith("data:"):
-                payload = line[5:].strip()
-                if payload:
-                    try:
-                        yield json.loads(payload)
-                    except Exception:
-                        continue
+            if line.startswith("id:"):
+                try:
+                    cur_id = int(line[3:].strip())
+                except ValueError:
+                    pass
+            elif line.startswith("data:") and line[5:].strip():
+                try:
+                    ev = json.loads(line[5:].strip())
+                except Exception:
+                    continue
+                ev.setdefault("_id", cur_id)
+                yield ev
 
 
 def copy_id(url: str, identity: str, *, timeout: float = 10.0) -> dict:
@@ -1372,26 +1393,38 @@ def _host_delegated_command(args: argparse.Namespace) -> int | None:
 
 
 def watch_command(args: argparse.Namespace) -> int:
-    """`urirun host watch <node>` — stream the node's live events (run/error) as URIs."""
+    """`urirun host watch <node>` — stream the node's live events (run/error) as URIs.
+    Reconnects automatically, replaying missed events via Last-Event-ID."""
     config = load_host_config(args.config)
     url = node_url(config, args.node)
-    sys.stderr.write(f"watching {url}/events — Ctrl-C to stop\n")
+    scheme = [s for s in (getattr(args, "scheme", None) or "").split(",") if s] or None
+    token = getattr(args, "token", None) or os.environ.get("URIRUN_NODE_TOKEN")
+    identity = getattr(args, "identity", None)
+    if identity:
+        identity = os.path.expanduser(identity)
+    sys.stderr.write(f"watching {url}/events{' scheme=' + ','.join(scheme) if scheme else ''} — Ctrl-C to stop\n")
     sys.stderr.flush()
-    try:
-        for ev in watch_node(url):
-            if getattr(args, "json", False):
-                print(json.dumps(ev, ensure_ascii=False), flush=True)
-            else:
-                tail = ev.get("category") or ev.get("message") or ""
-                ok = ev.get("ok")
-                mark = "" if ok is None else ("ok" if ok else "FAIL")
-                print(f"{ev.get('event', '?'):6} {ev.get('uri', '')}  {mark} {tail}".rstrip(), flush=True)
-    except KeyboardInterrupt:
-        return 0
-    except Exception as exc:  # noqa: BLE001
-        sys.stderr.write(f"watch ended: {exc}\n")
-        return 1
-    return 0
+    last_id = 0
+    while True:
+        try:
+            for ev in watch_node(url, scheme=scheme, last_event_id=last_id, token=token, identity=identity):
+                last_id = ev.get("_id", last_id)
+                if getattr(args, "json", False):
+                    print(json.dumps(ev, ensure_ascii=False), flush=True)
+                else:
+                    ok = ev.get("ok")
+                    mark = "" if ok is None else ("ok" if ok else "FAIL")
+                    tail = ev.get("category") or ev.get("message") or ""
+                    print(f"{ev.get('event', '?'):6} {ev.get('uri', '')}  {mark} {tail}".rstrip(), flush=True)
+        except KeyboardInterrupt:
+            return 0
+        except Exception as exc:  # noqa: BLE001
+            if not getattr(args, "follow", False):
+                sys.stderr.write(f"watch ended: {exc}\n")
+                return 1
+        if not getattr(args, "follow", False):
+            return 0
+        time.sleep(2)  # reconnect after a drop, resuming from last_id
 
 
 def _host_mesh_command(args: argparse.Namespace, config: dict, mesh: dict) -> int | None:
