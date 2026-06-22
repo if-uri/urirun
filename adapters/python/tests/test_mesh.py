@@ -714,6 +714,38 @@ class MeshTests(unittest.TestCase):
         finally:
             manage._pip = orig
 
+    def test_connector_install_from_any_source(self):
+        b = manage.bindings("lab")["bindings"]
+        for path in ("connector/command/install", "connector/query/discover", "registry/query/installed"):
+            assert f"node://lab/{path}" in b
+        calls, orig = [], manage._pip
+        manage._pip = lambda args, timeout=900: (calls.append(args) or {"ok": True, "returncode": 0})
+        try:
+            manage.connector_install(source="browser-control")          # catalog id
+            self.assertEqual(calls[-1], ["install", "--upgrade", "urirun-connector-browser-control"])
+            manage.connector_install(source="git+https://github.com/x/y.git")  # git url
+            self.assertEqual(calls[-1], ["install", "--upgrade", "git+https://github.com/x/y.git"])
+            manage.connector_install(source="/home/tom/github/foo", editable=True)  # local path -e
+            self.assertEqual(calls[-1], ["install", "--upgrade", "-e", "/home/tom/github/foo"])
+        finally:
+            manage._pip = orig
+
+    def test_connector_discover_scans_local_projects(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp) / "urirun-connector-demo" / "demo"
+            d.mkdir(parents=True)
+            (d / "connector.manifest.json").write_text(json.dumps(
+                {"id": "demo", "name": "Demo", "uriSchemes": ["demo"]}), encoding="utf-8")
+            out = manage.connector_discover(roots=tmp, scheme="demo")
+            ids = [c["id"] for c in out["local"]]
+            self.assertIn("demo", ids)
+            hit = next(c for c in out["local"] if c["id"] == "demo")
+            self.assertEqual(hit["schemes"], ["demo"])
+            self.assertTrue(os.path.isdir(hit["source"]))      # source path usable for install
+            # a non-matching scheme filters it out
+            self.assertEqual(manage.connector_discover(roots=tmp, scheme="nope")["local"], [])
+
     def test_node_management_routes_admin_gated(self):
         import socket as _socket
         import threading

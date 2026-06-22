@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import subprocess
 import sys
 from typing import Any
@@ -166,7 +168,11 @@ def runtime_info(**payload: Any) -> dict:
 _ROUTES = [
     ("package/command/install", "command", "package_install",
      {"spec": {"type": ["string", "array"]}, "upgrade": {"type": "boolean"}}),
-    ("connector/command/install", "command", "connector_install", {"id": {"type": "string"}}),
+    ("connector/command/install", "command", "connector_install",
+     {"source": {"type": "string"}, "id": {"type": "string"}, "editable": {"type": "boolean"}}),
+    ("connector/query/discover", "query", "connector_discover",
+     {"match": {"type": "string"}, "scheme": {"type": "string"}, "roots": {"type": ["string", "array"]}}),
+    ("registry/query/installed", "query", "registry_installed", {"match": {"type": "string"}, "scheme": {"type": "string"}}),
     ("package/query/list", "query", "package_list", {"match": {"type": "string"}}),
     ("runtime/query/info", "query", "runtime_info", {}),
 ]
