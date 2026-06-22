@@ -14,6 +14,7 @@ The mesh layer is intentionally thin:
 from __future__ import annotations
 
 import argparse
+import collections
 import hmac
 import importlib
 import json
@@ -35,21 +36,28 @@ from typing import Any
 class EventHub:
     """In-memory pub/sub for a node's live event stream (SSE). Each subscriber gets a
     bounded queue; publish never blocks the request thread (drops on a full/slow client).
-    Events are plain dicts carrying a `uri` so the other side receives them in URI form."""
+    Events are plain dicts carrying a `uri` so the other side receives them in URI form.
+    Each event gets a monotonic `_id`; a ring buffer keeps the most recent ones so a
+    reconnecting client can replay what it missed via `Last-Event-ID`."""
 
-    def __init__(self) -> None:
+    def __init__(self, buffer: int = 256) -> None:
         self._subs: set[queue.Queue] = set()
         self._lock = threading.Lock()
+        self._seq = 0
+        self._ring: collections.deque = collections.deque(maxlen=buffer)
 
-    def publish(self, event: dict) -> None:
-        payload = ("data: " + json.dumps(event, ensure_ascii=False) + "\n\n").encode("utf-8")
+    def publish(self, event: dict) -> int:
         with self._lock:
+            self._seq += 1
+            event = dict(event, _id=self._seq)
+            self._ring.append(event)
             subs = list(self._subs)
         for q in subs:
             try:
-                q.put_nowait(payload)
+                q.put_nowait(event)
             except queue.Full:
                 pass
+        return event["_id"]
 
     def subscribe(self) -> queue.Queue:
         q: queue.Queue = queue.Queue(maxsize=2000)
@@ -60,6 +68,10 @@ class EventHub:
     def unsubscribe(self, q: queue.Queue) -> None:
         with self._lock:
             self._subs.discard(q)
+
+    def replay_since(self, last_id: int) -> list[dict]:
+        with self._lock:
+            return [e for e in self._ring if e.get("_id", 0) > last_id]
 
     def count(self) -> int:
         with self._lock:
@@ -1806,6 +1818,30 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
         def _stream_events(self):
             # Server-Sent Events: a long-lived GET that streams the node's run/error/
             # deploy events to the host as they happen (one-way node->host channel).
+            # When /run is gated (--require-run-auth), /events is gated the same way.
+            if run_auth_enforced and not self._run_ok(b""):
+                send_json(self, 403, {"ok": False, "error": "unauthorized (/events requires X-Urirun-Token or an enrolled-key signature)"})
+                return
+            path, _, query = self.path.partition("?")
+            params = {}
+            for part in query.split("&"):
+                if "=" in part:
+                    k, v = part.split("=", 1)
+                    params[k] = unquote(v.replace("+", " "))
+            schemes = {s for s in (params.get("scheme", "").split(",")) if s}
+            try:
+                last_id = int(params.get("last_event_id") or self.headers.get("Last-Event-ID") or 0)
+            except ValueError:
+                last_id = 0
+
+            def matches(ev: dict) -> bool:
+                return not schemes or str(ev.get("uri", "")).split("://", 1)[0] in schemes
+
+            def frame(ev: dict) -> bytes:
+                body = {k: v for k, v in ev.items() if k != "_id"}
+                return (f"id: {ev.get('_id', '')}\n"
+                        f"data: {json.dumps(body, ensure_ascii=False)}\n\n").encode("utf-8")
+
             try:
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
@@ -1814,6 +1850,9 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(f": connected to {state['name']}\n\n".encode("utf-8"))
+                for ev in hub.replay_since(last_id):       # replay what was missed
+                    if matches(ev):
+                        self.wfile.write(frame(ev))
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError, OSError):
                 return
@@ -1821,11 +1860,14 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
             try:
                 while True:
                     try:
-                        data = q.get(timeout=15)
+                        ev = q.get(timeout=15)
                     except queue.Empty:
-                        data = b": keep-alive\n\n"  # heartbeat so proxies/clients hold the stream
-                    self.wfile.write(data)
-                    self.wfile.flush()
+                        self.wfile.write(b": keep-alive\n\n")  # heartbeat
+                        self.wfile.flush()
+                        continue
+                    if matches(ev):
+                        self.wfile.write(frame(ev))
+                        self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError, OSError):
                 pass
             finally:

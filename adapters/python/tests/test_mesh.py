@@ -99,6 +99,66 @@ class MeshTests(unittest.TestCase):
                 if old_env is not None:
                     os.environ["URIRUN_NODE_TOKEN"] = old_env
 
+    @unittest.skipUnless(keyauth.available(), "cryptography not installed")
+    def test_verify_request_rejects_replay(self):
+        import os
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+        with tempfile.TemporaryDirectory() as tmp:
+            old_home = os.environ.get("HOME"); os.environ["HOME"] = tmp
+            try:
+                key = Ed25519PrivateKey.generate()
+                priv = Path(tmp) / "id_ed25519"
+                priv.write_bytes(key.private_bytes(Encoding.PEM, PrivateFormat.OpenSSH, NoEncryption()))
+                keyauth.add_authorized(keyauth.public_openssh(str(priv)))
+                body = b'{"x":1}'
+                hdrs = keyauth.sign(str(priv), keyauth.PURPOSE_DEPLOY, body)
+                self.assertTrue(keyauth.verify_request(hdrs, body, keyauth.PURPOSE_DEPLOY))   # first: accepted
+                self.assertFalse(keyauth.verify_request(hdrs, body, keyauth.PURPOSE_DEPLOY))  # replay: rejected
+            finally:
+                if old_home is not None:
+                    os.environ["HOME"] = old_home
+
+    def test_apply_deploy_ignores_dangerous_env(self):
+        import os
+        os.environ.pop("LD_PRELOAD", None); os.environ.pop("SAFE_DEPLOY_VAR", None)
+        state = {"name": "n", "registry": {"version": "urirun.bindings.v2", "routes": {}}, "routes": [], "allow": []}
+        summary = mesh.apply_deploy(state, {
+            "bindings": {"version": "urirun.bindings.v2", "bindings": {
+                "demo://n/x/query/p": {"kind": "query", "adapter": "argv-template",
+                                       "argv": ["true"], "inputSchema": {"type": "object"}}}},
+            "env": {"LD_PRELOAD": "/evil.so", "SAFE_DEPLOY_VAR": "1"}})
+        self.assertIsNone(os.environ.get("LD_PRELOAD"))            # dangerous key blocked
+        self.assertEqual(os.environ.get("SAFE_DEPLOY_VAR"), "1")   # benign key applied
+        self.assertNotIn("LD_PRELOAD", summary["env"])
+        os.environ.pop("SAFE_DEPLOY_VAR", None)
+
+    def test_oversized_body_rejected_with_413(self):
+        import socket as _socket
+        import threading
+        import urllib.error
+        import urllib.request
+        registry = mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
+            "env://probe/runtime/query/ping": {"kind": "query", "adapter": "argv-template",
+                                                "inputSchema": {"type": "object"}, "argv": ["true"]}}})
+        s = _socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+        server = mesh.serve_node("probe", registry, "127.0.0.1", port, execute=True, admin_token="t")
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            big = b'{"x":"' + b"A" * (mesh.MAX_BODY_BYTES + 1024) + b'"}'
+            req = urllib.request.Request(f"http://127.0.0.1:{port}/run", data=big, method="POST",
+                                         headers={"Content-Type": "application/json"})
+            ingested = False
+            try:
+                ingested = urllib.request.urlopen(req, timeout=3).status == 200
+            except urllib.error.HTTPError as exc:
+                self.assertEqual(exc.code, 413)            # clean 413 if the node drained the body
+            except (BrokenPipeError, ConnectionError, urllib.error.URLError):
+                pass                                       # node refused the oversized body (closed) — also valid
+            self.assertFalse(ingested)                     # the 4MB+ body must never be accepted
+        finally:
+            server.shutdown()
+
     def test_parse_ports(self):
         self.assertEqual(mesh.parse_ports("8765-8767"), [8765, 8766, 8767])
         self.assertEqual(mesh.parse_ports("8765,9000"), [8765, 9000])

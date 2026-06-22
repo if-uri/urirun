@@ -56,6 +56,23 @@ The `node` service is a deliberately permissive config (`--allow 'demo://*'`
 including a command route, `--key-auth`, plaintext) so every vector is reachable;
 `probe.py` reports `VULN`/`ok` per check from the attacker container.
 
+## Hardening applied (code)
+
+Re-running the probe after the fixes flips the two genuine code-level gaps to `ok`
+(8 findings → 6); the rest are transport/config/by-design and need operational
+mitigations.
+
+| # | Fix | Where | Verified |
+|---|-----|-------|----------|
+| 3 | **Replay rejected** — `verify_request` accepts each signature at most once (`_replay_seen`, `MAX_SKEW` window) | `keyauth.py` | probe: replay → 403; `test_verify_request_rejects_replay` |
+| 5 | **Body cap + 413** — `do_POST` rejects `Content-Length > 4 MB`; `read_raw` never reads past the cap | `mesh.py` | probe: 8 MB → refused; `test_oversized_body_rejected_with_413` |
+| 7 | **Constant-time token compare** — `hmac.compare_digest` | `mesh.py` | code |
+| 8 | **`/deploy` env allowlist** — drops `PATH`/`LD_PRELOAD`/`PYTHONPATH`/… | `mesh.py` | `test_apply_deploy_ignores_dangerous_env` |
+| 6 | **`/errors` gated** behind `X-Urirun-Token` **when `--admin-token` is set** (open on a key-auth-only / no-token node — residual) | `mesh.py` | code |
+
+Still open (operational, not code): **#1** scope `--allow` to query routes (verified to
+deny the command route), **#2** TLS/overlay, **#4** enroll-on-provision to win the TOFU race.
+
 ## Priority hardening
 
 1. **Don't put command routes behind a broad `--allow`** (config) — kills #1, the
