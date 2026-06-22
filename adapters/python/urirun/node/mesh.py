@@ -1612,9 +1612,49 @@ def _host_delegated_command(args: argparse.Namespace) -> int | None:
         return run_command(args)
     if args.host_command == "ensure":
         return ensure_command(args)
+    if args.host_command == "supply":
+        return supply_command(args)
     if args.host_command == "probe":
         return probe_command(args)
     return None
+
+
+def fulfill_need(client, need: dict, roots=None) -> dict:
+    """Host-side: satisfy one node `need` event — supply a connector (ensure the scheme)
+    or push a folder the node lacks."""
+    kind = str(need.get("kind") or "connector")
+    what = need.get("what")
+    if kind in ("connector", "scheme"):
+        res = client.ensure_scheme(str(what), roots=roots)
+    elif kind == "folder":
+        res = client.push_folder(str(what), roots=roots)
+    else:
+        res = {"ok": False, "error": f"unknown need kind {kind!r}"}
+    return {"need": {"kind": kind, "what": what}, "ok": bool(res.get("ok")), "result": res}
+
+
+def supply_command(args: argparse.Namespace) -> int:
+    """`urirun host supply <node>` — watch a node's `need://` events and fulfill each by
+    supplying the connector/folder it asks for (the host as a capability provider)."""
+    from urirun.node.client import NodeClient
+    config = load_host_config(args.config)
+    url = node_url(config, args.node)
+    token = getattr(args, "token", None) or os.environ.get("URIRUN_NODE_TOKEN")
+    roots = getattr(args, "roots", None)
+    once = bool(getattr(args, "once", False))
+    client = NodeClient(url, token=token)
+    sys.stderr.write(f"supplying {client.name}: watching need:// — Ctrl-C to stop\n")
+    sys.stderr.flush()
+    rc = 0
+    for ev in client.watch(scheme="need"):
+        if ev.get("event") != "need":
+            continue
+        res = fulfill_need(client, ev, roots=roots)
+        reglib._emit_json(res, "-")
+        rc = 0 if res["ok"] else 1
+        if once:
+            return rc
+    return rc
 
 
 def ensure_command(args: argparse.Namespace) -> int:
@@ -2147,10 +2187,18 @@ def apply_deploy(state: dict, body: dict) -> dict:
         except Exception as exc:  # noqa: BLE001
             summary.setdefault("codeWarnings", []).append(f"{mod}: {type(exc).__name__}: {exc}")
 
-    registry = _deploy_registry(body, state.get("registry"))
-    state["registry"] = registry
-    state["routes"] = routes_from_registry(registry, source="deploy")  # host-pushed surface
-    state["generation"] = state.get("generation", 1) + 1                # surface changed
+    has_surface = bool(body.get("registry") or body.get("bindings"))
+    has_mutation = bool(body.get("code") or body.get("env") or isinstance(body.get("allow"), list) or body.get("name"))
+    if not has_surface and not has_mutation:
+        raise ValueError("deploy needs 'bindings' or 'registry'")
+
+    if has_surface:
+        registry = _deploy_registry(body, state.get("registry"))
+        state["registry"] = registry
+        state["routes"] = routes_from_registry(registry, source="deploy")  # host-pushed surface
+    else:
+        registry = state.get("registry") or {"version": v2.VERSION, "bindings": {}}
+    state["generation"] = state.get("generation", 1) + 1                # surface/code/policy changed
     if body.get("name"):
         state["name"] = str(body["name"])
     if isinstance(body.get("allow"), list):

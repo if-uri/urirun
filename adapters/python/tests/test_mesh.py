@@ -104,6 +104,21 @@ class MeshTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             mesh.apply_deploy({"name": "n", "registry": {}, "routes": [], "allow": []}, {})
 
+    def test_apply_deploy_accepts_code_only_hot_swap(self):
+        state = {"name": "n",
+                 "registry": mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
+                     "demo://n/x/query/p": {"kind": "query", "adapter": "argv-template", "argv": ["true"]},
+                 }}),
+                 "routes": [{"uri": "demo://n/x/query/p"}], "allow": ["demo://**"], "generation": 1}
+
+        summary = mesh.apply_deploy(state, {"code": {"notes.txt": "hello"}})
+
+        self.assertTrue(summary["ok"])
+        self.assertEqual(summary["code"], ["notes.txt"])
+        self.assertEqual(summary["routeCount"], 1)
+        self.assertEqual(state["allow"], ["demo://**"])
+        self.assertEqual(state["generation"], 2)
+
     def test_watch_node_url_encodes_filters_and_replay_cursor(self):
         from urllib.parse import parse_qs, urlparse
 
@@ -715,6 +730,63 @@ class MeshTests(unittest.TestCase):
         finally:
             manage._pip = orig
 
+    def test_node_requests_and_host_supplies_connector_and_folder(self):
+        # node asks the host (need event); host fulfills: connector → ensure scheme live;
+        # folder → push its files to the node.
+        import socket as _socket
+        import threading
+
+        from urirun.node import mesh as _mesh
+        from urirun.node.client import NodeClient
+
+        demo_doc = {"ok": True, "version": mesh.v2.VERSION, "count": 1, "bindings": {
+            "demo://self/thing/query/ping": {"kind": "query", "adapter": "argv-template", "argv": ["true"],
+                                             "inputSchema": {"type": "object"}, "policy": {"allowExecute": True}}}}
+        orig = manage.registry_installed
+        manage.registry_installed = lambda **p: demo_doc
+        reg = mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
+            "env://self/x/query/p": {"kind": "query", "adapter": "argv-template", "argv": ["true"],
+                                     "inputSchema": {"type": "object"}, "policy": {"allowExecute": True}}}})
+        s = _socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+        server = mesh.serve_node("self", reg, "127.0.0.1", port, execute=True,
+                                 allow=["env://**"], admin_token="T", manage=True)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{port}"
+        try:
+            _wait_healthy(base)
+            c = NodeClient(base, token="T")
+            # 1) node requests a connector -> a need event is emitted to the host stream
+            needs, stop = [], threading.Event()
+
+            def watch():
+                for ev in c.watch(scheme="need", stop=stop):
+                    needs.append(ev)
+                    if ev.get("event") == "need":
+                        return
+            tw = threading.Thread(target=watch, daemon=True); tw.start()
+            _wait_subscribers(base, 1)
+            req = c.request_capability("demo", kind="connector")
+            self.assertTrue(req["ok"])
+            tw.join(timeout=3); stop.set()
+            need = next(e for e in needs if e.get("event") == "need")
+            self.assertEqual((need["kind"], need["what"]), ("connector", "demo"))
+            # 2) host fulfills the need -> scheme becomes live + runnable
+            res = _mesh.fulfill_need(c, need)
+            self.assertTrue(res["ok"])
+            self.assertIn("demo", c.schemes())
+            self.assertTrue(c.run("demo://self/thing/query/ping")["ok"])
+            # 3) folder need: host pushes a local folder's files to the node
+            with tempfile.TemporaryDirectory() as tmp:
+                (Path(tmp) / "notes.txt").write_text("hello", encoding="utf-8")
+                (Path(tmp) / "helper.py").write_text("X = 1\n", encoding="utf-8")
+                fr = _mesh.fulfill_need(c, {"kind": "folder", "what": tmp})
+                self.assertTrue(fr["ok"])
+                self.assertTrue((mesh.deploy_dir() / "notes.txt").exists())
+                self.assertTrue((mesh.deploy_dir() / "helper.py").exists())
+        finally:
+            server.shutdown()
+            manage.registry_installed = orig
+
     def test_node_side_adopt_makes_installed_routes_live(self):
         # node://<name>/registry/command/adopt — the node merges its installed connector
         # bindings into the LIVE registry itself (no host deploy), admin-gated.
@@ -783,6 +855,23 @@ class MeshTests(unittest.TestCase):
         finally:
             server.shutdown()
             manage.registry_installed = orig
+
+    def test_fulfill_need_dispatches_scheme_and_folder_requests(self):
+        calls = []
+
+        class Client:
+            def ensure_scheme(self, scheme, roots=None):
+                calls.append(("ensure", scheme, roots))
+                return {"ok": True, "scheme": scheme}
+
+            def push_folder(self, folder, roots=None):
+                calls.append(("folder", folder, roots))
+                return {"ok": True, "folder": folder}
+
+        self.assertTrue(mesh.fulfill_need(Client(), {"kind": "scheme", "what": "browser"}, roots="/src")["ok"])
+        self.assertTrue(mesh.fulfill_need(Client(), {"kind": "folder", "what": "pack"}, roots="/src")["ok"])
+        self.assertFalse(mesh.fulfill_need(Client(), {"kind": "mystery", "what": "x"})["ok"])
+        self.assertEqual(calls, [("ensure", "browser", "/src"), ("folder", "pack", "/src")])
 
     def test_connector_install_from_any_source(self):
         b = manage.bindings("lab")["bindings"]

@@ -149,6 +149,38 @@ class NodeClientTests(unittest.TestCase):
         self.assertEqual(out["scheme"], "ghost")
         self.assertIn("no installed bindings", out["error"])
 
+    def test_request_capability_emits_need_route(self):
+        client = NodeClient.__new__(NodeClient)
+        client.name = "lab"
+        calls = []
+        client.run = lambda uri, payload=None: calls.append((uri, payload)) or {"ok": True}
+
+        out = client.request_capability("browser", kind="scheme")
+
+        self.assertTrue(out["ok"])
+        self.assertEqual(calls, [("node://lab/host/command/request", {"kind": "scheme", "what": "browser"})])
+
+    def test_push_folder_deploys_text_files(self):
+        import tempfile
+        from pathlib import Path
+
+        client = NodeClient.__new__(NodeClient)
+        calls = []
+        client.deploy = lambda **kwargs: calls.append(kwargs) or {"ok": True, "code": sorted(kwargs["code"])}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "pack"
+            folder.mkdir()
+            (folder / "a.py").write_text("print('a')\n", encoding="utf-8")
+            (folder / "b.txt").write_text("b\n", encoding="utf-8")
+
+            out = client.push_folder("pack", roots=tmp)
+
+        self.assertTrue(out["ok"])
+        self.assertEqual(out["files"], ["a.py", "b.txt"])
+        self.assertTrue(calls[0]["merge"])
+        self.assertEqual(sorted(calls[0]["code"]), ["a.py", "b.txt"])
+
 
 if __name__ == "__main__":
     unittest.main()

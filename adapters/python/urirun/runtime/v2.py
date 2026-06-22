@@ -1775,6 +1775,13 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     host_ensure.add_argument("--no-install", action="store_true", help="only use already-installed bindings; don't install")
     host_ensure.add_argument("--token", help="admin token for node:// management / deploy")
 
+    host_supply = host_sub.add_parser("supply", parents=[host_common],
+                                      help="Watch a node's need:// events and supply the connectors/folders it asks for")
+    host_supply.add_argument("node", help="configured node name or a node URL")
+    host_supply.add_argument("--roots", help="connector/folder search roots (default ~/github / $URIRUN_CONNECTOR_ROOTS)")
+    host_supply.add_argument("--once", action="store_true", help="fulfill one need and exit")
+    host_supply.add_argument("--token", help="admin token for node:// management / deploy")
+
     host_ask = host_sub.add_parser("ask", parents=[host_common], help="Generate a URI flow from natural language and dispatch it")
     host_ask.add_argument("prompt", nargs="+")
     host_ask.add_argument("--node", action="append", default=[], help="restrict execution to a node name; repeatable")
