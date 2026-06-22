@@ -1769,7 +1769,7 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
                                       "deploy": deploy_enabled, "events": hub.count(),
                                       "keyAuth": key_auth, "keyCount": len(keyauth.load_authorized()) if key_auth else 0})
                 return
-            if self.path == "/events":
+            if self.path == "/events" or self.path.startswith("/events?"):
                 self._stream_events()
                 return
             if self.path == "/routes" or self.path == "/uri-processes":
