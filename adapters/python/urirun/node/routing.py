@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from urirun import _registry as reglib, v2
 
-UNSAFE_URI_PARTS = ("/terminal/command/run", "://sudo", "/command/install", "/command/upgrade")
+# Arbitrary-command verbs are never auto-classified safe: a route that runs whatever
+# string it's given (terminal run, shell exec) must not be offered to planners or merged
+# into a remote registry as "safe". NOTE: this denylist is intentionally minimal and
+# fragile — the real fix is a deny-by-default capability model + per-binding `safe` flags;
+# `/command/run` is NOT listed bare because legit routes use it (planfile/flow/httpbin DSL run).
+UNSAFE_URI_PARTS = ("/terminal/command/run", "/command/exec", "://sudo", "/command/install", "/command/upgrade")
 
 
 def routes_from_registry(registry: dict, source: str = "built-in") -> list[dict]:
@@ -22,12 +27,18 @@ def routes_from_registry(registry: dict, source: str = "built-in") -> list[dict]
         entry = item["routeEntry"]
         config = entry.get("config") or {}
         meta = entry.get("meta") or {}
+        # A route is safe only when the denylist does not flag it AND its author did not
+        # explicitly declare it unsafe (config/meta `safe: false`). Either signal can deny;
+        # neither can override the other to "safe" — deny wins. (Top-level binding `safe`
+        # is dropped by compile, so authors must put it under config/meta to survive.)
+        declared = config.get("safe", meta.get("safe"))
+        denied = any(part in item["uri"] for part in UNSAFE_URI_PARTS)
         routes.append(
             {
                 "uri": item["uri"],
                 "kind": entry.get("kind"),
                 "adapter": entry.get("adapter"),
-                "safe": not any(part in item["uri"] for part in UNSAFE_URI_PARTS),
+                "safe": (declared is not False) and not denied,
                 "title": meta.get("label") or meta.get("title") or item["uri"],
                 "source": source,
                 "inputSchema": config.get("inputSchema") or entry.get("inputSchema") or {"type": "object"},

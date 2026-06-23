@@ -259,8 +259,8 @@ Language-agnostic URI to handler adapter
 ### `project/map.toon.yaml`
 
 ```toon markpact:analysis path=project/map.toon.yaml
-# urirun | 149f 26588L | python:127,shell:10,javascript:4,go:3,rust:2,typescript:2,less:1 | 2026-06-23
-# stats: 1058 func | 46 cls | 149 mod | CC̄=4.5 | critical:111 | cycles:0
+# urirun | 149f 26225L | python:127,shell:10,javascript:4,go:3,rust:2,typescript:2,less:1 | 2026-06-23
+# stats: 1037 func | 46 cls | 149 mod | CC̄=4.5 | critical:107 | cycles:0
 # alerts[5]: CC apply_deploy=20; CC _host_mesh_command=18; CC main=18; CC main=17; CC watch_command=17
 # hotspots[5]: serve fan=28; run_command fan=27; main fan=23; main fan=23; serve_node fan=21
 # evolution: baseline
@@ -356,9 +356,9 @@ M[149]:
   adapters/python/urirun/node/flow.py,432
   adapters/python/urirun/node/keyauth.py,177
   adapters/python/urirun/node/manage.py,356
-  adapters/python/urirun/node/mesh.py,2387
+  adapters/python/urirun/node/mesh.py,2019
   adapters/python/urirun/node/paths.py,39
-  adapters/python/urirun/node/routing.py,117
+  adapters/python/urirun/node/routing.py,122
   adapters/python/urirun/node/transport.py,433
   adapters/python/urirun/planfile_adapter.py,6
   adapters/python/urirun/runtime/__init__.py,2
@@ -1105,31 +1105,10 @@ D:
     runtime_info()
     bindings(name)
   adapters/python/urirun/node/mesh.py:
-    e: _flow_format,flow_document,write_flow_document,load_flow_document,first_url,nl_key,append_if_available,_flow_intents,_append_target_steps,heuristic_flow,json_from_text,normalize_flow,normalize_flow_or_explain,llm_flow,make_flow,_dig_path,resolve_step_payload,execute_flow,_flow_stdout,verify_flow_execution,run_flow_document,format_nodes,format_routes,format_tickets,format_table,_parse_json_option,data_command,monitor_command,_task_prompt,_ticket_payload,_host_local_registry,_run_executor_handler,_resolves_locally,_run_task_flow,_emit_ticket_result,_task_plan,_task_bindings,_task_schedule,_task_list,_task_show,_task_next,_task_create,_task_claim,_task_start,_task_complete,_task_fail,_task_block,_task_ready,_task_wait,_task_dsl,_task_run,_task_loop,task_command,_host_delegated_command,fulfill_need,supply_command,ensure_command,run_command,_print_event,watch_command,_host_mesh_command,copy_id_command,copy_id_cli,deploy_command,_maybe_load_dotenv,host_command,send_json,read_raw,read_json,_pool_executors,_probe_one_route,_render_probe_report,probe_command,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_registry_to_bindings,_deploy_registry,apply_deploy,serve_node,_resolve_serve_opts,_node_serve,node_list_command,node_stop_command,node_command,EventHub,NodeContext,NodeHandler
+    e: format_nodes,format_routes,format_tickets,format_table,_parse_json_option,data_command,monitor_command,_task_prompt,_ticket_payload,_host_local_registry,_run_executor_handler,_resolves_locally,_run_task_flow,_emit_ticket_result,_task_plan,_task_bindings,_task_schedule,_task_list,_task_show,_task_next,_task_create,_task_claim,_task_start,_task_complete,_task_fail,_task_block,_task_ready,_task_wait,_task_dsl,_task_run,_task_loop,task_command,_host_delegated_command,fulfill_need,supply_command,ensure_command,run_command,_print_event,watch_command,_host_mesh_command,copy_id_command,copy_id_cli,deploy_command,_maybe_load_dotenv,host_command,send_json,read_raw,read_json,_pool_executors,_probe_one_route,_render_probe_report,probe_command,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_registry_to_bindings,_deploy_registry,apply_deploy,serve_node,_resolve_serve_opts,_node_serve,node_list_command,node_stop_command,node_command,EventHub,NodeContext,NodeHandler
     EventHub: __init__(1),publish(1),subscribe(0),unsubscribe(1),replay_since(1),current_id(0),count(0)  # In-memory pub/sub for a node's live event stream (SSE). Each
     NodeContext: __init__(0)  # Everything a NodeHandler needs to serve one node — the mutab
     NodeHandler: ctx(0),do_OPTIONS(0),_guarded(1),do_GET(0),do_POST(0),_get(0),_get_errors(2),_post(0),_run_target(2),_publish_run(2),_validate_run_request(1),_dispatch_control_uri(3),_respond_async(4),_handle_run(0),_handle_adopt(2),_handle_need(2),_handle_run_control(1),_stream_events(0),_admin_ok(1),_run_ok(1),_handle_deploy(0),_handle_enroll(0),log_message(1)  # The node's HTTP surface. State/config live on `self.server.c
-    _flow_format(path;requested)
-    flow_document(flow)
-    write_flow_document(path;document;fmt)
-    load_flow_document(path)
-    first_url(prompt)
-    nl_key(text)
-    append_if_available(steps;route_uris;uri;payload;previous)
-    _flow_intents(lowered)
-    _append_target_steps(steps;route_uris;target;intents;url;previous)
-    heuristic_flow(prompt;routes;nodes;selected_nodes)
-    json_from_text(text)
-    normalize_flow(flow;allowed_uris)
-    normalize_flow_or_explain(flow;allowed_uris)
-    llm_flow(prompt;routes;nodes)
-    make_flow(prompt;mesh;selected_nodes;use_llm)
-    _dig_path(data;dotted)
-    resolve_step_payload(payload;results)
-    execute_flow(flow;mesh;registry;execute)
-    _flow_stdout(envelope)
-    verify_flow_execution(document;execution)
-    run_flow_document(document;mesh)
     format_nodes(mesh)
     format_routes(routes)
     format_tickets(tickets)
@@ -1752,7 +1731,7 @@ D:
 
 ```prolog markpact:analysis path=project/logic.pl
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urirun', '0.4.61', 'javascript').
+project_metadata('urirun', '0.4.62', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/bash/example/hash-connector.sh', 10, 'shell').
@@ -1845,9 +1824,9 @@ project_file('adapters/python/urirun/node/config.py', 186, 'python').
 project_file('adapters/python/urirun/node/flow.py', 432, 'python').
 project_file('adapters/python/urirun/node/keyauth.py', 177, 'python').
 project_file('adapters/python/urirun/node/manage.py', 356, 'python').
-project_file('adapters/python/urirun/node/mesh.py', 2387, 'python').
+project_file('adapters/python/urirun/node/mesh.py', 2019, 'python').
 project_file('adapters/python/urirun/node/paths.py', 39, 'python').
-project_file('adapters/python/urirun/node/routing.py', 117, 'python').
+project_file('adapters/python/urirun/node/routing.py', 122, 'python').
 project_file('adapters/python/urirun/node/transport.py', 433, 'python').
 project_file('adapters/python/urirun/planfile_adapter.py', 6, 'python').
 project_file('adapters/python/urirun/runtime/__init__.py', 2, 'python').
@@ -2409,27 +2388,6 @@ python_function('adapters/python/urirun/node/manage.py', 'registry_adopt', 0, 1,
 python_function('adapters/python/urirun/node/manage.py', 'package_list', 0, 7, 5).
 python_function('adapters/python/urirun/node/manage.py', 'runtime_info', 0, 2, 3).
 python_function('adapters/python/urirun/node/manage.py', 'bindings', 1, 2, 0).
-python_function('adapters/python/urirun/node/mesh.py', '_flow_format', 2, 3, 2).
-python_function('adapters/python/urirun/node/mesh.py', 'flow_document', 1, 3, 2).
-python_function('adapters/python/urirun/node/mesh.py', 'write_flow_document', 3, 3, 7).
-python_function('adapters/python/urirun/node/mesh.py', 'load_flow_document', 1, 5, 9).
-python_function('adapters/python/urirun/node/mesh.py', 'first_url', 1, 2, 2).
-python_function('adapters/python/urirun/node/mesh.py', 'nl_key', 1, 1, 6).
-python_function('adapters/python/urirun/node/mesh.py', 'append_if_available', 5, 5, 5).
-python_function('adapters/python/urirun/node/mesh.py', '_flow_intents', 1, 4, 3).
-python_function('adapters/python/urirun/node/mesh.py', '_append_target_steps', 6, 10, 2).
-python_function('adapters/python/urirun/node/mesh.py', 'heuristic_flow', 4, 8, 12).
-python_function('adapters/python/urirun/node/mesh.py', 'json_from_text', 1, 5, 7).
-python_function('adapters/python/urirun/node/mesh.py', 'normalize_flow', 2, 15, 9).
-python_function('adapters/python/urirun/node/mesh.py', 'normalize_flow_or_explain', 2, 10, 7).
-python_function('adapters/python/urirun/node/mesh.py', 'llm_flow', 3, 7, 7).
-python_function('adapters/python/urirun/node/mesh.py', 'make_flow', 4, 6, 5).
-python_function('adapters/python/urirun/node/mesh.py', '_dig_path', 2, 4, 4).
-python_function('adapters/python/urirun/node/mesh.py', 'resolve_step_payload', 2, 5, 5).
-python_function('adapters/python/urirun/node/mesh.py', 'execute_flow', 4, 9, 9).
-python_function('adapters/python/urirun/node/mesh.py', '_flow_stdout', 1, 6, 2).
-python_function('adapters/python/urirun/node/mesh.py', 'verify_flow_execution', 2, 10, 6).
-python_function('adapters/python/urirun/node/mesh.py', 'run_flow_document', 2, 7, 7).
 python_function('adapters/python/urirun/node/mesh.py', 'format_nodes', 1, 8, 5).
 python_function('adapters/python/urirun/node/mesh.py', 'format_routes', 1, 7, 4).
 python_function('adapters/python/urirun/node/mesh.py', 'format_tickets', 1, 6, 2).
@@ -3406,9 +3364,9 @@ sumd_workflow_step('clean', 1, 'rm -rf node_modules .pytest_cache adapters/pytho
 | `_write_planfile_action` *(in adapters.python.urirun.host.host_integrations)* | 8 | 1 | 39 | **40** |
 | `info` *(in adapters.python.urirun.runtime.errors)* | 13 ⚠ | 2 | 27 | **29** |
 | `main` *(in scripts.repin_connectors)* | 18 ⚠ | 0 | 28 | **28** |
-| `proto_from_registry` *(in adapters.python.urirun.runtime.codegen)* | 13 ⚠ | 2 | 25 | **27** |
 | `main` *(in scripts.lint_connectors)* | 14 ⚠ | 0 | 27 | **27** |
 | `_cmd_upgrade` *(in adapters.python.urirun.runtime.v2)* | 14 ⚠ | 0 | 27 | **27** |
+| `proto_from_registry` *(in adapters.python.urirun.runtime.codegen)* | 13 ⚠ | 2 | 25 | **27** |
 
 ```toon markpact:analysis path=project/calls.toon.yaml
 # code2llm call graph | /home/tom/github/if-uri/urirun
@@ -3427,36 +3385,36 @@ HUBS[20]:
     CC=13  in:2  out:27  total:29
   scripts.repin_connectors.main
     CC=18  in:0  out:28  total:28
-  adapters.python.urirun.runtime.codegen.proto_from_registry
-    CC=13  in:2  out:25  total:27
   scripts.lint_connectors.main
     CC=14  in:0  out:27  total:27
   adapters.python.urirun.runtime.v2._cmd_upgrade
     CC=14  in:0  out:27  total:27
+  adapters.python.urirun.runtime.codegen.proto_from_registry
+    CC=13  in:2  out:25  total:27
   adapters.python.urirun.host.host_db._run_query_route
     CC=7  in:1  out:26  total:27
   adapters.python.urirun.host.host_dashboard._dashboard_api_response
     CC=13  in:1  out:25  total:26
-  adapters.python.urirun.runtime.v2.validate_binding_document
-    CC=12  in:2  out:24  total:26
   adapters.python.urirun.host.host_dashboard.summary
     CC=6  in:1  out:25  total:26
+  adapters.python.urirun.runtime.v2.validate_binding_document
+    CC=12  in:2  out:24  total:26
   adapters.python.urirun.testing.smoke
     CC=9  in:1  out:23  total:24
   adapters.python.urirun.runtime.v1.run
     CC=14  in:1  out:23  total:24
-  adapters.python.urirun.connectors.connector_lint.lint_connector
-    CC=10  in:3  out:20  total:23
   adapters.python.urirun.runtime.v2.scan_artifacts
     CC=11  in:4  out:19  total:23
-  adapters.python.urirun.host.host_db.search_records
-    CC=6  in:1  out:21  total:22
+  adapters.python.urirun.connectors.connector_lint.lint_connector
+    CC=10  in:3  out:20  total:23
   adapters.python.urirun.runtime.errors.problem
     CC=10  in:0  out:22  total:22
+  adapters.python.urirun.host.host_db.search_records
+    CC=6  in:1  out:21  total:22
   adapters.python.urirun.runtime.v1._run_process_streaming
     CC=7  in:1  out:20  total:21
-  adapters.python.urirun.runtime.codegen.gen_command
-    CC=9  in:0  out:20  total:20
+  adapters.python.urirun.host.domain_monitor._route_flow
+    CC=4  in:0  out:20  total:20
 
 MODULES:
   adapters.c.urirun  [3 funcs]
