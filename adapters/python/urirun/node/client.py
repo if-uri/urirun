@@ -140,7 +140,18 @@ class NodeClient:
     def schemes(self) -> set:
         return {str(r.get("uri", "")).split("://", 1)[0] for r in self.routes()}
 
-    def ensure_scheme(self, scheme: str, roots=None, install: bool = True) -> dict:
+    @staticmethod
+    def _route_key(uri: str) -> tuple[str, str]:
+        """(scheme, path-after-target) so routes match across targets:
+        fs://host/dir/query/list and fs://laptop/dir/query/list both → ('fs', 'dir/query/list')."""
+        try:
+            scheme_part, rest = str(uri).split("://", 1)
+            seg = rest.split("/", 1)
+            return (scheme_part, seg[1] if len(seg) > 1 else "")
+        except Exception:  # noqa: BLE001
+            return (str(uri), "")
+
+    def ensure_scheme(self, scheme: str, roots=None, install: bool = True, route: str | None = None) -> dict:
         """Make `scheme://` live on the node, acquiring it if missing: adopt bindings already
         installed in the node venv, else discover a connector (catalog/local ~/github/git)
         via node:// management, install it, then adopt its routes. Older nodes fall back to
@@ -178,7 +189,14 @@ class NodeClient:
             locals_ = [c for c in disc.get("local", []) if c.get("source")]
             # prefer connectors that explicitly declare this scheme; try each until one adopts
             declared = [c for c in locals_ if scheme in (c.get("schemes") or [])]
-            for c in (declared or locals_):
+            candidates = declared or locals_
+            # route-granular: when a scheme is split across connectors (e.g. fs:// duplicates vs
+            # dir/file), prefer the one whose routes actually cover the requested route.
+            if route:
+                want = self._route_key(route)
+                candidates = sorted(candidates,
+                                    key=lambda c: 0 if any(self._route_key(r) == want for r in (c.get("routes") or [])) else 1)
+            for c in candidates:
                 self.run(f"{mgmt}/connector/command/install", {"source": c["source"], "editable": True})
                 adopted = try_adopt()
                 if adopted.get("ok"):
@@ -200,7 +218,7 @@ class NodeClient:
         scheme = str(uri).split("://", 1)[0]
         ensured = None
         if scheme not in ("run",) and scheme not in self.schemes():
-            ensured = self.ensure_scheme(scheme, roots=roots)
+            ensured = self.ensure_scheme(scheme, roots=roots, route=str(uri))
         env = self.run(uri, payload, **kw)
         if ensured is not None:
             env["ensured"] = ensured

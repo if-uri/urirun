@@ -3,11 +3,11 @@
 
 ## AI Cost Tracking
 
-![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.73-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![AI Cost](https://img.shields.io/badge/AI%20Cost-$8.87-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-57.8h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.1.31-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![AI Cost](https://img.shields.io/badge/AI%20Cost-$8.39-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-58.4h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
 
-- 🤖 **LLM usage:** $8.8686 (187 commits)
-- 👤 **Human dev:** ~$5782 (57.8h @ $100/h, 30min dedup)
+- 🤖 **LLM usage:** $8.3870 (188 commits)
+- 👤 **Human dev:** ~$5841 (58.4h @ $100/h, 30min dedup)
 
 Generated on 2026-06-23 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
 
@@ -398,6 +398,29 @@ urirun host dashboard serve \
   --node-url lenovo=http://192.168.188.201:8765 \
   --port 8194
 ```
+
+The dashboard phone scanner can be started from the Chat tab with a natural
+language prompt such as `uruchom skaner telefonu i pokaz QR`. Captured images
+are cropped by `urirun-connector-smart-crop`, OCR is run on the cropped image,
+and the host writes a canonical PDF document plus JSON sidecar. The default
+archive is `~/.urirun/documents/YYYY-MM/` with names like
+`paragon_2026-03-15_allegro-sp-z-o-o_123.45-pln.pdf`. The registry lives at
+`~/.urirun/documents/index.json` and stores the document URI, source paths,
+OCR metadata, hashes and duplicate status.
+
+`docid` is used when it is installed in the dashboard environment; otherwise
+urirun falls back to a deterministic `LOCAL-DOC-*` ID based on normalized OCR
+text or the source file hash. The archive location can be changed with:
+
+```bash
+export URIRUN_DOCUMENT_DIR=~/.urirun/documents
+export URIRUN_DOCUMENT_INDEX=~/.urirun/documents/index.json
+```
+
+The scanner has a `Best PDF` mode for phone capture. It samples a short burst at
+1 frame per second, scores every candidate using crop confidence, OCR text,
+document type/date/amount and visual sharpness/contrast, and archives only the
+best receipt/invoice candidate as PDF.
 
 Daily queues can be scheduled without hand-editing systemd files:
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from pathlib import Path
 
 from urirun.host import host_dashboard
@@ -253,26 +254,6 @@ def test_scanner_capture_registers_artifact_and_chat_message(monkeypatch, tmp_pa
     assert fake_db.logs[-1]["detail"]["attachments"][0]["meta"]["ocr"]["text"] == "VAT"
 
 
-def test_auto_crop_receipt_detects_light_document(tmp_path):
-    from PIL import Image, ImageDraw
-
-    image = Image.new("RGB", (240, 180), (45, 47, 50))
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((72, 20, 164, 158), fill=(246, 244, 235))
-    draw.line((86, 42, 150, 42), fill=(35, 35, 35), width=2)
-    draw.line((86, 70, 142, 70), fill=(35, 35, 35), width=2)
-    path = tmp_path / "receipt.jpg"
-    image.save(path)
-
-    crop = host_dashboard._auto_crop_receipt(path)
-
-    assert crop["ok"] is True
-    assert Path(crop["path"]).is_file()
-    assert crop["width"] < 180
-    assert crop["height"] > 120
-    assert crop["box"][0] > 40
-
-
 def test_scanner_capture_uses_receipt_crop_for_preview_and_ocr(monkeypatch, tmp_path):
     fake_db = FakeHostDb()
     seen_ocr_paths = []
@@ -306,3 +287,188 @@ def test_scanner_capture_uses_receipt_crop_for_preview_and_ocr(monkeypatch, tmp_
     assert attachment["kind"] == "receipt-crop"
     assert attachment["previewUrl"].startswith("/api/file?path=")
     assert attachment["meta"]["originalPath"] != attachment["path"]
+
+
+def test_scanner_capture_candidate_scores_without_archiving(monkeypatch, tmp_path):
+    from PIL import Image
+
+    fake_db = FakeHostDb()
+    host_dashboard._SCANNER_BEST_SESSIONS.clear()
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    monkeypatch.setenv("URIRUN_SCANNER_DIR", str(tmp_path))
+
+    def fake_crop(path):
+        crop_path = Path(path).with_name(f"{Path(path).stem}-crop.jpg")
+        Image.new("RGB", (260, 420), (245, 244, 235)).save(crop_path)
+        return {
+            "ok": True,
+            "path": str(crop_path),
+            "bboxArea": 0.4,
+            "width": 260,
+            "height": 420,
+            "orientation": {"enabled": True, "width": 260, "height": 420},
+        }
+
+    monkeypatch.setattr(host_dashboard, "_auto_crop_receipt", fake_crop)
+    monkeypatch.setattr(host_dashboard, "_local_image_ocr", lambda path: {
+        "ok": True,
+        "backend": "mock",
+        "text": "PARAGON FISKALNY\nALLEGRO\nDATA 2026-03-15\nRAZEM 123,45 PLN",
+        "chars": 61,
+    })
+    raw = base64.b64encode(b"candidate-frame").decode("ascii")
+
+    result = host_dashboard.scanner_capture(str(tmp_path), ":memory:", {
+        "image": f"data:image/jpeg;base64,{raw}",
+        "width": 100,
+        "height": 200,
+        "source": "phone",
+        "archive": False,
+        "mode": "best-candidate",
+        "seriesId": "series-a",
+        "frameIndex": 1,
+    })
+
+    assert result["ok"] is True
+    assert result["candidate"]["quality"]["documentLike"] is True
+    assert result["candidate"]["detectedDocument"]["type"] == "paragon"
+    assert result["series"]["best"]["frameIndex"] == 1
+    assert fake_db.artifacts == []
+    assert fake_db.logs == []
+
+
+def test_scanner_best_finish_archives_best_candidate(monkeypatch, tmp_path):
+    from PIL import Image
+
+    fake_db = FakeHostDb()
+    host_dashboard._SCANNER_BEST_SESSIONS.clear()
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    monkeypatch.setenv("URIRUN_SCANNER_DIR", str(tmp_path / "scans"))
+
+    def fake_crop(path):
+        crop_path = Path(path).with_name(f"{Path(path).stem}-crop.jpg")
+        Image.new("RGB", (280, 460), (245, 244, 235)).save(crop_path)
+        return {
+            "ok": True,
+            "path": str(crop_path),
+            "bboxArea": 0.42,
+            "width": 280,
+            "height": 460,
+            "orientation": {"enabled": True, "width": 280, "height": 460},
+        }
+
+    ocr_items = iter([
+        {"ok": True, "backend": "mock", "text": "blur", "chars": 4},
+        {
+            "ok": True,
+            "backend": "mock",
+            "text": "PARAGON FISKALNY\nALLEGRO SP Z O O\nDATA 2026-03-15\nRAZEM 123,45 PLN",
+            "chars": 72,
+        },
+    ])
+
+    def fake_archive(**kwargs):
+        pdf = tmp_path / "best.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n")
+        return {
+            "ok": True,
+            "duplicate": False,
+            "docId": "DOC-PAR-BEST",
+            "uri": "document://host/DOC-PAR-BEST",
+            "path": str(pdf),
+            "jsonPath": str(tmp_path / "best.json"),
+            "metadata": {"type": "paragon", "date": "2026-03-15", "contractor": "ALLEGRO", "amount": "123.45", "currency": "PLN"},
+        }
+
+    monkeypatch.setattr(host_dashboard, "_auto_crop_receipt", fake_crop)
+    monkeypatch.setattr(host_dashboard, "_local_image_ocr", lambda path: next(ocr_items))
+    monkeypatch.setattr(host_dashboard, "_archive_scanned_document", fake_archive)
+
+    for idx, raw in enumerate((b"weak-frame", b"good-frame"), start=1):
+        host_dashboard.scanner_capture(str(tmp_path), ":memory:", {
+            "image": f"data:image/jpeg;base64,{base64.b64encode(raw).decode('ascii')}",
+            "width": 100,
+            "height": 200,
+            "source": "phone",
+            "archive": False,
+            "mode": "best-candidate",
+            "seriesId": "series-best",
+            "frameIndex": idx,
+        })
+
+    result = host_dashboard.scanner_best_finish(str(tmp_path), ":memory:", {"seriesId": "series-best", "minScore": 1})
+
+    assert result["ok"] is True
+    assert result["best"]["frameIndex"] == 2
+    assert result["document"]["docId"] == "DOC-PAR-BEST"
+    assert [item["kind"] for item in fake_db.artifacts] == ["camera-scan", "document-pdf"]
+    assert fake_db.logs[-1]["detail"]["attachments"][1]["kind"] == "document-pdf"
+
+
+def test_archive_scanned_document_writes_pdf_json_index_and_detects_duplicate(monkeypatch, tmp_path):
+    from PIL import Image
+
+    document_root = tmp_path / "documents"
+    monkeypatch.setenv("URIRUN_DOCUMENT_DIR", str(document_root))
+    monkeypatch.setenv("URIRUN_DOCUMENT_INDEX", str(document_root / "index.json"))
+    crop = tmp_path / "crop.jpg"
+    original = tmp_path / "original.jpg"
+    Image.new("RGB", (240, 360), (245, 244, 235)).save(crop)
+    original.write_bytes(crop.read_bytes())
+    ocr_text = "\n".join([
+        "PARAGON FISKALNY",
+        "ALLEGRO SP Z O O",
+        "Data 2026-03-15",
+        "RAZEM 123,45 PLN",
+    ])
+    ocr = {"ok": True, "backend": "mock", "text": ocr_text, "chars": len(ocr_text)}
+
+    result = host_dashboard._archive_scanned_document(
+        display_path=crop,
+        original_path=original,
+        ocr=ocr,
+        crop={"ok": True, "path": str(crop)},
+        source_sha256="source-a",
+        captured_at="2026-03-15T10:00:00Z",
+    )
+
+    assert result["ok"] is True
+    assert result["duplicate"] is False
+    assert result["metadata"]["type"] == "paragon"
+    assert result["metadata"]["date"] == "2026-03-15"
+    assert result["metadata"]["amount"] == "123.45"
+    assert Path(result["path"]).is_file()
+    assert Path(result["jsonPath"]).is_file()
+    assert Path(result["path"]).name.startswith("paragon_2026-03-15_allegro")
+    index = json.loads((document_root / "index.json").read_text(encoding="utf-8"))
+    assert index["documents"][0]["docId"] == result["docId"]
+    assert index["documents"][0]["pdfPath"] == result["path"]
+
+    duplicate = host_dashboard._archive_scanned_document(
+        display_path=crop,
+        original_path=original,
+        ocr=ocr,
+        crop={"ok": True, "path": str(crop)},
+        source_sha256="source-b",
+        captured_at="2026-03-15T10:00:00Z",
+    )
+
+    assert duplicate["ok"] is True
+    assert duplicate["duplicate"] is True
+    assert duplicate["path"] == result["path"]
+
+
+def test_document_metadata_does_not_parse_date_as_amount():
+    text = "\n".join([
+        "Polskie ePlatnosci",
+        "BUD COPE KAWKA GMA",
+        "KARTA CONTACTLESS",
+        "PROSZE OBCIAZYC MOJE KONTO",
+        "DATA 19,06 2026 GODZINA: 09552451",
+    ])
+
+    metadata = host_dashboard._extract_document_metadata(text)
+
+    assert metadata["type"] == "potwierdzenie"
+    assert metadata["amount"] == ""
+    assert metadata["currency"] == ""

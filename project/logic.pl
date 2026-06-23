@@ -1,5 +1,5 @@
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urirun', '0.4.71', 'javascript').
+project_metadata('urirun', '0.4.73', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/bash/example/hash-connector.sh', 10, 'shell').
@@ -64,7 +64,7 @@ project_file('adapters/python/urirun/connector_sdk.py', 6, 'python').
 project_file('adapters/python/urirun/connector_smoke.py', 6, 'python').
 project_file('adapters/python/urirun/connectors/__init__.py', 2, 'python').
 project_file('adapters/python/urirun/connectors/connect_catalog.py', 255, 'python').
-project_file('adapters/python/urirun/connectors/connector_lint.py', 391, 'python').
+project_file('adapters/python/urirun/connectors/connector_lint.py', 443, 'python').
 project_file('adapters/python/urirun/connectors/connector_scaffold.py', 413, 'python').
 project_file('adapters/python/urirun/connectors/connector_sdk.py', 88, 'python').
 project_file('adapters/python/urirun/connectors/connector_smoke.py', 82, 'python').
@@ -76,7 +76,7 @@ project_file('adapters/python/urirun/errors.py', 9, 'python').
 project_file('adapters/python/urirun/exec.py', 62, 'python').
 project_file('adapters/python/urirun/host/__init__.py', 2, 'python').
 project_file('adapters/python/urirun/host/domain_monitor.py', 486, 'python').
-project_file('adapters/python/urirun/host/host_dashboard.py', 1285, 'python').
+project_file('adapters/python/urirun/host/host_dashboard.py', 2529, 'python').
 project_file('adapters/python/urirun/host/host_db.py', 500, 'python').
 project_file('adapters/python/urirun/host/host_integrations.py', 356, 'python').
 project_file('adapters/python/urirun/host/planfile_adapter.py', 280, 'python').
@@ -90,14 +90,16 @@ project_file('adapters/python/urirun/node/__init__.py', 2, 'python').
 project_file('adapters/python/urirun/node/_artifacts.py', 111, 'python').
 project_file('adapters/python/urirun/node/_util.py', 31, 'python').
 project_file('adapters/python/urirun/node/_version.py', 75, 'python').
-project_file('adapters/python/urirun/node/client.py', 343, 'python').
+project_file('adapters/python/urirun/node/client.py', 361, 'python').
 project_file('adapters/python/urirun/node/config.py', 194, 'python').
 project_file('adapters/python/urirun/node/flow.py', 482, 'python').
+project_file('adapters/python/urirun/node/formatting.py', 79, 'python').
 project_file('adapters/python/urirun/node/keyauth.py', 174, 'python').
-project_file('adapters/python/urirun/node/manage.py', 358, 'python').
-project_file('adapters/python/urirun/node/mesh.py', 2074, 'python').
+project_file('adapters/python/urirun/node/manage.py', 360, 'python').
+project_file('adapters/python/urirun/node/mesh.py', 1722, 'python').
 project_file('adapters/python/urirun/node/paths.py', 39, 'python').
 project_file('adapters/python/urirun/node/routing.py', 144, 'python').
+project_file('adapters/python/urirun/node/task_cli.py', 343, 'python').
 project_file('adapters/python/urirun/node/transport.py', 436, 'python').
 project_file('adapters/python/urirun/planfile_adapter.py', 6, 'python').
 project_file('adapters/python/urirun/runtime/__init__.py', 2, 'python').
@@ -106,7 +108,7 @@ project_file('adapters/python/urirun/runtime/_runtime.py', 541, 'python').
 project_file('adapters/python/urirun/runtime/_scan.py', 667, 'python').
 project_file('adapters/python/urirun/runtime/adopt_pack.py', 246, 'python').
 project_file('adapters/python/urirun/runtime/agent.py', 152, 'python').
-project_file('adapters/python/urirun/runtime/cli.py', 674, 'python').
+project_file('adapters/python/urirun/runtime/cli.py', 682, 'python').
 project_file('adapters/python/urirun/runtime/codegen.py', 439, 'python').
 project_file('adapters/python/urirun/runtime/compat.py', 200, 'python').
 project_file('adapters/python/urirun/runtime/daemon.py', 117, 'python').
@@ -118,7 +120,7 @@ project_file('adapters/python/urirun/runtime/progress.py', 90, 'python').
 project_file('adapters/python/urirun/runtime/secrets.py', 235, 'python').
 project_file('adapters/python/urirun/runtime/tree.py', 92, 'python').
 project_file('adapters/python/urirun/runtime/v1.py', 472, 'python').
-project_file('adapters/python/urirun/runtime/v2.py', 1968, 'python').
+project_file('adapters/python/urirun/runtime/v2.py', 2006, 'python').
 project_file('adapters/python/urirun/runtime/v2_adopt.py', 194, 'python').
 project_file('adapters/python/urirun/runtime/v2_grpc.py', 205, 'python').
 project_file('adapters/python/urirun/runtime/v2_mcp.py', 210, 'python').
@@ -152,7 +154,7 @@ project_file('scripts/repin_connectors.py', 167, 'python').
 project_file('scripts/sync-versions.sh', 26, 'shell').
 project_file('security/mesh-probe/probe.py', 115, 'python').
 project_file('test/urirun.test.js', 11, 'javascript').
-project_file('tests/test_host_dashboard.py', 185, 'python').
+project_file('tests/test_host_dashboard.py', 475, 'python').
 project_file('tests/test_urirun.py', 12, 'python').
 project_file('tests/test_v2_service_auth.py', 47, 'python').
 project_file('tree.sh', 5, 'shell').
@@ -414,7 +416,9 @@ python_function('adapters/python/urirun/connectors/connector_lint.py', '_compute
 python_function('adapters/python/urirun/connectors/connector_lint.py', '_adapter_drift', 2, 5, 4).
 python_function('adapters/python/urirun/connectors/connector_lint.py', '_route_kind_counts', 1, 5, 1).
 python_function('adapters/python/urirun/connectors/connector_lint.py', 'lint_connector', 1, 10, 16).
+python_function('adapters/python/urirun/connectors/connector_lint.py', 'sync_manifest', 2, 18, 13).
 python_function('adapters/python/urirun/connectors/connector_lint.py', '_format_report', 1, 13, 3).
+python_function('adapters/python/urirun/connectors/connector_lint.py', 'sync_manifest_command', 1, 9, 7).
 python_function('adapters/python/urirun/connectors/connector_lint.py', 'lint_command', 1, 6, 5).
 python_function('adapters/python/urirun/connectors/connector_lint.py', '_import_first_bindings', 2, 6, 10).
 python_function('adapters/python/urirun/connectors/connector_lint.py', '_unresolved_handlers', 1, 8, 6).
@@ -494,8 +498,49 @@ python_function('adapters/python/urirun/host/host_dashboard.py', '_chat_message'
 python_function('adapters/python/urirun/host/host_dashboard.py', '_add_chat_message', 2, 2, 2).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'chat_history', 3, 4, 9).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_local_image_ocr', 1, 5, 4).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_document_archive_root', 0, 1, 4).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_document_index_path', 0, 2, 5).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_utc_now', 0, 1, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_file_sha256', 1, 2, 9).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_normalized_document_text', 1, 2, 6).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_load_document_index', 0, 5, 7).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_save_document_index', 1, 1, 7).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_docid_for_file', 2, 8, 17).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_parse_document_date', 2, 8, 10).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_parse_amount', 1, 10, 11).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_document_type', 1, 12, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_parse_contractor', 1, 12, 12).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_extract_document_metadata', 1, 1, 4).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_filename_part', 1, 4, 6).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_canonical_document_filename', 1, 9, 7).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_pdf_text', 1, 2, 5).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_pdf_stream', 1, 1, 3).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_write_document_pdf', 2, 8, 27).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_unique_document_path', 3, 3, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_existing_document', 1, 11, 6).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_archive_scanned_document', 0, 9, 27).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'shutil_which', 1, 1, 1).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'scanner_capture', 3, 9, 22).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_lan_host', 0, 8, 8).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_url_host', 1, 3, 1).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_public_base_url', 3, 4, 5).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_write_qr_png', 2, 1, 7).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'startup_phone_qr', 2, 10, 16).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_ensure_tls_cert', 2, 3, 6).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_probe_scanner_url', 2, 3, 4).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_nl_text', 1, 3, 4).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_is_phone_scanner_prompt', 1, 8, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'ensure_phone_scanner_service', 6, 10, 13).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_auto_crop_receipt', 1, 2, 3).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_bounded', 3, 1, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_frame_visual_metrics', 1, 7, 20).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_document_frame_quality', 4, 31, 14).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_public_scanner_candidate', 1, 4, 3).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_scanner_best_update', 2, 3, 8).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_scanner_best_take', 1, 3, 3).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_register_scanner_result', 2, 16, 10).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'scanner_capture', 3, 16, 25).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'scanner_best_finish', 3, 31, 17).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'scanner_session', 2, 5, 8).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_first', 3, 2, 1).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_host_db', 0, 1, 0).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_mesh', 0, 1, 0).
@@ -505,12 +550,12 @@ python_function('adapters/python/urirun/host/host_dashboard.py', '_safe_tickets'
 python_function('adapters/python/urirun/host/host_dashboard.py', '_task_counts', 1, 3, 2).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'summary', 4, 6, 17).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_compact_chat_result', 2, 5, 3).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'chat_ask', 7, 20, 20).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'chat_ask', 7, 25, 22).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'task_action', 4, 8, 9).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_dashboard_api_response', 6, 15, 14).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'create_handler', 6, 1, 15).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'serve', 10, 3, 11).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'command', 1, 9, 6).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'create_handler', 6, 1, 17).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'serve', 12, 5, 13).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'command', 1, 10, 7).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'default_host', 0, 1, 2).
 python_function('adapters/python/urirun/host/host_db.py', 'db_path', 1, 2, 3).
 python_function('adapters/python/urirun/host/host_db.py', 'now_iso', 0, 1, 2).
@@ -659,6 +704,10 @@ python_function('adapters/python/urirun/node/flow.py', 'execute_flow', 4, 9, 9).
 python_function('adapters/python/urirun/node/flow.py', '_flow_stdout', 1, 6, 2).
 python_function('adapters/python/urirun/node/flow.py', 'verify_flow_execution', 2, 10, 6).
 python_function('adapters/python/urirun/node/flow.py', 'run_flow_document', 2, 7, 7).
+python_function('adapters/python/urirun/node/formatting.py', 'format_table', 3, 6, 9).
+python_function('adapters/python/urirun/node/formatting.py', 'format_nodes', 1, 8, 5).
+python_function('adapters/python/urirun/node/formatting.py', 'format_routes', 1, 7, 4).
+python_function('adapters/python/urirun/node/formatting.py', 'format_tickets', 1, 6, 2).
 python_function('adapters/python/urirun/node/keyauth.py', 'new_enroll_token', 1, 2, 3).
 python_function('adapters/python/urirun/node/keyauth.py', 'token_matches', 2, 3, 4).
 python_function('adapters/python/urirun/node/keyauth.py', 'available', 0, 2, 0).
@@ -689,44 +738,15 @@ python_function('adapters/python/urirun/node/manage.py', '_augment_local_routes'
 python_function('adapters/python/urirun/node/manage.py', '_list_installed_connectors', 1, 4, 4).
 python_function('adapters/python/urirun/node/manage.py', 'connector_discover', 0, 10, 10).
 python_function('adapters/python/urirun/node/manage.py', '_derive_local_routes', 2, 8, 10).
-python_function('adapters/python/urirun/node/manage.py', '_read_connector_manifest', 2, 11, 11).
+python_function('adapters/python/urirun/node/manage.py', '_read_connector_manifest', 2, 16, 12).
 python_function('adapters/python/urirun/node/manage.py', 'registry_installed', 0, 11, 10).
 python_function('adapters/python/urirun/node/manage.py', 'registry_adopt', 0, 1, 0).
 python_function('adapters/python/urirun/node/manage.py', 'package_list', 0, 7, 5).
 python_function('adapters/python/urirun/node/manage.py', 'runtime_info', 0, 2, 3).
 python_function('adapters/python/urirun/node/manage.py', 'bindings', 1, 2, 0).
-python_function('adapters/python/urirun/node/mesh.py', 'format_nodes', 1, 8, 5).
-python_function('adapters/python/urirun/node/mesh.py', 'format_routes', 1, 7, 4).
-python_function('adapters/python/urirun/node/mesh.py', 'format_tickets', 1, 6, 2).
-python_function('adapters/python/urirun/node/mesh.py', 'format_table', 3, 6, 9).
 python_function('adapters/python/urirun/node/mesh.py', '_parse_json_option', 2, 2, 1).
 python_function('adapters/python/urirun/node/mesh.py', 'data_command', 1, 15, 15).
 python_function('adapters/python/urirun/node/mesh.py', 'monitor_command', 1, 14, 10).
-python_function('adapters/python/urirun/node/mesh.py', '_task_prompt', 1, 7, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_ticket_payload', 1, 7, 4).
-python_function('adapters/python/urirun/node/mesh.py', '_host_local_registry', 1, 4, 7).
-python_function('adapters/python/urirun/node/mesh.py', '_run_executor_handler', 3, 2, 6).
-python_function('adapters/python/urirun/node/mesh.py', '_resolves_locally', 2, 5, 3).
-python_function('adapters/python/urirun/node/mesh.py', '_run_task_flow', 2, 11, 16).
-python_function('adapters/python/urirun/node/mesh.py', '_emit_ticket_result', 1, 2, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_plan', 2, 3, 5).
-python_function('adapters/python/urirun/node/mesh.py', '_task_bindings', 2, 2, 4).
-python_function('adapters/python/urirun/node/mesh.py', '_task_schedule', 2, 3, 3).
-python_function('adapters/python/urirun/node/mesh.py', '_task_list', 2, 2, 4).
-python_function('adapters/python/urirun/node/mesh.py', '_task_show', 2, 2, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_next', 2, 1, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_create', 2, 4, 4).
-python_function('adapters/python/urirun/node/mesh.py', '_task_claim', 2, 1, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_start', 2, 1, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_complete', 2, 1, 3).
-python_function('adapters/python/urirun/node/mesh.py', '_task_fail', 2, 1, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_block', 2, 2, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_ready', 2, 1, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_wait', 2, 1, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_task_dsl', 2, 2, 4).
-python_function('adapters/python/urirun/node/mesh.py', '_task_run', 2, 6, 6).
-python_function('adapters/python/urirun/node/mesh.py', '_task_loop', 2, 10, 11).
-python_function('adapters/python/urirun/node/mesh.py', 'task_command', 1, 2, 2).
 python_function('adapters/python/urirun/node/mesh.py', '_host_delegated_command', 1, 14, 14).
 python_function('adapters/python/urirun/node/mesh.py', 'fulfill_need', 3, 4, 5).
 python_function('adapters/python/urirun/node/mesh.py', 'supply_command', 1, 8, 12).
@@ -772,6 +792,31 @@ python_function('adapters/python/urirun/node/routing.py', 'binding_for_remote_ro
 python_function('adapters/python/urirun/node/routing.py', 'registry_from_routes', 1, 3, 3).
 python_function('adapters/python/urirun/node/routing.py', 'target_nodes', 3, 10, 2).
 python_function('adapters/python/urirun/node/routing.py', 'route_targets_for_nodes', 2, 14, 5).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_prompt', 1, 7, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_ticket_payload', 1, 7, 4).
+python_function('adapters/python/urirun/node/task_cli.py', '_host_local_registry', 1, 4, 7).
+python_function('adapters/python/urirun/node/task_cli.py', '_run_executor_handler', 3, 2, 6).
+python_function('adapters/python/urirun/node/task_cli.py', '_resolves_locally', 2, 5, 3).
+python_function('adapters/python/urirun/node/task_cli.py', '_run_task_flow', 2, 11, 16).
+python_function('adapters/python/urirun/node/task_cli.py', '_emit_ticket_result', 1, 2, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_plan', 2, 3, 5).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_bindings', 2, 2, 4).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_schedule', 2, 3, 3).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_list', 2, 2, 4).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_show', 2, 2, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_next', 2, 1, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_create', 2, 4, 4).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_claim', 2, 1, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_start', 2, 1, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_complete', 2, 1, 3).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_fail', 2, 1, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_block', 2, 2, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_ready', 2, 1, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_wait', 2, 1, 2).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_dsl', 2, 2, 4).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_run', 2, 6, 6).
+python_function('adapters/python/urirun/node/task_cli.py', '_task_loop', 2, 10, 11).
+python_function('adapters/python/urirun/node/task_cli.py', 'task_command', 1, 2, 2).
 python_function('adapters/python/urirun/node/transport.py', 'http_json', 6, 8, 8).
 python_function('adapters/python/urirun/node/transport.py', '_probe_health', 3, 6, 3).
 python_function('adapters/python/urirun/node/transport.py', '_listening_ports_local', 0, 7, 8).
@@ -1049,7 +1094,7 @@ python_function('adapters/python/urirun/runtime/v1.py', 'expand_bindings', 1, 2,
 python_function('adapters/python/urirun/runtime/v1.py', 'compile_registry', 3, 1, 2).
 python_function('adapters/python/urirun/runtime/v1.py', 'load_registry_arg', 2, 4, 9).
 python_function('adapters/python/urirun/runtime/v1.py', 'main', 1, 13, 23).
-python_function('adapters/python/urirun/runtime/v2.py', 'model_from_function', 1, 4, 4).
+python_function('adapters/python/urirun/runtime/v2.py', 'model_from_function', 1, 8, 5).
 python_function('adapters/python/urirun/runtime/v2.py', '_placeholder_kwargs', 1, 2, 1).
 python_function('adapters/python/urirun/runtime/v2.py', 'uri_command', 1, 1, 6).
 python_function('adapters/python/urirun/runtime/v2.py', 'uri_shell', 1, 1, 1).
@@ -1090,7 +1135,8 @@ python_function('adapters/python/urirun/runtime/v2.py', 'host_data_bindings', 2,
 python_function('adapters/python/urirun/runtime/v2.py', 'run_host_data', 3, 1, 2).
 python_function('adapters/python/urirun/runtime/v2.py', 'domain_monitor_bindings', 4, 1, 2).
 python_function('adapters/python/urirun/runtime/v2.py', 'run_domain_monitor', 3, 1, 2).
-python_function('adapters/python/urirun/runtime/v2.py', 'run_local_function_subprocess', 3, 7, 7).
+python_function('adapters/python/urirun/runtime/v2.py', 'run_local_function_subprocess', 3, 7, 8).
+python_function('adapters/python/urirun/runtime/v2.py', '_last_json_object', 1, 7, 3).
 python_function('adapters/python/urirun/runtime/v2.py', '_builtin_error_route_entry', 1, 4, 1).
 python_function('adapters/python/urirun/runtime/v2.py', '_builtin_registry_route_entry', 1, 3, 1).
 python_function('adapters/python/urirun/runtime/v2.py', '_record_error', 1, 1, 1).
@@ -1236,9 +1282,18 @@ python_function('security/mesh-probe/probe.py', 'record', 4, 2, 2).
 python_function('tests/test_host_dashboard.py', 'test_chat_ask_generates_and_dry_runs_uri_flow', 1, 13, 4).
 python_function('tests/test_host_dashboard.py', 'test_chat_ask_execute_and_transient_node_urls', 1, 5, 4).
 python_function('tests/test_host_dashboard.py', 'test_chat_ask_requires_prompt', 0, 4, 3).
+python_function('tests/test_host_dashboard.py', 'test_phone_scanner_prompt_intent_is_specific', 0, 6, 1).
+python_function('tests/test_host_dashboard.py', 'test_chat_ask_starts_phone_scanner_service_from_nl', 1, 7, 4).
 python_function('tests/test_host_dashboard.py', 'test_chat_history_reads_message_logs', 1, 3, 4).
 python_function('tests/test_host_dashboard.py', 'test_chat_history_limit_ignores_technical_ask_logs', 1, 2, 4).
+python_function('tests/test_host_dashboard.py', 'test_startup_phone_qr_adds_chat_message', 2, 7, 7).
+python_function('tests/test_host_dashboard.py', 'test_scanner_session_adds_chat_message', 1, 5, 4).
 python_function('tests/test_host_dashboard.py', 'test_scanner_capture_registers_artifact_and_chat_message', 2, 4, 7).
+python_function('tests/test_host_dashboard.py', 'test_scanner_capture_uses_receipt_crop_for_preview_and_ocr', 2, 7, 12).
+python_function('tests/test_host_dashboard.py', 'test_scanner_capture_candidate_scores_without_archiving', 2, 7, 12).
+python_function('tests/test_host_dashboard.py', 'test_scanner_best_finish_archives_best_candidate', 2, 7, 17).
+python_function('tests/test_host_dashboard.py', 'test_archive_scanned_document_writes_pdf_json_index_and_detects_duplicate', 2, 14, 14).
+python_function('tests/test_host_dashboard.py', 'test_document_metadata_does_not_parse_date_as_amount', 0, 4, 2).
 python_function('tests/test_urirun.py', 'test_placeholder', 0, 2, 0).
 python_function('tests/test_urirun.py', 'test_import', 0, 1, 0).
 python_function('tests/test_v2_service_auth.py', 'test_v2_service_post_signs_with_identity', 1, 7, 7).
@@ -1514,7 +1569,8 @@ python_method('NodeClient', 'cancel', 1, 1, 1).
 python_method('NodeClient', 'status', 1, 1, 1).
 python_method('NodeClient', 'deploy', 6, 9, 7).
 python_method('NodeClient', 'schemes', 0, 2, 4).
-python_method('NodeClient', 'ensure_scheme', 3, 20, 11).
+python_method('NodeClient', '_route_key', 1, 3, 3).
+python_method('NodeClient', 'ensure_scheme', 4, 24, 12).
 python_method('NodeClient', 'run_ensuring', 3, 4, 5).
 python_method('NodeClient', 'request_capability', 2, 1, 1).
 python_method('NodeClient', 'push_folder', 3, 16, 15).

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import mimetypes
 import os
@@ -14,9 +15,11 @@ import re
 import socket
 import ssl
 import subprocess
+import textwrap
 import threading
 import time
 import unicodedata
+from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -26,6 +29,9 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 _SERVICE_LOCK = threading.Lock()
 _SERVICE_SERVERS: dict[str, ThreadingHTTPServer] = {}
 _SERVICE_THREADS: dict[str, threading.Thread] = {}
+_DOCUMENT_INDEX_LOCK = threading.Lock()
+_SCANNER_BEST_LOCK = threading.Lock()
+_SCANNER_BEST_SESSIONS: dict[str, dict] = {}
 
 
 INDEX_HTML = r"""<!doctype html>
@@ -203,6 +209,13 @@ INDEX_HTML = r"""<!doctype html>
       width: 100%;
       max-height: 220px;
       object-fit: contain;
+      border: 1px solid #eef1f6;
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+    .attachment iframe {
+      width: 100%;
+      height: 220px;
       border: 1px solid #eef1f6;
       border-radius: 6px;
       background: #f8fafc;
@@ -497,9 +510,13 @@ INDEX_HTML = r"""<!doctype html>
       const meta = att.meta || {};
       const ocr = meta.ocr || {};
       const qrClass = att.kind === 'qr-code' ? ' attachment-qr' : '';
+      const isPdf = /\.pdf$/i.test(text(att.path));
       const preview = att.previewUrl
-        ? `<img src="${esc(att.previewUrl)}" alt="${esc(basename(att.path))}" loading="lazy">`
+        ? (isPdf
+          ? `<iframe src="${esc(att.previewUrl)}" title="${esc(basename(att.path))}" loading="lazy"></iframe>`
+          : `<img src="${esc(att.previewUrl)}" alt="${esc(basename(att.path))}" loading="lazy">`)
         : `<div class="subtle">preview unavailable</div>`;
+      const download = att.previewUrl ? `<a href="${esc(att.previewUrl)}" download>download</a>` : '';
       const ocrLine = ocr.ok
         ? `<div class="subtle">OCR ${esc(ocr.backend || '')}: ${esc(text(ocr.text).slice(0, 160))}</div>`
         : (ocr.error ? `<div class="subtle">OCR: ${esc(ocr.error)}</div>` : '');
@@ -507,6 +524,7 @@ INDEX_HTML = r"""<!doctype html>
         ${preview}
         <div class="mono">${esc(basename(att.path))}</div>
         <div class="subtle">${esc(att.kind || 'file')} ${meta.width && meta.height ? `· ${meta.width}x${meta.height}` : ''}</div>
+        ${download}
         ${ocrLine}
         <details><summary>metadata</summary><pre>${esc(JSON.stringify(att, null, 2))}</pre></details>
       </div>`;
@@ -677,12 +695,18 @@ SCANNER_HTML = r"""<!doctype html>
     <div class="controls">
       <button class="primary" id="start">Start camera</button>
       <button class="primary" id="capture" disabled>Scan now</button>
+      <button class="primary" id="best" disabled>Best PDF</button>
+      <select id="bestCount">
+        <option value="6">6 frames · 1s</option>
+        <option value="4">4 frames · 1s</option>
+        <option value="8">8 frames · 1s</option>
+      </select>
       <select id="quality">
         <option value="0.92">JPEG 92%</option>
         <option value="0.82">JPEG 82%</option>
         <option value="0.70">JPEG 70%</option>
       </select>
-      <label><input type="checkbox" id="auto"> auto every 5s</label>
+      <label><input type="checkbox" id="auto"> auto every 1s</label>
     </div>
     <p class="status">Use this page from the phone on the same LAN. Mobile browsers usually require HTTPS or a trusted local exception for camera access.</p>
   </main>
@@ -692,9 +716,11 @@ SCANNER_HTML = r"""<!doctype html>
     const state = document.getElementById('state');
     const startBtn = document.getElementById('start');
     const captureBtn = document.getElementById('capture');
+    const bestBtn = document.getElementById('best');
     const auto = document.getElementById('auto');
     let stream = null;
     let timer = null;
+    let bestRunning = false;
 
     function setState(text, error=false) {
       state.textContent = text;
@@ -730,11 +756,16 @@ SCANNER_HTML = r"""<!doctype html>
       });
       video.srcObject = stream;
       captureBtn.disabled = false;
+      bestBtn.disabled = false;
       setState('camera ready');
       await announce('camera-started', {tracks: stream.getVideoTracks().map((track) => track.label)});
     }
 
-    async function capture() {
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function sendFrame(options={}) {
       if (!stream) return;
       const w = video.videoWidth || 1920;
       const h = video.videoHeight || 1080;
@@ -743,7 +774,6 @@ SCANNER_HTML = r"""<!doctype html>
       canvas.getContext('2d').drawImage(video, 0, 0, w, h);
       const quality = Number(document.getElementById('quality').value || '0.92');
       const image = canvas.toDataURL('image/jpeg', quality);
-      setState(`uploading ${w}x${h}...`);
       const response = await fetch('/api/scanner/capture', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -753,20 +783,75 @@ SCANNER_HTML = r"""<!doctype html>
           width: w,
           height: h,
           userAgent: navigator.userAgent,
-          capturedAt: new Date().toISOString()
+          capturedAt: new Date().toISOString(),
+          ...options
         })
       });
       const data = await response.json();
       if (!response.ok || data.ok === false) throw new Error(data.error || response.statusText);
+      return data;
+    }
+
+    async function capture() {
+      const w = video.videoWidth || 1920;
+      const h = video.videoHeight || 1080;
+      setState(`uploading ${w}x${h}...`);
+      const data = await sendFrame({archive: true});
       setState(`saved ${data.artifact && data.artifact.path ? data.artifact.path : data.uri}`);
+    }
+
+    async function bestPdf() {
+      if (!stream || bestRunning) return;
+      bestRunning = true;
+      bestBtn.disabled = true;
+      captureBtn.disabled = true;
+      const total = Number(document.getElementById('bestCount').value || '6');
+      const seriesId = `best-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      try {
+        let best = null;
+        for (let frame = 1; frame <= total; frame += 1) {
+          setState(`frame ${frame}/${total}...`);
+          const data = await sendFrame({
+            archive: false,
+            mode: 'best-candidate',
+            seriesId,
+            frameIndex: frame,
+            frameCount: total
+          });
+          best = data.series && data.series.best ? data.series.best : data.candidate;
+          const score = best && best.quality ? Number(best.quality.score || 0).toFixed(1) : '0.0';
+          setState(`frame ${frame}/${total}, best score ${score}`);
+          if (frame < total) await sleep(1000);
+        }
+        const response = await fetch('/api/scanner/best/finish', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({seriesId, minScore: 45})
+        });
+        const finalData = await response.json();
+        if (!response.ok || finalData.ok === false) throw new Error(finalData.error || response.statusText);
+        setState(`saved best ${finalData.document && finalData.document.path ? finalData.document.path : finalData.uri}`);
+      } finally {
+        bestRunning = false;
+        bestBtn.disabled = !stream;
+        captureBtn.disabled = !stream;
+      }
     }
 
     announce('open');
     startBtn.addEventListener('click', () => startCamera().catch((err) => setState(err.message, true)));
     captureBtn.addEventListener('click', () => capture().catch((err) => setState(err.message, true)));
+    bestBtn.addEventListener('click', () => bestPdf().catch((err) => {
+      bestRunning = false;
+      bestBtn.disabled = !stream;
+      captureBtn.disabled = !stream;
+      setState(err.message, true);
+    }));
     auto.addEventListener('change', () => {
       clearInterval(timer);
-      timer = auto.checked ? setInterval(() => capture().catch((err) => setState(err.message, true)), 5000) : null;
+      timer = auto.checked ? setInterval(() => {
+        if (!bestRunning) bestPdf().catch((err) => setState(err.message, true));
+      }, 1000) : null;
     });
   </script>
 </body>
@@ -940,6 +1025,422 @@ def _local_image_ocr(path: str) -> dict:
         return {"ok": False, "backend": "tesseract", "error": (proc.stderr or "").strip()}
     text = proc.stdout.strip()
     return {"ok": True, "backend": "tesseract", "text": text, "chars": len(text)}
+
+
+def _document_archive_root() -> Path:
+    return Path(os.environ.get("URIRUN_DOCUMENT_DIR", "~/.urirun/documents")).expanduser().resolve()
+
+
+def _document_index_path() -> Path:
+    configured = os.environ.get("URIRUN_DOCUMENT_INDEX")
+    return Path(configured).expanduser().resolve() if configured else _document_archive_root() / "index.json"
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _file_sha256(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).expanduser().resolve().open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _normalized_document_text(text: str) -> str:
+    folded = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii")
+    folded = re.sub(r"[^a-zA-Z0-9.,:/@+\- ]+", " ", folded.lower())
+    return re.sub(r"\s+", " ", folded).strip()
+
+
+def _load_document_index() -> dict:
+    path = _document_index_path()
+    if not path.is_file():
+        return {"version": 1, "documents": []}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {"version": 1, "documents": []}
+    if not isinstance(data, dict):
+        return {"version": 1, "documents": []}
+    docs = data.get("documents")
+    if not isinstance(docs, list):
+        data["documents"] = []
+    data.setdefault("version", 1)
+    return data
+
+
+def _save_document_index(index: dict) -> None:
+    path = _document_index_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    index["updatedAt"] = _utc_now()
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def _docid_for_file(path: str | Path, ocr_text: str) -> dict:
+    docid_error = ""
+    docid_log = ""
+    try:
+        import contextlib
+        from docid import get_document_id  # type: ignore
+
+        log_buffer = io.StringIO()
+        with contextlib.redirect_stdout(log_buffer), contextlib.redirect_stderr(log_buffer):
+            value = str(get_document_id(str(Path(path).expanduser().resolve())) or "").strip()
+        docid_log = log_buffer.getvalue().strip()
+        if value:
+            result = {"id": value, "provider": "docid", "source": "get_document_id"}
+            if docid_log:
+                result["docidLog"] = docid_log[:240]
+            return result
+    except Exception as exc:  # noqa: BLE001
+        docid_error = str(exc)
+
+    normalized = _normalized_document_text(ocr_text)
+    if len(normalized) >= 24:
+        digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        source = "ocr-text"
+    else:
+        digest = _file_sha256(path)
+        source = "file-sha256"
+    result = {"id": f"LOCAL-DOC-{digest[:16].upper()}", "provider": "local-fallback", "source": source}
+    if docid_error:
+        result["docidError"] = docid_error[:240]
+    if docid_log:
+        result["docidLog"] = docid_log[:240]
+    return result
+
+
+def _parse_document_date(text: str, fallback: str | None = None) -> str:
+    candidates: list[date] = []
+    for year, month, day in re.findall(r"\b(20\d{2})[-./](\d{1,2})[-./](\d{1,2})\b", text):
+        try:
+            candidates.append(date(int(year), int(month), int(day)))
+        except ValueError:
+            pass
+    for day, month, year in re.findall(r"\b(\d{1,2})[-./](\d{1,2})[-./](20\d{2})\b", text):
+        try:
+            candidates.append(date(int(year), int(month), int(day)))
+        except ValueError:
+            pass
+    if candidates:
+        return min(candidates).isoformat()
+    if fallback:
+        match = re.search(r"\b(20\d{2}-\d{2}-\d{2})\b", fallback)
+        if match:
+            return match.group(1)
+    return time.strftime("%Y-%m-%d", time.gmtime())
+
+
+def _parse_amount(text: str) -> dict:
+    amount_re = re.compile(r"(?<!\d)(\d{1,3}(?:[ \u00a0]?\d{3})*(?:[,.]\d{2})|\d+[,.]\d{2})(?!\d)")
+    keyword_re = re.compile(r"(razem|suma|do zaplaty|do zapłaty|naleznosc|należność|total|kwota|brutto)", re.I)
+    date_context_re = re.compile(r"\b(data|date|godzina|hour|czas|time)\b", re.I)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    matches: list[tuple[int, float, str]] = []
+    for idx, line in enumerate(lines):
+        has_amount_keyword = bool(keyword_re.search(line))
+        if date_context_re.search(line) and not has_amount_keyword:
+            continue
+        for raw in amount_re.findall(line):
+            normalized = raw.replace("\u00a0", "").replace(" ", "").replace(",", ".")
+            try:
+                value = float(normalized)
+            except ValueError:
+                continue
+            score = 10 if has_amount_keyword else 0
+            matches.append((score + idx, value, raw))
+    if not matches:
+        return {"amount": "", "currency": ""}
+    best = max(matches, key=lambda item: (item[0], item[1]))
+    return {"amount": f"{best[1]:.2f}", "currency": "PLN"}
+
+
+def _document_type(text: str) -> str:
+    lower = text.lower()
+    if "paragon" in lower or "fiskal" in lower or "receipt" in lower:
+        return "paragon"
+    if "faktura" in lower or "invoice" in lower or ("nip" in lower and "vat" in lower):
+        return "faktura"
+    if "rachunek" in lower or "bill" in lower:
+        return "rachunek"
+    payment_terms = ("contactless", "terminal", "karta", "kart", "obciazyc", "obciążyć", "eplatnosci", "epłatności")
+    if any(term in lower for term in payment_terms):
+        return "potwierdzenie"
+    return "dokument"
+
+
+def _parse_contractor(text: str) -> str:
+    ignored = re.compile(
+        r"^(faktura|paragon|rachunek|invoice|receipt|nip|vat|data|date|razem|suma|total|do zap|sprzedawca|nabywca|lp\.?|ilosc|ilość|cena|kwota)\b",
+        re.I,
+    )
+    candidates: list[tuple[int, str]] = []
+    for idx, raw in enumerate(text.splitlines()[:30]):
+        line = re.sub(r"\s+", " ", raw.strip(" \t:-")).strip()
+        if len(line) < 3 or len(line) > 70 or ignored.search(line):
+            continue
+        if not re.search(r"[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]", line):
+            continue
+        digit_ratio = sum(ch.isdigit() for ch in line) / max(1, len(line))
+        if digit_ratio > 0.35:
+            continue
+        score = 100 - idx
+        if re.search(r"\b(sp\.?|s\.a\.|s\.c\.|ltd|gmbh|inc|allegro|amazon|google|openai|microsoft|apple)\b", line, re.I):
+            score += 30
+        if line.upper() == line and len(line) >= 5:
+            score += 8
+        candidates.append((score, line))
+    if not candidates:
+        return "kontrahent-nieznany"
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _extract_document_metadata(ocr_text: str, *, captured_at: str | None = None) -> dict:
+    amount = _parse_amount(ocr_text)
+    return {
+        "type": _document_type(ocr_text),
+        "date": _parse_document_date(ocr_text, captured_at),
+        "contractor": _parse_contractor(ocr_text),
+        "amount": amount["amount"],
+        "currency": amount["currency"],
+    }
+
+
+def _filename_part(value: str, *, default: str, max_len: int = 48) -> str:
+    folded = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
+    folded = re.sub(r"[^A-Za-z0-9._+-]+", "-", folded).strip(".-_").lower()
+    folded = re.sub(r"-{2,}", "-", folded)
+    return (folded or default)[:max_len].strip(".-_") or default
+
+
+def _canonical_document_filename(meta: dict) -> str:
+    doc_type = _filename_part(str(meta.get("type") or ""), default="dokument", max_len=18)
+    doc_date = _filename_part(str(meta.get("date") or ""), default=time.strftime("%Y-%m-%d", time.gmtime()), max_len=10)
+    contractor = _filename_part(str(meta.get("contractor") or ""), default="kontrahent-nieznany", max_len=42)
+    amount = str(meta.get("amount") or "").strip()
+    currency = str(meta.get("currency") or "").strip().upper()
+    amount_part = f"{amount}-{currency}" if amount and currency else amount or "kwota-nieznana"
+    amount_part = _filename_part(amount_part, default="kwota-nieznana", max_len=24)
+    return f"{doc_type}_{doc_date}_{contractor}_{amount_part}.pdf"
+
+
+def _pdf_text(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode("ascii")
+    text = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    return text
+
+
+def _pdf_stream(data: bytes) -> bytes:
+    return b"<< /Length " + str(len(data)).encode("ascii") + b" >>\nstream\n" + data + b"\nendstream"
+
+
+def _write_document_pdf(image_path: str | Path, pdf_path: str | Path, *, metadata: dict, ocr_text: str) -> None:
+    from PIL import Image, ImageOps
+
+    source = Path(image_path).expanduser().resolve()
+    target = Path(pdf_path).expanduser().resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(source) as opened:
+        image = ImageOps.exif_transpose(opened).convert("RGB")
+        image_bytes = io.BytesIO()
+        image.save(image_bytes, format="JPEG", quality=92, optimize=True)
+        jpeg = image_bytes.getvalue()
+        image_width, image_height = image.size
+
+    page_width = 595.0
+    page_height = 842.0
+    margin = 36.0
+    scale = min((page_width - margin * 2) / image_width, (page_height - margin * 2) / image_height)
+    draw_width = image_width * scale
+    draw_height = image_height * scale
+    draw_x = (page_width - draw_width) / 2.0
+    draw_y = (page_height - draw_height) / 2.0
+    image_content = f"q {draw_width:.2f} 0 0 {draw_height:.2f} {draw_x:.2f} {draw_y:.2f} cm /Im0 Do Q".encode("ascii")
+
+    header_lines = [
+        f"Document ID: {metadata.get('docId', '')}",
+        f"Type: {metadata.get('type', '')}",
+        f"Date: {metadata.get('date', '')}",
+        f"Contractor: {metadata.get('contractor', '')}",
+        f"Amount: {metadata.get('amount', '')} {metadata.get('currency', '')}".strip(),
+        f"Source: {metadata.get('sourcePath', '')}",
+        "",
+        "OCR text:",
+    ]
+    text_lines = header_lines
+    for paragraph in (ocr_text or "").splitlines():
+        if not paragraph.strip():
+            text_lines.append("")
+            continue
+        text_lines.extend(textwrap.wrap(paragraph.strip(), width=92) or [""])
+    text_lines = text_lines[:66]
+    ops = ["BT /F1 10 Tf 12 TL 44 792 Td"]
+    for line in text_lines:
+        ops.append(f"({_pdf_text(line)}) Tj T*")
+    ops.append("ET")
+    text_content = "\n".join(ops).encode("ascii", "ignore")
+
+    info = (
+        f"<< /Title ({_pdf_text(target.stem)}) "
+        f"/Creator ({_pdf_text('urirun host dashboard')}) "
+        f"/Subject ({_pdf_text(metadata.get('docId', ''))}) "
+        f"/Keywords ({_pdf_text('urirun,ocr,document,' + str(metadata.get('type', '')))}) >>"
+    ).encode("ascii", "ignore")
+
+    objects: list[bytes] = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R 7 0 R] /Count 2 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>",
+        _pdf_stream(image_content),
+        (
+            b"<< /Type /XObject /Subtype /Image /Width "
+            + str(image_width).encode("ascii")
+            + b" /Height "
+            + str(image_height).encode("ascii")
+            + b" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "
+            + str(len(jpeg)).encode("ascii")
+            + b" >>\nstream\n"
+            + jpeg
+            + b"\nendstream"
+        ),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 6 0 R >> >> /Contents 8 0 R >>",
+        _pdf_stream(text_content),
+        info,
+    ]
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for idx, body in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{idx} 0 obj\n".encode("ascii"))
+        pdf.extend(body)
+        pdf.extend(b"\nendobj\n")
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode("ascii"))
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R /Info 9 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
+    )
+    target.write_bytes(bytes(pdf))
+
+
+def _unique_document_path(directory: Path, filename: str, doc_id: str) -> Path:
+    candidate = directory / filename
+    if not candidate.exists():
+        return candidate
+    suffix = _filename_part(doc_id[-10:], default="doc", max_len=12)
+    alternative = directory / f"{candidate.stem}_{suffix}{candidate.suffix}"
+    counter = 2
+    while alternative.exists():
+        alternative = directory / f"{candidate.stem}_{suffix}-{counter}{candidate.suffix}"
+        counter += 1
+    return alternative
+
+
+def _existing_document(index: dict, *, doc_id: str, source_sha256: str, text_sha256: str) -> dict | None:
+    for item in index.get("documents", []):
+        if not isinstance(item, dict):
+            continue
+        same_doc = item.get("docId") == doc_id
+        same_source = bool(source_sha256 and item.get("sourceSha256") == source_sha256)
+        same_text = bool(text_sha256 and item.get("textSha256") == text_sha256)
+        if same_doc or same_source or same_text:
+            path = item.get("pdfPath") or item.get("path")
+            if path and Path(path).expanduser().is_file():
+                return item
+    return None
+
+
+def _archive_scanned_document(
+    *,
+    display_path: Path,
+    original_path: Path,
+    ocr: dict,
+    crop: dict,
+    source_sha256: str,
+    captured_at: str | None,
+) -> dict:
+    ocr_text = str(ocr.get("text") or "")
+    extracted = _extract_document_metadata(ocr_text, captured_at=captured_at)
+    docid_info = _docid_for_file(display_path, ocr_text)
+    doc_id = str(docid_info["id"])
+    normalized_text = _normalized_document_text(ocr_text)
+    text_sha256 = hashlib.sha256(normalized_text.encode("utf-8")).hexdigest() if normalized_text else ""
+    month = str(extracted["date"])[:7] if re.match(r"^20\d{2}-\d{2}", str(extracted.get("date", ""))) else time.strftime("%Y-%m", time.gmtime())
+    root = _document_archive_root()
+    archive_dir = root / month
+    filename = _canonical_document_filename(extracted)
+
+    with _DOCUMENT_INDEX_LOCK:
+        index = _load_document_index()
+        duplicate = _existing_document(index, doc_id=doc_id, source_sha256=source_sha256, text_sha256=text_sha256)
+        if duplicate:
+            return {
+                "ok": True,
+                "duplicate": True,
+                "docId": doc_id,
+                "docIdProvider": docid_info.get("provider"),
+                "path": duplicate.get("pdfPath") or duplicate.get("path"),
+                "jsonPath": duplicate.get("jsonPath"),
+                "duplicateOf": duplicate.get("docId"),
+                "metadata": extracted,
+                "indexPath": str(_document_index_path()),
+            }
+
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        pdf_path = _unique_document_path(archive_dir, filename, doc_id)
+        json_path = pdf_path.with_suffix(".json")
+        pdf_meta = {
+            **extracted,
+            "docId": doc_id,
+            "sourcePath": str(original_path),
+            "cropPath": str(display_path),
+        }
+        _write_document_pdf(display_path, pdf_path, metadata=pdf_meta, ocr_text=ocr_text)
+        entry = {
+            "docId": doc_id,
+            "docIdProvider": docid_info.get("provider"),
+            "docIdSource": docid_info.get("source"),
+            "docIdError": docid_info.get("docidError"),
+            "docIdLog": docid_info.get("docidLog"),
+            "uri": f"document://host/{quote(doc_id, safe='')}",
+            "pdfPath": str(pdf_path),
+            "jsonPath": str(json_path),
+            "originalPath": str(original_path),
+            "cropPath": str(display_path),
+            "sourceSha256": source_sha256,
+            "textSha256": text_sha256,
+            "ocrBackend": ocr.get("backend"),
+            "ocrChars": ocr.get("chars"),
+            "crop": crop,
+            "createdAt": _utc_now(),
+            **extracted,
+        }
+        json_path.write_text(
+            json.dumps({**entry, "ocr": ocr, "text": ocr_text}, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        docs = [item for item in index.get("documents", []) if isinstance(item, dict) and item.get("docId") != doc_id]
+        docs.append(entry)
+        index["documents"] = docs
+        _save_document_index(index)
+    return {
+        "ok": True,
+        "duplicate": False,
+        "docId": doc_id,
+        "docIdProvider": docid_info.get("provider"),
+        "path": str(pdf_path),
+        "jsonPath": str(json_path),
+        "uri": entry["uri"],
+        "metadata": extracted,
+        "indexPath": str(_document_index_path()),
+    }
 
 
 def shutil_which(binary: str) -> str | None:
@@ -1184,96 +1685,221 @@ def ensure_phone_scanner_service(
 
 def _auto_crop_receipt(path: Path) -> dict:
     try:
-        from PIL import Image, ImageOps
+        from urirun_connector_smart_crop import detect_document_crop
     except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "reason": f"pillow unavailable: {exc}"}
+        return {"ok": False, "reason": f"smart-crop connector unavailable: {exc}", "originalPath": str(path)}
+    return detect_document_crop(path, output_path=path.with_name(f"{path.stem}-receipt-crop.jpg"))
 
+
+def _bounded(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    return max(low, min(high, value))
+
+
+def _frame_visual_metrics(path: str | Path) -> dict:
     try:
-        with Image.open(path) as opened:
-            image = ImageOps.exif_transpose(opened).convert("RGB")
+        from PIL import Image, ImageOps
+
+        with Image.open(Path(path).expanduser().resolve()) as opened:
+            image = ImageOps.exif_transpose(opened).convert("L")
+            scale = min(1.0, 420 / max(image.size))
+            if scale < 1.0:
+                image = image.resize((max(1, int(image.size[0] * scale)), max(1, int(image.size[1] * scale))))
+            width, height = image.size
+            pixels = list(image.tobytes())
     except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "reason": f"image decode failed: {exc}"}
-
-    width, height = image.size
-    if width < 80 or height < 80:
-        return {"ok": False, "reason": "image too small", "width": width, "height": height}
-
-    max_side = 900
-    scale = min(1.0, max_side / max(width, height))
-    analysis = image.resize((max(1, int(width * scale)), max(1, int(height * scale)))) if scale < 1.0 else image
-    aw, ah = analysis.size
-    pixels = analysis.load()
-    xs: list[int] = []
-    ys: list[int] = []
-    for y in range(ah):
-        for x in range(aw):
-            r, g, b = pixels[x, y]
-            hi = max(r, g, b)
-            lo = min(r, g, b)
-            lum = (299 * r + 587 * g + 114 * b) // 1000
-            sat = hi - lo
-            if (lum >= 150 and sat <= 70) or lum >= 215:
-                xs.append(x)
-                ys.append(y)
-
-    coverage = len(xs) / float(aw * ah)
-    if coverage < 0.035:
-        return {"ok": False, "reason": "not enough receipt-like pixels", "coverage": round(coverage, 4)}
-
-    xs.sort()
-    ys.sort()
-
-    def quantile(values: list[int], q: float) -> int:
-        return values[min(len(values) - 1, max(0, int(len(values) * q)))]
-
-    left = quantile(xs, 0.01)
-    right = quantile(xs, 0.99)
-    top = quantile(ys, 0.01)
-    bottom = quantile(ys, 0.99)
-    bw = max(1, right - left + 1)
-    bh = max(1, bottom - top + 1)
-    bbox_area = (bw * bh) / float(aw * ah)
-    if bbox_area < 0.08:
-        return {"ok": False, "reason": "detected region too small", "coverage": round(coverage, 4), "bboxArea": round(bbox_area, 4)}
-    if bbox_area > 0.96:
-        return {"ok": False, "reason": "receipt already fills frame", "coverage": round(coverage, 4), "bboxArea": round(bbox_area, 4)}
-
-    pad_x = max(4, int(bw * 0.035))
-    pad_y = max(4, int(bh * 0.035))
-    left = max(0, left - pad_x)
-    top = max(0, top - pad_y)
-    right = min(aw - 1, right + pad_x)
-    bottom = min(ah - 1, bottom + pad_y)
-
-    inv_scale = 1.0 / scale
-    box = (
-        max(0, int(left * inv_scale)),
-        max(0, int(top * inv_scale)),
-        min(width, int((right + 1) * inv_scale)),
-        min(height, int((bottom + 1) * inv_scale)),
-    )
-    if box[2] - box[0] < 50 or box[3] - box[1] < 50:
-        return {"ok": False, "reason": "crop too small", "box": list(box)}
-    if box[0] <= 3 and box[1] <= 3 and box[2] >= width - 3 and box[3] >= height - 3:
-        return {"ok": False, "reason": "crop equals original", "box": list(box)}
-
-    crop = image.crop(box)
-    crop_path = path.with_name(f"{path.stem}-receipt-crop.jpg")
-    crop.save(crop_path, format="JPEG", quality=94, optimize=True)
+        return {"ok": False, "error": str(exc), "sharpness": 0.0, "contrast": 0.0, "brightness": 0.0}
+    if not pixels:
+        return {"ok": False, "error": "empty image", "sharpness": 0.0, "contrast": 0.0, "brightness": 0.0}
+    mean = sum(pixels) / len(pixels)
+    variance = sum((value - mean) ** 2 for value in pixels) / len(pixels)
+    contrast = variance ** 0.5
+    diffs = []
+    stride = max(1, width // 160)
+    for y in range(0, height - 1, stride):
+        row = y * width
+        next_row = (y + 1) * width
+        for x in range(0, width - 1, stride):
+            idx = row + x
+            diffs.append(abs(pixels[idx] - pixels[idx + 1]))
+            diffs.append(abs(pixels[idx] - pixels[next_row + x]))
+    sharpness = sum(diffs) / max(1, len(diffs))
+    brightness_score = _bounded(1.0 - abs(mean - 190.0) / 190.0)
     return {
         "ok": True,
-        "path": str(crop_path),
-        "box": list(box),
-        "coverage": round(coverage, 4),
-        "bboxArea": round(bbox_area, 4),
-        "originalWidth": width,
-        "originalHeight": height,
-        "width": crop.size[0],
-        "height": crop.size[1],
+        "width": width,
+        "height": height,
+        "brightness": round(mean, 3),
+        "brightnessScore": round(brightness_score, 4),
+        "contrast": round(contrast, 3),
+        "contrastScore": round(_bounded(contrast / 72.0), 4),
+        "sharpness": round(sharpness, 3),
+        "sharpnessScore": round(_bounded(sharpness / 18.0), 4),
     }
 
 
+def _document_frame_quality(crop: dict, ocr: dict, metadata: dict, display_path: str | Path) -> dict:
+    visual = _frame_visual_metrics(display_path)
+    score = 0.0
+    reasons: list[str] = []
+    if crop.get("ok"):
+        score += 42.0
+        reasons.append("crop")
+        bbox_area = float(crop.get("bboxArea") or 0.0)
+        if bbox_area:
+            score += 18.0 * _bounded(1.0 - abs(bbox_area - 0.42) / 0.42)
+        width = int(crop.get("width") or crop.get("cropWidth") or 0)
+        height = int(crop.get("height") or crop.get("cropHeight") or 0)
+        if min(width, height) >= 220 and max(width, height) >= 420:
+            score += 12.0
+            reasons.append("size")
+        orientation = crop.get("orientation") if isinstance(crop.get("orientation"), dict) else {}
+        if orientation.get("enabled") and int(orientation.get("height") or height) >= int(orientation.get("width") or width):
+            score += 5.0
+            reasons.append("portrait")
+    else:
+        score -= 20.0
+
+    doc_type = str(metadata.get("type") or "dokument")
+    if doc_type in {"paragon", "faktura"}:
+        score += 32.0
+        reasons.append(doc_type)
+    elif doc_type in {"rachunek", "potwierdzenie"}:
+        score += 20.0
+        reasons.append(doc_type)
+    elif doc_type != "dokument":
+        score += 10.0
+
+    if metadata.get("date"):
+        score += 8.0
+        reasons.append("date")
+    if metadata.get("amount"):
+        score += 10.0
+        reasons.append("amount")
+
+    chars = int(ocr.get("chars") or len(str(ocr.get("text") or "")))
+    if ocr.get("ok") and chars:
+        score += min(36.0, chars / 4.0)
+        reasons.append("ocr")
+
+    if visual.get("ok"):
+        score += 18.0 * float(visual.get("sharpnessScore") or 0.0)
+        score += 10.0 * float(visual.get("contrastScore") or 0.0)
+        score += 7.0 * float(visual.get("brightnessScore") or 0.0)
+        reasons.append("visual")
+
+    document_like = bool(crop.get("ok") and (doc_type in {"paragon", "faktura", "rachunek", "potwierdzenie"} or chars >= 36))
+    return {
+        "score": round(max(0.0, score), 3),
+        "documentLike": document_like,
+        "reasons": reasons,
+        "visual": visual,
+    }
+
+
+def _public_scanner_candidate(candidate: dict) -> dict:
+    ocr = candidate.get("ocr") if isinstance(candidate.get("ocr"), dict) else {}
+    return {
+        "seriesId": candidate.get("seriesId"),
+        "frameIndex": candidate.get("frameIndex"),
+        "uri": candidate.get("uri"),
+        "path": candidate.get("displayPath"),
+        "originalPath": candidate.get("originalPath"),
+        "sha256": candidate.get("sha256"),
+        "quality": candidate.get("quality"),
+        "detectedDocument": candidate.get("detectedDocument"),
+        "crop": candidate.get("crop"),
+        "ocr": {key: value for key, value in ocr.items() if key != "text"},
+    }
+
+
+def _scanner_best_update(series_id: str, candidate: dict) -> dict:
+    with _SCANNER_BEST_LOCK:
+        series = _SCANNER_BEST_SESSIONS.setdefault(series_id, {"createdAt": _utc_now(), "candidates": []})
+        series["updatedAt"] = _utc_now()
+        series["candidates"].append(candidate)
+        series["candidates"] = series["candidates"][-24:]
+        best = max(series["candidates"], key=lambda item: float((item.get("quality") or {}).get("score") or 0.0))
+        series["best"] = best
+        return {
+            "seriesId": series_id,
+            "count": len(series["candidates"]),
+            "best": _public_scanner_candidate(best),
+        }
+
+
+def _scanner_best_take(series_id: str, *, clear: bool = True) -> dict | None:
+    with _SCANNER_BEST_LOCK:
+        series = _SCANNER_BEST_SESSIONS.get(series_id)
+        if not series:
+            return None
+        if clear:
+            _SCANNER_BEST_SESSIONS.pop(series_id, None)
+        return dict(series)
+
+
+def _register_scanner_result(
+    project: str,
+    db: str | None,
+    *,
+    uri: str,
+    display_path: Path,
+    original_path: Path,
+    meta: dict,
+    crop: dict,
+    ocr: dict,
+    document: dict,
+    content_prefix: str,
+) -> dict:
+    artifact = _host_db().register_artifact(db, "camera-scan", uri, str(display_path), meta)
+    attachments = [{
+        "kind": "receipt-crop" if crop.get("ok") else "image",
+        "path": str(display_path),
+        "uri": uri,
+        "previewUrl": _preview_url(str(display_path), project),
+        "meta": meta,
+    }]
+    document_artifact = None
+    if document.get("ok") and document.get("path"):
+        document_uri = str(document.get("uri") or f"document://host/{quote(str(document.get('docId') or meta.get('sha256') or ''), safe='')}")
+        document_meta = {
+            "document": document,
+            "ocr": {key: value for key, value in ocr.items() if key != "text"},
+            "sourceCaptureUri": uri,
+            "sourceImage": str(original_path),
+            "displayImage": str(display_path),
+        }
+        document_artifact = _host_db().register_artifact(db, "document-pdf", document_uri, str(document["path"]), document_meta)
+        attachments.append({
+            "kind": "document-pdf",
+            "path": str(document["path"]),
+            "uri": document_uri,
+            "previewUrl": _preview_url(str(document["path"]), project),
+            "meta": document_meta,
+        })
+    content = content_prefix
+    if crop.get("ok"):
+        content += " (cropped to receipt)"
+    if document.get("ok") and document.get("path"):
+        content += " -> document PDF"
+        if document.get("duplicate"):
+            content += " (duplicate)"
+    if ocr.get("ok") and ocr.get("text"):
+        content += f": {str(ocr.get('text'))[:180]}"
+    elif ocr.get("error"):
+        content += f" (OCR: {ocr.get('error')})"
+    message = _chat_message(
+        "system",
+        content,
+        detail={"artifact": artifact, "documentArtifact": document_artifact, "uri": uri, "ocr": ocr, "document": document},
+        attachments=attachments,
+    )
+    _add_chat_message(db, message)
+    return {"artifact": artifact, "documentArtifact": document_artifact, "message": message}
+
+
 def scanner_capture(project: str, db: str | None, payload: dict) -> dict:
+    mode = str(payload.get("mode") or "").lower()
+    archive = not (payload.get("archive") is False or mode in {"candidate", "best-candidate", "analyze", "analysis"})
     raw_image = str(payload.get("image") or "")
     match = re.match(r"^data:(image/[a-zA-Z0-9.+-]+);base64,(.+)$", raw_image, re.S)
     if not match:
@@ -1290,6 +1916,21 @@ def scanner_capture(project: str, db: str | None, payload: dict) -> dict:
     crop = _auto_crop_receipt(path)
     display_path = Path(crop["path"]) if crop.get("ok") and crop.get("path") else path
     ocr = _local_image_ocr(str(display_path))
+    detected_document = _extract_document_metadata(str(ocr.get("text") or ""), captured_at=payload.get("capturedAt"))
+    quality = _document_frame_quality(crop, ocr, detected_document, display_path)
+    document = {"ok": False, "reason": "analysis-only", "metadata": detected_document}
+    if archive:
+        try:
+            document = _archive_scanned_document(
+                display_path=display_path,
+                original_path=path,
+                ocr=ocr,
+                crop=crop,
+                source_sha256=digest,
+                captured_at=payload.get("capturedAt"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            document = {"ok": False, "error": str(exc), "metadata": detected_document}
     meta = {
         "source": payload.get("source") or "phone",
         "width": payload.get("width"),
@@ -1303,26 +1944,157 @@ def scanner_capture(project: str, db: str | None, payload: dict) -> dict:
         "capturedAt": payload.get("capturedAt"),
         "userAgent": payload.get("userAgent", ""),
         "ocr": ocr,
+        "detectedDocument": detected_document,
+        "quality": quality,
+        "document": document,
     }
     uri = f"scanner://host/capture/{digest[:16]}"
-    artifact = _host_db().register_artifact(db, "camera-scan", uri, str(display_path), meta)
-    attachment = {
-        "kind": "receipt-crop" if crop.get("ok") else "image",
-        "path": str(display_path),
+    if not archive:
+        candidate = {
+            "seriesId": str(payload.get("seriesId") or ""),
+            "frameIndex": payload.get("frameIndex"),
+            "uri": uri,
+            "mime": mime,
+            "sha256": digest,
+            "bytes": len(raw),
+            "originalPath": str(path),
+            "displayPath": str(display_path),
+            "crop": crop,
+            "ocr": ocr,
+            "detectedDocument": detected_document,
+            "quality": quality,
+            "capturedAt": payload.get("capturedAt"),
+            "userAgent": payload.get("userAgent", ""),
+            "width": payload.get("width"),
+            "height": payload.get("height"),
+        }
+        series = None
+        if candidate["seriesId"]:
+            series = _scanner_best_update(candidate["seriesId"], candidate)
+        return {
+            "ok": True,
+            "uri": uri,
+            "candidate": _public_scanner_candidate(candidate),
+            "series": series,
+            "ocr": ocr,
+            "crop": crop,
+            "quality": quality,
+            "detectedDocument": detected_document,
+        }
+
+    registered = _register_scanner_result(
+        project,
+        db,
+        uri=uri,
+        display_path=display_path,
+        original_path=path,
+        meta=meta,
+        crop=crop,
+        ocr=ocr,
+        document=document,
+        content_prefix="Phone scan saved",
+    )
+    return {
+        "ok": True,
         "uri": uri,
-        "previewUrl": _preview_url(str(display_path), project),
-        "meta": meta,
+        "artifact": registered["artifact"],
+        "documentArtifact": registered["documentArtifact"],
+        "ocr": ocr,
+        "detectedDocument": detected_document,
+        "quality": quality,
+        "document": document,
+        "message": registered["message"],
     }
-    content = "Phone scan saved"
-    if crop.get("ok"):
-        content += " (cropped to receipt)"
-    if ocr.get("ok") and ocr.get("text"):
-        content += f": {str(ocr.get('text'))[:180]}"
-    elif ocr.get("error"):
-        content += f" (OCR: {ocr.get('error')})"
-    message = _chat_message("system", content, detail={"artifact": artifact, "uri": uri, "ocr": ocr}, attachments=[attachment])
-    _add_chat_message(db, message)
-    return {"ok": True, "uri": uri, "artifact": artifact, "ocr": ocr, "message": message}
+
+
+def scanner_best_finish(project: str, db: str | None, payload: dict) -> dict:
+    series_id = str(payload.get("seriesId") or "").strip()
+    if not series_id:
+        raise ValueError("seriesId is required")
+    series = _scanner_best_take(series_id, clear=payload.get("clear", True) is not False)
+    if not series:
+        return {"ok": False, "error": "scanner best series not found", "seriesId": series_id}
+    best = series.get("best")
+    if not isinstance(best, dict):
+        candidates = [item for item in series.get("candidates", []) if isinstance(item, dict)]
+        best = max(candidates, key=lambda item: float((item.get("quality") or {}).get("score") or 0.0)) if candidates else None
+    if not isinstance(best, dict):
+        return {"ok": False, "error": "scanner best series has no candidates", "seriesId": series_id}
+    quality = best.get("quality") if isinstance(best.get("quality"), dict) else {}
+    min_score = float(payload.get("minScore") if payload.get("minScore") is not None else 45.0)
+    if not payload.get("force") and (float(quality.get("score") or 0.0) < min_score or not quality.get("documentLike")):
+        return {
+            "ok": False,
+            "error": "no reliable receipt or invoice candidate found",
+            "seriesId": series_id,
+            "best": _public_scanner_candidate(best),
+            "minScore": min_score,
+        }
+
+    original_path = Path(str(best.get("originalPath") or "")).expanduser().resolve()
+    display_path = Path(str(best.get("displayPath") or "")).expanduser().resolve()
+    if not original_path.is_file() or not display_path.is_file():
+        return {"ok": False, "error": "best candidate file is missing", "seriesId": series_id, "best": _public_scanner_candidate(best)}
+    crop = best.get("crop") if isinstance(best.get("crop"), dict) else {}
+    ocr = best.get("ocr") if isinstance(best.get("ocr"), dict) else {}
+    digest = str(best.get("sha256") or _file_sha256(original_path))
+    try:
+        document = _archive_scanned_document(
+            display_path=display_path,
+            original_path=original_path,
+            ocr=ocr,
+            crop=crop,
+            source_sha256=digest,
+            captured_at=str(best.get("capturedAt") or ""),
+        )
+    except Exception as exc:  # noqa: BLE001
+        document = {"ok": False, "error": str(exc), "metadata": best.get("detectedDocument") or {}}
+    uri = str(best.get("uri") or f"scanner://host/capture/{digest[:16]}")
+    meta = {
+        "source": "phone-best",
+        "seriesId": series_id,
+        "frameIndex": best.get("frameIndex"),
+        "candidateCount": len(series.get("candidates", []) or []),
+        "width": best.get("width"),
+        "height": best.get("height"),
+        "mime": best.get("mime"),
+        "sha256": digest,
+        "bytes": best.get("bytes"),
+        "originalPath": str(original_path),
+        "displayPath": str(display_path),
+        "crop": crop,
+        "capturedAt": best.get("capturedAt"),
+        "userAgent": best.get("userAgent", ""),
+        "ocr": ocr,
+        "detectedDocument": best.get("detectedDocument") or {},
+        "quality": quality,
+        "document": document,
+    }
+    registered = _register_scanner_result(
+        project,
+        db,
+        uri=uri,
+        display_path=display_path,
+        original_path=original_path,
+        meta=meta,
+        crop=crop,
+        ocr=ocr,
+        document=document,
+        content_prefix="Best phone scan saved",
+    )
+    return {
+        "ok": True,
+        "seriesId": series_id,
+        "best": _public_scanner_candidate(best),
+        "uri": uri,
+        "artifact": registered["artifact"],
+        "documentArtifact": registered["documentArtifact"],
+        "ocr": ocr,
+        "detectedDocument": best.get("detectedDocument") or {},
+        "quality": quality,
+        "document": document,
+        "message": registered["message"],
+    }
 
 
 def scanner_session(db: str | None, payload: dict) -> dict:
@@ -1675,6 +2447,10 @@ def create_handler(
                 if parsed.path == "/api/scanner/capture":
                     payload = _read_json(self)
                     _json_response(self, 200, scanner_capture(project, db, payload))
+                    return
+                if parsed.path == "/api/scanner/best/finish":
+                    payload = _read_json(self)
+                    _json_response(self, 200, scanner_best_finish(project, db, payload))
                     return
                 if parsed.path == "/api/scanner/session":
                     payload = _read_json(self)

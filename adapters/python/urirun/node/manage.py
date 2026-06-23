@@ -267,8 +267,10 @@ def _read_connector_manifest(mf: str, path: str) -> dict | None:
     try:
         if mf.endswith(".json"):
             m = json.loads(open(mf, encoding="utf-8").read())
+            routes = [r if isinstance(r, str) else r.get("uri") for r in (m.get("routes") or [])]
             return {"id": m.get("id"), "name": m.get("name"), "kind": "if-uri",
-                    "schemes": m.get("uriSchemes") or m.get("schemes") or [], "source": path}
+                    "schemes": m.get("uriSchemes") or m.get("schemes") or [],
+                    "routes": [r for r in routes if r], "source": path}
         text = open(mf, encoding="utf-8").read()
         if "uri_patterns" not in text:
             return None  # not a connector pack manifest

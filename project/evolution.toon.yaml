@@ -1,58 +1,58 @@
-# code2llm/evolution | 1076 func | 74f | 2026-06-23
+# code2llm/evolution | 1113 func | 76f | 2026-06-23
 # generated in 0.00s
 
 NEXT[10] (ranked by impact):
-  [1] !! SPLIT           adapters/python/urirun/node/mesh.py
-      WHY: 2073L, 3 classes, max CC=20
-      EFFORT: ~4h  IMPACT: 41460
+  [1] !! SPLIT           adapters/python/urirun/host/host_dashboard.py
+      WHY: 2209L, 0 classes, max CC=25
+      EFFORT: ~4h  IMPACT: 55225
 
-  [2] !! SPLIT           adapters/python/urirun/runtime/v2.py
-      WHY: 1967L, 1 classes, max CC=14
-      EFFORT: ~4h  IMPACT: 27538
+  [2] !! SPLIT           adapters/python/urirun/node/mesh.py
+      WHY: 1721L, 3 classes, max CC=20
+      EFFORT: ~4h  IMPACT: 34420
 
-  [3] !  SPLIT-FUNC      run_command  CC=16  fan=34
+  [3] !! SPLIT           adapters/python/urirun/runtime/v2.py
+      WHY: 2005L, 1 classes, max CC=14
+      EFFORT: ~4h  IMPACT: 28070
+
+  [4] !  SPLIT-FUNC      scanner_capture  CC=23  fan=31
+      WHY: CC=23 exceeds 15
+      EFFORT: ~1h  IMPACT: 713
+
+  [5] !! SPLIT-FUNC      chat_ask  CC=25  fan=28
+      WHY: CC=25 exceeds 15
+      EFFORT: ~1h  IMPACT: 700
+
+  [6] !  SPLIT-FUNC      run_command  CC=16  fan=34
       WHY: CC=16 exceeds 15
       EFFORT: ~1h  IMPACT: 544
 
-  [4] !  SPLIT-FUNC      NodeHandler._stream_events  CC=19  fan=28
+  [7] !  SPLIT-FUNC      NodeHandler._stream_events  CC=19  fan=28
       WHY: CC=19 exceeds 15
       EFFORT: ~1h  IMPACT: 532
 
-  [5] !  SPLIT-FUNC      main  CC=17  fan=29
+  [8] !  SPLIT-FUNC      main  CC=17  fan=29
       WHY: CC=17 exceeds 15
       EFFORT: ~1h  IMPACT: 493
 
-  [6] !  SPLIT-FUNC      chat_ask  CC=20  fan=24
-      WHY: CC=20 exceeds 15
-      EFFORT: ~1h  IMPACT: 480
+  [9] !  SPLIT-FUNC      NodeClient.ensure_scheme  CC=24  fan=18
+      WHY: CC=24 exceeds 15
+      EFFORT: ~1h  IMPACT: 432
 
-  [7] !  SPLIT-FUNC      apply_deploy  CC=20  fan=21
+  [10] !  SPLIT-FUNC      apply_deploy  CC=20  fan=21
       WHY: CC=20 exceeds 15
       EFFORT: ~1h  IMPACT: 420
 
-  [8] !  SPLIT-FUNC      serve_node  CC=17  fan=21
-      WHY: CC=17 exceeds 15
-      EFFORT: ~1h  IMPACT: 357
-
-  [9] !  SPLIT-FUNC      NodeClient.ensure_scheme  CC=20  fan=17
-      WHY: CC=20 exceeds 15
-      EFFORT: ~1h  IMPACT: 340
-
-  [10] !  SPLIT-FUNC      watch_command  CC=17  fan=19
-      WHY: CC=17 exceeds 15
-      EFFORT: ~1h  IMPACT: 323
-
 
 RISKS[3]:
-  ⚠ Splitting adapters/python/urirun/node/mesh.py may break 94 import paths
-  ⚠ Splitting adapters/python/urirun/runtime/v2.py may break 124 import paths
-  ⚠ Splitting planfile.yaml may break 0 import paths
+  ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 62 import paths
+  ⚠ Splitting adapters/python/urirun/runtime/v2.py may break 125 import paths
+  ⚠ Splitting adapters/python/urirun/node/mesh.py may break 65 import paths
 
 METRICS-TARGET:
   CC̄:          4.5 → ≤3.1
-  max-CC:      20 → ≤10
+  max-CC:      25 → ≤12
   god-modules: 11 → 0
-  high-CC(≥15): 19 → ≤9
+  high-CC(≥15): 22 → ≤11
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
@@ -80,4 +80,4 @@ PATTERNS (language parser shared logic):
     - Standardized FunctionInfo/ClassInfo models
 
 HISTORY:
-  prev CC̄=4.4 → now CC̄=4.5
+  prev CC̄=4.5 → now CC̄=4.5

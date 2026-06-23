@@ -69,12 +69,25 @@ DECORATED_BINDINGS: dict[str, dict] = {}
 # --------------------------------------------------------------------------- #
 def model_from_function(fn: Callable):
     fields: dict[str, tuple[Any, Any]] = {}
+    has_var_kw = False
     for name, param in inspect.signature(fn).parameters.items():
+        # **kw / *args are not input fields — a handler with only **kw must NOT yield a schema
+        # requiring a property called "kw" (it should accept any payload). self/cls are the
+        # bound-method receiver, never an input.
+        if param.kind is inspect.Parameter.VAR_KEYWORD:
+            has_var_kw = True
+            continue
+        if param.kind is inspect.Parameter.VAR_POSITIONAL or name in ("self", "cls"):
+            continue
         annotation = param.annotation if param.annotation is not inspect.Parameter.empty else Any
         if param.default is inspect.Parameter.empty:
             fields[name] = (annotation, Field(...))
         else:
             fields[name] = (annotation, Field(default=param.default))
+    # a **kw handler accepts arbitrary extra keys → the schema must allow additionalProperties.
+    if has_var_kw:
+        from pydantic import ConfigDict
+        return create_model(f"{fn.__name__}Input", __config__=ConfigDict(extra="allow"), **fields)
     return create_model(f"{fn.__name__}Input", **fields)
 
 
