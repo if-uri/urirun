@@ -1135,6 +1135,37 @@ class MeshTests(unittest.TestCase):
         uris = [step["uri"] for step in flow["steps"]]
         self.assertEqual(uris, ["env://laptop/runtime/query/health", "proc://laptop/process/query/list"])
 
+    def test_heuristic_flow_maps_linkedin_screen_prompt_to_capture(self):
+        nodes = [{"name": "laptop", "reachable": True}]
+        routes = [
+            {"uri": "screen://laptop/portal/query/capture", "node": "laptop", "safe": True},
+            {"uri": "browser://laptop/cdp/page/command/navigate", "node": "laptop", "safe": True},
+            {"uri": "browser://laptop/cdp/page/query/eval", "node": "laptop", "safe": True},
+            {"uri": "browser://laptop/cdp/page/query/tabs", "node": "laptop", "safe": True},
+        ]
+
+        flow = mesh.heuristic_flow("sprawdź czy na ekranie jest LinkedIn", routes, nodes, selected_nodes=["laptop"])
+
+        self.assertEqual(flow["steps"][0]["uri"], "screen://laptop/portal/query/capture")
+
+    def test_heuristic_flow_maps_browser_linkedin_prompt_to_cdp(self):
+        nodes = [{"name": "laptop", "reachable": True}]
+        routes = [
+            {"uri": "browser://laptop/cdp/page/command/navigate", "node": "laptop", "safe": True},
+            {"uri": "browser://laptop/cdp/page/query/eval", "node": "laptop", "safe": True},
+            {"uri": "browser://laptop/cdp/page/query/tabs", "node": "laptop", "safe": True},
+        ]
+
+        flow = mesh.heuristic_flow("sprawdź linkedin w przeglądarce", routes, nodes, selected_nodes=["laptop"])
+
+        uris = [step["uri"] for step in flow["steps"]]
+        self.assertEqual(uris, [
+            "browser://laptop/cdp/page/command/navigate",
+            "browser://laptop/cdp/page/query/eval",
+            "browser://laptop/cdp/page/query/tabs",
+        ])
+        self.assertEqual(flow["steps"][0]["payload"]["url"], "https://www.linkedin.com/feed/")
+
     def test_registry_from_remote_routes(self):
         registry = mesh.registry_from_routes([
             {

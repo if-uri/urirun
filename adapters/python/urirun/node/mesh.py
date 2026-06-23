@@ -26,6 +26,7 @@ import socket
 import sys
 import threading
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 from urllib.parse import unquote, urlencode
@@ -789,6 +790,12 @@ def first_url(prompt: str) -> str | None:
     return match.group(0) if match else None
 
 
+def nl_key(text: str) -> str:
+    """Lowercase NL prompt with diacritics stripped for small heuristic matchers."""
+    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    return " ".join(plain.lower().split())
+
+
 def append_if_available(steps: list[dict], route_uris: set[str], uri: str, payload: dict, previous: str | None) -> str | None:
     if uri not in route_uris:
         return previous
@@ -801,6 +808,7 @@ def append_if_available(steps: list[dict], route_uris: set[str], uri: str, paylo
 
 _FLOW_INTENT_WORDS = {
     "browser": ("browser", "przeglad", "stron", "url", "otworz", "open"),
+    "screen": ("screen", "ekran", "monitor", "zrzut", "screenshot", "widz", "widac", "linkedin"),
     "processes": ("proces", "process", "aplikac", "program"),
     "logs": ("log", "logi"),
     "python": ("python3", "python"),
@@ -821,10 +829,18 @@ def _flow_intents(lowered: str) -> dict[str, bool]:
 def _append_target_steps(steps: list[dict], route_uris: set, target: str, intents: dict[str, bool], url: str, previous):
     """Append the available steps for one target node, returning the new previous-step id."""
     previous = append_if_available(steps, route_uris, f"env://{target}/runtime/query/health", {}, previous)
+    if intents["screen"]:
+        previous = append_if_available(steps, route_uris, f"screen://{target}/portal/query/capture", {}, previous)
+        previous = append_if_available(steps, route_uris, f"browser://{target}/kvm/screen/query/inspect", {"contains": "LinkedIn" if "linkedin" in url.lower() else ""}, previous)
     if intents["processes"]:
         previous = append_if_available(steps, route_uris, f"proc://{target}/process/query/list", {"limit": 12}, previous)
     if intents["browser"]:
         previous = append_if_available(steps, route_uris, f"browser://{target}/page/command/open", {"url": url}, previous)
+        previous = append_if_available(steps, route_uris, f"browser://{target}/cdp/page/command/navigate", {"url": url}, previous)
+        previous = append_if_available(steps, route_uris, f"browser://{target}/cdp/page/query/eval", {
+            "expr": "({title: document.title, href: location.href, text: document.body ? document.body.innerText.slice(0, 1000) : ''})"
+        }, previous)
+        previous = append_if_available(steps, route_uris, f"browser://{target}/cdp/page/query/tabs", {}, previous)
     for binary, enabled in (("python3", intents["python"]), ("git", intents["git"])):
         if enabled:
             previous = append_if_available(steps, route_uris, f"shell://{target}/command/which", {"binary": binary}, previous)
@@ -840,8 +856,9 @@ def _append_target_steps(steps: list[dict], route_uris: set, target: str, intent
 def heuristic_flow(prompt: str, routes: list[dict], nodes: list[dict], selected_nodes: list[str] | None = None) -> dict:
     route_uris = {route["uri"] for route in routes if safe_route(route)}
     targets = route_targets_for_nodes(routes, target_nodes(prompt, nodes, selected_nodes))
-    intents = _flow_intents(prompt.lower())
-    url = first_url(prompt) or "https://example.com/"
+    lowered = nl_key(prompt)
+    intents = _flow_intents(lowered)
+    url = first_url(prompt) or ("https://www.linkedin.com/feed/" if "linkedin" in lowered else "https://example.com/")
     steps: list[dict] = []
     previous = None
     for target in targets:
