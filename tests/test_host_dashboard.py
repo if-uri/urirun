@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from urirun.host import host_dashboard
 
@@ -79,6 +80,19 @@ class FakeHostDb:
         items = [item for item in self.logs if stream is None or item["stream"] == stream]
         return list(reversed(items[-limit:]))
 
+    def delete_logs(self, path, ids, stream=None, event=None):
+        clean = set(ids)
+        before = len(self.logs)
+        self.logs = [
+            item for item in self.logs
+            if not (
+                item["id"] in clean
+                and (stream is None or item["stream"] == stream)
+                and (event is None or item["event"] == event)
+            )
+        ]
+        return before - len(self.logs)
+
     def register_artifact(self, path, kind, uri, artifact_path=None, meta=None):
         item = {"id": f"art_{len(self.artifacts)}", "kind": kind, "uri": uri,
                 "path": artifact_path, "meta": meta or {}, "created_at": "2026-06-23T00:00:00Z"}
@@ -97,6 +111,20 @@ def test_dashboard_html_tracks_tabs_actions_and_chat_fullscreen():
     assert "discoveryRoutesList" in html
     assert "messageMatchesTargets" in html
     assert "messageTargets" in html
+    assert "chatDeleteVisibleBtn" in html
+    assert "chatCopyVisibleBtn" in html
+    assert "chatDeleteSelectedBtn" in html
+    assert "chatSelectVisibleBtn" in html
+    assert "chatClearSelectionBtn" in html
+    assert "chatSelectionSummary" in html
+    assert "chatMessageSelect" in html
+    assert "data-chat-delete" in html
+    assert "copyVisibleChat" in html
+    assert "chatMessagePlainText" in html
+    assert "selectedVisibleChatMessageIds" in html
+    assert "selectedChatMessageIds" in html
+    assert "scanner://page/camera/command/autonomous" in html
+    assert "body[data-view=\"chat\"] .grid" in html
     assert "data-view=\"discovery\"" in html
     assert "name=\"chatTarget\"" in html
     assert html.index("id=\"chatResult\"") < html.index("id=\"chatPrompt\"")
@@ -163,6 +191,50 @@ def test_chat_ask_requires_prompt():
         assert "prompt is required" in str(exc)
     else:
         raise AssertionError("empty chat prompt should fail")
+
+
+def test_chat_delete_messages_removes_only_chat_messages(monkeypatch):
+    fake_db = FakeHostDb()
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    fake_db.add_log(":memory:", "chat", "message", {"role": "system", "content": "delete me"})
+    fake_db.add_log(":memory:", "chat", "ask", {"prompt": "keep audit"})
+    fake_db.add_log(":memory:", "service", "message", {"role": "system", "content": "keep service"})
+
+    result = host_dashboard.chat_delete_messages(":memory:", {"ids": ["log_0", "log_1", "log_2"]})
+
+    assert result["ok"] is True
+    assert result["deleted"] == 1
+    assert [item["id"] for item in fake_db.logs] == ["log_1", "log_2"]
+
+
+def test_chat_ask_reports_missing_screen_capture_capability(monkeypatch):
+    fake_mesh = FakeMesh()
+    fake_db = FakeHostDb()
+    monkeypatch.setattr(host_dashboard, "_mesh", lambda: fake_mesh)
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+
+    result = host_dashboard.chat_ask(
+        ".",
+        ":memory:",
+        None,
+        {
+            "prompt": "zacznij robić zrzuty ekranu i tworzyć dokumenty w ~/Downloads/[rok]-[msc]/x.pdf na laptop",
+            "nodes": ["laptop"],
+            "targets": ["node:laptop"],
+            "execute": True,
+        },
+    )
+
+    assert result["ok"] is False
+    assert result["error"]["type"] == "CapabilityGap"
+    assert result["error"]["missing"] == "screen-capture"
+    assert result["flow"]["steps"] == []
+    assert fake_mesh.selected_nodes is None
+    assert fake_mesh.executed is None
+    message_logs = [item for item in fake_db.logs if item["stream"] == "chat" and item["event"] == "message"]
+    assert message_logs[-1]["detail"]["detail"]["error"]["type"] == "CapabilityGap"
+    assert fake_db.logs[-1]["event"] == "ask"
+    assert fake_db.logs[-1]["detail"]["error"]["type"] == "CapabilityGap"
 
 
 def test_phone_scanner_prompt_intent_is_specific():
@@ -237,7 +309,12 @@ def test_startup_phone_qr_adds_chat_message(monkeypatch, tmp_path):
     result = host_dashboard.startup_phone_qr(str(tmp_path), ":memory:", scheme="https", host="0.0.0.0", port=8196)
 
     assert result["ok"] is True
-    assert result["url"] == "https://192.168.1.10:8196/scanner"
+    parsed = urlparse(result["url"])
+    params = parse_qs(parsed.query)
+    assert f"{parsed.scheme}://{parsed.netloc}{parsed.path}" == "https://192.168.1.10:8196/scanner"
+    assert params["autostart"] == ["1"]
+    assert params["auto"] == ["1"]
+    assert params["best"] == ["1"]
     assert fake_db.artifacts[0]["kind"] == "dashboard-qr"
     assert fake_db.logs[-1]["detail"]["role"] == "system"
     assert fake_db.logs[-1]["detail"]["attachments"][0]["kind"] == "qr-code"
@@ -405,6 +482,37 @@ def test_chat_camera_prompt_starts_service_and_queues_page_action(monkeypatch):
     assert result["timeline"][-1]["uri"] == "scanner://page/ui/button/start-camera/command/click"
     polled = host_dashboard.page_action_poll("scanner")
     assert polled["actions"][0]["uri"] == "scanner://page/ui/button/start-camera/command/click"
+
+
+def test_chat_autonomous_receipt_prompt_queues_autonomous_scanner(monkeypatch):
+    fake_db = FakeHostDb()
+    host_dashboard._PAGE_ACTION_QUEUES.clear()
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+
+    def fake_ensure(*args, **kwargs):
+        return {
+            "ok": True,
+            "status": "started",
+            "url": "https://192.168.1.10:8196/scanner?autostart=1&auto=1&best=1",
+            "message": {"attachments": [{"kind": "qr-code", "path": "/tmp/qr.png"}]},
+        }
+
+    monkeypatch.setattr(host_dashboard, "ensure_phone_scanner_service", fake_ensure)
+
+    result = host_dashboard.chat_ask(".", ":memory:", None, {
+        "prompt": "uruchom autonomiczne skanowanie paragonow na smartfonie",
+        "execute": True,
+        "no_llm": True,
+    })
+
+    assert result["ok"] is True
+    assert result["results"]["camera-start"]["queued"] is True
+    assert result["timeline"][-1]["uri"] == "scanner://page/camera/command/autonomous"
+    assert result["timeline"][-1]["autonomous"] is True
+    polled = host_dashboard.page_action_poll("scanner")
+    assert polled["actions"][0]["uri"] == "scanner://page/camera/command/autonomous"
+    assert polled["actions"][0]["payload"]["auto"] is True
+    assert polled["actions"][0]["payload"]["startBest"] is True
 
 
 def test_chat_torch_prompt_starts_camera_and_queues_light(monkeypatch):

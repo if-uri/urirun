@@ -23,7 +23,7 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, quote, unquote, urlparse
+from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlparse, urlsplit, urlunsplit
 
 
 _SERVICE_LOCK = threading.Lock()
@@ -44,16 +44,29 @@ INDEX_HTML = r"""<!doctype html>
   <title>urirun host</title>
   <style>
     :root {
-      color-scheme: light;
-      --bg: #f7f8fa;
-      --surface: #ffffff;
-      --ink: #111827;
-      --muted: #64748b;
-      --line: #d9dee7;
-      --accent: #0f766e;
-      --warn: #b45309;
-      --bad: #b91c1c;
-      --good: #15803d;
+      color-scheme: dark;
+      --bg: #11100f;
+      --surface: #181716;
+      --surface-2: #201f1d;
+      --surface-3: #292724;
+      --ink: #f4f1e9;
+      --muted: #aaa49a;
+      --line: #3c3934;
+      --line-soft: #302d29;
+      --accent: #2dd4bf;
+      --accent-ink: #06221f;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --good: #34d399;
+      --topbar: rgba(24, 23, 22, 0.94);
+      --pill-bg: #25231f;
+      --pill-ink: #ded8cc;
+      --good-bg: rgba(52, 211, 153, .14);
+      --bad-bg: rgba(251, 113, 133, .16);
+      --warn-bg: rgba(251, 191, 36, .16);
+      --user-bg: rgba(45, 212, 191, .10);
+      --system-bg: #1c1b19;
+      --code-bg: #151412;
     }
     * { box-sizing: border-box; }
     body {
@@ -73,7 +86,7 @@ INDEX_HTML = r"""<!doctype html>
       min-height: 64px;
       padding: 12px 20px;
       border-bottom: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.94);
+      background: var(--topbar);
       backdrop-filter: blur(10px);
     }
     h1, h2, h3, p { margin: 0; }
@@ -93,10 +106,12 @@ INDEX_HTML = r"""<!doctype html>
       padding: 0 12px;
       cursor: pointer;
     }
-    button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
     button.danger { color: var(--bad); }
     button.active { border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); color: var(--accent); }
     button:disabled { opacity: .55; cursor: not-allowed; }
+    ::placeholder { color: #7f786f; }
+    a { color: var(--accent); }
     select, input { min-height: 36px; padding: 0 10px; }
     textarea {
       width: 100%;
@@ -129,6 +144,37 @@ INDEX_HTML = r"""<!doctype html>
       gap: 14px;
       align-items: start;
     }
+    body[data-view="chat"] .grid {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: calc(100vh - 210px);
+    }
+    body[data-view="chat"] .grid > .stack:first-of-type {
+      grid-column: 1 / -1;
+      min-height: inherit;
+    }
+    body[data-view="chat"] .grid > aside.stack {
+      display: none;
+    }
+    body[data-view="chat"] .chat-panel {
+      min-height: inherit;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    body[data-view="chat"] .chat-panel .panel-body,
+    body[data-view="chat"] .chat-shell,
+    body[data-view="chat"] .chat-main {
+      min-height: 0;
+      height: 100%;
+    }
+    body[data-view="chat"] .chat-result {
+      max-height: none;
+      min-height: 0;
+    }
+    .discovery-layout {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 14px;
+    }
     .panel {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -146,7 +192,7 @@ INDEX_HTML = r"""<!doctype html>
     .panel-body { padding: 12px 14px; }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; min-width: 760px; }
-    th, td { padding: 9px 8px; border-bottom: 1px solid #eef1f6; text-align: left; vertical-align: top; }
+    th, td { padding: 9px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
     th { color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
     .status, .pill {
       display: inline-flex;
@@ -154,13 +200,13 @@ INDEX_HTML = r"""<!doctype html>
       min-height: 24px;
       padding: 0 8px;
       border-radius: 999px;
-      background: #eef2f7;
-      color: #334155;
+      background: var(--pill-bg);
+      color: var(--pill-ink);
       white-space: nowrap;
     }
-    .status.done, .pill.up { background: #dcfce7; color: var(--good); }
-    .status.blocked, .status.failed, .pill.down { background: #fee2e2; color: var(--bad); }
-    .status.in_progress, .pill.running { background: #fef3c7; color: var(--warn); }
+    .status.done, .pill.up { background: var(--good-bg); color: var(--good); }
+    .status.blocked, .status.failed, .pill.down { background: var(--bad-bg); color: var(--bad); }
+    .status.in_progress, .pill.running { background: var(--warn-bg); color: var(--warn); }
     .stack { display: grid; gap: 14px; }
     .list { display: grid; gap: 8px; }
     .chat-shell {
@@ -175,7 +221,7 @@ INDEX_HTML = r"""<!doctype html>
       gap: 8px;
       min-height: 0;
       padding-right: 12px;
-      border-right: 1px solid #eef1f6;
+      border-right: 1px solid var(--line-soft);
     }
     .contact-list {
       display: grid;
@@ -190,9 +236,9 @@ INDEX_HTML = r"""<!doctype html>
       gap: 8px;
       align-items: start;
       padding: 9px;
-      border: 1px solid #eef1f6;
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
-      background: #fbfcfe;
+      background: var(--surface-2);
     }
     .contact-card input { margin-top: 2px; min-height: 0; }
     .contact-title { font-weight: 700; overflow-wrap: anywhere; }
@@ -216,7 +262,7 @@ INDEX_HTML = r"""<!doctype html>
       display: grid;
       gap: 10px;
       padding-top: 10px;
-      border-top: 1px solid #eef1f6;
+      border-top: 1px solid var(--line-soft);
     }
     .chat-options, .node-options {
       display: flex;
@@ -243,13 +289,15 @@ INDEX_HTML = r"""<!doctype html>
       display: grid;
       gap: 8px;
       padding: 10px;
-      border: 1px solid #eef1f6;
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
-      background: #fbfcfe;
+      background: var(--system-bg);
     }
-    .message.user { background: #ecfeff; border-color: #bae6fd; }
-    .message.system { background: #f8fafc; }
+    .message.user { background: var(--user-bg); border-color: rgba(45, 212, 191, .32); }
+    .message.system { background: var(--system-bg); }
     .message-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .message-title { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+    .message-actions { display: inline-flex; align-items: center; gap: 8px; }
     .attachments {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -259,24 +307,24 @@ INDEX_HTML = r"""<!doctype html>
       display: grid;
       gap: 6px;
       padding: 8px;
-      border: 1px solid #eef1f6;
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
-      background: #fff;
+      background: var(--surface-2);
     }
     .attachment img {
       width: 100%;
       max-height: 220px;
       object-fit: contain;
-      border: 1px solid #eef1f6;
+      border: 1px solid var(--line-soft);
       border-radius: 6px;
-      background: #f8fafc;
+      background: var(--code-bg);
     }
     .attachment iframe {
       width: 100%;
       height: 220px;
-      border: 1px solid #eef1f6;
+      border: 1px solid var(--line-soft);
       border-radius: 6px;
-      background: #f8fafc;
+      background: var(--code-bg);
     }
     .attachment.attachment-qr {
       max-width: 380px;
@@ -288,9 +336,9 @@ INDEX_HTML = r"""<!doctype html>
     pre {
       margin: 0;
       padding: 10px;
-      border: 1px solid #eef1f6;
+      border: 1px solid var(--line-soft);
       border-radius: 6px;
-      background: #f8fafc;
+      background: var(--code-bg);
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
@@ -298,9 +346,9 @@ INDEX_HTML = r"""<!doctype html>
       display: grid;
       gap: 4px;
       padding: 10px;
-      border: 1px solid #eef1f6;
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
-      background: #fbfcfe;
+      background: var(--surface-2);
     }
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -357,7 +405,7 @@ INDEX_HTML = r"""<!doctype html>
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid { grid-template-columns: 1fr; }
       .chat-shell { grid-template-columns: 1fr; min-height: 0; }
-      .contacts-panel { border-right: 0; border-bottom: 1px solid #eef1f6; padding-right: 0; padding-bottom: 10px; }
+      .contacts-panel { border-right: 0; border-bottom: 1px solid var(--line-soft); padding-right: 0; padding-bottom: 10px; }
       .contact-list { max-height: 260px; }
       .desktop-tabs { display: none; }
       .bottom-nav { display: grid; }
@@ -388,6 +436,16 @@ INDEX_HTML = r"""<!doctype html>
   <main>
     <section class="metrics" id="metrics"></section>
     <section class="grid">
+      <section class="discovery-layout view-block" data-section="discovery">
+        <article class="panel">
+          <div class="panel-head"><h2>Discovery</h2><span class="subtle" id="discoveryCount"></span></div>
+          <div class="panel-body"><div class="list" id="discoveryList"></div></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Discovered URI Routes</h2><span class="subtle" id="discoveryRouteCount"></span></div>
+          <div class="panel-body"><div class="list" id="discoveryRoutesList"></div></div>
+        </article>
+      </section>
       <div class="stack">
         <article class="panel view-block chat-panel" data-section="chat">
           <div class="panel-head">
@@ -413,7 +471,15 @@ INDEX_HTML = r"""<!doctype html>
               <div class="chat-main">
                 <div class="chat-toolbar">
                   <div class="subtle" id="chatTargetSummary">urirun host</div>
-                  <button type="button" id="chatScrollBottomBtn">Latest</button>
+                  <div class="actions">
+                    <span class="subtle" id="chatSelectionSummary">0 selected</span>
+                    <button type="button" id="chatScrollBottomBtn">Latest</button>
+                    <button type="button" id="chatCopyVisibleBtn">Copy chat</button>
+                    <button type="button" id="chatSelectVisibleBtn">Select visible</button>
+                    <button type="button" id="chatClearSelectionBtn">Clear</button>
+                    <button type="button" class="danger" id="chatDeleteSelectedBtn">Delete selected</button>
+                    <button type="button" class="danger" id="chatDeleteVisibleBtn">Delete all visible</button>
+                  </div>
                 </div>
                 <div class="chat-result" id="chatResult"></div>
                 <form class="chat-form chat-composer" id="chatForm">
@@ -427,14 +493,6 @@ INDEX_HTML = r"""<!doctype html>
               </div>
             </div>
           </div>
-        </article>
-        <article class="panel view-block" data-section="discovery">
-          <div class="panel-head"><h2>Discovery</h2><span class="subtle" id="discoveryCount"></span></div>
-          <div class="panel-body"><div class="list" id="discoveryList"></div></div>
-        </article>
-        <article class="panel view-block" data-section="discovery">
-          <div class="panel-head"><h2>Discovered URI Routes</h2><span class="subtle" id="discoveryRouteCount"></span></div>
-          <div class="panel-body"><div class="list" id="discoveryRoutesList"></div></div>
         </article>
         <article class="panel view-block" data-section="tasks">
           <div class="panel-head">
@@ -504,6 +562,9 @@ INDEX_HTML = r"""<!doctype html>
       tasks: [],
       view: initialView,
       chatMessages: [],
+      visibleChatMessages: [],
+      visibleChatMessageIds: [],
+      selectedChatMessageIds: new Set(),
       chatFullscreen: initialChatFull,
       selectedTargets: initialTargets.length ? initialTargets : ['host']
     };
@@ -797,10 +858,16 @@ INDEX_HTML = r"""<!doctype html>
       const lines = timeline.map((step) => `${step.ok ? 'ok' : 'fail'} · ${step.target || ''} · ${step.uri}`).join('\n');
       const attachments = message.attachments || [];
       const role = message.role || 'system';
+      const selected = message.id && state.selectedChatMessageIds.has(message.id) ? 'checked' : '';
+      const checkbox = message.id ? `<input type="checkbox" name="chatMessageSelect" value="${esc(message.id)}" ${selected}>` : '';
+      const deleteButton = message.id ? `<button type="button" class="danger" data-chat-delete="${esc(message.id)}">Delete</button>` : '';
       return `<div class="message ${esc(role)}">
         <div class="message-head">
-          <strong>${esc(role)}</strong>
-          <span class="subtle">${esc(message.created_at || '')}</span>
+          <span class="message-title">${checkbox}<strong>${esc(role)}</strong></span>
+          <span class="message-actions">
+            <span class="subtle">${esc(message.created_at || '')}</span>
+            ${deleteButton}
+          </span>
         </div>
         <div>${esc(message.content || '')}</div>
         ${lines ? `<pre>${esc(lines)}</pre>` : ''}
@@ -853,6 +920,69 @@ INDEX_HTML = r"""<!doctype html>
       return active.some((target) => targets.has(target));
     }
 
+    function selectedVisibleChatMessageIds() {
+      return state.visibleChatMessageIds.filter((id) => state.selectedChatMessageIds.has(id));
+    }
+
+    function updateChatSelectionControls() {
+      const visibleCount = state.visibleChatMessageIds.length;
+      const selectedCount = selectedVisibleChatMessageIds().length;
+      $('chatSelectionSummary').textContent = `${selectedCount} selected / ${visibleCount} visible`;
+      $('chatCopyVisibleBtn').disabled = visibleCount === 0;
+      $('chatDeleteSelectedBtn').disabled = selectedCount === 0;
+      $('chatDeleteVisibleBtn').disabled = visibleCount === 0;
+      $('chatSelectVisibleBtn').disabled = visibleCount === 0;
+      $('chatClearSelectionBtn').disabled = selectedCount === 0;
+    }
+
+    function chatMessagePlainText(message) {
+      const detail = message.detail || {};
+      const timeline = detail.timeline || [];
+      const attachments = message.attachments || [];
+      const parts = [
+        `[${message.created_at || ''}] ${message.role || 'system'}`,
+        text(message.content || ''),
+      ].filter(Boolean);
+      if (timeline.length) {
+        parts.push('URI timeline:');
+        timeline.forEach((step) => {
+          parts.push(`- ${step.ok ? 'ok' : 'fail'} ${step.target || ''} ${step.uri || ''}`.trim());
+        });
+      }
+      if (attachments.length) {
+        parts.push('Attachments:');
+        attachments.forEach((att) => {
+          parts.push(`- ${att.kind || 'file'} ${att.path || att.uri || att.previewUrl || ''}`.trim());
+        });
+      }
+      return parts.join('\n');
+    }
+
+    async function copyTextToClipboard(value) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+      }
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
+
+    async function copyVisibleChat() {
+      const content = state.visibleChatMessages.map(chatMessagePlainText).join('\n\n---\n\n');
+      if (!content) return;
+      await copyTextToClipboard(content);
+      window.__urirunLastCopiedChat = content;
+      $('chatStatus').textContent = `copied ${state.visibleChatMessages.length}`;
+      writeUrlState({ action: 'chat:copy', copied: state.visibleChatMessages.length }, { replace: true });
+    }
+
     function renderChatHistory() {
       const seenQr = new Set();
       const visible = [...state.chatMessages].reverse().filter((message) => {
@@ -863,8 +993,11 @@ INDEX_HTML = r"""<!doctype html>
         }
         return true;
       }).reverse().filter(messageMatchesTargets);
+      state.visibleChatMessages = visible;
+      state.visibleChatMessageIds = visible.map((message) => message.id).filter(Boolean);
       $('chatResult').innerHTML = visible.map(renderChatMessage).join('') || empty('No chat messages yet');
       $('chatResult').scrollTop = $('chatResult').scrollHeight;
+      updateChatSelectionControls();
     }
 
     async function loadChatHistory() {
@@ -873,9 +1006,24 @@ INDEX_HTML = r"""<!doctype html>
       renderChatHistory();
     }
 
+    async function deleteChatMessages(ids) {
+      const clean = [...new Set((ids || []).filter(Boolean))];
+      if (!clean.length) return;
+      const result = await api('/api/chat/messages/delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids: clean }),
+      });
+      state.chatMessages = state.chatMessages.filter((message) => !clean.includes(message.id));
+      clean.forEach((id) => state.selectedChatMessageIds.delete(id));
+      renderChatHistory();
+      $('chatStatus').textContent = `deleted ${result.deleted || 0}`;
+      writeUrlState({ action: 'chat:delete', deleted: result.deleted || 0 }, { replace: true });
+    }
+
     function applyView(view) {
       if (!VALID_VIEWS.has(view)) view = 'overview';
       state.view = view;
+      document.body.dataset.view = view;
       document.querySelectorAll('.view-block').forEach((block) => {
         block.classList.toggle('hidden', view !== 'overview' && block.dataset.section !== view);
       });
@@ -951,6 +1099,11 @@ INDEX_HTML = r"""<!doctype html>
     }
 
     document.addEventListener('click', (event) => {
+      const deleteId = event.target.dataset.chatDelete;
+      if (deleteId) {
+        deleteChatMessages([deleteId]).catch((error) => alert(error.message));
+        return;
+      }
       const action = event.target.dataset.action;
       const id = event.target.dataset.id;
       const view = event.target.dataset.view;
@@ -968,6 +1121,12 @@ INDEX_HTML = r"""<!doctype html>
         renderChatHistory();
         writeUrlState({ action: 'contacts:select', targets: state.selectedTargets.join(',') }, { replace: true });
       }
+      if (event.target && event.target.name === 'chatMessageSelect') {
+        const id = event.target.value;
+        if (event.target.checked) state.selectedChatMessageIds.add(id);
+        else state.selectedChatMessageIds.delete(id);
+        updateChatSelectionControls();
+      }
     });
     $('refreshBtn').addEventListener('click', () => {
       writeUrlState({ action: 'refresh' });
@@ -981,6 +1140,25 @@ INDEX_HTML = r"""<!doctype html>
     $('chatScrollBottomBtn').addEventListener('click', () => {
       $('chatResult').scrollTop = $('chatResult').scrollHeight;
       writeUrlState({ action: 'chat:latest' }, { replace: true });
+    });
+    $('chatCopyVisibleBtn').addEventListener('click', () => {
+      copyVisibleChat().catch((error) => alert(error.message));
+    });
+    $('chatSelectVisibleBtn').addEventListener('click', () => {
+      state.visibleChatMessageIds.forEach((id) => state.selectedChatMessageIds.add(id));
+      renderChatHistory();
+      writeUrlState({ action: 'chat:select-visible' }, { replace: true });
+    });
+    $('chatClearSelectionBtn').addEventListener('click', () => {
+      state.visibleChatMessageIds.forEach((id) => state.selectedChatMessageIds.delete(id));
+      renderChatHistory();
+      writeUrlState({ action: 'chat:clear-selection' }, { replace: true });
+    });
+    $('chatDeleteSelectedBtn').addEventListener('click', () => {
+      deleteChatMessages(selectedVisibleChatMessageIds()).catch((error) => alert(error.message));
+    });
+    $('chatDeleteVisibleBtn').addEventListener('click', () => {
+      deleteChatMessages(state.visibleChatMessageIds).catch((error) => alert(error.message));
     });
     $('sprintFilter').addEventListener('change', () => {
       writeUrlState({ action: 'filter:sprint' }, { replace: true });
@@ -1092,6 +1270,8 @@ SCANNER_HTML = r"""<!doctype html>
     const torchBtn = document.getElementById('torch');
     const captureBtn = document.getElementById('capture');
     const bestBtn = document.getElementById('best');
+    const bestCount = document.getElementById('bestCount');
+    const quality = document.getElementById('quality');
     const startBest = document.getElementById('startBest');
     const auto = document.getElementById('auto');
     let stream = null;
@@ -1101,6 +1281,18 @@ SCANNER_HTML = r"""<!doctype html>
     let startCameraPromise = null;
     let startCameraClickPromise = null;
     let torchClickPromise = null;
+    const scannerParams = new URLSearchParams(location.search);
+
+    function truthyParam(name, fallback=false) {
+      if (!scannerParams.has(name)) return fallback;
+      const value = String(scannerParams.get(name) || '').toLowerCase();
+      return !['0', 'false', 'no', 'off'].includes(value);
+    }
+
+    function numericParam(name, fallback) {
+      const raw = Number(scannerParams.get(name));
+      return Number.isFinite(raw) && raw > 0 ? raw : fallback;
+    }
 
     function setState(text, error=false) {
       state.textContent = text;
@@ -1155,8 +1347,9 @@ SCANNER_HTML = r"""<!doctype html>
       setState('camera ready');
       await announce('camera-started', {tracks: stream.getVideoTracks().map((track) => track.label)});
       const shouldStartBest = Object.prototype.hasOwnProperty.call(options || {}, 'startBest') ? !!options.startBest : startBest.checked;
+      if (auto.checked) startAutoLoop();
       if (shouldStartBest) {
-        setTimeout(() => bestPdf().catch((err) => setState(err.message, true)), 350);
+        setTimeout(() => bestPdf(options || {}).catch((err) => setState(err.message, true)), 350);
       }
       return cameraStatus();
     }
@@ -1347,7 +1540,8 @@ SCANNER_HTML = r"""<!doctype html>
           setState(`frame ${frame}/${total}, best score ${score}`);
           if (frame < total) await sleep(1000);
         }
-        const finalData = await invokeURI('scanner://host/best/command/finish', {seriesId, minScore: options.minScore || 45});
+        const minScore = Number(Object.prototype.hasOwnProperty.call(options || {}, 'minScore') ? options.minScore : numericParam('minScore', 45));
+        const finalData = await invokeURI('scanner://host/best/command/finish', {seriesId, minScore});
         if (!finalData || finalData.ok === false) throw new Error((finalData && finalData.error) || 'best scan failed');
         setState(`saved best ${finalData.document && finalData.document.path ? finalData.document.path : finalData.uri}`);
         return finalData;
@@ -1356,6 +1550,33 @@ SCANNER_HTML = r"""<!doctype html>
         bestBtn.disabled = !stream;
         captureBtn.disabled = !stream;
       }
+    }
+
+    function bestOptions(options={}) {
+      return {
+        count: Number(options.count || numericParam('count', Number(document.getElementById('bestCount').value || '6'))),
+        minScore: Number(Object.prototype.hasOwnProperty.call(options || {}, 'minScore') ? options.minScore : numericParam('minScore', 45)),
+      };
+    }
+
+    function startAutoLoop(options={}) {
+      clearInterval(timer);
+      if (!auto.checked) return null;
+      const run = () => {
+        if (!stream || bestRunning) return;
+        bestPdf(bestOptions(options)).catch((err) => setState(err.message, true));
+      };
+      timer = setInterval(run, Number(options.intervalMs || numericParam('intervalMs', 1000)));
+      return timer;
+    }
+
+    async function beginAutonomousScanning(options={}) {
+      auto.checked = Object.prototype.hasOwnProperty.call(options || {}, 'auto') ? !!options.auto : true;
+      startBest.checked = Object.prototype.hasOwnProperty.call(options || {}, 'startBest') ? !!options.startBest : true;
+      await announce('autonomous-start-requested', {auto: auto.checked, startBest: startBest.checked});
+      const status = await runStartCamera({startBest: startBest.checked, ...bestOptions(options)});
+      startAutoLoop(options);
+      return {ok: true, uri: 'scanner://page/camera/command/autonomous', status, auto: auto.checked};
     }
 
     function cameraStatus() {
@@ -1392,6 +1613,9 @@ SCANNER_HTML = r"""<!doctype html>
       });
       window.urirun.registerAction('scanner://page/camera/command/best-pdf', (payload) => bestPdf(payload || {}), {
         label: 'Capture best PDF', layer: 'page', kind: 'command', sideEffects: ['camera-read', 'network', 'document-write']
+      });
+      window.urirun.registerAction('scanner://page/camera/command/autonomous', (payload) => beginAutonomousScanning(payload || {}), {
+        label: 'Autonomous receipt/invoice scanning', layer: 'page', kind: 'command', sideEffects: ['camera-permission', 'camera-read', 'network', 'document-write']
       });
       window.urirun.registerAction('scanner://page/camera/query/status', () => cameraStatus(), {
         label: 'Camera page status', layer: 'page', kind: 'query', sideEffects: []
@@ -1442,7 +1666,17 @@ SCANNER_HTML = r"""<!doctype html>
       }
     }
 
-    announce('open');
+    function applyInitialScannerOptions() {
+      startBest.checked = truthyParam('best', startBest.checked);
+      auto.checked = truthyParam('auto', auto.checked);
+      const count = String(numericParam('count', Number(bestCount.value || '6')));
+      if ([...bestCount.options].some((option) => option.value === count)) bestCount.value = count;
+      const qualityValue = scannerParams.get('quality');
+      if (qualityValue && [...quality.options].some((option) => option.value === qualityValue)) quality.value = qualityValue;
+    }
+
+    applyInitialScannerOptions();
+    announce('open', {autostart: truthyParam('autostart', false), auto: auto.checked, startBest: startBest.checked});
     registerCameraActions();
     setInterval(() => pollPageActions().catch(() => {}), 1000);
     startBtn.addEventListener('click', () => beginStartCamera().catch((err) => setState(err.message, true)));
@@ -1463,11 +1697,19 @@ SCANNER_HTML = r"""<!doctype html>
       setState(err.message, true);
     }));
     auto.addEventListener('change', () => {
-      clearInterval(timer);
-      timer = auto.checked ? setInterval(() => {
-        if (!bestRunning) bestPdf().catch((err) => setState(err.message, true));
-      }, 1000) : null;
+      if (auto.checked && !stream) {
+        beginAutonomousScanning({auto: true, startBest: startBest.checked}).catch((err) => setState(err.message, true));
+      } else {
+        startAutoLoop();
+      }
     });
+    if (truthyParam('autostart', false)) {
+      setTimeout(() => {
+        beginAutonomousScanning({auto: auto.checked, startBest: startBest.checked}).catch((err) => {
+          setState(`camera permission needed: ${err.message || err}`, true);
+        });
+      }, 350);
+    }
   </script>
 </body>
 </html>
@@ -1657,6 +1899,17 @@ def chat_history(db: str | None, project: str, limit: int = 80) -> dict:
         msg.setdefault("id", item.get("id"))
         messages.append(msg)
     return {"ok": True, "messages": messages[-limit:]}
+
+
+def chat_delete_messages(db: str | None, payload: dict) -> dict:
+    raw_ids = payload.get("ids")
+    if raw_ids is None and payload.get("id"):
+        raw_ids = [payload.get("id")]
+    if not isinstance(raw_ids, list):
+        raise ValueError("ids must be a list")
+    ids = [str(item).strip() for item in raw_ids if str(item).strip()]
+    deleted = _host_db().delete_logs(db, ids, stream="chat", event="message")
+    return {"ok": True, "deleted": deleted, "ids": ids}
 
 
 def _local_image_ocr(path: str) -> dict:
@@ -2137,6 +2390,24 @@ def _public_base_url(scheme: str, host: str, port: int) -> str:
     return f"{scheme}://{_url_host(public_host)}:{port}"
 
 
+def _scanner_autonomy_params() -> dict[str, str]:
+    return {
+        "autostart": os.environ.get("URIRUN_PHONE_SCANNER_AUTOSTART", "1"),
+        "auto": os.environ.get("URIRUN_PHONE_SCANNER_AUTO", "1"),
+        "best": os.environ.get("URIRUN_PHONE_SCANNER_BEST", "1"),
+        "count": os.environ.get("URIRUN_PHONE_SCANNER_BEST_COUNT", "6"),
+        "minScore": os.environ.get("URIRUN_PHONE_SCANNER_MIN_SCORE", "45"),
+    }
+
+
+def _scanner_page_url(base_url: str) -> str:
+    parts = urlsplit(base_url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    for key, value in _scanner_autonomy_params().items():
+        query.setdefault(key, value)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path or "/scanner", urlencode(query), parts.fragment))
+
+
 def _write_qr_png(url: str, path: Path) -> None:
     import qrcode
 
@@ -2156,7 +2427,7 @@ def _write_qr_png(url: str, path: Path) -> None:
 def startup_phone_qr(project: str, db: str | None, *, scheme: str, host: str, port: int,
                      qr_url: str | None = None, content_prefix: str = "Phone scanner QR ready") -> dict:
     base_url = _public_base_url(scheme, host, port)
-    scanner_url = (qr_url or os.environ.get("URIRUN_DASHBOARD_QR_URL") or f"{base_url}/scanner").strip()
+    scanner_url = _scanner_page_url((qr_url or os.environ.get("URIRUN_DASHBOARD_QR_URL") or f"{base_url}/scanner").strip())
     digest = hashlib.sha256(scanner_url.encode("utf-8")).hexdigest()
     root = Path(os.environ.get("URIRUN_DASHBOARD_QR_DIR", "~/.urirun/host-dashboard/qr")).expanduser()
     path = root / f"phone-scanner-{digest[:12]}.png"
@@ -2245,7 +2516,7 @@ def _is_phone_scanner_prompt(prompt: str) -> bool:
     text = _nl_text(prompt)
     scanner_terms = (
         "skaner", "scanner", "skan", "scan", "kamera", "camera", "telefon", "phone", "mobile", "mobil",
-        "webrtc", "qr", "qrcode", "paragon", "rachunek", "latark", "swiatl", "torch", "flash",
+        "webrtc", "qr", "qrcode", "paragon", "rachunek", "faktur", "smartfon", "latark", "swiatl", "torch", "flash",
     )
     service_terms = ("aplikac", "uslug", "service", "stron", "narzedz", "interfejs")
     start_terms = (
@@ -2255,8 +2526,17 @@ def _is_phone_scanner_prompt(prompt: str) -> bool:
     wants_scanner = any(word in text for word in scanner_terms)
     wants_service = any(word in text for word in service_terms)
     wants_start = any(word in text for word in start_terms)
-    mobile_context = any(word in text for word in ("telefon", "phone", "mobile", "mobil", "webrtc", "kamera", "camera", "qr", "skaner", "scanner", "latark", "swiatl", "torch", "flash"))
-    return wants_start and (wants_scanner or (wants_service and mobile_context))
+    autonomous_context = any(word in text for word in ("auto", "autonom", "samoczyn", "petl", "ciagl", "co 1"))
+    mobile_context = any(word in text for word in ("telefon", "phone", "mobile", "mobil", "smartfon", "webrtc", "kamera", "camera", "qr", "skaner", "scanner", "latark", "swiatl", "torch", "flash"))
+    return (wants_start and (wants_scanner or (wants_service and mobile_context))) or (autonomous_context and wants_scanner)
+
+
+def _is_autonomous_scanner_prompt(prompt: str) -> bool:
+    text = _nl_text(prompt)
+    autonomous_terms = ("auto", "autonom", "samoczyn", "petl", "ciagl", "co 1")
+    document_terms = ("paragon", "rachunek", "faktur", "receipt", "invoice")
+    scanner_terms = ("skan", "scan", "skaner", "scanner", "kamera", "camera", "telefon", "smartfon", "phone", "mobile")
+    return any(word in text for word in autonomous_terms) and (any(word in text for word in document_terms) or any(word in text for word in scanner_terms))
 
 
 def _is_camera_start_prompt(prompt: str) -> bool:
@@ -2298,7 +2578,7 @@ def ensure_phone_scanner_service(
     cert = tls_cert or os.environ.get("URIRUN_PHONE_SCANNER_TLS_CERT", "~/.urirun/certs/urirun-dashboard.crt")
     key = tls_key or os.environ.get("URIRUN_PHONE_SCANNER_TLS_KEY", "~/.urirun/certs/urirun-dashboard.key")
     cert, key = _ensure_tls_cert(cert, key)
-    scanner_url = f"https://{_url_host(_lan_host())}:{scanner_port}/scanner"
+    scanner_url = _scanner_page_url(f"https://{_url_host(_lan_host())}:{scanner_port}/scanner")
     service_id = f"https://{bind_host}:{scanner_port}"
 
     with _SERVICE_LOCK:
@@ -2922,6 +3202,14 @@ def _uri_action_catalog() -> list[dict]:
             "where": "browser page via urirun.registerAction",
         },
         {
+            "uri": "scanner://page/camera/command/autonomous",
+            "layer": "page",
+            "kind": "command",
+            "label": "Start autonomous receipt/invoice scanning loop",
+            "sideEffects": ["camera-permission", "camera-read", "network", "document-write"],
+            "where": "browser page via urirun.registerAction",
+        },
+        {
             "uri": "scanner://page/camera/query/status",
             "layer": "page",
             "kind": "query",
@@ -3123,7 +3411,7 @@ def _task_counts(tickets: list[dict]) -> dict[str, int]:
 
 def _service_contacts() -> list[dict]:
     scanner_port = int(os.environ.get("URIRUN_PHONE_SCANNER_PORT", "8196"))
-    scanner_url = f"https://{_url_host(_lan_host())}:{scanner_port}/scanner"
+    scanner_url = _scanner_page_url(f"https://{_url_host(_lan_host())}:{scanner_port}/scanner")
     phone_scanner = {
         "id": "service:phone-scanner",
         "kind": "service",
@@ -3136,6 +3424,7 @@ def _service_contacts() -> list[dict]:
             "dashboard://host/phone-scanner/command/start",
             "scanner://page/camera/command/scan",
             "scanner://page/camera/command/best-pdf",
+            "scanner://page/camera/command/autonomous",
         ],
     }
     contacts = [phone_scanner]
@@ -3144,7 +3433,7 @@ def _service_contacts() -> list[dict]:
             thread = _SERVICE_THREADS.get(service_id)
             parsed = urlparse(service_id)
             port = int(parsed.port or scanner_port)
-            service_url = f"https://{_url_host(_lan_host())}:{port}/scanner"
+            service_url = _scanner_page_url(f"https://{_url_host(_lan_host())}:{port}/scanner")
             name = "phone-scanner" if port == scanner_port else f"service-{port}"
             item = {
                 **phone_scanner,
@@ -3213,6 +3502,70 @@ def _compact_chat_result(result: dict, payload: dict) -> dict:
     return compacted
 
 
+def _needs_screen_document_capture(prompt: str) -> bool:
+    text_value = prompt.casefold()
+    wants_screen = any(word in text_value for word in ("zrzut", "screenshot", "screen capture", "zrzuty ekranu"))
+    wants_document = any(word in text_value for word in ("pdf", "dokument", "document", "faktur", "rachunek", "paragon"))
+    return wants_screen and wants_document
+
+
+def _route_in_selected_targets(route: dict, selected_nodes: list[str], selected_targets: list[str]) -> bool:
+    if not selected_nodes and not selected_targets:
+        return True
+    route_node = str(route.get("node") or "")
+    uri = str(route.get("uri") or "")
+    target_names = set(selected_nodes)
+    for target in selected_targets:
+        if target.startswith("node:"):
+            target_names.add(target.split(":", 1)[1])
+        elif target == "host":
+            target_names.add("host")
+    if route_node and route_node in target_names:
+        return True
+    if "host" in target_names and "://host/" in uri:
+        return True
+    return any(f"://{name}/" in uri for name in target_names if name)
+
+
+def _has_screen_capture_route(routes: list[dict], selected_nodes: list[str], selected_targets: list[str]) -> bool:
+    for route in routes:
+        if not _route_in_selected_targets(route, selected_nodes, selected_targets):
+            continue
+        uri = str(route.get("uri") or "").casefold()
+        if uri.startswith(("screen://", "kvm://")):
+            return True
+        if "screenshot" in uri:
+            return True
+        if uri.startswith("browser://") and "/capture" in uri:
+            return True
+    return False
+
+
+def _screen_document_capability_gap(prompt: str, discovered: dict, selected_nodes: list[str], selected_targets: list[str]) -> dict | None:
+    if not _needs_screen_document_capture(prompt):
+        return None
+    routes = discovered.get("routes") or []
+    if _has_screen_capture_route(routes, selected_nodes, selected_targets):
+        return None
+    related = [
+        route.get("uri") for route in routes
+        if any(token in str(route.get("uri") or "") for token in ("camera://", "ocr://", "fs://", "browser://", "screen://", "kvm://"))
+    ][:20]
+    return {
+        "type": "CapabilityGap",
+        "missing": "screen-capture",
+        "message": "Brakuje route'u URI do zrzutow ekranu node'a. Dostepne sa camera/ocr/fs, ale nie screen/kvm/browser screenshot.",
+        "selectedNodes": selected_nodes,
+        "selectedTargets": selected_targets,
+        "requiredAnyOf": [
+            "screen://<node>/.../screenshot",
+            "kvm://<node>/.../screenshot",
+            "browser://<node>/page/command/screenshot",
+        ],
+        "availableRelatedRoutes": related,
+    }
+
+
 def chat_ask(project: str, db: str | None, config: str | None, payload: dict, node_urls: list[str] | None = None,
              token: str | None = None, identity: str | None = None) -> dict:
     prompt = str(payload.get("prompt") or "").strip()
@@ -3241,25 +3594,38 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
         queued_camera = None
         queued_torch = None
         camera_click_uri = "scanner://page/ui/button/start-camera/command/click"
+        camera_autonomous_uri = "scanner://page/camera/command/autonomous"
         torch_click_uri = "scanner://page/ui/button/torch/command/click"
         torch_enabled = _torch_enabled_from_prompt(prompt)
-        if _is_camera_start_prompt(prompt) or torch_enabled is not None:
+        autonomous_scan = _is_autonomous_scanner_prompt(prompt)
+        camera_action_uri = camera_autonomous_uri if autonomous_scan else camera_click_uri
+        camera_payload = {
+            "target": "scanner",
+            "startBest": torch_enabled is None,
+            "auto": bool(autonomous_scan),
+            "count": int(os.environ.get("URIRUN_PHONE_SCANNER_BEST_COUNT", "6")),
+            "minScore": float(os.environ.get("URIRUN_PHONE_SCANNER_MIN_SCORE", "45")),
+        }
+        if autonomous_scan or _is_camera_start_prompt(prompt) or torch_enabled is not None:
             queued_camera = page_action_enqueue(
                 db,
                 target="scanner",
-                uri=camera_click_uri,
-                payload={"target": "scanner", "startBest": torch_enabled is None},
+                uri=camera_action_uri,
+                payload=camera_payload,
                 mode="execute",
                 source="chat",
             )
             camera_message = _chat_message(
                 "system",
+                "Autonomous scanner queued for the open scanner page. Open the scanner URL and accept the browser camera permission if prompted."
+                if autonomous_scan else
                 "Camera start queued for the open scanner page. Open the scanner URL and accept the browser camera permission if prompted.",
                 detail={
-                    "uri": camera_click_uri,
+                    "uri": camera_action_uri,
                     "selectedTargets": ["service:phone-scanner"],
                     "queued": queued_camera,
                     "scannerUrl": service.get("url"),
+                    "autonomous": bool(autonomous_scan),
                 },
             )
             _add_chat_message(db, camera_message)
@@ -3296,9 +3662,9 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
                 "steps": [
                     {"id": "start-phone-scanner", "uri": "dashboard://host/phone-scanner/command/start", "payload": {}},
                     *([{
-                        "id": "queue-camera-start",
-                        "uri": camera_click_uri,
-                        "payload": {"target": "scanner", "startBest": torch_enabled is None},
+                        "id": "queue-camera-autonomous" if autonomous_scan else "queue-camera-start",
+                        "uri": camera_action_uri,
+                        "payload": camera_payload,
                     }] if queued_camera else []),
                     *([{
                         "id": "queue-camera-light",
@@ -3316,11 +3682,12 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
                     "status": service.get("status"),
                 },
                 *([{
-                    "id": "queue-camera-start",
-                    "uri": camera_click_uri,
+                    "id": "queue-camera-autonomous" if autonomous_scan else "queue-camera-start",
+                    "uri": camera_action_uri,
                     "target": "scanner-page",
                     "ok": bool(queued_camera.get("ok")),
                     "status": "queued",
+                    "autonomous": bool(autonomous_scan),
                 }] if queued_camera else []),
                 *([{
                     "id": "queue-camera-light",
@@ -3366,6 +3733,56 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
         os.environ.pop("URIRUN_RUN_TOKEN", None)
     try:
         discovered = mesh.discover_mesh(_host_config(config, node_urls))
+        capability_gap = _screen_document_capability_gap(prompt, discovered, selected_nodes, selected_targets)
+        if capability_gap:
+            result = {
+                "ok": False,
+                "prompt": prompt,
+                "execute": execute,
+                "selectedNodes": selected_nodes,
+                "selectedTargets": selected_targets,
+                "generator": {"provider": "host-dashboard", "intent": "capability-check"},
+                "nodeCount": len(discovered.get("nodes") or []),
+                "routeCount": len(discovered.get("routes") or []),
+                "flow": {"task": {"id": "capability-gap", "title": "Missing URI capability"}, "steps": []},
+                "timeline": [],
+                "results": {},
+                "error": capability_gap,
+            }
+            _add_chat_message(db, _chat_message(
+                "system",
+                "failed: missing screen-capture URI route for requested screenshot-to-document workflow",
+                detail={
+                    "prompt": prompt,
+                    "execute": execute,
+                    "ok": False,
+                    "selectedTargets": selected_targets,
+                    "generator": result["generator"],
+                    "flow": result["flow"],
+                    "timeline": [],
+                    "results": {},
+                    "error": capability_gap,
+                },
+            ))
+            try:
+                _host_db().add_log(
+                    db,
+                    "chat",
+                    "ask",
+                    {
+                        "prompt": prompt,
+                        "execute": execute,
+                        "ok": False,
+                        "selectedNodes": selected_nodes,
+                        "selectedTargets": selected_targets,
+                        "generator": result["generator"],
+                        "timeline": [],
+                        "error": capability_gap,
+                    },
+                )
+            except Exception:
+                pass
+            return result
         flow, generator = mesh.make_flow(prompt, discovered, selected_nodes=selected_nodes, use_llm=not no_llm)
         registry = mesh.registry_from_routes(discovered.get("routes") or [])
         execution = mesh.execute_flow(flow, discovered, registry, execute=execute)
@@ -3541,6 +3958,10 @@ def create_handler(
                     payload = _read_json(self)
                     _json_response(self, 200, chat_ask(project, db, config, payload, node_urls=node_urls,
                                                        token=token, identity=identity))
+                    return
+                if parsed.path == "/api/chat/messages/delete":
+                    payload = _read_json(self)
+                    _json_response(self, 200, chat_delete_messages(db, payload))
                     return
                 if parsed.path == "/api/uri/invoke":
                     payload = _read_json(self)

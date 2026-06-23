@@ -368,6 +368,26 @@ def recent_logs(path: str | None = None, stream: str | None = None, limit: int =
         return rows_dict(conn.execute(sql, params).fetchall())
 
 
+def delete_logs(path: str | None, ids: list[str], stream: str | None = None, event: str | None = None) -> int:
+    init_db(path)
+    clean_ids = [str(item).strip() for item in ids if str(item).strip()]
+    if not clean_ids:
+        return 0
+    placeholders = ",".join("?" for _ in clean_ids)
+    params: list[Any] = clean_ids[:]
+    clauses = [f"id IN ({placeholders})"]
+    if stream:
+        clauses.append("stream = ?")
+        params.append(stream)
+    if event:
+        clauses.append("event = ?")
+        params.append(event)
+    sql = f"DELETE FROM logs WHERE {' AND '.join(clauses)}"
+    with connection(path) as conn:
+        cursor = conn.execute(sql, params)
+        return int(cursor.rowcount or 0)
+
+
 def create_llm_session(path: str | None, title: str) -> dict:
     init_db(path)
     session_id = new_id("llm")
