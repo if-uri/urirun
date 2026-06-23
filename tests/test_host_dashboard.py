@@ -373,6 +373,37 @@ def test_service_live_views_wraps_scanner_stream(tmp_path):
     assert view["data"]["streams"][0]["seriesId"] == "series-2"
 
 
+def test_service_widget_html_and_svg_render_live_view(tmp_path):
+    image = tmp_path / "candidate.jpg"
+    image.write_bytes(b"jpg")
+    host_dashboard._SCANNER_BEST_SESSIONS.clear()
+    host_dashboard._SCANNER_LIVE_STREAMS.clear()
+
+    host_dashboard._scanner_best_update("series-widget", {
+        "seriesId": "series-widget",
+        "frameIndex": 1,
+        "displayPath": str(image),
+        "originalPath": str(image),
+        "quality": {"score": 84.0, "documentLike": True},
+        "detectedDocument": {"type": "paragon", "date": "2026-06-23", "contractor": "Sklep Test"},
+        "crop": {"ok": True},
+        "ocr": {"ok": True, "chars": 90},
+    })
+
+    query = {"target": ["service:phone-scanner"]}
+    html = host_dashboard._service_widget_html(str(tmp_path), query)
+    svg = host_dashboard._service_widget_svg(str(tmp_path), query)
+
+    assert "<!doctype html>" in html
+    assert "/api/services/live?limit=8" in html
+    assert "scanner-stream" in html
+    assert "service:phone-scanner" in html
+    assert svg.startswith("<svg")
+    assert "phone scanner stream" in svg
+    assert "paragon" in svg
+    assert "running" in svg
+
+
 def test_startup_phone_qr_adds_chat_message(monkeypatch, tmp_path):
     fake_db = FakeHostDb()
     monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
