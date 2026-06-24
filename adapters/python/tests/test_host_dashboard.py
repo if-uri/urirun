@@ -294,5 +294,46 @@ class ArtifactWidgetClassTests(unittest.TestCase):
         self.assertEqual(out["artifactClass"], "widget")
 
 
+class RegisterTaggedArtifactTests(unittest.TestCase):
+    """Host routes a tagged result: frozen artifact -> store; widget -> never; untagged -> no-op."""
+
+    def _capture_host_db(self, monkeypatch_calls):
+        class _FakeDB:
+            def register_artifact(self, db, kind, uri, path, meta):
+                row = {"kind": kind, "uri": uri, "path": path, "meta": meta}
+                monkeypatch_calls.append(row)
+                return {"id": "art_1", **row}
+        return _FakeDB()
+
+    def test_frozen_artifact_with_path_is_registered(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            pdf = Path(tmp) / "doc.pdf"
+            pdf.write_bytes(b"%PDF-1.4")
+            with patch.object(host_dashboard, "_host_db", lambda: self._capture_host_db(calls)):
+                row = host_dashboard.register_tagged_artifact(
+                    "db", uri="doc://host/x", result={"ok": True, "kind": "document", "live": False, "path": str(pdf)})
+            self.assertIsNotNone(row)
+            self.assertEqual(calls[0]["kind"], "document")
+            self.assertEqual(calls[0]["path"], str(pdf))
+
+    def test_widget_is_not_registered(self):
+        calls = []
+        with patch.object(host_dashboard, "_host_db", lambda: self._capture_host_db(calls)):
+            row = host_dashboard.register_tagged_artifact(
+                "db", uri="camera://host/stream", result={"kind": "stream", "live": True, "url": "rtsp://x"})
+        self.assertIsNone(row)
+        self.assertEqual(calls, [])
+
+    def test_untagged_or_missing_path_is_noop(self):
+        calls = []
+        with patch.object(host_dashboard, "_host_db", lambda: self._capture_host_db(calls)):
+            self.assertIsNone(host_dashboard.register_tagged_artifact(
+                "db", uri="x://y", result={"ok": True, "path": "/x"}))  # untagged
+            self.assertIsNone(host_dashboard.register_tagged_artifact(
+                "db", uri="x://y", result={"kind": "document", "live": False, "path": "/no/such/file"}))
+        self.assertEqual(calls, [])
+
+
 if __name__ == "__main__":
     unittest.main()

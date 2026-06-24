@@ -156,6 +156,21 @@ def policy(allow=None, deny=None, secret_allow=None, policy_file=None) -> dict |
     return build_policy(policy_file, allow, deny, secret_allow)
 
 
+def resolve_secret(value, secret_allow="") -> str:
+    """Resolve a credential argument that may be a secret *reference* (the shared connector
+    helper). ``value`` may be a literal, a ``getv://NAME`` / ``secret://...`` reference, or a
+    ``{getv:..}`` / ``{secret:..}`` placeholder; references resolve under ``secret_allow``
+    (glob list or comma/space-separated string), deny-by-default. Empty ``value`` -> ''.
+
+    Local-function connectors receive credentials as params (the runtime only auto-injects
+    secrets into ``fetch`` adapters), so each calls this at the credential boundary instead of
+    reading the value from ``os.environ`` itself. See ``urirun.runtime.secrets.resolve_secret``.
+    """
+    from urirun.runtime import secrets as _secrets
+
+    return _secrets.resolve_secret(value, secret_allow)
+
+
 def action_space(registry: dict) -> list[dict]:
     """The routes an agent/LLM can choose from — ``{uri, kind, label, inputs,
     required}`` per route, including the input schema (unlike ``list_routes``,

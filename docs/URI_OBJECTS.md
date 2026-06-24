@@ -148,7 +148,10 @@ extra artifact rows that point to the same final PDF.
 ## Current Gaps
 
 - `urirun.host.host_dashboard` still owns too many concerns: chat UI, scanner
-  API, artifact rendering, widget rendering and some document archive logic.
+  API, artifact API, fallback HTML/CSS and some document archive logic. Artifact
+  and chat-message rendering now have a reusable browser path through
+  `urirun-widgets` (`renderDashboardWidget`), but the inline fallback and shared
+  styles are still duplicated in the host dashboard.
 - `urirun-connector-camera` has local artifact persistence logic. It should move
   toward returning descriptors and letting the host/service register final
   artifacts.
@@ -182,4 +185,3 @@ Use these names consistently:
 - `Artifact`: a static output.
 - `Widget`: a live view/control surface.
 - `Runtime`: the execution boundary for routes, processes and transports.
-

@@ -936,7 +936,8 @@ INDEX_HTML = r"""<!doctype html>
         queue: $('queueFilter') ? $('queueFilter').value : '',
         execute: $('chatExecute') && $('chatExecute').checked ? '1' : '',
         no_llm: $('chatNoLlm') && $('chatNoLlm').checked ? '1' : '',
-        targets: state.selectedTargets.join(',')
+        targets: state.selectedTargets.join(','),
+        prompt: $('chatPrompt') ? $('chatPrompt').value.trim() : ''
       };
     }
 
@@ -958,6 +959,8 @@ INDEX_HTML = r"""<!doctype html>
       setParam(search, 'execute', controls.execute);
       setParam(search, 'no_llm', controls.no_llm);
       setParam(search, 'targets', controls.targets || 'host');
+      setParam(search, 'prompt', controls.prompt);
+      setParam(search, 'prompt_len', controls.prompt ? controls.prompt.length : '');
       Object.entries(changes).forEach(([key, value]) => setParam(search, key, value));
       const query = search.toString();
       const nextUrl = `${window.location.pathname}${query ? '?' + query : ''}${window.location.hash}`;
@@ -978,6 +981,9 @@ INDEX_HTML = r"""<!doctype html>
         $('chatMode').textContent = $('chatExecute').checked ? 'execute' : 'dry-run';
       }
       if ($('chatNoLlm')) $('chatNoLlm').checked = search.get('no_llm') === '1';
+      if ($('chatPrompt') && (search.has('prompt') || search.has('message'))) {
+        $('chatPrompt').value = search.get('prompt') || search.get('message') || '';
+      }
       const targets = (search.get('targets') || 'host').split(',').map((item) => item.trim()).filter(Boolean);
       state.selectedTargets = targets.length ? targets : ['host'];
     }
@@ -1769,11 +1775,7 @@ INDEX_HTML = r"""<!doctype html>
           // chat cards without duplicating those templates in this file.
           const factory = new Function(js + "\n;return {"
             + "renderServiceView: (typeof renderServiceView === 'function') ? renderServiceView : null,"
-            + "renderDashboardWidget: (typeof renderDashboardWidget === 'function') ? renderDashboardWidget : null,"
-            + "renderArtifactFileGrid: (typeof renderArtifactFileGrid === 'function') ? renderArtifactFileGrid : null,"
-            + "renderChatMessage: (typeof renderChatMessage === 'function') ? renderChatMessage : null,"
-            + "renderAttachment: (typeof renderAttachment === 'function') ? renderAttachment : null,"
-            + "messageAttachments: (typeof messageAttachments === 'function') ? messageAttachments : null"
+            + "renderDashboardWidget: (typeof renderDashboardWidget === 'function') ? renderDashboardWidget : null"
             + "};");
           const widgets = factory();
           if (widgets && typeof widgets.renderServiceView === 'function') state.widgetRender = widgets.renderServiceView;
@@ -2138,7 +2140,7 @@ INDEX_HTML = r"""<!doctype html>
       const nodes = selectedNodeNames();
       const execute = $('chatExecute').checked;
       state.view = 'chat';
-      writeUrlState({ action: 'chat:run', prompt_len: prompt.length, nodes: nodes.join(','), targets: state.selectedTargets.join(',') });
+      writeUrlState({ action: 'chat:run', prompt, prompt_len: prompt.length, nodes: nodes.join(','), targets: state.selectedTargets.join(',') });
       $('chatMode').textContent = execute ? 'execute' : 'dry-run';
       $('chatStatus').textContent = 'running...';
       $('chatAskBtn').disabled = true;
@@ -2221,6 +2223,14 @@ INDEX_HTML = r"""<!doctype html>
         $('chatStatus').textContent = error.message;
         alert(error.message);
       });
+    });
+    let chatPromptUrlTimer = null;
+    $('chatPrompt').addEventListener('input', () => {
+      clearTimeout(chatPromptUrlTimer);
+      chatPromptUrlTimer = setTimeout(() => {
+        const prompt = $('chatPrompt').value.trim();
+        writeUrlState({ prompt, prompt_len: prompt ? prompt.length : '' }, { replace: true });
+      }, 250);
     });
     $('refreshBtn').addEventListener('click', () => {
       writeUrlState({ action: 'refresh' });
@@ -6792,7 +6802,30 @@ def _result_artifact_class(value: Any) -> str | None:
     return "widget" if value.get("live") else "artifact"
 
 
-def _run_inprocess_connector_uri(uri: str, action_payload: dict) -> dict | None:
+def register_tagged_artifact(db: str | None, *, uri: str, result: Any, meta: dict | None = None) -> dict | None:
+    """Route a tagged connector result per the shared ``urirun.tag`` contract.
+
+    * frozen **artifact** (``live=False``) pointing at an on-disk ``path`` -> cataloged in
+      the artifact store under its connector-declared ``kind``;
+    * live **widget** (``live=True``) -> never stored (it is a self-updating view);
+    * untagged result -> left alone (the host's own taxonomy decides elsewhere).
+
+    Returns the registered artifact row, or ``None`` when nothing was stored. Best-effort:
+    never raises, so a catalog hiccup cannot fail the connector call.
+    """
+    if _result_artifact_class(result) != "artifact":
+        return None
+    path = str((result or {}).get("path") or "")
+    if not path or not Path(path).expanduser().is_file():
+        return None
+    kind = str(result.get("kind") or "artifact")
+    try:
+        return _host_db().register_artifact(db, kind, uri, path, meta or {})
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _run_inprocess_connector_uri(uri: str, action_payload: dict, db: str | None = None) -> dict | None:
     """Execute an installed in-process connector URI (widget://, artifact://, …) through the
     urirun runtime and return its unwrapped handler value. Returns None when no connector owns
     the route, so :func:`uri_invoke` can fall back to its legacy "unsupported URI action" error.
@@ -6815,9 +6848,15 @@ def _run_inprocess_connector_uri(uri: str, action_payload: dict) -> dict | None:
         value = urirun.result_data(env)
     except Exception:  # noqa: BLE001
         value = (env.get("result") or {}).get("value") if isinstance(env.get("result"), dict) else None
+    # Route by the tag contract: a frozen artifact with a path gets cataloged under its
+    # declared kind; a live widget never does. No-op for today's in-process traffic
+    # (widget://, artifact:// registry/schema queries are untagged), correct for any
+    # connector that returns a frozen file artifact over this path.
+    registered = register_tagged_artifact(db, uri=uri, result=value) if db else None
     return {"ok": bool(env.get("ok")), "invokedUri": uri,
             "result": value if value is not None else env.get("result"),
             "artifactClass": _result_artifact_class(value),
+            "registeredArtifact": registered,
             "error": (env.get("error") or {}).get("message") if not env.get("ok") else None}
 
 
@@ -6906,7 +6945,7 @@ def uri_invoke(
     else:
         # Not a hardcoded dashboard/scanner action: try an installed in-process connector
         # (widget://, artifact://, …) over the urirun runtime before giving up.
-        dispatched = _run_inprocess_connector_uri(effective_uri, action_payload)
+        dispatched = _run_inprocess_connector_uri(effective_uri, action_payload, db=db)
         if dispatched is not None:
             return dispatched
         raise ValueError(f"unsupported URI action: {uri}")

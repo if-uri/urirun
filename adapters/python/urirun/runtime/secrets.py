@@ -232,3 +232,32 @@ def fill_secrets(text: str, *, execute: bool, allow: list[str] | None = None, di
 
 def has_secret(text: str) -> bool:
     return bool(SECRET_PLACEHOLDER.search(str(text)))
+
+
+def resolve_secret(value: str, secret_allow: str | list[str] | None = "") -> str:
+    """Resolve a credential parameter that may be a secret *reference*.
+
+    The one helper connectors use to honour the secrets layer for a credential they receive
+    as a function/route argument (the runtime only auto-injects into ``fetch`` adapters, not
+    local-function handlers). ``value`` may be:
+
+    * a literal credential -> returned unchanged;
+    * a ``{getv:NAME}`` / ``{secret:provider/loc#field}`` placeholder -> ``fill_secrets``;
+    * a bare ``getv://NAME`` / ``secret://...`` reference -> ``resolve(...).reveal()``.
+
+    References resolve under ``secret_allow`` (a glob list, or comma/space-separated string),
+    deny-by-default (an unlisted reference raises ``PermissionError``). An empty ``value``
+    returns ``''`` so callers can fall back to an ambient default.
+    """
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if isinstance(secret_allow, str):
+        allow = [pattern for pattern in re.split(r"[,\s]+", secret_allow) if pattern]
+    else:
+        allow = list(secret_allow or [])
+    if has_secret(value):
+        return fill_secrets(value, execute=True, allow=allow)
+    if value.startswith(("secret://", "getv://")):
+        return resolve(value, execute=True, allow=allow).reveal()
+    return value

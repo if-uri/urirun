@@ -206,6 +206,10 @@ def test_dashboard_html_tracks_tabs_actions_and_chat_fullscreen():
     assert "name=\"chatTarget\"" in html
     assert html.index("id=\"chatResult\"") < html.index("id=\"chatPrompt\"")
     assert "writeUrlState" in html
+    assert "setParam(search, 'prompt'" in html
+    assert "search.get('prompt')" in html
+    assert "writeUrlState({ action: 'chat:run', prompt, prompt_len: prompt.length" in html
+    assert "$('chatPrompt').addEventListener('input'" in html
     assert "selectedTargets" in html
     assert "tab:" in html
     assert "action:" in html
