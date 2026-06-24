@@ -271,6 +271,25 @@ def test_chat_ask_generates_and_dry_runs_uri_flow(monkeypatch):
     assert fake_db.logs[1]["detail"]["attachments"][0]["path"] == "/tmp/shot.jpg"
 
 
+def test_chat_ask_derives_nodes_from_node_targets(monkeypatch):
+    fake_mesh = FakeMesh()
+    fake_db = FakeHostDb()
+    monkeypatch.setattr(host_dashboard, "_mesh", lambda: fake_mesh)
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+
+    result = host_dashboard.chat_ask(
+        ".",
+        ":memory:",
+        None,
+        {"prompt": "sprawdz health na laptop", "nodes": [], "targets": ["host", "node:laptop"], "no_llm": True},
+    )
+
+    assert result["ok"] is True
+    assert result["selectedNodes"] == ["laptop"]
+    assert fake_mesh.selected_nodes == ["laptop"]
+    assert fake_db.logs[0]["detail"]["detail"]["selectedNodes"] == ["laptop"]
+
+
 def test_chat_ask_execute_and_transient_node_urls(monkeypatch):
     fake_mesh = FakeMesh()
     fake_db = FakeHostDb()

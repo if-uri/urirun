@@ -7208,6 +7208,26 @@ def _screen_document_capability_gap(prompt: str, discovered: dict, selected_node
     }
 
 
+def _selected_nodes_from_targets(selected_nodes: list[str], selected_targets: list[str]) -> list[str]:
+    """Keep API callers and the browser form consistent: node targets imply selected nodes."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for node in selected_nodes:
+        clean = str(node).strip()
+        if clean and clean not in seen:
+            out.append(clean)
+            seen.add(clean)
+    for target in selected_targets:
+        clean = str(target).strip()
+        if not clean.startswith("node:"):
+            continue
+        node = clean.split(":", 1)[1].strip()
+        if node and node not in seen:
+            out.append(node)
+            seen.add(node)
+    return out
+
+
 def chat_ask(project: str, db: str | None, config: str | None, payload: dict, node_urls: list[str] | None = None,
              token: str | None = None, identity: str | None = None) -> dict:
     prompt = str(payload.get("prompt") or "").strip()
@@ -7217,6 +7237,7 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
     selected_targets = [str(item).strip() for item in (payload.get("targets") or []) if str(item).strip()]
     if not selected_targets:
         selected_targets = ["host", *[f"node:{name}" for name in selected_nodes]]
+    selected_nodes = _selected_nodes_from_targets(selected_nodes, selected_targets)
     execute = bool(payload.get("execute"))
     no_llm = bool(payload.get("no_llm") or payload.get("noLlm"))
     _add_chat_message(db, _chat_message(

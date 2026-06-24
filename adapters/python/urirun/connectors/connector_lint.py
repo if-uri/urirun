@@ -381,6 +381,12 @@ def _format_report(rep: dict) -> str:
     if rep["connectorObjects"]:
         objs = ", ".join(f"{k}={v['scheme']}://{v['target']}" for k, v in rep["connectorObjects"].items())
         lines.append(f"  connectors: {objs}")
+    sr = rep.get("secretEnvReads") or {}
+    for f in sr.get("findings", []):
+        label = "SECRET ambient env read" if sr.get("bypass") else "warn  secret env read"
+        lines.append(f"  {label} `{f['name']}` ({f['file']}:{f['line']}) — address by reference via urirun.resolve_secret")
+    if sr.get("bypass"):
+        lines.append("  → connector reads secret-shaped env vars and never calls resolve_secret: it bypasses the secrets layer (no policy/redaction/node-guard)")
     if rep["pattern"] != "decorator":
         lines.append("  pattern: declarative / no @connector decorators recognized — duplication & drift checks skipped")
         return "\n".join(lines)
@@ -403,12 +409,6 @@ def _format_report(rep: dict) -> str:
     for p in dup["perRoute"]:
         if p["factor"] > 1:
             lines.append(f"    {p['uri']} — {p['factor']}×: {', '.join(p['places'])}")
-    sr = rep.get("secretEnvReads") or {}
-    for f in sr.get("findings", []):
-        label = "SECRET ambient env read" if sr.get("bypass") else "warn  secret env read"
-        lines.append(f"  {label} `{f['name']}` ({f['file']}:{f['line']}) — address by reference via urirun.resolve_secret")
-    if sr.get("bypass"):
-        lines.append("  → connector reads secret-shaped env vars and never calls resolve_secret: it bypasses the secrets layer (no policy/redaction/node-guard)")
     return "\n".join(lines)
 
 
