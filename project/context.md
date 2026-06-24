@@ -1,5 +1,5 @@
 # System Architecture Analysis
-<!-- generated in 0.01s -->
+<!-- generated in 0.00s -->
 
 ## Overview
 
@@ -7,7 +7,7 @@
 - **Primary Language**: python
 - **Languages**: python: 103, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1672
+- **Total Functions**: 1678
 - **Total Classes**: 30
 - **Modules**: 163
 - **Entry Points**: 558
@@ -15,7 +15,7 @@
 ## Architecture by Module
 
 ### adapters.python.urirun.host.host_dashboard
-- **Functions**: 342
+- **Functions**: 348
 - **File**: `host_dashboard.py`
 
 ### adapters.python.urirun.runtime.v2
@@ -460,26 +460,25 @@ Key functions that process and transform data:
 ### adapters.python.urirun.host.document_sync._parse_sync_params
 - **Output to**: None.resolve, adapters.python.urirun.host.document_sync._resolve_node_params, adapters.python.urirun.host.document_sync._build_sync_params, None.strip, None.expanduser
 
-### adapters.python.urirun.runtime.cli._add_connectors_subparser
-> The `connectors` command tree (list/show/install/index/resolve/check/lint/
-verify/new/smoke/from-spe
-- **Output to**: subparsers.add_parser, connectors_parser.add_subparsers, argparse.ArgumentParser, connectors_common.add_argument, connectors_sub.add_parser
+### adapters.python.urirun.host.host_dashboard._decode_capture_image
+> Parse a ``data:image/*;base64`` payload into (mime, raw_bytes, sha256, file_ext).
+- **Output to**: re.match, base64.b64decode, None.hexdigest, ValueError, match.group
 
-### adapters.python.urirun.runtime.cli._add_node_subparser
-> The `node` command tree (init/config/list/stop/routes/serve). Extracted from _build_parser to cut fa
-- **Output to**: subparsers.add_parser, node_parser.add_subparsers, argparse.ArgumentParser, node_common.add_argument, node_sub.add_parser
+### adapters.python.urirun.host.host_dashboard._run_inprocess_connector_uri
+> Execute an installed in-process connector URI (widget://, artifact://, …) through the
+urirun runtime
+- **Output to**: discovery.registry_for_uri, urirun.run, urirun.result_data, adapters.python.urirun.host.host_dashboard.register_tagged_artifact, bool
 
-### adapters.python.urirun.runtime.cli._add_host_task_subparser
-> The `host task` tree (planfile ticket lifecycle: plan/bindings/schedule/list/show/next/create/claim/
-- **Output to**: host_sub.add_parser, host_task.add_subparsers, argparse.ArgumentParser, task_common.add_argument, argparse.ArgumentParser
+### adapters.python.urirun.host.host_dashboard._validated_sync_retry_payload
+> Validate a urifix `retry` block targets this document-sync node, returning its payload.
+- **Output to**: retry.get, None.strip, None.strip, dict, str
 
-### adapters.python.urirun.runtime.cli._add_host_data_subparser
-> `host data` tree (SQLite context: bindings/init/dataset-create/datasets/record-upsert/records).
-- **Output to**: host_sub.add_parser, host_data.add_subparsers, argparse.ArgumentParser, data_common.add_argument, data_sub.add_parser
+### adapters.python.urirun.host.host_dashboard._parse_bindings_output
+> Parse the ``BINDINGS:<count>:<names>`` smoke marker into (count, names).
+- **Output to**: None.splitlines, line.startswith, line.split, int, None.split
 
-### adapters.python.urirun.runtime.cli._add_host_monitor_subparser
-> `host monitor` tree (HTTP/DNS/domain monitoring: bindings/http/dns/domain/daily).
-- **Output to**: host_sub.add_parser, host_monitor.add_subparsers, argparse.ArgumentParser, monitor_common.add_argument, monitor_common.add_argument
+### adapters.python.urirun.host.host_dashboard._process_cmdline
+- **Output to**: _process_cmdline_impl
 
 ## Behavioral Patterns
 
@@ -497,6 +496,16 @@ verify/new/smoke/from-spe
 - **Type**: recursion
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.Connector.handler
+
+### recursion__short_value
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun.host.host_dashboard._short_value
+
+### recursion__uri_action_lookup
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun.host.host_dashboard._uri_action_lookup
 
 ### recursion__short_value
 - **Type**: recursion
@@ -538,16 +547,6 @@ verify/new/smoke/from-spe
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.runtime.secrets.redact
 
-### recursion__short_value
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun.host.host_dashboard._short_value
-
-### recursion__uri_action_lookup
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun.host.host_dashboard._uri_action_lookup
-
 ### state_machine_Urirun
 - **Type**: state_machine
 - **Confidence**: 0.70
@@ -562,16 +561,16 @@ verify/new/smoke/from-spe
 
 Functions exposed as public API (no underscore prefix):
 
-- `adapters.python.urirun.host.host_dashboard.create_handler` - 130 calls
+- `adapters.python.urirun.host.host_dashboard.create_handler` - 133 calls
 - `adapters.python.urirun.runtime._scan.main` - 59 calls
 - `adapters.python.urirun.runtime._registry.main` - 56 calls
 - `adapters.python.urirun.host.host_dashboard.scanner_best_finish` - 48 calls
 - `adapters.python.urirun.runtime.v1.main` - 44 calls
 - `adapters.python.urirun.runtime.daemon.serve` - 41 calls
 - `adapters.python.urirun.host.host_dashboard.scanner_capture` - 40 calls
-- `adapters.python.urirun.host.host_dashboard.summary` - 36 calls
-- `adapters.python.urirun.runtime._runtime.main` - 33 calls
+- `adapters.python.urirun.host.host_dashboard.summary` - 37 calls
 - `adapters.python.urirun.host.host_dashboard.restart_phone_scanner_service` - 33 calls
+- `adapters.python.urirun.runtime._runtime.main` - 33 calls
 - `adapters.python.urirun.runtime.v2_adopt.main` - 31 calls
 - `adapters.python.urirun.node.recovery.normalize_error` - 30 calls
 - `adapters.python.urirun.node.mesh.copy_id_command` - 30 calls
@@ -581,27 +580,27 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.adopt_pack.adopt` - 28 calls
 - `adapters.python.urirun.runtime.errors.info` - 27 calls
 - `adapters.python.urirun.connectors.connector_lint.verify_connector` - 27 calls
-- `adapters.python.urirun.host.discovery.node_alias_map_from_env` - 26 calls
 - `adapters.python.urirun.host.host_dashboard.phone_node_qr` - 26 calls
+- `adapters.python.urirun.host.discovery.node_alias_map_from_env` - 26 calls
+- `adapters.python.urirun.host.host_dashboard.node_add` - 25 calls
 - `adapters.python.urirun.runtime.codegen.proto_from_registry` - 25 calls
 - `adapters.python.urirun.runtime._runtime.run` - 25 calls
 - `adapters.python.urirun.runtime.v2_grpc.main` - 25 calls
 - `adapters.python.urirun.node.mesh.apply_deploy` - 25 calls
-- `adapters.python.urirun.host.host_dashboard.node_add` - 25 calls
+- `adapters.python.urirun.host.host_dashboard.startup_phone_qr` - 24 calls
 - `adapters.python.urirun.runtime.v2.run_local_function_subprocess` - 24 calls
 - `adapters.python.urirun.runtime.v2.validate_binding_document` - 24 calls
 - `adapters.python.urirun.connectors.connector_lint.lint_connector` - 24 calls
 - `adapters.python.urirun.connectors.resolver.resolve` - 24 calls
 - `adapters.python.urirun.node.mesh.watch_command` - 24 calls
-- `adapters.python.urirun.host.host_dashboard.startup_phone_qr` - 24 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
 - `adapters.python.urirun.host.document_sync.sync_documents_to_node` - 23 calls
 - `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.runtime.errors.problem` - 22 calls
 - `adapters.python.urirun.connectors.resolver.index_local` - 22 calls
 - `adapters.python.urirun.host.host_db.search_records` - 21 calls
-- `adapters.python.urirun.node.mesh.probe_command` - 21 calls
 - `adapters.python.urirun.host.host_dashboard.chat_history` - 21 calls
+- `adapters.python.urirun.host.host_dashboard.ensure_phone_scanner_service` - 21 calls
 
 ## System Interactions
 

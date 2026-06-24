@@ -3,11 +3,11 @@
 
 ## AI Cost Tracking
 
-![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.134-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![AI Cost](https://img.shields.io/badge/AI%20Cost-$11.48-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-75.8h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.135-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![AI Cost](https://img.shields.io/badge/AI%20Cost-$11.43-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-75.9h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
 
-- 🤖 **LLM usage:** $11.4756 (250 commits)
-- 👤 **Human dev:** ~$7585 (75.8h @ $100/h, 30min dedup)
+- 🤖 **LLM usage:** $11.4285 (251 commits)
+- 👤 **Human dev:** ~$7591 (75.9h @ $100/h, 30min dedup)
 
 Generated on 2026-06-24 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
 
@@ -80,6 +80,7 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
   deny-by-default `secretAllow` policy, `urirun.resolve_secret` for connector authors,
   and the `make lint-connectors` secret-bypass gate
 - `docs/REFACTOR_ROADMAP.md` - remaining refactor/security backlog and what landed
+- `docs/COMPLEXITY_GATE.md` - the `make complexity` cyclomatic-complexity CI gate (CC<=15)
 - `docs/COMPONENTS.md` - Polish operator/developer guide to host, node,
   service, connector, widget and artifact boundaries
 - `docs/NODE_CONNECTIONS.md` - practical connection guide for classic nodes,
@@ -681,8 +682,12 @@ Copy `adapters/c/urirun.c` and `adapters/c/urirun.h` into your firmware project.
 ## Verify
 
 ```bash
-make test
+make test         # all runtime checks: js / python / c / conformance / v1 / v2
+make lint         # ruff (Python package)
+make complexity   # cyclomatic-complexity gate — fails if any Python function exceeds CC=15
 ```
+
+CI (`.github/workflows/ci.yml`) runs `version-check`, `lint`, `complexity` and `test` on every push.
 
 ## Documentation
 

@@ -11442,6 +11442,16 @@ def serve(
     startup_qr: bool = False,
     qr_url: str | None = None,
 ) -> ThreadingHTTPServer:
+    # Load `<project>/.env` so the in-process NL planner sees LLM_MODEL / OPENROUTER_API_KEY
+    # without the launcher having to `set -a; . .env`. The real environment always wins
+    # (the file never clobbers an already-set variable), mirroring `host ask`.
+    from urirun.node.mesh import _maybe_load_dotenv
+    loaded_env = _maybe_load_dotenv(os.path.join(os.path.expanduser(project), ".env"))
+    if loaded_env:
+        print(json.dumps({
+            "event": "urirun.host_dashboard.dotenv_loaded",
+            "keys": sorted(loaded_env),
+        }), flush=True)
     # Starting a new dashboard auto-replaces the old one holding this port (parent+worker), so
     # `serve` never dies on "Address already in use".
     _free_port_from_old_dashboard(int(port))

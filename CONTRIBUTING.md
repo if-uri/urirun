@@ -4,6 +4,8 @@ Thanks for helping build the **ifURI / urirun** ecosystem.
 
 ## Ground rules
 - Keep `make test` green and the docs standard passing (`make docs-lint` in `if-uri/ifuri-com`).
+- Keep `make lint` (ruff) and `make complexity` green — both are CI-gated. `make complexity`
+  fails if any Python function exceeds CC=15; extract helpers or a dispatch table to stay under.
 - Match the surrounding code and prose style; one logical change per PR; explain the *why*.
 
 ## Workflow

@@ -6,9 +6,18 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import pytest
 from PIL import Image
 
 from urirun.host import host_dashboard
+
+
+@pytest.fixture(autouse=True)
+def _no_live_webpage_merge(monkeypatch):
+    """Keep summary() deterministic: never reach a live android-node service (port 8195) to
+    merge transient webpage nodes. Tests that exercise the merge re-patch phone_web_nodes."""
+    monkeypatch.setattr(host_dashboard, "phone_web_nodes",
+                        lambda payload: {"ok": True, "devices": []})
 
 
 class FakeMesh:
@@ -3581,3 +3590,85 @@ def test_prune_scanner_staging_throttles(monkeypatch, tmp_path):
     monkeypatch.setattr(host_dashboard, "_LAST_STAGING_PRUNE", time.time())  # just ran
     assert host_dashboard._prune_scanner_staging(min_interval=60.0) == 0
     assert p.is_file()  # throttled, not touched
+
+
+def test_node_remove_deletes_persistent_node(monkeypatch, tmp_path):
+    config = tmp_path / "mesh.json"
+    nodes_file = tmp_path / "nodes.json"
+    kinds_file = tmp_path / "node-kinds.json"
+    monkeypatch.setenv("URIRUN_NODES_FILE", str(nodes_file))
+    monkeypatch.setenv("URIRUN_NODE_KINDS_FILE", str(kinds_file))
+
+    host_dashboard.node_add(str(config), {"name": "gone", "url": "127.0.0.1:9222", "kind": "browser-debug"})
+    assert any(n["name"] == "gone" for n in json.loads(config.read_text())["nodes"])
+    assert "gone" in json.loads(kinds_file.read_text())
+
+    result = host_dashboard.node_remove(str(config), {"name": "gone"})
+    assert result["ok"] is True
+    assert result["removed"] is True
+    assert not any(n["name"] == "gone" for n in json.loads(config.read_text())["nodes"])
+    assert "gone" not in json.loads(kinds_file.read_text())
+    # the urifix mirror is cleaned too
+    assert "gone" not in json.loads(nodes_file.read_text())
+
+
+def test_node_remove_requires_name(tmp_path):
+    result = host_dashboard.node_remove(str(tmp_path / "mesh.json"), {"name": ""})
+    assert result["ok"] is False
+    assert "name is required" in result["error"]
+
+
+def test_node_remove_unknown_node_is_ok(tmp_path):
+    # removing a node that was never persisted is a graceful no-op (removed=False)
+    result = host_dashboard.node_remove(str(tmp_path / "mesh.json"), {"name": "ghost", "transient": False})
+    assert result["ok"] is True
+    assert result["removed"] is False
+
+
+def test_merge_live_webpage_nodes_appends_from_relay(monkeypatch):
+    monkeypatch.setattr(host_dashboard, "phone_web_nodes", lambda payload: {
+        "ok": True,
+        "devices": [
+            {"id": "web1", "name": "browser-web1", "platform": "browser", "online": True,
+             "nodeUrl": "http://h:8195/api/webpage-node/relay/web1",
+             "routes": ["webpage://web1/page/query/info"]},
+        ],
+    })
+    nodes = [{"name": "laptop", "url": "http://laptop:8765", "reachable": True}]
+    host_dashboard._merge_live_webpage_nodes(nodes)
+    webpage = [n for n in nodes if n.get("kind") == "webpage"]
+    assert len(webpage) == 1
+    n = webpage[0]
+    assert n["name"] == "browser-web1"
+    assert n["transient"] is True and n["reachable"] is True
+    # string routes are normalised to dicts for the object registry
+    assert n["routes"] == [{"uri": "webpage://web1/page/query/info"}]
+
+
+def test_merge_live_webpage_nodes_skips_existing_names(monkeypatch):
+    monkeypatch.setattr(host_dashboard, "phone_web_nodes", lambda payload: {
+        "ok": True, "devices": [{"id": "x", "name": "laptop", "online": True, "nodeUrl": "u"}],
+    })
+    nodes = [{"name": "laptop", "url": "http://laptop:8765", "reachable": True}]
+    host_dashboard._merge_live_webpage_nodes(nodes)
+    assert len([n for n in nodes if n["name"] == "laptop"]) == 1  # no duplicate
+
+
+def test_merge_live_webpage_nodes_graceful_when_service_down(monkeypatch):
+    def boom(payload):
+        raise OSError("connection refused")
+    monkeypatch.setattr(host_dashboard, "phone_web_nodes", boom)
+    nodes = [{"name": "laptop"}]
+    host_dashboard._merge_live_webpage_nodes(nodes)  # must not raise
+    assert nodes == [{"name": "laptop"}]
+
+
+def test_node_kinds_sidecar_roundtrip(monkeypatch, tmp_path):
+    kinds_file = tmp_path / "node-kinds.json"
+    monkeypatch.setenv("URIRUN_NODE_KINDS_FILE", str(kinds_file))
+    host_dashboard._set_node_kind("cam", "device")
+    assert host_dashboard._node_kinds() == {"cam": "device"}
+    # annotation copies the sidecar kind onto the node dict
+    nodes = [{"name": "cam"}]
+    host_dashboard._annotate_node_kinds(nodes)
+    assert nodes[0]["kind"] == "device"

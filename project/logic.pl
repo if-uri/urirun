@@ -1,5 +1,5 @@
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urirun', '0.4.132', 'javascript').
+project_metadata('urirun', '0.4.134', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/bash/example/hash-connector.sh', 10, 'shell').
@@ -84,7 +84,7 @@ project_file('adapters/python/urirun/host/document_metadata.py', 518, 'python').
 project_file('adapters/python/urirun/host/document_sync.py', 404, 'python').
 project_file('adapters/python/urirun/host/domain_monitor.py', 488, 'python').
 project_file('adapters/python/urirun/host/fs_transfer.py', 210, 'python').
-project_file('adapters/python/urirun/host/host_dashboard.py', 11471, 'python').
+project_file('adapters/python/urirun/host/host_dashboard.py', 11494, 'python').
 project_file('adapters/python/urirun/host/host_db.py', 528, 'python').
 project_file('adapters/python/urirun/host/host_integrations.py', 357, 'python').
 project_file('adapters/python/urirun/host/node_types.py', 266, 'python').
@@ -115,7 +115,7 @@ project_file('adapters/python/urirun/node/paths.py', 39, 'python').
 project_file('adapters/python/urirun/node/recovery.py', 233, 'python').
 project_file('adapters/python/urirun/node/routing.py', 144, 'python').
 project_file('adapters/python/urirun/node/task_cli.py', 343, 'python').
-project_file('adapters/python/urirun/node/transport.py', 530, 'python').
+project_file('adapters/python/urirun/node/transport.py', 529, 'python').
 project_file('adapters/python/urirun/planfile_adapter.py', 6, 'python').
 project_file('adapters/python/urirun/runtime/__init__.py', 2, 'python').
 project_file('adapters/python/urirun/runtime/_registry.py', 719, 'python').
@@ -173,7 +173,7 @@ project_file('security/mesh-probe/probe.py', 115, 'python').
 project_file('test/urirun.test.js', 11, 'javascript').
 project_file('tests/conftest.py', 30, 'python').
 project_file('tests/test_host_contracts.py', 49, 'python').
-project_file('tests/test_host_dashboard.py', 3584, 'python').
+project_file('tests/test_host_dashboard.py', 3675, 'python').
 project_file('tests/test_host_db.py', 39, 'python').
 project_file('tests/test_host_discovery.py', 82, 'python').
 project_file('tests/test_host_fs_transfer.py', 33, 'python').
@@ -863,7 +863,10 @@ python_function('adapters/python/urirun/host/host_dashboard.py', '_apply_uri_ove
 python_function('adapters/python/urirun/host/host_dashboard.py', '_resolve_node_api_identifiers', 2, 8, 3).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_connector_required_response', 3, 1, 0).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'configured_node_api_request', 3, 13, 8).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'node_remove', 2, 21, 24).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_node_remove_from_mirror', 1, 8, 8).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_node_remove_kind', 1, 3, 5).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_node_forget_webpage', 1, 3, 10).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'node_remove', 2, 11, 11).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_node_kinds_path', 0, 2, 2).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_node_kinds', 0, 3, 4).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_set_node_kind', 2, 3, 6).
@@ -871,7 +874,8 @@ python_function('adapters/python/urirun/host/host_dashboard.py', '_annotate_node
 python_function('adapters/python/urirun/host/host_dashboard.py', '_android_node_service_url', 0, 2, 3).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'start_android_node_service', 1, 8, 10).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'restart_android_node_service', 1, 11, 11).
-python_function('adapters/python/urirun/host/host_dashboard.py', '_merge_live_webpage_nodes', 1, 24, 7).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_webpage_node_dict', 3, 11, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_merge_live_webpage_nodes', 1, 14, 7).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'phone_web_nodes', 1, 5, 8).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'phone_node_qr', 3, 9, 19).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_node_envelope_error', 1, 10, 3).
@@ -1845,6 +1849,7 @@ python_function('tests/conftest.py', '_disable_llm_metadata_extraction', 2, 2, 3
 python_function('tests/conftest.py', 'pytest_configure', 1, 1, 1).
 python_function('tests/test_host_contracts.py', 'test_file_transfer_verification_reports_missing_files', 0, 9, 1).
 python_function('tests/test_host_contracts.py', 'test_file_transfer_verification_accepts_complete_transfer', 0, 4, 1).
+python_function('tests/test_host_dashboard.py', '_no_live_webpage_merge', 1, 1, 2).
 python_function('tests/test_host_dashboard.py', 'test_dashboard_html_tracks_tabs_actions_and_chat_fullscreen', 0, 125, 1).
 python_function('tests/test_host_dashboard.py', 'test_dashboard_chat_messages_can_copy_markdown', 0, 11, 0).
 python_function('tests/test_host_dashboard.py', 'test_chat_ask_generates_and_dry_runs_uri_flow', 1, 15, 4).
@@ -1962,6 +1967,13 @@ python_function('tests/test_host_dashboard.py', 'test_scanner_capture_rejects_lo
 python_function('tests/test_host_dashboard.py', 'test_scanner_capture_archives_when_quality_passes', 2, 4, 10).
 python_function('tests/test_host_dashboard.py', 'test_prune_scanner_staging_keeps_recent_referenced_and_active', 2, 4, 14).
 python_function('tests/test_host_dashboard.py', 'test_prune_scanner_staging_throttles', 2, 3, 9).
+python_function('tests/test_host_dashboard.py', 'test_node_remove_deletes_persistent_node', 2, 8, 7).
+python_function('tests/test_host_dashboard.py', 'test_node_remove_requires_name', 1, 3, 2).
+python_function('tests/test_host_dashboard.py', 'test_node_remove_unknown_node_is_ok', 1, 3, 2).
+python_function('tests/test_host_dashboard.py', 'test_merge_live_webpage_nodes_appends_from_relay', 1, 7, 4).
+python_function('tests/test_host_dashboard.py', 'test_merge_live_webpage_nodes_skips_existing_names', 1, 2, 3).
+python_function('tests/test_host_dashboard.py', 'test_merge_live_webpage_nodes_graceful_when_service_down', 1, 2, 3).
+python_function('tests/test_host_dashboard.py', 'test_node_kinds_sidecar_roundtrip', 2, 3, 5).
 python_function('tests/test_host_db.py', 'test_delete_logs_filters_stream_and_event', 1, 6, 4).
 python_function('tests/test_host_db.py', 'test_delete_artifacts_by_ids', 1, 6, 5).
 python_function('tests/test_host_discovery.py', 'test_prompt_node_match_prefers_longest_alias', 0, 2, 1).
