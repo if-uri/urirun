@@ -350,6 +350,75 @@ def test_chat_ask_plans_document_sync_without_llm(monkeypatch):
     assert fake_db.logs[2]["detail"]["decisionLoop"]["intent"]["id"] == "document-sync"
 
 
+def test_chat_ask_document_sync_resolves_node_from_known_nodes_file(monkeypatch, tmp_path):
+    fake_db = FakeHostDb()
+    nodes_file = tmp_path / "nodes.json"
+    nodes_file.write_text(json.dumps({"lenovo": "http://laptop.local:8766"}))
+    monkeypatch.setenv("URIRUN_NODES_FILE", str(nodes_file))
+    monkeypatch.delenv("URIRUN_DOCUMENT_SYNC_NODE", raising=False)
+    monkeypatch.delenv("URIRUN_NODES", raising=False)
+    monkeypatch.delenv("URIRUN_NODE_ALIASES", raising=False)
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+
+    result = host_dashboard.chat_ask(
+        ".",
+        ":memory:",
+        None,
+        {
+            "prompt": "wyślij wszystkie folery z artifacts z /home/tom/.urirun/documents/* do lenovo laptop do fodleru downloads usera",
+            "nodes": [],
+            "targets": ["host", "service:phone-scanner"],
+            "execute": False,
+        },
+    )
+
+    assert result["ok"] is True
+    assert result["generator"]["intent"] == "document-sync"
+    assert result["selectedNodes"] == ["lenovo"]
+    assert result["selectedTargets"] == ["host", "service:phone-scanner", "node:lenovo"]
+    assert fake_db.logs[0]["detail"]["detail"]["requestedNodes"] == []
+    assert fake_db.logs[0]["detail"]["detail"]["selectedNodes"] == ["lenovo"]
+    assert fake_db.logs[0]["detail"]["detail"]["resolvedTargets"] == ["host", "service:phone-scanner", "node:lenovo"]
+
+
+def test_summary_shows_known_nodes_file_nodes(monkeypatch, tmp_path):
+    class SummaryMesh(FakeMesh):
+        def load_host_config(self, config):
+            return {"nodes": []}
+
+        def config_with_transient_node_urls(self, config, node_urls):
+            self.node_urls = node_urls
+            return config
+
+        def discover_mesh(self, config):
+            return {
+                "nodes": [
+                    {**node, "reachable": False, "routes": [], "error": "offline"}
+                    for node in config.get("nodes", [])
+                ],
+                "routes": [],
+                "serviceMap": {},
+            }
+
+        def host_config_path(self, config):
+            return Path("/tmp/mesh.json")
+
+    fake_db = FakeHostDb()
+    nodes_file = tmp_path / "nodes.json"
+    nodes_file.write_text(json.dumps({"lenovo": "http://laptop.local:8766"}))
+    monkeypatch.setenv("URIRUN_NODES_FILE", str(nodes_file))
+    monkeypatch.setattr(host_dashboard, "_mesh", lambda: SummaryMesh())
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+
+    result = host_dashboard.summary(".", ":memory:", None)
+
+    assert result["nodeCount"] == 1
+    assert result["nodes"][0]["name"] == "lenovo"
+    assert result["nodes"][0]["url"] == "http://laptop.local:8766"
+    assert result["nodes"][0]["source"] == "known-nodes-file"
+    assert result["nodes"][0]["reachable"] is False
+
+
 def test_chat_ask_executes_document_sync_without_llm(monkeypatch):
     fake_db = FakeHostDb()
     calls = []

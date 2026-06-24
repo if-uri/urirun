@@ -191,11 +191,13 @@ export URIRUN_DOCUMENT_SYNC_DEST='~/Downloads/urirun-scans'
 `URIRUN_DOCUMENT_SYNC_NODE` is intentionally configuration, not code. The
 dashboard does not hardcode local machine names. A natural-language prompt is
 matched against selected node targets and configured node names/aliases from the
-host config, `URIRUN_NODES`, `URIRUN_NODE_URL_*`, or `URIRUN_NODE_ALIASES`.
+host config, `~/.urirun/nodes.json` (`URIRUN_NODES_FILE`), `URIRUN_NODES`,
+`URIRUN_NODE_URL_*`, or `URIRUN_NODE_ALIASES`.
 
 Example aliases:
 
 ```bash
+printf '{"office-laptop":"http://192.168.1.20:8766"}\n' > ~/.urirun/nodes.json
 export URIRUN_NODES='office-laptop=http://192.168.1.20:8766'
 export URIRUN_NODE_ALIASES='office-laptop=notebook|work laptop'
 ```

@@ -63,11 +63,13 @@ the raw request and also show `selectedNodes: ["lenovo"]` plus
 `selectedTargets: [..., "node:lenovo"]`.
 
 Local node names are data, not code. Prompt resolution uses selected targets and
-configured node names/aliases from host config, `URIRUN_NODES`,
-`URIRUN_NODE_URL_*`, `URIRUN_DOCUMENT_SYNC_NODE`, and `URIRUN_NODE_ALIASES`.
+configured node names/aliases from host config, `~/.urirun/nodes.json`
+(`URIRUN_NODES_FILE`), `URIRUN_NODES`, `URIRUN_NODE_URL_*`,
+`URIRUN_DOCUMENT_SYNC_NODE`, and `URIRUN_NODE_ALIASES`.
 For example:
 
 ```bash
+printf '{"office-laptop":"http://192.168.1.20:8766"}\n' > ~/.urirun/nodes.json
 export URIRUN_NODES='office-laptop=http://192.168.1.20:8766'
 export URIRUN_NODE_ALIASES='office-laptop=notebook|work laptop'
 ```

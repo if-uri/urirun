@@ -72,7 +72,7 @@ restart-chat: ## Restart urirun-service-chat on CHAT_PORT (default 8194).
 	@test -x "$(CHAT_SERVICE)" || { echo "missing $(CHAT_SERVICE); install urirun-service-chat in the venv"; exit 1; }
 	@mkdir -p "$(LOG_DIR)"
 	@nohup "$(CHAT_SERVICE)" restart --project "$(CURDIR)" --db "$(HOST_DB)" --host "$(CHAT_HOST)" --port "$(CHAT_PORT)" $(NODE_URL_ARGS) $(FORCE_REPLACE_ARG) >"$(LOG_DIR)/chat.log" 2>&1 &
-	@sleep 1
+	@for i in $$(seq 1 20); do curl -fsS --max-time 2 "http://$(CHAT_HOST):$(CHAT_PORT)/api/summary" >/dev/null 2>&1 && break || sleep 0.5; done
 	@curl -fsS --max-time 2 "http://$(CHAT_HOST):$(CHAT_PORT)/api/summary" >/dev/null || { echo "chat failed to start; log:"; tail -40 "$(LOG_DIR)/chat.log"; exit 1; }
 	@echo "chat: http://$(CHAT_HOST):$(CHAT_PORT)/"
 	@echo "log:  $(LOG_DIR)/chat.log"
@@ -82,7 +82,7 @@ restart-scanner: ## Restart urirun-service-scanner on SCANNER_PORT (default 8196
 	@test -x "$(SCANNER_SERVICE)" || { echo "missing $(SCANNER_SERVICE); install urirun-service-scanner in the venv"; exit 1; }
 	@mkdir -p "$(LOG_DIR)"
 	@nohup "$(SCANNER_SERVICE)" restart --project "$(CURDIR)" --db "$(HOST_DB)" --host "$(SCANNER_HOST)" --port "$(SCANNER_PORT)" $(NODE_URL_ARGS) $(FORCE_REPLACE_ARG) >"$(LOG_DIR)/scanner.log" 2>&1 &
-	@sleep 1
+	@for i in $$(seq 1 20); do curl -kfsS --max-time 2 "https://127.0.0.1:$(SCANNER_PORT)/api/scanner/live" >/dev/null 2>&1 && break || sleep 0.5; done
 	@curl -kfsS --max-time 2 "https://127.0.0.1:$(SCANNER_PORT)/api/scanner/live" >/dev/null || { echo "scanner failed to start; log:"; tail -40 "$(LOG_DIR)/scanner.log"; exit 1; }
 	@echo "scanner: https://$(SCANNER_HOST):$(SCANNER_PORT)/scanner"
 	@echo "log:     $(LOG_DIR)/scanner.log"

@@ -835,7 +835,13 @@ INDEX_HTML = r"""<!doctype html>
             <details class="add-node-help" style="margin-top:10px">
               <summary>➕ Jak dodać node (gdy nie ma go na liście)</summary>
               <div class="stack" style="margin-top:8px">
-                <p class="subtle">Node to nazwa + URL usługi urirun (port węzła). Wpisz dane, a poniżej dostaniesz gotowy wpis do wklejenia — host i urifix wtedy rozwiążą ten node.</p>
+                <div class="artifact-actions">
+                  <button type="button" id="scanNodesBtn" onclick="scanNodes()">🔎 Skanuj sieć (LAN)</button>
+                  <span id="scanNodesStatus" class="subtle"></span>
+                </div>
+                <div id="scanNodesResults" class="list"></div>
+                <p class="subtle">Mesh nie wykrywa węzłów automatycznie (świadomie — węzły są jawne i enrolled). Skan to jednorazowe, read-only sondowanie /health po lokalnej podsieci na porcie węzła; znalezione węzły dodajesz przyciskiem „dodaj".</p>
+                <p class="subtle">Albo wpisz ręcznie: node to nazwa + URL usługi urirun (port węzła) — poniżej dostaniesz gotowy wpis do wklejenia (host i urifix rozwiążą ten node).</p>
                 <label class="stack"><span class="subtle">Nazwa node'a</span><input id="addNodeName" oninput="nodeAddSnippet()" placeholder="office-node"></label>
                 <label class="stack"><span class="subtle">URL node'a</span><input id="addNodeUrl" oninput="nodeAddSnippet()" placeholder="http://host-or-ip:8765"></label>
                 <div class="artifact-actions">
@@ -1076,6 +1082,40 @@ INDEX_HTML = r"""<!doctype html>
         'URIRUN_NODES="' + name + '=' + url + '"\n\n' +
         '3) jednorazowo w wywolaniu URI (np. document://host/archive/command/sync-to-node):\n' +
         'node_urls=["' + name + '=' + url + '"]';
+    }
+
+    // Reuse the netscan:// connector over the existing URI dispatch (no host-specific endpoint):
+    // /api/uri/invoke runs netscan://host/lan/query/nodes in-process and returns discovered nodes.
+    async function scanNodes() {
+      const btn = $('scanNodesBtn'); const status = $('scanNodesStatus'); const out = $('scanNodesResults');
+      if (!btn) return;
+      btn.disabled = true; status.textContent = 'skanuję LAN…'; out.innerHTML = '';
+      try {
+        const env = await api('/api/uri/invoke', {
+          method: 'POST',
+          body: JSON.stringify({ uri: 'netscan://host/lan/query/nodes', mode: 'execute', payload: {}, source: 'nodes-scan' }),
+        });
+        const data = (env && env.result) || env || {};
+        const nodes = data.nodes || [];
+        status.textContent = `${esc(data.subnet || '')} · znaleziono ${nodes.length} / przeskanowano ${data.scanned || 0}`;
+        out.innerHTML = nodes.map((n) => `<div class="item">
+          <div><strong>${esc(n.name || n.host)}</strong> <span class="pill up">node</span> <span class="subtle">v${esc(n.version || '?')}</span></div>
+          <div class="mono">${esc(n.url)}</div>
+          <div class="artifact-actions"><button type="button" data-name="${esc(n.name || n.host)}" data-url="${esc(n.url)}" onclick="useScannedNode(this.dataset.name, this.dataset.url)">dodaj</button></div>
+        </div>`).join('') || empty('Brak węzłów urirun w tej podsieci na porcie 8765. Jeśli netscan nie jest zainstalowany: pip install urirun-connector-netscan.');
+      } catch (error) {
+        status.textContent = 'błąd skanu: ' + error.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // A discovered node -> prefill the add-node form + snippet (then paste it where shown).
+    function useScannedNode(name, url) {
+      if ($('addNodeName')) $('addNodeName').value = name || '';
+      if ($('addNodeUrl')) $('addNodeUrl').value = url || '';
+      nodeAddSnippet();
+      const snip = $('addNodeSnippet'); if (snip && snip.scrollIntoView) snip.scrollIntoView({ block: 'nearest' });
     }
 
 	    function contactCard(contact) {
@@ -3825,22 +3865,109 @@ def _iter_node_alias_values(value: Any) -> list[str]:
     return [str(value).strip()] if str(value).strip() else []
 
 
-def _node_alias_map_from_config_doc(config_doc: dict | None) -> dict[str, str]:
+def _add_node_aliases(out: dict[str, str], name: str, aliases: Any = None) -> None:
+    clean_name = str(name or "").strip()
+    if not clean_name:
+        return
+    out.setdefault(clean_name.casefold(), clean_name)
+    for alias in _iter_node_alias_values(aliases):
+        out.setdefault(alias.casefold(), clean_name)
+
+
+def _node_alias_map_from_value(value: Any) -> dict[str, str]:
     out: dict[str, str] = {}
-    if not isinstance(config_doc, dict):
+    if isinstance(value, dict):
+        nodes = value.get("nodes")
+        if isinstance(nodes, (dict, list)):
+            out.update(_node_alias_map_from_value(nodes))
+            return out
+        for name, spec in value.items():
+            if name == "nodes":
+                continue
+            if isinstance(spec, dict):
+                canonical = str(spec.get("name") or name).strip()
+                aliases: list[str] = []
+                for key in ("alias", "aliases", "host", "hostname", "label", "labels", "tags"):
+                    aliases.extend(_iter_node_alias_values(spec.get(key)))
+                _add_node_aliases(out, canonical, aliases)
+            else:
+                _add_node_aliases(out, str(name))
         return out
-    for item in config_doc.get("nodes") or []:
+    if not isinstance(value, (list, tuple, set)):
+        return out
+    for item in value:
         if not isinstance(item, dict):
+            text = str(item).strip()
+            if not text:
+                continue
+            name = text.split("=", 1)[0].strip() if "=" in text else text
+            _add_node_aliases(out, name)
             continue
         name = str(item.get("name") or "").strip()
-        if not name:
-            continue
         aliases = [name]
         for key in ("alias", "aliases", "host", "hostname", "label", "labels", "tags"):
             aliases.extend(_iter_node_alias_values(item.get(key)))
-        for alias in aliases:
-            out.setdefault(alias.casefold(), name)
+        _add_node_aliases(out, name, aliases)
     return out
+
+
+def _normalize_known_node_url(raw: Any) -> str:
+    value = str(raw or "").strip()
+    if not value:
+        return ""
+    if "://" not in value:
+        value = f"http://{value if ':' in value else value + ':8765'}"
+    return value.rstrip("/")
+
+
+def _node_url_map_from_value(value: Any) -> dict[str, str]:
+    out: dict[str, str] = {}
+    if isinstance(value, dict):
+        nodes = value.get("nodes")
+        if isinstance(nodes, (dict, list)):
+            out.update(_node_url_map_from_value(nodes))
+            return out
+        for name, spec in value.items():
+            if name == "nodes":
+                continue
+            if isinstance(spec, dict):
+                clean_name = str(spec.get("name") or name).strip()
+                url = _normalize_known_node_url(spec.get("url") or spec.get("nodeUrl") or spec.get("node_url"))
+            else:
+                clean_name = str(name).strip()
+                url = _normalize_known_node_url(spec)
+            if clean_name and url:
+                out[clean_name] = url
+        return out
+    if not isinstance(value, (list, tuple, set)):
+        return out
+    for item in value:
+        if isinstance(item, dict):
+            clean_name = str(item.get("name") or "").strip()
+            url = _normalize_known_node_url(item.get("url") or item.get("nodeUrl") or item.get("node_url"))
+        else:
+            text = str(item).strip()
+            if not text or "=" not in text:
+                continue
+            clean_name, raw_url = [part.strip() for part in text.split("=", 1)]
+            url = _normalize_known_node_url(raw_url)
+        if clean_name and url:
+            out[clean_name] = url
+    return out
+
+
+def _node_dicts_from_url_map(nodes: dict[str, str], *, source: str) -> list[dict]:
+    return [
+        {"name": name, "url": url, "source": source}
+        for name, url in sorted(nodes.items())
+        if name and url
+    ]
+
+
+def _node_alias_map_from_config_doc(config_doc: dict | None) -> dict[str, str]:
+    if not isinstance(config_doc, dict):
+        return {}
+    return _node_alias_map_from_value(config_doc.get("nodes") or [])
 
 
 def _node_alias_map_from_env() -> dict[str, str]:
@@ -3888,8 +4015,37 @@ def _node_alias_map_from_node_urls(node_urls: list[str] | None) -> dict[str, str
     return out
 
 
+def _known_nodes_file_data() -> Any:
+    path = Path(os.environ.get("URIRUN_NODES_FILE") or "~/.urirun/nodes.json").expanduser()
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _node_alias_map_from_known_nodes_file() -> dict[str, str]:
+    return _node_alias_map_from_value(_known_nodes_file_data())
+
+
+def _known_nodes_file_urls() -> dict[str, str]:
+    return _node_url_map_from_value(_known_nodes_file_data())
+
+
+def _merge_known_nodes_into_config(config_doc: dict | None) -> dict:
+    out = json.loads(json.dumps(config_doc if isinstance(config_doc, dict) else {}))
+    out.setdefault("nodes", [])
+    existing = {str(item.get("name") or "").strip() for item in out.get("nodes") or [] if isinstance(item, dict)}
+    merged = [dict(item) for item in out.get("nodes") or [] if isinstance(item, dict)]
+    for item in _node_dicts_from_url_map(_known_nodes_file_urls(), source="known-nodes-file"):
+        if item["name"] not in existing:
+            merged.append(item)
+    out["nodes"] = sorted(merged, key=lambda item: str(item.get("name") or ""))
+    return out
+
+
 def _node_alias_map_from_context(config: str | None, node_urls: list[str] | None = None) -> dict[str, str]:
     out = _node_alias_map_from_env()
+    out.update(_node_alias_map_from_known_nodes_file())
     out.update(_node_alias_map_from_node_urls(node_urls))
     try:
         out.update(_node_alias_map_from_config_doc(_host_config(config, node_urls)))
@@ -7260,6 +7416,7 @@ def _planfile_adapter():
 def _host_config(config: str | None, node_urls: list[str] | None = None) -> dict:
     mesh = _mesh()
     loaded = mesh.load_host_config(config)
+    loaded = _merge_known_nodes_into_config(loaded)
     return mesh.config_with_transient_node_urls(loaded, node_urls or [])
 
 
