@@ -13,30 +13,22 @@ static int is_path_end(char value) {
   return value == '\0' || value == '?' || value == '#';
 }
 
-int urirun_parse(const char* uri, urirun_descriptor_t* out) {
-  if (!uri || !out) return -1;
-  memset(out, 0, sizeof(*out));
-
-  const char* scheme_end = strstr(uri, "://");
-  if (!scheme_end) return -1;
-  if (scheme_end == uri) return -1;
-  if (copy_token(out->package_name, uri, (size_t)(scheme_end - uri)) != 0) return -1;
-
-  const char* p = scheme_end + 3;
+/* Copy the authority/target (up to the first '/', '?' or '#') into out->target.
+   Returns a pointer to the delimiter, or NULL on an empty/oversized target. */
+static const char* parse_target(const char* p, urirun_descriptor_t* out) {
   const char* target_end = p;
   while (*target_end && *target_end != '/' && *target_end != '?' && *target_end != '#') {
     target_end++;
   }
-  if (target_end == p) return -1;
-  if (copy_token(out->target, p, (size_t)(target_end - p)) != 0) return -1;
+  if (target_end == p) return NULL;
+  if (copy_token(out->target, p, (size_t)(target_end - p)) != 0) return NULL;
+  return target_end;
+}
 
-  if (*target_end != '/') {
-    out->segment_count = 0;
-    return 0;
-  }
-
+/* Split the path (starting just past the leading '/') into out->segments.
+   Returns 0 on success, -1 on overflow/oversized segment. */
+static int parse_segments(const char* p, urirun_descriptor_t* out) {
   out->segment_count = 0;
-  p = target_end + 1;
   while (!is_path_end(*p)) {
     if (out->segment_count >= URIHANDLER_MAX_SEGMENTS) return -1;
     const char* next = p;
@@ -53,4 +45,22 @@ int urirun_parse(const char* uri, urirun_descriptor_t* out) {
     p = next + 1;
   }
   return 0;
+}
+
+int urirun_parse(const char* uri, urirun_descriptor_t* out) {
+  if (!uri || !out) return -1;
+  memset(out, 0, sizeof(*out));
+
+  const char* scheme_end = strstr(uri, "://");
+  if (!scheme_end || scheme_end == uri) return -1;
+  if (copy_token(out->package_name, uri, (size_t)(scheme_end - uri)) != 0) return -1;
+
+  const char* target_end = parse_target(scheme_end + 3, out);
+  if (!target_end) return -1;
+
+  if (*target_end != '/') {
+    out->segment_count = 0;
+    return 0;
+  }
+  return parse_segments(target_end + 1, out);
 }

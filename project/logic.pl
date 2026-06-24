@@ -1,5 +1,5 @@
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urirun', '0.4.122', 'javascript').
+project_metadata('urirun', '0.4.123', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/bash/example/hash-connector.sh', 10, 'shell').
@@ -41,7 +41,7 @@ project_file('adapters/python/tests/test_minimal_imports.py', 91, 'python').
 project_file('adapters/python/tests/test_no_urirun_shadow.py', 15, 'python').
 project_file('adapters/python/tests/test_node_client.py', 321, 'python').
 project_file('adapters/python/tests/test_node_diagnostics.py', 46, 'python').
-project_file('adapters/python/tests/test_node_extracted.py', 112, 'python').
+project_file('adapters/python/tests/test_node_extracted.py', 141, 'python').
 project_file('adapters/python/tests/test_openapi_import.py', 49, 'python').
 project_file('adapters/python/tests/test_param_routing.py', 59, 'python').
 project_file('adapters/python/tests/test_planfile_adapter.py', 344, 'python').
@@ -82,12 +82,12 @@ project_file('adapters/python/urirun/host/discovery.py', 361, 'python').
 project_file('adapters/python/urirun/host/document_sync.py', 400, 'python').
 project_file('adapters/python/urirun/host/domain_monitor.py', 486, 'python').
 project_file('adapters/python/urirun/host/fs_transfer.py', 207, 'python').
-project_file('adapters/python/urirun/host/host_dashboard.py', 9976, 'python').
+project_file('adapters/python/urirun/host/host_dashboard.py', 9978, 'python').
 project_file('adapters/python/urirun/host/host_db.py', 541, 'python').
 project_file('adapters/python/urirun/host/host_integrations.py', 356, 'python').
 project_file('adapters/python/urirun/host/object_registry.py', 108, 'python').
 project_file('adapters/python/urirun/host/planfile_adapter.py', 280, 'python').
-project_file('adapters/python/urirun/host/scanner_bridge.py', 174, 'python').
+project_file('adapters/python/urirun/host/scanner_bridge.py', 319, 'python').
 project_file('adapters/python/urirun/host/scheduler.py', 134, 'python').
 project_file('adapters/python/urirun/host/service_control.py', 365, 'python').
 project_file('adapters/python/urirun/host/task_planner.py', 372, 'python').
@@ -105,7 +105,7 @@ project_file('adapters/python/urirun/node/flow.py', 607, 'python').
 project_file('adapters/python/urirun/node/formatting.py', 79, 'python').
 project_file('adapters/python/urirun/node/keyauth.py', 174, 'python').
 project_file('adapters/python/urirun/node/manage.py', 370, 'python').
-project_file('adapters/python/urirun/node/mesh.py', 1860, 'python').
+project_file('adapters/python/urirun/node/mesh.py', 1865, 'python').
 project_file('adapters/python/urirun/node/paths.py', 39, 'python').
 project_file('adapters/python/urirun/node/recovery.py', 233, 'python').
 project_file('adapters/python/urirun/node/routing.py', 144, 'python').
@@ -172,12 +172,13 @@ project_file('tests/test_host_db.py', 39, 'python').
 project_file('tests/test_host_discovery.py', 82, 'python').
 project_file('tests/test_host_fs_transfer.py', 33, 'python').
 project_file('tests/test_host_object_registry.py', 90, 'python').
+project_file('tests/test_host_scanner_bridge.py', 164, 'python').
 project_file('tests/test_host_service_control.py', 145, 'python').
 project_file('tests/test_node_flow_recovery.py', 90, 'python').
 project_file('tests/test_urirun.py', 12, 'python').
 project_file('tests/test_v2_service_auth.py', 47, 'python').
 project_file('tree.sh', 5, 'shell').
-project_file('v1/js/urirun-v1.js', 335, 'javascript').
+project_file('v1/js/urirun-v1.js', 344, 'javascript').
 
 % ── Python Functions ─────────────────────────────────────
 python_function('adapters/conformance.py', 'essential', 1, 3, 4).
@@ -335,6 +336,8 @@ python_function('adapters/python/tests/test_no_urirun_shadow.py', 'test_urirun_i
 python_function('adapters/python/tests/test_node_diagnostics.py', '_template_registry', 0, 1, 1).
 python_function('adapters/python/tests/test_node_diagnostics.py', 'test_concrete_uri_resolves_against_host_template', 0, 3, 5).
 python_function('adapters/python/tests/test_node_diagnostics.py', 'test_template_route_denied_without_allow_still_resolves', 0, 3, 4).
+python_function('adapters/python/tests/test_node_extracted.py', 'test_enroll_token_is_short_and_console_safe', 0, 3, 3).
+python_function('adapters/python/tests/test_node_extracted.py', 'test_enroll_token_rotation_replaces_pin_and_reprints', 1, 5, 8).
 python_function('adapters/python/tests/test_node_extracted.py', 'test_uri_is_available_matches_concrete_against_templated_route', 0, 8, 1).
 python_function('adapters/python/tests/test_node_extracted.py', 'test_normalize_flow_accepts_concrete_uri_for_templated_route', 0, 2, 1).
 python_function('adapters/python/tests/test_node_extracted.py', 'test_node_url_resolves_name_then_bare_then_url', 0, 5, 1).
@@ -768,7 +771,7 @@ python_function('adapters/python/urirun/host/host_dashboard.py', '_recent_scanne
 python_function('adapters/python/urirun/host/host_dashboard.py', 'service_live_views', 3, 12, 11).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_scanner_best_update', 2, 3, 9).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_scanner_best_take', 1, 3, 3).
-python_function('adapters/python/urirun/host/host_dashboard.py', '_scanner_bridge_deps', 0, 1, 3).
+python_function('adapters/python/urirun/host/host_dashboard.py', '_scanner_bridge_deps', 0, 1, 4).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_crop_overlay_attachment', 6, 1, 2).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_register_document_artifact', 2, 1, 2).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_scanner_result_content', 4, 1, 1).
@@ -791,11 +794,11 @@ python_function('adapters/python/urirun/host/host_dashboard.py', '_ensure_best_o
 python_function('adapters/python/urirun/host/host_dashboard.py', '_store_best_finish', 5, 6, 3).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_best_crop_and_ocr', 1, 3, 2).
 python_function('adapters/python/urirun/host/host_dashboard.py', 'scanner_best_finish', 3, 14, 23).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'scanner_session', 2, 6, 10).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'uri_event', 2, 5, 5).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'page_action_enqueue', 1, 5, 11).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'page_action_poll', 2, 4, 6).
-python_function('adapters/python/urirun/host/host_dashboard.py', 'page_action_result', 2, 4, 4).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'scanner_session', 2, 1, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'uri_event', 2, 1, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'page_action_enqueue', 1, 1, 2).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'page_action_poll', 2, 1, 1).
+python_function('adapters/python/urirun/host/host_dashboard.py', 'page_action_result', 2, 1, 2).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_uri_action_catalog', 0, 1, 0).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_uri_action_lookup', 1, 4, 3).
 python_function('adapters/python/urirun/host/host_dashboard.py', '_uri_mode', 1, 3, 3).
@@ -978,6 +981,13 @@ python_function('adapters/python/urirun/host/scanner_bridge.py', 'crop_overlay_a
 python_function('adapters/python/urirun/host/scanner_bridge.py', 'register_document_artifact', 3, 7, 6).
 python_function('adapters/python/urirun/host/scanner_bridge.py', 'scanner_result_content', 4, 9, 2).
 python_function('adapters/python/urirun/host/scanner_bridge.py', 'register_scanner_result', 3, 10, 12).
+python_function('adapters/python/urirun/host/scanner_bridge.py', '_add_log', 5, 3, 1).
+python_function('adapters/python/urirun/host/scanner_bridge.py', 'scanner_session', 3, 5, 9).
+python_function('adapters/python/urirun/host/scanner_bridge.py', '_first', 3, 2, 1).
+python_function('adapters/python/urirun/host/scanner_bridge.py', 'uri_event', 3, 4, 4).
+python_function('adapters/python/urirun/host/scanner_bridge.py', 'page_action_enqueue', 2, 4, 10).
+python_function('adapters/python/urirun/host/scanner_bridge.py', 'page_action_poll', 2, 4, 6).
+python_function('adapters/python/urirun/host/scanner_bridge.py', 'page_action_result', 3, 3, 3).
 python_function('adapters/python/urirun/host/scheduler.py', 'build_loop_command', 0, 4, 3).
 python_function('adapters/python/urirun/host/scheduler.py', 'shell_join', 1, 2, 2).
 python_function('adapters/python/urirun/host/scheduler.py', 'systemd_units', 0, 2, 1).
@@ -1179,7 +1189,7 @@ python_function('adapters/python/urirun/node/mesh.py', '_sse_initial_cursor', 3,
 python_function('adapters/python/urirun/node/mesh.py', '_sse_event_matches', 3, 4, 3).
 python_function('adapters/python/urirun/node/mesh.py', '_sse_frame', 1, 3, 4).
 python_function('adapters/python/urirun/node/mesh.py', '_warn_unauthenticated_node', 5, 4, 2).
-python_function('adapters/python/urirun/node/mesh.py', '_start_enroll_token_rotation', 2, 1, 5).
+python_function('adapters/python/urirun/node/mesh.py', '_start_enroll_token_rotation', 2, 2, 6).
 python_function('adapters/python/urirun/node/mesh.py', '_announce_node_started', 5, 4, 7).
 python_function('adapters/python/urirun/node/mesh.py', 'serve_node', 18, 13, 17).
 python_function('adapters/python/urirun/node/mesh.py', '_serve_opts_merged', 2, 14, 5).
@@ -1836,6 +1846,11 @@ python_function('tests/test_host_object_registry.py', 'test_host_registry_routes
 python_function('tests/test_host_object_registry.py', 'test_service_contacts_marks_external_scanner_state', 0, 5, 1).
 python_function('tests/test_host_object_registry.py', 'test_service_contacts_replaces_default_with_in_process_scanner', 0, 6, 2).
 python_function('tests/test_host_object_registry.py', 'test_annotate_node_tokens_never_raises', 0, 2, 2).
+python_function('tests/test_host_scanner_bridge.py', 'test_register_scanner_result_uses_document_pdf_as_canonical_artifact', 1, 6, 5).
+python_function('tests/test_host_scanner_bridge.py', 'test_register_scanner_result_registers_camera_scan_without_document', 1, 5, 5).
+python_function('tests/test_host_scanner_bridge.py', 'test_scanner_session_logs_and_adds_chat_message', 0, 7, 4).
+python_function('tests/test_host_scanner_bridge.py', 'test_uri_event_logs_js_event', 0, 5, 3).
+python_function('tests/test_host_scanner_bridge.py', 'test_page_action_queue_round_trip', 0, 5, 5).
 python_function('tests/test_host_service_control.py', 'test_service_restart_argv_systemd_payload_unit', 0, 3, 1).
 python_function('tests/test_host_service_control.py', 'test_service_restart_argv_env_command', 1, 3, 2).
 python_function('tests/test_host_service_control.py', 'test_chat_service_restart_argv_builds_port_replace_command', 2, 6, 4).
@@ -2286,6 +2301,13 @@ python_method('FakeHostDb', 'register_artifact', 5, 2, 2).
 python_method('FakeHostDb', 'list_artifacts', 3, 4, 2).
 python_method('FakeHostDb', 'artifacts_by_ids', 2, 3, 1).
 python_method('FakeHostDb', 'delete_artifacts', 2, 3, 2).
+python_class('tests/test_host_scanner_bridge.py', 'BridgeRecorder').
+python_method('BridgeRecorder', '__init__', 0, 1, 0).
+python_method('BridgeRecorder', 'deps', 0, 1, 1).
+python_method('BridgeRecorder', 'register_artifact', 5, 1, 1).
+python_method('BridgeRecorder', 'chat_message', 2, 3, 0).
+python_method('BridgeRecorder', 'add_chat_message', 2, 1, 1).
+python_method('BridgeRecorder', 'add_log', 4, 1, 1).
 python_class('tests/test_v2_service_auth.py', '_Resp').
 python_method('_Resp', '__enter__', 0, 1, 0).
 python_method('_Resp', '__exit__', 0, 1, 0).

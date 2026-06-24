@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import quote
+
+
+PAGE_ACTION_LOCK = threading.Lock()
+PAGE_ACTION_QUEUES: dict[str, list[dict]] = {}
 
 
 @dataclass(frozen=True)
@@ -12,6 +20,7 @@ class ScannerBridgeDeps:
     register_artifact: Callable[[str | None, str, str, str, dict], Any]
     chat_message: Callable[..., dict]
     add_chat_message: Callable[[str | None, dict], Any]
+    add_log: Callable[[str | None, str, str, dict], Any] | None = None
 
 
 def crop_overlay_attachment(
@@ -51,7 +60,9 @@ def register_document_artifact(
     document: dict,
 ) -> tuple[Any, dict]:
     """Register the canonical document-pdf artifact; return (artifact_row, chat_attachment)."""
-    document_id = str(document.get("duplicateOf") or document.get("docId") or meta.get("sha256") or "")
+    document_id = str(
+        document.get("duplicateOf") or document.get("docId") or meta.get("sha256") or ""
+    )
     document_uri = str(document.get("uri") or f"document://host/{quote(document_id, safe='')}")
     document_meta = {
         "document": document,
@@ -144,7 +155,11 @@ def register_scanner_result(
             "path": None,
             "meta": meta,
             "skipped": True,
-            "reason": "document-pdf artifact is canonical" if document_artifact else "staged display image is not available",
+            "reason": (
+                "document-pdf artifact is canonical"
+                if document_artifact
+                else "staged display image is not available"
+            ),
         }
     primary_artifact = document_artifact or scan_artifact
     content = scanner_result_content(content_prefix, crop, document, ocr)
@@ -171,3 +186,133 @@ def register_scanner_result(
         "primaryArtifact": primary_artifact,
         "message": message,
     }
+
+
+def _add_log(deps: ScannerBridgeDeps, db: str | None, stream: str, event: str, detail: dict) -> None:
+    if deps.add_log is None:
+        return
+    try:
+        deps.add_log(db, stream, event, detail)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def scanner_session(deps: ScannerBridgeDeps, db: str | None, payload: dict) -> dict:
+    event = str(payload.get("event") or "open")
+    fingerprint = json.dumps({
+        "event": event,
+        "userAgent": payload.get("userAgent", ""),
+        "href": payload.get("href", ""),
+        "at": payload.get("at", ""),
+    }, sort_keys=True)
+    digest = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()
+    uri = f"scanner://host/session/{digest[:16]}"
+    detail = {
+        "uri": uri,
+        "event": event,
+        "selectedTargets": ["service:phone-scanner"],
+        "href": payload.get("href"),
+        "width": payload.get("width"),
+        "height": payload.get("height"),
+        "userAgent": payload.get("userAgent", ""),
+        "at": payload.get("at"),
+        "tracks": payload.get("tracks") or [],
+    }
+    label = (
+        "Phone scanner opened"
+        if event == "open"
+        else "Phone scanner camera started"
+        if event == "camera-started"
+        else f"Phone scanner {event}"
+    )
+    message = deps.chat_message("system", label, detail=detail)
+    _add_log(deps, db, "scanner-session", event, detail)
+    deps.add_chat_message(db, message)
+    return {"ok": True, "uri": uri, "message": message}
+
+
+def _first(query: dict[str, list[str]], name: str, default: str | None = None) -> str | None:
+    values = query.get(name)
+    return values[0] if values else default
+
+
+def uri_event(deps: ScannerBridgeDeps, db: str | None, query: dict[str, list[str]]) -> dict:
+    event = _first(query, "e", "event") or "event"
+    detail = {
+        "site": _first(query, "s", ""),
+        "event": event,
+        "path": _first(query, "p", ""),
+        "url": _first(query, "u", ""),
+        "referrer": _first(query, "r", ""),
+        "label": _first(query, "l", ""),
+        "value": _first(query, "v", ""),
+        "raw": {
+            key: values[0] if len(values) == 1 else values
+            for key, values in query.items()
+        },
+    }
+    _add_log(deps, db, "uri-js", event, detail)
+    return {"ok": True, "event": event}
+
+
+def page_action_enqueue(
+    deps: ScannerBridgeDeps,
+    db: str | None,
+    *,
+    target: str,
+    uri: str,
+    payload: dict | None = None,
+    mode: str = "execute",
+    source: str = "host",
+    uri_mode: Callable[[Any], str],
+    utc_now: Callable[[], str],
+) -> dict:
+    target = (target or "scanner").strip() or "scanner"
+    action_id = hashlib.sha256(
+        f"{time.time_ns()}:{target}:{uri}".encode("utf-8")
+    ).hexdigest()[:16]
+    item = {
+        "id": action_id,
+        "target": target,
+        "uri": uri,
+        "payload": payload or {},
+        "mode": uri_mode(mode),
+        "source": source,
+        "createdAt": utc_now(),
+    }
+    with PAGE_ACTION_LOCK:
+        queue = PAGE_ACTION_QUEUES.setdefault(target, [])
+        queue.append(item)
+        PAGE_ACTION_QUEUES[target] = queue[-50:]
+    _add_log(deps, db, "page-action", "queued", item)
+    return {"ok": True, "queued": True, "target": target, "action": item}
+
+
+def page_action_poll(target: str = "scanner", limit: int = 4) -> dict:
+    target = (target or "scanner").strip() or "scanner"
+    limit = max(1, min(20, int(limit or 4)))
+    with PAGE_ACTION_LOCK:
+        queue = PAGE_ACTION_QUEUES.get(target, [])
+        actions = queue[:limit]
+        PAGE_ACTION_QUEUES[target] = queue[limit:]
+    return {"ok": True, "target": target, "actions": actions, "count": len(actions)}
+
+
+def page_action_result(
+    deps: ScannerBridgeDeps,
+    db: str | None,
+    payload: dict,
+    *,
+    utc_now: Callable[[], str],
+) -> dict:
+    detail = {
+        "id": payload.get("id"),
+        "target": payload.get("target") or "scanner",
+        "uri": payload.get("uri"),
+        "ok": payload.get("ok"),
+        "error": payload.get("error"),
+        "result": payload.get("result"),
+        "at": payload.get("at") or utc_now(),
+    }
+    _add_log(deps, db, "page-action", "result", detail)
+    return {"ok": True, "result": detail}

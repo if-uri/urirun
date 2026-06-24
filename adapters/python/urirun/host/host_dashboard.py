@@ -73,11 +73,18 @@ from .object_registry import (
     service_contacts as _service_contacts_impl,
 )
 from .scanner_bridge import (
+    PAGE_ACTION_LOCK as _SCANNER_PAGE_ACTION_LOCK,
+    PAGE_ACTION_QUEUES as _SCANNER_PAGE_ACTION_QUEUES,
     ScannerBridgeDeps,
     crop_overlay_attachment as _crop_overlay_attachment_impl,
+    page_action_enqueue as _page_action_enqueue_impl,
+    page_action_poll as _page_action_poll_impl,
+    page_action_result as _page_action_result_impl,
     register_document_artifact as _register_document_artifact_impl,
     register_scanner_result as _register_scanner_result_impl,
+    scanner_session as _scanner_session_impl,
     scanner_result_content as _scanner_result_content_impl,
+    uri_event as _uri_event_impl,
 )
 from .service_control import (
     chat_service_restart_argv as _chat_service_restart_argv_impl,
@@ -139,8 +146,8 @@ _DOCUMENT_INDEX_LOCK = threading.Lock()
 _SCANNER_BEST_LOCK = threading.Lock()
 _SCANNER_BEST_SESSIONS: dict[str, dict] = {}
 _SCANNER_LIVE_STREAMS: dict[str, dict] = {}
-_PAGE_ACTION_LOCK = threading.Lock()
-_PAGE_ACTION_QUEUES: dict[str, list[dict]] = {}
+_PAGE_ACTION_LOCK = _SCANNER_PAGE_ACTION_LOCK
+_PAGE_ACTION_QUEUES = _SCANNER_PAGE_ACTION_QUEUES
 
 
 INDEX_HTML = r"""<!doctype html>
@@ -6978,6 +6985,7 @@ def _scanner_bridge_deps() -> ScannerBridgeDeps:
         ),
         chat_message=_chat_message,
         add_chat_message=_add_chat_message,
+        add_log=lambda db, stream, event, detail: _host_db().add_log(db, stream, event, detail),
     )
 
 
@@ -7463,53 +7471,11 @@ def scanner_best_finish(project: str, db: str | None, payload: dict) -> dict:
 
 
 def scanner_session(db: str | None, payload: dict) -> dict:
-    event = str(payload.get("event") or "open")
-    fingerprint = json.dumps({
-        "event": event,
-        "userAgent": payload.get("userAgent", ""),
-        "href": payload.get("href", ""),
-        "at": payload.get("at", ""),
-    }, sort_keys=True)
-    digest = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()
-    uri = f"scanner://host/session/{digest[:16]}"
-    detail = {
-        "uri": uri,
-        "event": event,
-        "selectedTargets": ["service:phone-scanner"],
-        "href": payload.get("href"),
-        "width": payload.get("width"),
-        "height": payload.get("height"),
-        "userAgent": payload.get("userAgent", ""),
-        "at": payload.get("at"),
-        "tracks": payload.get("tracks") or [],
-    }
-    label = "Phone scanner opened" if event == "open" else "Phone scanner camera started" if event == "camera-started" else f"Phone scanner {event}"
-    message = _chat_message("system", label, detail=detail)
-    try:
-        _host_db().add_log(db, "scanner-session", event, detail)
-    except Exception:  # noqa: BLE001
-        pass
-    _add_chat_message(db, message)
-    return {"ok": True, "uri": uri, "message": message}
+    return _scanner_session_impl(_scanner_bridge_deps(), db, payload)
 
 
 def uri_event(db: str | None, query: dict[str, list[str]]) -> dict:
-    event = _first(query, "e", "event") or "event"
-    detail = {
-        "site": _first(query, "s", ""),
-        "event": event,
-        "path": _first(query, "p", ""),
-        "url": _first(query, "u", ""),
-        "referrer": _first(query, "r", ""),
-        "label": _first(query, "l", ""),
-        "value": _first(query, "v", ""),
-        "raw": {key: values[0] if len(values) == 1 else values for key, values in query.items()},
-    }
-    try:
-        _host_db().add_log(db, "uri-js", event, detail)
-    except Exception:  # noqa: BLE001
-        pass
-    return {"ok": True, "event": event}
+    return _uri_event_impl(_scanner_bridge_deps(), db, query)
 
 
 def page_action_enqueue(
@@ -7521,53 +7487,25 @@ def page_action_enqueue(
     mode: str = "execute",
     source: str = "host",
 ) -> dict:
-    target = (target or "scanner").strip() or "scanner"
-    action_id = hashlib.sha256(f"{time.time_ns()}:{target}:{uri}".encode("utf-8")).hexdigest()[:16]
-    item = {
-        "id": action_id,
-        "target": target,
-        "uri": uri,
-        "payload": payload or {},
-        "mode": _uri_mode(mode),
-        "source": source,
-        "createdAt": _utc_now(),
-    }
-    with _PAGE_ACTION_LOCK:
-        queue = _PAGE_ACTION_QUEUES.setdefault(target, [])
-        queue.append(item)
-        _PAGE_ACTION_QUEUES[target] = queue[-50:]
-    try:
-        _host_db().add_log(db, "page-action", "queued", item)
-    except Exception:  # noqa: BLE001
-        pass
-    return {"ok": True, "queued": True, "target": target, "action": item}
+    return _page_action_enqueue_impl(
+        _scanner_bridge_deps(),
+        db,
+        target=target,
+        uri=uri,
+        payload=payload,
+        mode=mode,
+        source=source,
+        uri_mode=_uri_mode,
+        utc_now=_utc_now,
+    )
 
 
 def page_action_poll(target: str = "scanner", limit: int = 4) -> dict:
-    target = (target or "scanner").strip() or "scanner"
-    limit = max(1, min(20, int(limit or 4)))
-    with _PAGE_ACTION_LOCK:
-        queue = _PAGE_ACTION_QUEUES.get(target, [])
-        actions = queue[:limit]
-        _PAGE_ACTION_QUEUES[target] = queue[limit:]
-    return {"ok": True, "target": target, "actions": actions, "count": len(actions)}
+    return _page_action_poll_impl(target, limit)
 
 
 def page_action_result(db: str | None, payload: dict) -> dict:
-    detail = {
-        "id": payload.get("id"),
-        "target": payload.get("target") or "scanner",
-        "uri": payload.get("uri"),
-        "ok": payload.get("ok"),
-        "error": payload.get("error"),
-        "result": payload.get("result"),
-        "at": payload.get("at") or _utc_now(),
-    }
-    try:
-        _host_db().add_log(db, "page-action", "result", detail)
-    except Exception:  # noqa: BLE001
-        pass
-    return {"ok": True, "result": detail}
+    return _page_action_result_impl(_scanner_bridge_deps(), db, payload, utc_now=_utc_now)
 
 
 def _uri_action_catalog() -> list[dict]:

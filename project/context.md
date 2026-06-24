@@ -7,10 +7,10 @@
 - **Primary Language**: python
 - **Languages**: python: 98, json: 13, shell: 10, yaml: 4, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1552
+- **Total Functions**: 1564
 - **Total Classes**: 30
 - **Modules**: 157
-- **Entry Points**: 522
+- **Entry Points**: 526
 
 ## Architecture by Module
 
@@ -29,7 +29,7 @@
 - **File**: `mesh.py`
 
 ### v1.js.urirun-v1
-- **Functions**: 65
+- **Functions**: 68
 - **File**: `urirun-v1.js`
 
 ### adapters.python.urirun
@@ -216,10 +216,9 @@ Falls back to full discovery (and refreshes the index) when the schem
 ### examples.node-file-transfer.fs_transfer.write_b64
 - **Calls**: examples.node-file-transfer.fs_transfer._expand_path, final.with_name, tmp.write_bytes, tmp.replace, target.parent.mkdir, examples.node-file-transfer.fs_transfer._unique_path, base64.b64decode, str
 
-### adapters.python.urirun.runtime.v2._cmd_doctor
-> Report the resolved urirun binary, version and interpreter, plus connector
-health — the fastest way to diagnose a version split (stale binary on PATH)
-- **Calls**: getattr, print, print, print, print, adapters.python.urirun.runtime.v2.connector_health, adapters.python.urirun.runtime.v2._package_version, reglib._emit_json
+### adapters.python.urirun.host.discovery.node_test_routes
+> Probe a node's URIs and report which respond.
+- **Calls**: None.strip, node_url_from_config, adapters.python.urirun.host.discovery._route_targets, adapters.python.urirun.host.discovery._node_test_summary, None.strip, node_token_for, node_client, adapters.python.urirun.host.discovery._probe_route
 
 ## Process Flows
 
@@ -398,6 +397,7 @@ Key functions that process and transform data:
 - **Output to**: adapters.js.String, adapters.js.match, adapters.js.Error, adapters.js.split, adapters.js.filter
 
 ### adapters.c.urirun.urirun_parse
+- **Output to**: adapters.c.urirun.memset, adapters.c.urirun.sizeof, adapters.c.urirun.strstr, adapters.c.urirun.copy_token, adapters.c.urirun.parse_target
 
 ### adapters.python.urirun.parse_uri
 - **Output to**: URI_RE.match, str, ValueError, m.group, unquote
@@ -412,6 +412,25 @@ Key functions that process and transform data:
 
 ### adapters.python.urirun.host.host_db._validate_record
 - **Output to**: None.validate, dataset.get, Draft202012Validator
+
+### adapters.python.urirun.host.service_control.process_cmdline
+- **Output to**: open, None.decode, None.replace, fh.read
+
+### adapters.python.urirun.host.service_control.is_dashboard_process
+> True only for a urirun host dashboard serve process.
+- **Output to**: adapters.python.urirun.host.service_control._cmdline_contains
+
+### adapters.python.urirun.host.service_control.is_scanner_process
+- **Output to**: adapters.python.urirun.host.service_control._cmdline_contains
+
+### adapters.python.urirun.host.service_control.is_chat_process
+- **Output to**: adapters.python.urirun.host.service_control._cmdline_contains
+
+### adapters.python.urirun.host.service_control.free_port_from_matching_processes
+- **Output to**: getpid_fn, holders, targets, adapters.python.urirun.host.service_control._signal_pids, holders
+
+### adapters.python.urirun.host.document_sync._parse_sync_params
+- **Output to**: None.resolve, adapters.python.urirun.host.document_sync._resolve_node_params, adapters.python.urirun.host.document_sync._build_sync_params, None.strip, None.expanduser
 
 ### adapters.python.urirun.runtime.cli._add_connectors_subparser
 > The `connectors` command tree (list/show/install/index/resolve/check/lint/
@@ -457,30 +476,6 @@ verify/new/smoke/from-spe
 
 ### adapters.python.urirun.runtime.v2._run_parse
 - **Output to**: reglib.parse_uri, reglib.translate, _RunAbort, str, str
-
-### adapters.python.urirun.runtime.v2._run_validate
-- **Output to**: adapters.python.urirun.runtime.v2.validate_input, _RunAbort
-
-### adapters.python.urirun.runtime.v2.parse_param_declaration
-> Parse a compact CLI param declaration.
-
-Supported forms:
-- ``name``
-- ``name:type``
-- ``name:type:re
-- **Output to**: left.split, None.strip, None.get, declaration.split, ValueError
-
-### adapters.python.urirun.runtime.v2.validate_binding_document
-- **Output to**: adapters.python.urirun.runtime.v2.expand_bindings, binding.get, config.get, set, set
-
-### adapters.python.urirun.runtime.v2._parse_dockerfile_labels
-- **Output to**: re.compile, re.compile, None.splitlines, label_re.match, pair_re.findall
-
-### adapters.python.urirun.runtime.v2._cmd_validate
-- **Output to**: adapters.python.urirun.runtime.v2.validate_binding_document, adapters.python.urirun.runtime.v2._load_json_arg, Path, reglib._emit_json, print
-
-### adapters.python.urirun.runtime._runtime.format_route_table
-- **Output to**: out.extend, None.join, max, None.rstrip, line
 
 ## Behavioral Patterns
 
@@ -590,19 +585,19 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.v2.validate_binding_document` - 24 calls
 - `adapters.python.urirun.connectors.connector_lint.lint_connector` - 24 calls
 - `adapters.python.urirun.connectors.resolver.resolve` - 24 calls
-- `adapters.python.urirun.host.host_dashboard.startup_phone_qr` - 24 calls
 - `adapters.python.urirun.node.mesh.watch_command` - 24 calls
+- `adapters.python.urirun.host.host_dashboard.startup_phone_qr` - 24 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
-- `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.host.document_sync.sync_documents_to_node` - 23 calls
+- `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.host.host_dashboard.node_add` - 23 calls
 - `adapters.python.urirun.runtime.errors.problem` - 22 calls
 - `adapters.python.urirun.connectors.resolver.index_local` - 22 calls
 - `adapters.python.urirun.host.host_dashboard.uri_invoke` - 22 calls
 - `adapters.python.urirun.host.host_db.search_records` - 21 calls
+- `adapters.python.urirun.node.mesh.probe_command` - 21 calls
 - `adapters.python.urirun.host.host_dashboard.chat_history` - 21 calls
 - `adapters.python.urirun.host.host_dashboard.ensure_phone_scanner_service` - 21 calls
-- `adapters.python.urirun.host.host_dashboard.scanner_live_state` - 21 calls
 
 ## System Interactions
 

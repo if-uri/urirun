@@ -69,7 +69,8 @@ Near-term extraction targets:
   token annotations moved behind dashboard wrappers.
 - `host/scanner_bridge.py` for dashboard-to-scanner API glue. First split
   landed: scanner result registration, document-pdf/camera-scan artifact
-  selection and chat attachments moved behind dashboard wrappers.
+  selection, chat attachments, scanner session logging and page-action queues
+  moved behind dashboard wrappers.
 
 ## Landed (2026-06-23)
 

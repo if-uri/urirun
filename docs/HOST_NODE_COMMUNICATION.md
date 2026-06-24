@@ -99,6 +99,22 @@ There are two separate gates:
   this flag, route execution is still constrained by node allow patterns and
   per-route policy.
 
+Two distinct credentials, do not confuse them:
+
+- **Enrollment PIN** (`--key-auth`): a short, console-safe code (≤7 chars) printed
+  as line 2 of the startup banner. It only authorizes `uri-copy-id` key enrollment.
+  It is **valid for 10 minutes**, then the node rotates it and prints a fresh
+  `TOKEN:` line to stdout — validation reads the current value live, so a leaked or
+  expired PIN cannot enroll a key. In-memory, regenerated each restart.
+- **Admin token** (`--admin-token` / `--generate-token`): a persistent 32-char hex
+  token (`secrets.token_hex(16)`) for `POST /deploy` and `urirun host deploy --token`.
+  With `--generate-token` it is persisted (0600) at `~/.urirun-node/admin-token`;
+  read it there, not from the rotating PIN line.
+
+Startup banner (stdout): line 1 = `[urirun] <version> · node '<name>' · <url>`,
+line 2 = the enrollment PIN (with `--key-auth`) or how to read the admin token,
+followed by the machine `urirun.node.started` JSON event.
+
 Node execution policy is the conjunction of:
 
 - node serve mode (`--execute` or config `execute: true`),
@@ -152,6 +168,8 @@ Then choose the route family by evidence:
 For a fresh or reinstalled node:
 
 ```bash
+# TOKEN = the ≤7-char enrollment PIN on the node console (rotates every 10 min); once the
+# key is enrolled, later host -> node calls authorize by signing with -i / --identity (no PIN).
 uri-copy-id http://NODE:8765 -i ~/.ssh/id_ed25519 --enroll-token TOKEN
 urirun host routes --node-url laptop=http://NODE:8765 --json
 urirun host deploy --node-url laptop=http://NODE:8765 laptop \

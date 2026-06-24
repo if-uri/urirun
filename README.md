@@ -3,11 +3,11 @@
 
 ## AI Cost Tracking
 
-![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.123-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![AI Cost](https://img.shields.io/badge/AI%20Cost-$6.22-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-73.7h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.124-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![AI Cost](https://img.shields.io/badge/AI%20Cost-$6.30-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-73.9h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
 
-- 🤖 **LLM usage:** $6.2182 (239 commits)
-- 👤 **Human dev:** ~$7369 (73.7h @ $100/h, 30min dedup)
+- 🤖 **LLM usage:** $6.3031 (240 commits)
+- 👤 **Human dev:** ~$7388 (73.9h @ $100/h, 30min dedup)
 
 Generated on 2026-06-24 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
 
@@ -335,10 +335,28 @@ Execution remains explicit: `host ask` is dry-run unless `--execute` is passed,
 and `node serve` executes only when started with `--execute` or configured with
 `execute: true`.
 
-For a remotely managed node, enroll the host key once, deploy additive route
-surfaces with `--merge`, and verify the result before dispatching work:
+On startup the node prints, on **stdout**, a two-line human banner followed by the
+machine `urirun.node.started` JSON event:
+
+```text
+[urirun] urirun 0.4.x · node 'laptop' · http://laptop.local:8765         ← line 1: version
+TOKEN: 6FA5LJ  (≤7 chars · valid 10 min, then rotates — new TOKEN here)  ← line 2: enrollment PIN
+{"event":"urirun.node.started", …, "version":"0.4.x"}
+```
+
+With `--key-auth`, line 2 is a short **enrollment PIN** (≤7 console-safe chars) that
+gates `uri-copy-id`. It is **valid for 10 minutes**, then the node auto-rotates it and
+prints a fresh `TOKEN:` line to stdout — a leaked PIN cannot enroll a key forever. The
+PIN only authorizes key enrollment; it is **not** the 32-char `--admin-token` (that one
+is persisted at `~/.urirun-node/admin-token` and used for `/deploy`/`--token`). Without
+`--key-auth`, line 2 instead says how to read the admin token.
+
+For a remotely managed node, enroll the host key once (quoting the PIN shown on the
+node console), deploy additive route surfaces with `--merge`, and verify the result
+before dispatching work:
 
 ```bash
+# TOKEN = the ≤7-char enrollment PIN currently printed on the node's console (rotates every 10 min)
 uri-copy-id http://laptop.local:8765 -i ~/.ssh/id_ed25519 --enroll-token TOKEN
 
 urirun host deploy laptop \

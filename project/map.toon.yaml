@@ -1,15 +1,15 @@
-# urirun | 157f 35680L | yaml:4,txt:3,shell:10,python:98,yml:2,json:13,javascript:3,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,c:1,cpp:1,csharp:4,ruby:2 | 2026-06-24
-# generated in 0.03s
-# stats: 1552 func | 0 cls | 157 mod | CC̄=4.6 | critical:3 | cycles:0
+# urirun | 157f 35825L | yaml:4,txt:3,shell:10,python:98,yml:2,json:13,javascript:3,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,c:2,csharp:4,ruby:2 | 2026-06-24
+# generated in 0.04s
+# stats: 1564 func | 0 cls | 157 mod | CC̄=4.6 | critical:1 | cycles:0
 # alerts[5]: fan-out _archive_scanned_document=43; fan-out create_handler=40; fan-out _write_document_pdf=32; fan-out serve=30; fan-out _add_host_subparser=27
 # hotspots[5]: _archive_scanned_document fan=43; create_handler fan=40; _write_document_pdf fan=32; serve fan=30; _add_host_subparser fan=27
-# evolution: CC̄ 4.7→4.6 (improved -0.1)
+# evolution: CC̄ 4.6→4.6 (flat 0.0)
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
 M[157]:
   Makefile,134
   adapters/bash/example/hash-connector.sh,9
   adapters/bash/urirun.sh,17
-  adapters/c/urirun.h,13
+  adapters/c/urirun.c,66
   adapters/c/urirun_test.c,18
   adapters/conformance.py,167
   adapters/csharp/Program.cs,7
@@ -61,12 +61,12 @@ M[157]:
   adapters/python/urirun/host/document_sync.py,399
   adapters/python/urirun/host/domain_monitor.py,485
   adapters/python/urirun/host/fs_transfer.py,206
-  adapters/python/urirun/host/host_dashboard.py,10039
+  adapters/python/urirun/host/host_dashboard.py,9977
   adapters/python/urirun/host/host_db.py,540
   adapters/python/urirun/host/host_integrations.py,355
   adapters/python/urirun/host/object_registry.py,107
   adapters/python/urirun/host/planfile_adapter.py,279
-  adapters/python/urirun/host/scanner_bridge.py,173
+  adapters/python/urirun/host/scanner_bridge.py,318
   adapters/python/urirun/host/scheduler.py,133
   adapters/python/urirun/host/service_control.py,364
   adapters/python/urirun/host/task_planner.py,371
@@ -162,76 +162,8 @@ M[157]:
   security/mesh-probe/probe.py,114
   testql-scenarios/generated-from-pytests.testql.toon.yaml,10
   tree.sh,4
-  v1/js/urirun-v1.js,334
+  v1/js/urirun-v1.js,343
 D:
-  v1/js/urirun-v1.js:
-    i: node:child_process,node:path
-    e: DEFAULT_TIMEOUT,OUTPUT_LIMIT,parseUri,match,segments,query,translate,inferKind,defaultAdapter,registryTree,setRoute,translation,bucket,compileRegistryDocument,routeRows,globMatch,parts,mergePolicy,evaluatePolicy,merged,deny,allow,allowed,check,descriptor,translation,routeEntry,tokenize,resolveParams,spec,current,renderValue,renderCommand,hasPlaceholders,truncate,renderedEnv,runProcess,result,envFlags,config,base,command,config,rendered,tokens,config,inner,config,inner,method,response,run,merged,descriptor,translation,tree,routeEntry,decision,executor,result,listRoutes,merged,expandBinding,expandBindings,compileRegistry
-    DEFAULT_TIMEOUT()
-    OUTPUT_LIMIT()
-    parseUri()
-    match()
-    segments()
-    query()
-    translate()
-    inferKind()
-    defaultAdapter()
-    registryTree()
-    setRoute()
-    translation()
-    bucket()
-    compileRegistryDocument()
-    routeRows()
-    globMatch()
-    parts()
-    mergePolicy()
-    evaluatePolicy()
-    merged()
-    deny()
-    allow()
-    allowed()
-    check()
-    descriptor()
-    translation()
-    routeEntry()
-    tokenize()
-    resolveParams()
-    spec()
-    current()
-    renderValue()
-    renderCommand()
-    hasPlaceholders()
-    truncate()
-    renderedEnv()
-    runProcess()
-    result()
-    envFlags()
-    config()
-    base()
-    command()
-    config()
-    rendered()
-    tokens()
-    config()
-    inner()
-    config()
-    inner()
-    method()
-    response()
-    run()
-    merged()
-    descriptor()
-    translation()
-    tree()
-    routeEntry()
-    decision()
-    executor()
-    result()
-    listRoutes()
-    merged()
-    expandBinding()
-    expandBindings()
-    compileRegistry()
   adapters/python/urirun/node/client.py:
     e: NodeClient,_get,_post
     NodeClient: __init__(3),_auth(1),routes(0),get(1),concretize(2),run(6),run_async(3),cancel(1),status(1),deploy(6),schemes(0),_route_key(0),_has_route(1),_collect_scheme_specs(0),_narrow_specs_to_route(2),_load_module_source(0),_local_connector_deploy_payload(1),_ensure_via_host_deploy(3),_try_adopt_scheme(3),_ensure_via_discovery_install(5),_ensure_via_node_bindings(5),ensure_scheme(4),run_ensuring(3),request_capability(2),_read_folder_files(1),push_folder(3),value(0),resolve_refs(1),recent_log(1),_watch_query_params(2),watch(5),stream_run(3)  # Drive one urirun node: ``c = NodeClient("http://host:8765");...
@@ -277,6 +209,36 @@ Connector a...
     connector_main()
     _connector_cli_routes(sub;pairs)
     _connector_run_command(conn;binding;args)
+  adapters/python/urirun/host/discovery.py:
+    e: iter_node_alias_values,add_node_aliases,node_spec_aliases,alias_map_from_dict,alias_map_from_list,node_alias_map_from_value,normalize_known_node_url,url_map_from_dict,url_map_from_list,node_url_map_from_value,node_dicts_from_url_map,node_alias_map_from_config_doc,node_alias_map_from_env,node_alias_map_from_node_urls,known_nodes_file_data,node_alias_map_from_known_nodes_file,known_nodes_file_urls,merge_known_nodes_into_config,host_config,node_alias_map_from_context,prompt_node_match,route_inputs_example,_classify_not_found,classify_route_run,_route_targets,_probe_route,_node_test_summary,node_test_routes
+    iter_node_alias_values(value)
+    add_node_aliases(out;name;aliases)
+    node_spec_aliases(spec;fallback_name)
+    alias_map_from_dict(value)
+    alias_map_from_list(value)
+    node_alias_map_from_value(value)
+    normalize_known_node_url(raw)
+    url_map_from_dict(value)
+    url_map_from_list(value)
+    node_url_map_from_value(value)
+    node_dicts_from_url_map(nodes)
+    node_alias_map_from_config_doc(config_doc)
+    node_alias_map_from_env()
+    node_alias_map_from_node_urls(node_urls)
+    known_nodes_file_data()
+    node_alias_map_from_known_nodes_file()
+    known_nodes_file_urls()
+    merge_known_nodes_into_config(config_doc)
+    host_config(mesh;config;node_urls)
+    node_alias_map_from_context(config_doc;node_urls)
+    prompt_node_match(prompt;alias_map)
+    route_inputs_example(route)
+    _classify_not_found(err)
+    classify_route_run(envelope;value)
+    _route_targets(payload;routemap)
+    _probe_route(client;uri;route;missing_sel)
+    _node_test_summary(node;node_url;mode;results)
+    node_test_routes(payload)
   adapters/python/urirun/host/fs_transfer.py:
     e: route_key,node_has_route,fs_file_transfer_binding,fs_file_transfer_fallback_bindings,_short_value,deploy_fs_file_transfer_fallback,ensure_node_uri_routes
     route_key(uri)
@@ -601,6 +563,76 @@ Connector a...
     registry_from_routes(routes)
     target_nodes(prompt;nodes;explicit)
     route_targets_for_nodes(routes;node_names)
+  adapters/python/urirun/node/mesh.py:
+    e: EventHub,NodeContext,NodeHandler,_data_bindings,_data_init,_data_dataset_create,_data_datasets,_data_record_upsert,_data_records,_data_artifact_register,_data_artifacts,_data_check_add,_data_checks,_data_sql,data_command,monitor_command,_host_delegated_command,fulfill_need,supply_command,ensure_command,_maybe_ensure_scheme,_run_streamed,run_command,_print_event,watch_command,_watch_loop,_host_cmd_config,_host_cmd_nodes,_host_cmd_routes,_host_cmd_agents,_host_cmd_ask,_host_mesh_command,copy_id_command,copy_id_cli,_split_deploy_doc,deploy_command,_maybe_load_dotenv,host_command,send_json,read_raw,read_json,_pool_executors,_probe_one_route,_render_probe_report,probe_command,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_registry_to_bindings,_deploy_registry,_reimport_pushed_code,_apply_deploy_surface,_apply_deploy_allow,apply_deploy,_parse_sse_query,_sse_initial_cursor,_sse_event_matches,_sse_frame,_warn_unauthenticated_node,_start_enroll_token_rotation,_announce_node_started,serve_node,_serve_opts_merged,_resolve_serve_opts,_node_serve,node_list_command,node_stop_command,node_command
+    EventHub: __init__(1),publish(1),subscribe(0),unsubscribe(1),replay_since(1),current_id(0),count(0)  # In-memory pub/sub for a node's live event stream (SSE). Each...
+    NodeContext: __init__(0)  # Everything a NodeHandler needs to serve one node — the mutab...
+    NodeHandler(BaseHTTPRequestHandler): do_OPTIONS(0),_guarded(1),do_GET(0),do_POST(0),_health_payload(0),_routes_payload(0),_get(0),_get_errors(2),_post(0),_run_target(2),_publish_run(2),_validate_run_request(1),_dispatch_control_uri(3),_respond_async(4),_handle_run(0),_handle_adopt(2),_handle_need(2),_handle_run_control(1),_stream_events(0),_admin_ok(1),_run_ok(1),_handle_deploy(0),_handle_enroll(0),log_message(1)  # The node's HTTP surface. State/config live on `self.server.c...
+    _data_bindings(args;host_db)
+    _data_init(args;host_db)
+    _data_dataset_create(args;host_db)
+    _data_datasets(args;host_db)
+    _data_record_upsert(args;host_db)
+    _data_records(args;host_db)
+    _data_artifact_register(args;host_db)
+    _data_artifacts(args;host_db)
+    _data_check_add(args;host_db)
+    _data_checks(args;host_db)
+    _data_sql(args;host_db)
+    data_command(args)
+    monitor_command(args)
+    _host_delegated_command(args)
+    fulfill_need(client;need;roots)
+    supply_command(args)
+    ensure_command(args)
+    _maybe_ensure_scheme(client;uri;ensure;roots)
+    _run_streamed(client;uri;payload;args;timeout)
+    run_command(args)
+    _print_event(ev;as_json)
+    watch_command(args)
+    _watch_loop(url)
+    _host_cmd_config(args;config;mesh)
+    _host_cmd_nodes(args;config;mesh)
+    _host_cmd_routes(args;config;mesh)
+    _host_cmd_agents(args;config;mesh)
+    _host_cmd_ask(args;config;mesh)
+    _host_mesh_command(args;config;mesh)
+    copy_id_command(args)
+    copy_id_cli(argv)
+    _split_deploy_doc(path)
+    deploy_command(args)
+    _maybe_load_dotenv(path)
+    host_command(args)
+    send_json(handler;status;payload)
+    read_raw(handler)
+    read_json(handler)
+    _pool_executors(pools)
+    _probe_one_route(url;route;etag0;execute;timeout)
+    _render_probe_report(report)
+    probe_command(args)
+    resolve_admin_token(explicit;config_token;generate)
+    _write_pushed_code(code;summary)
+    _apply_deploy_env(env;summary)
+    _registry_to_bindings(registry)
+    _deploy_registry(body;existing)
+    _reimport_pushed_code(pushed_mods;summary)
+    _apply_deploy_surface(state;body)
+    _apply_deploy_allow(state;body;summary)
+    apply_deploy(state;body)
+    _parse_sse_query(query)
+    _sse_initial_cursor(hub;params;headers)
+    _sse_event_matches(ev;schemes;runs)
+    _sse_frame(ev)
+    _warn_unauthenticated_node(name;host;port;execute;run_auth_enforced)
+    _start_enroll_token_rotation(ctx;public_url)
+    _announce_node_started(name;host;port;state;execute)
+    serve_node(name;registry;host;port;execute;public_url;allow_secrets;allow;pool;admin_token;key_auth;require_run_auth;manage;registry_path;config_path;kind;runtime;services)
+    _serve_opts_merged(args;node)
+    _resolve_serve_opts(args;node)
+    _node_serve(args;node;name;registry)
+    node_list_command(args)
+    node_stop_command(args)
+    node_command(args)
   adapters/python/urirun/node/transport.py:
     e: http_json,_probe_health,_listening_ports_local,node_list_running,_pids_on_port,stop_node_port,parse_ports,_deploy_allow_list,_annotate_deploy_allow_compat,deploy_to_node,_watch_node_url,_watch_node_headers,_parse_sse_line,watch_node,event_topic,_mqtt_publish_fn,fanout_to_mqtt,copy_id,discover_node,discover_mesh
     http_json(method;url;body;timeout;headers;raw)
@@ -970,106 +1002,6 @@ Connector a...
     serve(project;db;config;host;port;node_urls;token;identity;tls_cert;tls_key;startup_qr;qr_url)
     command(args)
     default_host()
-  adapters/python/urirun/host/discovery.py:
-    e: iter_node_alias_values,add_node_aliases,node_spec_aliases,alias_map_from_dict,alias_map_from_list,node_alias_map_from_value,normalize_known_node_url,url_map_from_dict,url_map_from_list,node_url_map_from_value,node_dicts_from_url_map,node_alias_map_from_config_doc,node_alias_map_from_env,node_alias_map_from_node_urls,known_nodes_file_data,node_alias_map_from_known_nodes_file,known_nodes_file_urls,merge_known_nodes_into_config,host_config,node_alias_map_from_context,prompt_node_match,route_inputs_example,_classify_not_found,classify_route_run,_route_targets,_probe_route,_node_test_summary,node_test_routes
-    iter_node_alias_values(value)
-    add_node_aliases(out;name;aliases)
-    node_spec_aliases(spec;fallback_name)
-    alias_map_from_dict(value)
-    alias_map_from_list(value)
-    node_alias_map_from_value(value)
-    normalize_known_node_url(raw)
-    url_map_from_dict(value)
-    url_map_from_list(value)
-    node_url_map_from_value(value)
-    node_dicts_from_url_map(nodes)
-    node_alias_map_from_config_doc(config_doc)
-    node_alias_map_from_env()
-    node_alias_map_from_node_urls(node_urls)
-    known_nodes_file_data()
-    node_alias_map_from_known_nodes_file()
-    known_nodes_file_urls()
-    merge_known_nodes_into_config(config_doc)
-    host_config(mesh;config;node_urls)
-    node_alias_map_from_context(config_doc;node_urls)
-    prompt_node_match(prompt;alias_map)
-    route_inputs_example(route)
-    _classify_not_found(err)
-    classify_route_run(envelope;value)
-    _route_targets(payload;routemap)
-    _probe_route(client;uri;route;missing_sel)
-    _node_test_summary(node;node_url;mode;results)
-    node_test_routes(payload)
-  adapters/python/urirun/node/mesh.py:
-    e: EventHub,NodeContext,NodeHandler,_data_bindings,_data_init,_data_dataset_create,_data_datasets,_data_record_upsert,_data_records,_data_artifact_register,_data_artifacts,_data_check_add,_data_checks,_data_sql,data_command,monitor_command,_host_delegated_command,fulfill_need,supply_command,ensure_command,_maybe_ensure_scheme,_run_streamed,run_command,_print_event,watch_command,_watch_loop,_host_cmd_config,_host_cmd_nodes,_host_cmd_routes,_host_cmd_agents,_host_cmd_ask,_host_mesh_command,copy_id_command,copy_id_cli,_split_deploy_doc,deploy_command,_maybe_load_dotenv,host_command,send_json,read_raw,read_json,_pool_executors,_probe_one_route,_render_probe_report,probe_command,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_registry_to_bindings,_deploy_registry,_reimport_pushed_code,_apply_deploy_surface,_apply_deploy_allow,apply_deploy,_parse_sse_query,_sse_initial_cursor,_sse_event_matches,_sse_frame,_warn_unauthenticated_node,_start_enroll_token_rotation,_announce_node_started,serve_node,_serve_opts_merged,_resolve_serve_opts,_node_serve,node_list_command,node_stop_command,node_command
-    EventHub: __init__(1),publish(1),subscribe(0),unsubscribe(1),replay_since(1),current_id(0),count(0)  # In-memory pub/sub for a node's live event stream (SSE). Each...
-    NodeContext: __init__(0)  # Everything a NodeHandler needs to serve one node — the mutab...
-    NodeHandler(BaseHTTPRequestHandler): do_OPTIONS(0),_guarded(1),do_GET(0),do_POST(0),_health_payload(0),_routes_payload(0),_get(0),_get_errors(2),_post(0),_run_target(2),_publish_run(2),_validate_run_request(1),_dispatch_control_uri(3),_respond_async(4),_handle_run(0),_handle_adopt(2),_handle_need(2),_handle_run_control(1),_stream_events(0),_admin_ok(1),_run_ok(1),_handle_deploy(0),_handle_enroll(0),log_message(1)  # The node's HTTP surface. State/config live on `self.server.c...
-    _data_bindings(args;host_db)
-    _data_init(args;host_db)
-    _data_dataset_create(args;host_db)
-    _data_datasets(args;host_db)
-    _data_record_upsert(args;host_db)
-    _data_records(args;host_db)
-    _data_artifact_register(args;host_db)
-    _data_artifacts(args;host_db)
-    _data_check_add(args;host_db)
-    _data_checks(args;host_db)
-    _data_sql(args;host_db)
-    data_command(args)
-    monitor_command(args)
-    _host_delegated_command(args)
-    fulfill_need(client;need;roots)
-    supply_command(args)
-    ensure_command(args)
-    _maybe_ensure_scheme(client;uri;ensure;roots)
-    _run_streamed(client;uri;payload;args;timeout)
-    run_command(args)
-    _print_event(ev;as_json)
-    watch_command(args)
-    _watch_loop(url)
-    _host_cmd_config(args;config;mesh)
-    _host_cmd_nodes(args;config;mesh)
-    _host_cmd_routes(args;config;mesh)
-    _host_cmd_agents(args;config;mesh)
-    _host_cmd_ask(args;config;mesh)
-    _host_mesh_command(args;config;mesh)
-    copy_id_command(args)
-    copy_id_cli(argv)
-    _split_deploy_doc(path)
-    deploy_command(args)
-    _maybe_load_dotenv(path)
-    host_command(args)
-    send_json(handler;status;payload)
-    read_raw(handler)
-    read_json(handler)
-    _pool_executors(pools)
-    _probe_one_route(url;route;etag0;execute;timeout)
-    _render_probe_report(report)
-    probe_command(args)
-    resolve_admin_token(explicit;config_token;generate)
-    _write_pushed_code(code;summary)
-    _apply_deploy_env(env;summary)
-    _registry_to_bindings(registry)
-    _deploy_registry(body;existing)
-    _reimport_pushed_code(pushed_mods;summary)
-    _apply_deploy_surface(state;body)
-    _apply_deploy_allow(state;body;summary)
-    apply_deploy(state;body)
-    _parse_sse_query(query)
-    _sse_initial_cursor(hub;params;headers)
-    _sse_event_matches(ev;schemes;runs)
-    _sse_frame(ev)
-    _warn_unauthenticated_node(name;host;port;execute;run_auth_enforced)
-    _start_enroll_token_rotation(ctx;public_url)
-    _announce_node_started(name;host;port;state;execute)
-    serve_node(name;registry;host;port;execute;public_url;allow_secrets;allow;pool;admin_token;key_auth;require_run_auth;manage;registry_path;config_path;kind;runtime;services)
-    _serve_opts_merged(args;node)
-    _resolve_serve_opts(args;node)
-    _node_serve(args;node;name;registry)
-    node_list_command(args)
-    node_stop_command(args)
-    node_command(args)
   scripts/lint_connectors.py:
     e: classify,lint_fleet,_flags,_print_fleet_report,_lint_exit_code,main
     classify(rep)
@@ -1078,6 +1010,21 @@ Connector a...
     _print_fleet_report(rows)
     _lint_exit_code(rows;strict)
     main(argv)
+  adapters/python/urirun/host/document_sync.py:
+    e: DocumentSyncDeps,_SyncParams,boolish,document_archive_pdfs,document_sync_verification,_log_and_chat_report,_resolve_node_params,_parse_sync_params,_build_sync_params,_check_preflight,_upload_file,_read_back_file,sync_documents_to_node
+    DocumentSyncDeps:
+    _SyncParams:
+    boolish(value;default)
+    document_archive_pdfs(root)
+    document_sync_verification(files;results)
+    _log_and_chat_report(db;deps;report)
+    _resolve_node_params(payload;config;deps;node_urls)
+    _parse_sync_params(payload;config;deps;node_urls)
+    _build_sync_params(payload;deps)
+    _check_preflight(params;files;deps;token;identity)
+    _upload_file(source;params;deps;token;identity)
+    _read_back_file(item;params;deps;token;identity)
+    sync_documents_to_node(project;db;config;payload)
   adapters/python/urirun/runtime/errors.py:
     e: store_path,_normalize_message,error_code,_match_message_rules,_errno_category,classify,category_meta,address,help_url,stamp,record,problem,_append,_load,fix_hints,info,_aggregate,recent,search,to_ticket,bindings,capture,_emit,_require_arg,_cmd_recent,_cmd_info,_cmd_search,_cmd_ticket,_cmd_categories,_cmd_bindings,main
     store_path(store)
@@ -1197,21 +1144,13 @@ Connector a...
     _roots_from_args(args)
     index_command(args)
     resolve_command(args)
-  adapters/python/urirun/host/document_sync.py:
-    e: DocumentSyncDeps,_SyncParams,boolish,document_archive_pdfs,document_sync_verification,_log_and_chat_report,_resolve_node_params,_parse_sync_params,_build_sync_params,_check_preflight,_upload_file,_read_back_file,sync_documents_to_node
-    DocumentSyncDeps:
-    _SyncParams:
-    boolish(value;default)
-    document_archive_pdfs(root)
-    document_sync_verification(files;results)
-    _log_and_chat_report(db;deps;report)
-    _resolve_node_params(payload;config;deps;node_urls)
-    _parse_sync_params(payload;config;deps;node_urls)
-    _build_sync_params(payload;deps)
-    _check_preflight(params;files;deps;token;identity)
-    _upload_file(source;params;deps;token;identity)
-    _read_back_file(item;params;deps;token;identity)
-    sync_documents_to_node(project;db;config;payload)
+  adapters/python/urirun/host/object_registry.py:
+    e: host_registry_routes,host_object,phone_scanner_contact,service_contacts,annotate_node_tokens
+    host_registry_routes(actions)
+    host_object(project;routes)
+    phone_scanner_contact(scanner_state)
+    service_contacts()
+    annotate_node_tokens(nodes;node_token_for)
   adapters/python/urirun/host/task_planner.py:
     e: PlannedTicket,TaskPlanningResult,normalize_text,slug,_json_from_text,is_ambiguous,is_destructive,_has_any,_unique,_short_name,_ambiguous_plan,_derive_plan_labels,_derive_acceptance_criteria,heuristic_plan_chat_request,quiet_completion,llm_plan_chat_request,plan_chat_request,ticket_payload,create_tickets_from_plan
     PlannedTicket(BaseModel):
@@ -1281,13 +1220,77 @@ Connector a...
     recovery_plan(error)
     can_retry_step(error)
     planner_failure(exc)
-  adapters/python/urirun/host/object_registry.py:
-    e: host_registry_routes,host_object,phone_scanner_contact,service_contacts,annotate_node_tokens
-    host_registry_routes(actions)
-    host_object(project;routes)
-    phone_scanner_contact(scanner_state)
-    service_contacts()
-    annotate_node_tokens(nodes;node_token_for)
+  v1/js/urirun-v1.js:
+    i: node:child_process,node:path
+    e: DEFAULT_TIMEOUT,OUTPUT_LIMIT,parseUri,match,segments,query,translate,inferKind,defaultAdapter,registryTree,setRoute,translation,bucket,compileRegistryDocument,routeRows,globMatch,parts,mergePolicy,evaluatePolicy,merged,deny,allow,allowed,check,descriptor,translation,routeEntry,tokenize,resolveParams,spec,missing,resolveParamDefaults,current,renderValue,renderCommand,hasPlaceholders,truncate,renderedEnv,runProcess,result,envFlags,config,base,command,config,rendered,tokens,config,inner,config,inner,method,response,run,merged,descriptor,translation,tree,routeEntry,decision,executor,_executeRoute,result,listRoutes,merged,expandBinding,expandBindings,compileRegistry
+    DEFAULT_TIMEOUT()
+    OUTPUT_LIMIT()
+    parseUri()
+    match()
+    segments()
+    query()
+    translate()
+    inferKind()
+    defaultAdapter()
+    registryTree()
+    setRoute()
+    translation()
+    bucket()
+    compileRegistryDocument()
+    routeRows()
+    globMatch()
+    parts()
+    mergePolicy()
+    evaluatePolicy()
+    merged()
+    deny()
+    allow()
+    allowed()
+    check()
+    descriptor()
+    translation()
+    routeEntry()
+    tokenize()
+    resolveParams()
+    spec()
+    missing()
+    resolveParamDefaults()
+    current()
+    renderValue()
+    renderCommand()
+    hasPlaceholders()
+    truncate()
+    renderedEnv()
+    runProcess()
+    result()
+    envFlags()
+    config()
+    base()
+    command()
+    config()
+    rendered()
+    tokens()
+    config()
+    inner()
+    config()
+    inner()
+    method()
+    response()
+    run()
+    merged()
+    descriptor()
+    translation()
+    tree()
+    routeEntry()
+    decision()
+    executor()
+    _executeRoute()
+    result()
+    listRoutes()
+    merged()
+    expandBinding()
+    expandBindings()
+    compileRegistry()
   scripts/repin_connectors.py:
     e: find_root,pypi_has,repin_text,classify,_pypi_write_guard,_repin_one,main
     find_root(explicit)
@@ -1359,6 +1362,25 @@ Connector a...
     _route_log(rc)
     _route_flow(rc)
     run_uri_route(ctx;execute)
+  adapters/python/urirun/host/service_control.py:
+    e: payload_truthy,service_restart_argv,schedule_restart_command,_resolve_chat_service_script,_append_chat_restart_options,chat_service_restart_argv,restart_chat_service,port_holder_pids,process_cmdline,_cmdline_contains,is_dashboard_process,is_scanner_process,is_chat_process,_signal_pids,free_port_from_matching_processes,_free_port_result,free_port_from_old_dashboard
+    payload_truthy(value)
+    service_restart_argv(payload)
+    schedule_restart_command(argv;payload;meta)
+    _resolve_chat_service_script(payload)
+    _append_chat_restart_options(argv)
+    chat_service_restart_argv(project;db;config;node_urls;token;identity;payload)
+    restart_chat_service(payload)
+    port_holder_pids(port)
+    process_cmdline(pid)
+    _cmdline_contains(pid;terms)
+    is_dashboard_process(pid)
+    is_scanner_process(pid)
+    is_chat_process(pid)
+    _signal_pids(pids;sig)
+    free_port_from_matching_processes(port)
+    _free_port_result()
+    free_port_from_old_dashboard(port)
   adapters/python/urirun/runtime/tree.py:
     e: collect_uris,uri_tree,build,main
     collect_uris(document)
@@ -1392,25 +1414,6 @@ Connector a...
     _task_run(args;pa)
     _task_loop(args;pa)
     task_command(args)
-  adapters/python/urirun/host/service_control.py:
-    e: payload_truthy,service_restart_argv,schedule_restart_command,_resolve_chat_service_script,_append_chat_restart_options,chat_service_restart_argv,restart_chat_service,port_holder_pids,process_cmdline,_cmdline_contains,is_dashboard_process,is_scanner_process,is_chat_process,_signal_pids,free_port_from_matching_processes,_free_port_result,free_port_from_old_dashboard
-    payload_truthy(value)
-    service_restart_argv(payload)
-    schedule_restart_command(argv;payload;meta)
-    _resolve_chat_service_script(payload)
-    _append_chat_restart_options(argv)
-    chat_service_restart_argv(project;db;config;node_urls;token;identity;payload)
-    restart_chat_service(payload)
-    port_holder_pids(port)
-    process_cmdline(pid)
-    _cmdline_contains(pid;terms)
-    is_dashboard_process(pid)
-    is_scanner_process(pid)
-    is_chat_process(pid)
-    _signal_pids(pids;sig)
-    free_port_from_matching_processes(port)
-    _free_port_result()
-    free_port_from_old_dashboard(port)
   adapters/python/urirun/exec.py:
     e: _resolve,main
     _resolve(ref)
@@ -1442,12 +1445,19 @@ Connector a...
     _print_table(modules)
     main(argv)
   adapters/python/urirun/host/scanner_bridge.py:
-    e: ScannerBridgeDeps,crop_overlay_attachment,register_document_artifact,scanner_result_content,register_scanner_result
+    e: ScannerBridgeDeps,crop_overlay_attachment,register_document_artifact,scanner_result_content,register_scanner_result,_add_log,scanner_session,_first,uri_event,page_action_enqueue,page_action_poll,page_action_result
     ScannerBridgeDeps:
     crop_overlay_attachment(deps)
     register_document_artifact(deps;db;project)
     scanner_result_content(content_prefix;crop;document;ocr)
     register_scanner_result(deps;project;db)
+    _add_log(deps;db;stream;event;detail)
+    scanner_session(deps;db;payload)
+    _first(query;name;default)
+    uri_event(deps;db;query)
+    page_action_enqueue(deps;db)
+    page_action_poll(target;limit)
+    page_action_result(deps;db;payload)
   examples/matrix/verify.py:
     e: essential,main
     essential(doc)
@@ -1600,6 +1610,17 @@ Connector a...
     invocation()
     mod()
     fn()
+  adapters/c/urirun.c:
+    i: string.h,urirun.h
+    e: copy_token,memcpy,is_path_end,parse_target,parse_segments,urirun_parse,memset,parse_segments
+    copy_token()
+    memcpy()
+    is_path_end()
+    parse_target()
+    parse_segments()
+    urirun_parse()
+    memset()
+    parse_segments()
   adapters/python/urirun/host/host_integrations.py:
     e: planfile_task_bindings,_list_param,_ticket_id,_planfile_action,_planfile_project,_simulate_planfile,_read_planfile_action,_planfile_update,_planfile_dsl,_write_planfile_action,run_planfile_task,host_data_bindings,run_host_data,domain_monitor_bindings,run_domain_monitor
     planfile_task_bindings(target;project)
@@ -1792,10 +1813,6 @@ Connector a...
   adapters/rust/src/lib.rs:
     e: Connector
     Connector:
-  adapters/c/urirun.h:
-    i: stddef.h
-    e: urirun_parse
-    urirun_parse()
   adapters/python/urirun/runtime/cli.py:
     e: _add_connectors_subparser,_add_node_subparser,_add_host_task_subparser,_add_host_data_subparser,_add_host_monitor_subparser,_add_host_subparser,_build_parser
     _add_connectors_subparser(subparsers)

@@ -126,6 +126,12 @@ export function resolveParams(routeEntry, descriptor, translation, payload) {
   values.target = translation.target;
   translation.args.forEach((arg, index) => { values[String(index)] = arg; });
 
+  const missing = resolveParamDefaults(spec, values);
+  if (missing.length) throw Object.assign(new Error(`missing required params: ${missing.sort().join(', ')}`), { paramsError: true });
+  return values;
+}
+
+function resolveParamDefaults(spec, values) {
   const missing = [];
   for (const [name, rule = {}] of Object.entries(spec)) {
     const current = values[name];
@@ -134,8 +140,7 @@ export function resolveParams(routeEntry, descriptor, translation, payload) {
       else if (rule.required) missing.push(name);
     }
   }
-  if (missing.length) throw Object.assign(new Error(`missing required params: ${missing.sort().join(', ')}`), { paramsError: true });
-  return values;
+  return missing;
 }
 
 export function renderValue(value, params) {
@@ -275,15 +280,20 @@ export async function run(uri, registry, payload = null, { mode = 'dry-run', pol
     }
     return envelope;
   }
+  await _executeRoute(envelope, executor, ctx, merged, decision, confirm);
+  return envelope;
+}
+
+async function _executeRoute(envelope, executor, ctx, merged, decision, confirm) {
   if (!decision.allowed) {
     envelope.ok = false;
     envelope.error = { type: 'policy', message: decision.reason };
-    return envelope;
+    return;
   }
   if (decision.requireConfirm && !confirm) {
     envelope.ok = false;
     envelope.error = { type: 'confirm', message: 'route requires confirmation; pass confirm: true' };
-    return envelope;
+    return;
   }
   try {
     const result = await executor(ctx, merged, true);
@@ -293,7 +303,6 @@ export async function run(uri, registry, payload = null, { mode = 'dry-run', pol
     envelope.ok = false;
     envelope.error = { type: err.paramsError ? 'params' : err.name || 'Error', message: err.message };
   }
-  return envelope;
 }
 
 export function listRoutes(registry, policy) {
