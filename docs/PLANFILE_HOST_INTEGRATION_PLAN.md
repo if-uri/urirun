@@ -1,5 +1,9 @@
 # Plan integracji urirun host z planfile
 
+<!-- docs-nav -->
+📖 **Dokumentacja urirun:** [← README](../README.md) · [Komponenty](COMPONENTS.md) · [URI Objects](URI_OBJECTS.md) · [Łączenie node](NODE_CONNECTIONS.md) · [Dashboard & chat](HOST_DASHBOARD_CHAT.md) · [Host↔Node](HOST_NODE_COMMUNICATION.md) · [Sekrety](SECRETS.md) · [Archiwum dok.](DOCUMENT_ARCHIVE.md) · [Decision Loop](DECISION_LOOP.md) · [Roadmap](REFACTOR_ROADMAP.md) · [Podział paczek](URIRUN_PACKAGE_SPLIT_PLAN.md) · **Planfile**
+<!-- /docs-nav -->
+
 ## Cel
 
 `urirun host` ma zarządzać zadaniami, sprintami, statusami i realizacją prac przez

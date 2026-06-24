@@ -995,7 +995,7 @@ def _render_probe_report(report: dict) -> None:
             mark, extra = "DEGR", f"degraded: {r['degraded']} (route works but is mocked/simulated)"
         else:
             mark, extra = "ok", ""
-        print(f"  {mark:5} {r['uri']}" + (f"  {extra}" if extra else ""))
+        print(f"  {mark:5} {r['uri']}{'  ' + extra if extra else ''}")
     if report["stable"]:
         print(f"surface STABLE (generation {report['generation']})"
               + (f" — but {degraded} route(s) DEGRADED" if degraded else ""))

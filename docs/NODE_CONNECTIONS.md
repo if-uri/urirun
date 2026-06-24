@@ -1,5 +1,9 @@
 # Sposoby laczenia node, services i zewnetrznych runtime przez urirun
 
+<!-- docs-nav -->
+📖 **Dokumentacja urirun:** [← README](../README.md) · [Komponenty](COMPONENTS.md) · [URI Objects](URI_OBJECTS.md) · **Łączenie node** · [Dashboard & chat](HOST_DASHBOARD_CHAT.md) · [Host↔Node](HOST_NODE_COMMUNICATION.md) · [Sekrety](SECRETS.md) · [Archiwum dok.](DOCUMENT_ARCHIVE.md) · [Decision Loop](DECISION_LOOP.md) · [Roadmap](REFACTOR_ROADMAP.md) · [Podział paczek](URIRUN_PACKAGE_SPLIT_PLAN.md) · [Planfile](PLANFILE_HOST_INTEGRATION_PLAN.md)
+<!-- /docs-nav -->
+
 Ostatnia aktualizacja: 2026-06-24.
 
 Ten dokument zbiera w jednym miejscu aktualny, praktyczny model podlaczania
@@ -36,6 +40,25 @@ Najwazniejsze obiekty:
 | `connector` | paczka zdolnosci URI | `ocr://`, `fs://`, `smartcrop://` |
 | `widget` | zywy widok/status | live camera, service status |
 | `artifact` | gotowy plik/wynik | PDF, JSON OCR, screenshot |
+
+## Typy node w dashboardzie (zakladki)
+
+Widok Nodes ma zakladki wyboru typu node (`data-kind`, `selectNodeKind`); wybrana
+zakladka jest mirrorowana do URL jako `?kind=<typ>` (patrz HOST_DASHBOARD_CHAT.md
+"URL State"). Kazdy typ to inny sposob laczenia opisany nizej:
+
+| Zakladka | `data-kind` | Co to | Sposob / transport |
+| --- | --- | --- | --- |
+| 🖥️ Server | `server` | serwer/VM/kontener, dostep shell/SSH | Sposob 3 (`shell://`, deploy przez node) |
+| 💻 PC | `pc` | desktop z aplikacjami + shell | Sposob 2 (`app://`, `shell://`, `screen://`) |
+| 🪟 RDP | `rdp` | pulpit zdalny (RDP/VNC) — node po stronie zdalnego desktopu, obserwacja i wejscie | Sposob 2 (desktop) + `screen://`/`kvm://`; wymaga sesji graficznej |
+| 📱 Smartphone | `smartphone` | telefon: najpierw webpage (przegladarka mobilna), potem APK | Sposob 5 (`service:android-node`, QR) |
+| 🌐 Browser Debug | `browser-debug` | przegladarka przez Chrome DevTools Protocol | Sposob 4 (`browser://.../cdp/...`) |
+| 🧩 Chrome Plugin | `browser-chrome-plugin` | rozszerzenie Chrome jako node | Sposob 4 (load unpacked) |
+| 🧩 Firefox Plugin | `browser-firefox-plugin` | dodatek Firefox jako node | Sposob 4 (temporary add-on) |
+| 📄 Webpage | `webpage` | pojedyncza strona JS rejestrowana jako node | Sposob 4/5 (QR → webpage node) |
+| 🔌 API | `api` | zewnetrzne HTTP API z auth | Sposob 6 (`api://`, fetch + secret://) |
+| 🧩 Device | `device` | urzadzenie multi-API (non-HTTP czesto) | Sposob 7 (device connector) |
 
 ## Sposob 1: klasyczny urirun node
 

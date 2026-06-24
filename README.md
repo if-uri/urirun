@@ -3,11 +3,11 @@
 
 ## AI Cost Tracking
 
-![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.133-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![AI Cost](https://img.shields.io/badge/AI%20Cost-$10.82-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-75.7h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.134-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![AI Cost](https://img.shields.io/badge/AI%20Cost-$11.48-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-75.8h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
 
-- 🤖 **LLM usage:** $10.8244 (249 commits)
-- 👤 **Human dev:** ~$7570 (75.7h @ $100/h, 30min dedup)
+- 🤖 **LLM usage:** $11.4756 (250 commits)
+- 👤 **Human dev:** ~$7585 (75.8h @ $100/h, 30min dedup)
 
 Generated on 2026-06-24 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
 
@@ -20,6 +20,12 @@ registry.
 
 The GitHub repository is `if-uri/urirun`. The runtime, CLI, Python import namespace, JS package
 name, schema prefix, Docker labels, and C adapter names are all `urirun`.
+
+## Dokumentacja
+
+<!-- docs-nav -->
+📖 **Dokumentacja urirun:** [Komponenty](docs/COMPONENTS.md) · [URI Objects](docs/URI_OBJECTS.md) · [Łączenie node](docs/NODE_CONNECTIONS.md) · [Dashboard & chat](docs/HOST_DASHBOARD_CHAT.md) · [Host↔Node](docs/HOST_NODE_COMMUNICATION.md) · [Sekrety](docs/SECRETS.md) · [Archiwum dok.](docs/DOCUMENT_ARCHIVE.md) · [Decision Loop](docs/DECISION_LOOP.md) · [Roadmap](docs/REFACTOR_ROADMAP.md) · [Podział paczek](docs/URIRUN_PACKAGE_SPLIT_PLAN.md) · [Planfile](docs/PLANFILE_HOST_INTEGRATION_PLAN.md)
+<!-- /docs-nav -->
 
 ## Goal
 

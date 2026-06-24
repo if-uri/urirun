@@ -1,5 +1,9 @@
 # Komponenty systemu urirun
 
+<!-- docs-nav -->
+📖 **Dokumentacja urirun:** [← README](../README.md) · **Komponenty** · [URI Objects](URI_OBJECTS.md) · [Łączenie node](NODE_CONNECTIONS.md) · [Dashboard & chat](HOST_DASHBOARD_CHAT.md) · [Host↔Node](HOST_NODE_COMMUNICATION.md) · [Sekrety](SECRETS.md) · [Archiwum dok.](DOCUMENT_ARCHIVE.md) · [Decision Loop](DECISION_LOOP.md) · [Roadmap](REFACTOR_ROADMAP.md) · [Podział paczek](URIRUN_PACKAGE_SPLIT_PLAN.md) · [Planfile](PLANFILE_HOST_INTEGRATION_PLAN.md)
+<!-- /docs-nav -->
+
 Ten dokument opisuje podstawowe elementy systemu urirun i ich granice
 odpowiedzialności. Jest przeznaczony dla operatora i developera, który chce
 zrozumieć, z czego składa się urirun: host, node, service, connector, widget i

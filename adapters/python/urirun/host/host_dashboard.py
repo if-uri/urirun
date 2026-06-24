@@ -22,7 +22,6 @@ import textwrap
 import threading
 import time
 import unicodedata
-from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -9065,6 +9064,51 @@ def configured_node_api_request(config: str | None, node_urls: list[str] | None,
     return _configured_api_call(node, api, payload)
 
 
+def _node_remove_from_mirror(name: str) -> bool:
+    """Remove a node from the nodes.json urifix mirror; True if it was present (best-effort)."""
+    try:
+        nodes_path = os.environ.get("URIRUN_NODES_FILE") or os.path.expanduser("~/.urirun/nodes.json")
+        if not os.path.exists(nodes_path):
+            return False
+        with open(nodes_path, encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        inner = loaded.get("nodes") if isinstance(loaded, dict) else None
+        target = inner if isinstance(inner, dict) else (loaded if isinstance(loaded, dict) else {})
+        if name not in target:
+            return False
+        target.pop(name, None)
+        with open(nodes_path, "w", encoding="utf-8") as fh:
+            json.dump(loaded, fh, indent=2)
+        return True
+    except Exception:  # noqa: BLE001 - mirror cleanup is best-effort
+        return False
+
+
+def _node_remove_kind(name: str) -> None:
+    """Drop a node from the kind sidecar (best-effort)."""
+    try:
+        kinds = _node_kinds()
+        if name in kinds:
+            kinds.pop(name, None)
+            with open(_node_kinds_path(), "w", encoding="utf-8") as fh:
+                json.dump(kinds, fh, indent=2)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _node_forget_webpage(name: str) -> bool:
+    """Ask the android-node service (8195) to forget a transient webpage node."""
+    try:
+        import urllib.request
+        url = _android_node_service_url().rstrip("/") + "/api/webpage-node/forget"
+        req = urllib.request.Request(url, data=json.dumps({"name": name, "id": name}).encode(),
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return bool(json.loads(resp.read() or "{}").get("ok"))
+    except Exception:  # noqa: BLE001 - service may be down or lack the endpoint
+        return False
+
+
 def node_remove(config: str | None, payload: dict) -> dict:
     """Remove a node. Persistent nodes are dropped from host config + the nodes.json mirror +
     the kind sidecar. Transient (live webpage) nodes aren't in config — they are forgotten in
@@ -9089,45 +9133,11 @@ def node_remove(config: str | None, payload: dict) -> dict:
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": f"could not update host config: {exc}"}
 
-    # 2. nodes.json mirror (urifix)
-    try:
-        nodes_path = os.environ.get("URIRUN_NODES_FILE") or os.path.expanduser("~/.urirun/nodes.json")
-        if os.path.exists(nodes_path):
-            with open(nodes_path, encoding="utf-8") as fh:
-                loaded = json.load(fh)
-            inner = loaded.get("nodes") if isinstance(loaded, dict) else None
-            target = inner if isinstance(inner, dict) else (loaded if isinstance(loaded, dict) else {})
-            if name in target:
-                target.pop(name, None)
-                with open(nodes_path, "w", encoding="utf-8") as fh:
-                    json.dump(loaded, fh, indent=2)
-                removed = True
-    except Exception:  # noqa: BLE001 - mirror cleanup is best-effort
-        pass
-
-    # 3. kind sidecar
-    try:
-        kinds = _node_kinds()
-        if name in kinds:
-            kinds.pop(name, None)
-            kp = _node_kinds_path()
-            with open(kp, "w", encoding="utf-8") as fh:
-                json.dump(kinds, fh, indent=2)
-    except Exception:  # noqa: BLE001
-        pass
-
-    # 4. transient/live webpage node: ask the 8195 service to forget it
-    forgot = False
-    if transient or not removed:
-        try:
-            import urllib.request
-            url = _android_node_service_url().rstrip("/") + "/api/webpage-node/forget"
-            req = urllib.request.Request(url, data=json.dumps({"name": name, "id": name}).encode(),
-                                         headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=2) as resp:
-                forgot = bool(json.loads(resp.read() or "{}").get("ok"))
-        except Exception:  # noqa: BLE001 - service may be down or lack the endpoint
-            pass
+    # 2. nodes.json mirror (urifix)  3. kind sidecar  4. transient webpage forget
+    if _node_remove_from_mirror(name):
+        removed = True
+    _node_remove_kind(name)
+    forgot = _node_forget_webpage(name) if (transient or not removed) else False
 
     return {"ok": True, "name": name, "removed": removed, "forgot": forgot, "transient": transient}
 
@@ -9240,6 +9250,24 @@ def restart_android_node_service(payload: dict | None = None) -> dict:
     }
 
 
+def _webpage_node_dict(dev: dict, name: str, norm_routes: list) -> dict:
+    """A transient live-webpage node entry from one android-node relay device record."""
+    return {
+        "name": name,
+        "url": dev.get("nodeUrl") or "",
+        "displayUrl": dev.get("clientUrl") or dev.get("clientIp") or dev.get("pageUrl") or dev.get("nodeUrl") or "",
+        "relayUrl": dev.get("relayUrl") or dev.get("nodeUrl") or "",
+        "clientIp": dev.get("clientIp") or "",
+        "clientUrl": dev.get("clientUrl") or "",
+        "pageUrl": dev.get("pageUrl") or "",
+        "reachable": bool(dev.get("online")),
+        "kind": "webpage",
+        "transient": True,
+        "live": True,
+        "routes": norm_routes,
+    }
+
+
 def _merge_live_webpage_nodes(nodes: list) -> None:
     """Append live webpage nodes (browsers/phones that opened the android-node page in webpage
     mode) so they appear in the nodes list automatically — no manual save. They are transient:
@@ -9257,20 +9285,7 @@ def _merge_live_webpage_nodes(nodes: list) -> None:
             continue
         raw_routes = dev.get("routes") or []
         norm_routes = [r if isinstance(r, dict) else {"uri": str(r)} for r in raw_routes]
-        nodes.append({
-            "name": name,
-            "url": dev.get("nodeUrl") or "",
-            "displayUrl": dev.get("clientUrl") or dev.get("clientIp") or dev.get("pageUrl") or dev.get("nodeUrl") or "",
-            "relayUrl": dev.get("relayUrl") or dev.get("nodeUrl") or "",
-            "clientIp": dev.get("clientIp") or "",
-            "clientUrl": dev.get("clientUrl") or "",
-            "pageUrl": dev.get("pageUrl") or "",
-            "reachable": bool(dev.get("online")),
-            "kind": "webpage",
-            "transient": True,
-            "live": True,
-            "routes": norm_routes,
-        })
+        nodes.append(_webpage_node_dict(dev, name, norm_routes))
         existing.add(name)
 
 
