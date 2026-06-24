@@ -5753,14 +5753,21 @@ def _register_scanner_result(
     document: dict,
     content_prefix: str,
 ) -> dict:
-    # The staged crop/image is gone when the capture was a docid duplicate (cleaned up
-    # so duplicates don't pile up). Point the artifact at the existing document instead
-    # and skip the image attachment so we never emit a dangling preview.
+    # The staged crop/image can be gone when docid recognized a duplicate and cleaned
+    # staging. In that case do not register a second artifact row that points at the
+    # existing document PDF; the document-pdf artifact below is the canonical record.
     display_exists = Path(str(display_path)).expanduser().is_file()
-    primary_target = str(display_path)
-    if not display_exists and document.get("path"):
-        primary_target = str(document.get("path"))
-    artifact = _host_db().register_artifact(db, "camera-scan", uri, primary_target, meta)
+    if display_exists:
+        artifact = _host_db().register_artifact(db, "camera-scan", uri, str(display_path), meta)
+    else:
+        artifact = {
+            "kind": "camera-scan",
+            "uri": uri,
+            "path": None,
+            "meta": meta,
+            "skipped": True,
+            "reason": "staged display image is not available",
+        }
     attachments = []
     document_artifact = None
     overlay_path = str(meta.get("overlayPath") or "")

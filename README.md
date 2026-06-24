@@ -3,11 +3,11 @@
 
 ## AI Cost Tracking
 
-![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.91-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![AI Cost](https://img.shields.io/badge/AI%20Cost-$7.78-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-67.0h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.92-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![AI Cost](https://img.shields.io/badge/AI%20Cost-$7.83-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-68.3h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
 
-- 🤖 **LLM usage:** $7.7752 (207 commits)
-- 👤 **Human dev:** ~$6698 (67.0h @ $100/h, 30min dedup)
+- 🤖 **LLM usage:** $7.8335 (208 commits)
+- 👤 **Human dev:** ~$6827 (68.3h @ $100/h, 30min dedup)
 
 Generated on 2026-06-24 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
 
@@ -71,6 +71,8 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - `docs/URIRUN_PACKAGE_SPLIT_PLAN.md` - migration plan for splitting core,
   connectors, runtime SDKs and the host app (see its STATUS block for what's done)
 - `docs/REFACTOR_ROADMAP.md` - remaining refactor/security backlog and what landed
+- `docs/URI_OBJECTS.md` - working contract for URI Nodes, URI Services,
+  connectors, widgets and artifacts
 - `v1/` - parameter binding (`{name}` from payload/query), string shorthand, Docker adapters, and `env`/`stdin`/`cwd`/`timeout`
 - `v2/` - schema-first command packages (JSON Schema inputs, multi-language decorators, artifact adoption) + MCP/A2A interop for LLM/agent discovery
 - external docs: `https://github.com/if-uri/docs`

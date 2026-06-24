@@ -1544,6 +1544,41 @@ def test_scanner_best_finish_archives_best_candidate(monkeypatch, tmp_path):
     assert ocr_backends == ["tesseract", "tesseract", None]
 
 
+def test_duplicate_scanner_result_registers_only_canonical_document_artifact(monkeypatch, tmp_path):
+    fake_db = FakeHostDb()
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    original = tmp_path / "raw.jpg"
+    original.write_bytes(b"raw")
+    missing_crop = tmp_path / "missing-crop.jpg"
+    pdf = tmp_path / "document.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+
+    result = host_dashboard._register_scanner_result(
+        str(tmp_path),
+        ":memory:",
+        uri="scanner://host/capture/duplicate",
+        display_path=missing_crop,
+        original_path=original,
+        meta={"source": "phone", "displayPath": str(missing_crop)},
+        crop={"ok": True, "path": str(missing_crop)},
+        ocr={"ok": True, "text": "PARAGON", "chars": 7},
+        document={
+            "ok": True,
+            "duplicate": True,
+            "docId": "DOC-DUP",
+            "uri": "document://host/DOC-DUP",
+            "path": str(pdf),
+        },
+        content_prefix="Phone scan saved",
+    )
+
+    assert result["artifact"]["skipped"] is True
+    assert result["documentArtifact"]["path"] == str(pdf)
+    assert [item["kind"] for item in fake_db.artifacts] == ["document-pdf"]
+    assert fake_db.artifacts[0]["path"] == str(pdf)
+    assert [item["kind"] for item in fake_db.logs[-1]["detail"]["attachments"]] == ["document-pdf"]
+
+
 def test_archive_scanned_document_writes_pdf_json_index_and_detects_duplicate(monkeypatch, tmp_path):
     from PIL import Image
 
