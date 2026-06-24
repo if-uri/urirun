@@ -49,6 +49,17 @@ See also:
 The important rule is that chat is not a second protocol. It is an operator view
 over URI actions.
 
+For autonomous work, the dashboard also emits a `decisionLoop` block on supported
+deterministic flows. That block is the normalized control shape:
+
+```text
+intent -> flow -> execution/result -> observation -> nextIntent
+```
+
+`ChatMessage` remains the display envelope. `decisionLoop` is the machine-facing
+structure that says whether the run is `done`, `dry-run`, `blocked` or ready for
+another URI flow. See `docs/DECISION_LOOP.md`.
+
 ## Deterministic Intents
 
 Some common commands should not depend on an LLM, because their shape is stable
@@ -106,6 +117,8 @@ fs://<node>/file/command/write-b64
 If the selected node is not present in the host config and no transient
 `--node-url lenovo=http://...` was supplied, the sync step fails with a structured
 error. The dashboard then calls `urifix://` if that connector is installed.
+The resulting chat detail includes `decisionLoop.nextIntent`, so the UI can show
+the missing config action instead of treating the failed step as a blind retry.
 
 ## Recovery With urifix
 
@@ -285,4 +298,3 @@ or:
 ```bash
 PYTHONPATH=/home/tom/github/if-uri/urirun/adapters/python urirun run ...
 ```
-

@@ -7385,9 +7385,9 @@ def _decision_loop_for_document_sync(prompt: str, *, execute: bool, sync_node: s
                                      selected_targets: list[str], flow: dict, timeline: list[dict],
                                      error: dict | None = None, urifix: dict | None = None,
                                      sync_result: dict | None = None) -> dict:
-    status = "done" if execute and not error else ("blocked" if error else "dry-run")
     recovery = (urifix or {}).get("recovery") or []
     can_auto_retry = bool((urifix or {}).get("diagnosis", {}).get("canAutoRetry") or (urifix or {}).get("repaired"))
+    status = "done" if execute and not error else (("retryable" if can_auto_retry else "blocked") if error else "dry-run")
     next_intent = None
     if error:
         next_intent = {
@@ -7436,17 +7436,45 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
     prompt = str(payload.get("prompt") or "").strip()
     if not prompt:
         raise ValueError("prompt is required")
-    selected_nodes = [str(item).strip() for item in (payload.get("nodes") or []) if str(item).strip()]
-    selected_targets = [str(item).strip() for item in (payload.get("targets") or []) if str(item).strip()]
+    requested_nodes = [str(item).strip() for item in (payload.get("nodes") or []) if str(item).strip()]
+    requested_targets = [str(item).strip() for item in (payload.get("targets") or []) if str(item).strip()]
+    selected_nodes = list(requested_nodes)
+    selected_targets = list(requested_targets)
     if not selected_targets:
         selected_targets = ["host", *[f"node:{name}" for name in selected_nodes]]
     selected_nodes = _selected_nodes_from_targets(selected_nodes, selected_targets)
     execute = bool(payload.get("execute"))
     no_llm = bool(payload.get("no_llm") or payload.get("noLlm"))
+    user_selected_nodes = list(selected_nodes)
+    user_selected_targets = list(selected_targets)
+    user_intent = None
+    if _is_document_sync_prompt(prompt):
+        preview_node = _document_sync_node_from_prompt(prompt, selected_nodes)
+        preview_target = f"node:{preview_node}"
+        user_selected_targets = list(selected_targets)
+        if preview_target not in user_selected_targets:
+            user_selected_targets.append(preview_target)
+        user_selected_nodes = _selected_nodes_from_targets([*selected_nodes, preview_node], user_selected_targets)
+        user_intent = {
+            "id": "document-sync",
+            "source": "prompt",
+            "target": preview_target,
+            "confidence": "deterministic",
+        }
     _add_chat_message(db, _chat_message(
         "user",
         prompt,
-        detail={"execute": execute, "selectedNodes": selected_nodes, "selectedTargets": selected_targets, "noLlm": no_llm},
+        detail={
+            "execute": execute,
+            "noLlm": no_llm,
+            "requestedNodes": requested_nodes,
+            "requestedTargets": requested_targets,
+            "selectedNodes": user_selected_nodes,
+            "selectedTargets": user_selected_targets,
+            "resolvedNodes": user_selected_nodes,
+            "resolvedTargets": user_selected_targets,
+            **({"intent": user_intent} if user_intent else {}),
+        },
     ))
     if _is_phone_scanner_prompt(prompt):
         service = ensure_phone_scanner_service(
@@ -7669,14 +7697,12 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
                 host_config=host_config_snapshot,
             )
             if urifix:
+                # Single source of truth is `decisionLoop` (built below from urifix):
+                # its `nextIntent` carries the recovery actions + retry. Keep the raw urifix
+                # only for the DB debug log; do NOT promote recovery/patch/retry copies onto
+                # the result/timeline/chat detail (that was the 4x-duplication).
                 result["urifix"] = urifix
-                result["recovery"] = urifix.get("recovery") or []
-                result["patch"] = urifix.get("patch") or {}
-                result["retry"] = urifix.get("retry")
-                timeline[0]["recovery"] = {
-                    "recoverable": bool(result["recovery"]),
-                    "actions": result["recovery"],
-                }
+                timeline[0]["recoverable"] = bool(urifix.get("recovery"))
         result["decisionLoop"] = _decision_loop_for_document_sync(
             prompt,
             execute=execute,
@@ -7693,21 +7719,12 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
             _add_chat_message(db, _chat_message(
                 "system",
                 ("failed: document sync URI step" if error else "dry-run: document sync URI step"),
+                # The decision-loop object is self-contained (intent → flow → execution →
+                # observation → nextIntent), so the chat message carries just it (+ ok) instead
+                # of the former duplicated recovery/patch/retry/urifix/flow/timeline copies.
                 detail={
-                    "prompt": prompt,
-                    "execute": execute,
+                    "schema": "urirun.decision-loop.v1",
                     "ok": ok,
-                    "selectedNodes": sync_selected_nodes,
-                    "selectedTargets": sync_selected_targets,
-                    "generator": generator,
-                    "flow": flow,
-                    "timeline": timeline,
-                    "results": result.get("results") or {},
-                    "error": error,
-                    "recovery": result.get("recovery") or [],
-                    "patch": result.get("patch") or {},
-                    "retry": result.get("retry"),
-                    "urifix": result.get("urifix"),
                     "decisionLoop": result.get("decisionLoop"),
                 },
             ))
@@ -7722,12 +7739,9 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
                     "ok": ok,
                     "selectedNodes": sync_selected_nodes,
                     "selectedTargets": sync_selected_targets,
-                    "generator": generator,
-                    "timeline": timeline,
-                    "error": error,
-                    "recovery": result.get("recovery") or [],
-                    "urifix": result.get("urifix"),
                     "decisionLoop": result.get("decisionLoop"),
+                    # Full urifix diagnosis retained in the DB log only (debug), not in chat.
+                    "urifix": result.get("urifix"),
                 },
             )
         except Exception:

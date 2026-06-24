@@ -335,5 +335,55 @@ class RegisterTaggedArtifactTests(unittest.TestCase):
         self.assertEqual(calls, [])
 
 
+class DecisionLoopTests(unittest.TestCase):
+    """The document-sync flow result is shaped as a self-contained decision-loop object
+    (intent -> flow -> execution -> observation -> nextIntent), the single control-flow
+    source that replaced the former duplicated recovery/patch/retry/urifix copies."""
+
+    FLOW = {"task": {"id": "document-sync-to-node"}, "steps": [{"id": "sync-documents-to-node"}]}
+    TIMELINE = [{"id": "sync-documents-to-node", "ok": False, "status": "failed"}]
+
+    def _loop(self, **kw):
+        base = dict(prompt="send to lenovo", execute=True, sync_node="lenovo",
+                    selected_nodes=["lenovo"], selected_targets=["node:lenovo"],
+                    flow=self.FLOW, timeline=self.TIMELINE)
+        base.update(kw)
+        return host_dashboard._decision_loop_for_document_sync(**base)
+
+    def test_failed_step_yields_repair_next_intent(self):
+        urifix = {"recovery": [{"id": "provide-node-url", "automatic": False}],
+                  "diagnosis": {"canAutoRetry": False}, "retry": {"mode": "execute"}}
+        loop = self._loop(error={"message": "node_url is required"}, urifix=urifix)
+        self.assertEqual(loop["schema"], "urirun.decision-loop.v1")
+        self.assertEqual(loop["observation"]["kind"], "uri-step-failed")
+        self.assertEqual(loop["execution"]["status"], "blocked")
+        ni = loop["nextIntent"]
+        self.assertEqual(ni["uri"], "urifix://host/chain/command/repair")
+        self.assertFalse(ni["automatic"])              # manual -> needs input
+        self.assertEqual(ni["status"], "needs-input")
+        self.assertEqual(ni["actions"], urifix["recovery"])
+
+    def test_auto_retryable_failure_is_marked_ready(self):
+        urifix = {"recovery": [{"id": "ensure-node-target", "automatic": True}],
+                  "diagnosis": {"canAutoRetry": True}}
+        loop = self._loop(error={"message": "x"}, urifix=urifix)
+        self.assertEqual(loop["execution"]["status"], "retryable")
+        self.assertTrue(loop["nextIntent"]["automatic"])
+        self.assertEqual(loop["nextIntent"]["status"], "ready")
+
+    def test_dry_run_next_intent_is_execute(self):
+        loop = self._loop(execute=False, timeline=[{"id": "sync-documents-to-node", "status": "dry-run"}])
+        self.assertEqual(loop["observation"]["kind"], "dry-run")
+        self.assertEqual(loop["nextIntent"]["id"], "execute-document-sync")
+        self.assertEqual(loop["nextIntent"]["status"], "awaiting-execute")
+
+    def test_success_has_no_next_intent(self):
+        loop = self._loop(timeline=[{"id": "sync-documents-to-node", "ok": True, "status": "done"}],
+                          sync_result={"ok": True})
+        self.assertEqual(loop["observation"]["kind"], "uri-flow-complete")
+        self.assertEqual(loop["execution"]["status"], "done")
+        self.assertIsNone(loop["nextIntent"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -422,7 +422,7 @@ def test_chat_ask_document_sync_error_includes_urifix_recovery(monkeypatch):
     assert result["ok"] is False
     assert result["urifix"]["repaired"] is True
     assert result["retry"]["payload"]["node_url"] == "http://laptop.local:8766"
-    assert result["decisionLoop"]["execution"]["status"] == "blocked"
+    assert result["decisionLoop"]["execution"]["status"] == "retryable"
     assert result["decisionLoop"]["observation"]["kind"] == "uri-step-failed"
     assert result["decisionLoop"]["nextIntent"]["id"] == "repair-uri-chain"
     assert result["decisionLoop"]["nextIntent"]["automatic"] is True
@@ -430,6 +430,52 @@ def test_chat_ask_document_sync_error_includes_urifix_recovery(monkeypatch):
     assert result["timeline"][0]["recovery"]["actions"][0]["id"] == "retry-with-node-url"
     assert fake_db.logs[1]["detail"]["detail"]["retry"]["uri"] == "document://host/archive/command/sync-to-node"
     assert fake_db.logs[1]["detail"]["detail"]["decisionLoop"]["nextIntent"]["uri"] == "urifix://host/chain/command/repair"
+
+
+def test_chat_ask_document_sync_decision_loop_blocks_without_node_url(monkeypatch):
+    fake_db = FakeHostDb()
+
+    def fake_sync(project, db, config, payload, **kwargs):
+        raise ValueError("node_url is required when the target node is not present in host config")
+
+    def fake_urifix(prompt, request, result, **kwargs):
+        return {
+            "ok": True,
+            "repaired": False,
+            "patch": {"stepPayload": {"node": "lenovo", "dest_root": "~/Downloads/urirun-scans"}},
+            "retry": {
+                "uri": "document://host/archive/command/sync-to-node",
+                "mode": "execute",
+                "payload": {"node": "lenovo", "dest_root": "~/Downloads/urirun-scans"},
+            },
+            "recovery": [{"id": "provide-node-url", "automatic": False, "kind": "config"}],
+            "diagnosis": {"canAutoRetry": False},
+        }
+
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    monkeypatch.setattr(host_dashboard, "sync_documents_to_node", fake_sync)
+    monkeypatch.setattr(host_dashboard, "_try_urifix_repair", fake_urifix)
+    monkeypatch.setattr(host_dashboard, "_host_config", lambda config, node_urls=None: {"nodes": []})
+
+    result = host_dashboard.chat_ask(
+        ".",
+        ":memory:",
+        None,
+        {
+            "prompt": "wyślij wszystkie foldery z artifacts do lenovo laptop",
+            "nodes": [],
+            "targets": ["host", "service:phone-scanner"],
+            "execute": True,
+        },
+    )
+
+    loop = result["decisionLoop"]
+    assert loop["execution"]["status"] == "blocked"
+    assert loop["observation"]["failedStep"] == "sync-documents-to-node"
+    assert loop["nextIntent"]["status"] == "needs-input"
+    assert loop["nextIntent"]["automatic"] is False
+    assert loop["nextIntent"]["actions"][0]["id"] == "provide-node-url"
+    assert fake_db.logs[1]["detail"]["detail"]["decisionLoop"]["execution"]["status"] == "blocked"
 
 
 def test_chat_ask_returns_recovery_when_planner_fails(monkeypatch):
