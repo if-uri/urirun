@@ -5,6 +5,16 @@ import urirun
 from urirun.runtime import discovery, v2
 
 
+def _fake_binding(uri: str, connector: str) -> dict:
+    return {
+        "uri": uri,
+        "kind": "query",
+        "adapter": "local-function",
+        "config": {"inputSchema": {"type": "object", "additionalProperties": True}},
+        "source": {"name": connector},
+    }
+
+
 def test_build_index_maps_schemes(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     index = discovery.build_index(v2.ENTRY_POINT_GROUP)
@@ -16,6 +26,48 @@ def test_build_index_maps_schemes(tmp_path, monkeypatch):
     if not any(s in schemes for s in ("time", "log", "fs")):
         return  # none of those connectors installed in this env
     assert any(s in schemes for s in ("time", "log", "fs"))
+
+
+def test_build_index_tracks_shared_scheme_candidates(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    bindings = [
+        _fake_binding("browser://host/page/command/screenshot", "domain-monitor"),
+        _fake_binding("browser://cdp/page/query/tabs", "browser-control"),
+        _fake_binding("browser://kvm/screen/query/capture", "browser-control"),
+        _fake_binding("artifact://host/schema/query/get", "artifact"),
+        _fake_binding("artifact://host/artifact/command/register", "sqlite-context"),
+    ]
+    monkeypatch.setattr(v2, "entry_point_bindings", lambda group, on_error="warn": list(bindings))
+    monkeypatch.setattr(discovery, "_fingerprint", lambda group: [["fake", "fake:bindings", "0"]])
+
+    index = discovery.build_index(v2.ENTRY_POINT_GROUP)
+
+    assert index["version"] == discovery._INDEX_VERSION
+    assert index["schemes"]["browser"] == "browser-control"
+    assert index["schemeCandidates"]["browser"] == ["browser-control", "domain-monitor"]
+    assert index["schemeCandidates"]["artifact"] == ["artifact", "sqlite-context"]
+
+
+def test_registry_for_uri_loads_all_candidates_for_shared_scheme(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    by_name = {
+        "domain-monitor": [_fake_binding("browser://host/page/command/screenshot", "domain-monitor")],
+        "browser-control": [
+            _fake_binding("browser://cdp/page/query/tabs", "browser-control"),
+            _fake_binding("browser://kvm/screen/query/capture", "browser-control"),
+        ],
+    }
+    bindings = [binding for group in by_name.values() for binding in group]
+    monkeypatch.setattr(v2, "entry_point_bindings", lambda group, on_error="warn": list(bindings))
+    monkeypatch.setattr(discovery, "_fingerprint", lambda group: [["fake", "fake:bindings", "0"]])
+    monkeypatch.setattr(discovery, "_bindings_for_entry_point", lambda name, group: list(by_name.get(name, [])))
+
+    reg = discovery.registry_for_uri("browser://cdp/page/query/tabs", v2.ENTRY_POINT_GROUP)
+    uris = {route["uri"] for route in urirun.list_routes(reg)}
+
+    assert "browser://cdp/page/query/tabs" in uris
+    assert "browser://host/page/command/screenshot" in uris
+    assert any(uri.startswith("registry://") for uri in uris)
 
 
 def test_cache_reused_when_fingerprint_matches(tmp_path, monkeypatch):

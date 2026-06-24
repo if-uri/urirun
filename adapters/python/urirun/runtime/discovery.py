@@ -6,8 +6,8 @@
 ``urirun run '<uri>'`` with no source discovers + compiles *every* installed
 connector (import-all ≈ 13 ms) just to resolve one URI. The scheme isn't in
 entry-point metadata, so we import once to learn it, cache a ``scheme ->
-entry-point name`` index, and afterward import **only** the connector that owns the
-URI's scheme.
+entry-point names`` index, and afterward import **only** the connector(s) that
+serve the URI's scheme.
 
 * ``registry_for_uri(uri, group)`` — a registry containing just the matching
   connector (+ the always-mounted builtin routes), or the full set on a cache miss
@@ -24,6 +24,13 @@ from pathlib import Path
 
 _INDEX_FILE = ".urirun/scheme-index.json"
 _REGISTRY_FILE = ".urirun/discovered-registry.json"
+_INDEX_VERSION = 2
+
+_PREFERRED_SCHEME_OWNERS = {
+    # domain-monitor exposes one legacy browser:// screenshot route, but
+    # browser-control owns the interactive CDP/KVM browser surface.
+    "browser": ("browser-control",),
+}
 
 
 def _index_path() -> Path:
@@ -90,17 +97,49 @@ def _scheme_of(uri: str) -> str:
     return uri.split("://", 1)[0]
 
 
+def _candidate_sort_key(scheme: str, name: str, count: int, first_seen: int) -> tuple:
+    preferred = _PREFERRED_SCHEME_OWNERS.get(scheme, ())
+    preference = preferred.index(name) if name in preferred else len(preferred)
+    return (preference, -count, first_seen, name)
+
+
 def build_index(group: str) -> dict:
-    """Full discovery once → map every scheme to the entry point that owns it."""
+    """Full discovery once → map every scheme to the entry points that serve it."""
     from urirun.runtime import v2
 
-    schemes: dict[str, str] = {}
-    for binding in v2.entry_point_bindings(group=group, on_error="ignore"):
+    counts: dict[str, dict[str, int]] = {}
+    first_seen: dict[str, dict[str, int]] = {}
+    for position, binding in enumerate(v2.entry_point_bindings(group=group, on_error="ignore")):
         name = (binding.get("source") or {}).get("name")
         uri = binding.get("uri")
         if name and uri:
-            schemes.setdefault(_scheme_of(uri), name)
-    index = {"fingerprint": _fingerprint(group), "schemes": schemes}
+            scheme = _scheme_of(uri)
+            scheme_counts = counts.setdefault(scheme, {})
+            scheme_counts[name] = scheme_counts.get(name, 0) + 1
+            first_seen.setdefault(scheme, {}).setdefault(name, position)
+    scheme_candidates = {
+        scheme: sorted(
+            sources,
+            key=lambda source: _candidate_sort_key(
+                scheme,
+                source,
+                counts[scheme][source],
+                first_seen[scheme][source],
+            ),
+        )
+        for scheme, sources in counts.items()
+    }
+    schemes = {
+        scheme: candidates[0]
+        for scheme, candidates in scheme_candidates.items()
+        if candidates
+    }
+    index = {
+        "version": _INDEX_VERSION,
+        "fingerprint": _fingerprint(group),
+        "schemes": schemes,
+        "schemeCandidates": scheme_candidates,
+    }
     try:
         path = _index_path()
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -116,7 +155,7 @@ def load_index(group: str) -> dict:
     if path.exists():
         try:
             cached = json.loads(path.read_text(encoding="utf-8"))
-            if cached.get("fingerprint") == _fingerprint(group):
+            if cached.get("version") == _INDEX_VERSION and cached.get("fingerprint") == _fingerprint(group):
                 return cached
         except (OSError, json.JSONDecodeError):
             pass
@@ -133,9 +172,14 @@ def registry_for_uri(uri: str, group: str):
     from urirun.runtime import v2
 
     scheme = _scheme_of(uri)
-    name = load_index(group).get("schemes", {}).get(scheme)
-    if name:
-        bindings = _bindings_for_entry_point(name, group)
+    index = load_index(group)
+    names = list(index.get("schemeCandidates", {}).get(scheme) or [])
+    if not names and index.get("schemes", {}).get(scheme):
+        names = [index["schemes"][scheme]]
+    if names:
+        bindings: list[dict] = []
+        for name in names:
+            bindings.extend(_bindings_for_entry_point(name, group))
         if bindings:
             bindings.extend(v2._builtin_binding_items())
             return v2.compile_registry(v2.build_binding_document(bindings))
