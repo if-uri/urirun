@@ -186,6 +186,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Docker desktop from an NL intent; the desktop driver is a *connector*, the schema in
   the action space is the only core change).
 
+## [0.4.132] - 2026-06-24
+
+### Docs
+- Update README.md
+- Update project/README.md
+
+### Other
+- Update Makefile
+- Update project/calls.png
+- Update project/index.html
+- Update project/project.toon.yaml
+- Update project/prompt.txt
+- Update scripts/cc_gate.py
+
 ## [0.4.131] - 2026-06-24
 
 ### Docs

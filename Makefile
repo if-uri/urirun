@@ -57,6 +57,10 @@ conformance: ## Verify every language SDK emits the same urirun.bindings.v2 cont
 lint: ## Ruff-lint the Python package (keeps main green; gated in CI).
 	$(PYTHON) -m ruff check adapters/python/urirun
 
+.PHONY: complexity
+complexity: ## Fail if any Python function exceeds the cyclomatic-complexity limit (CC>15).
+	$(PYTHON) scripts/cc_gate.py
+
 .PHONY: lint-connectors
 lint-connectors: ## Lint every sibling urirun-connector-* package; fail on code/manifest drift or a secrets-layer bypass (--strict via STRICT=1).
 	$(PYTHON) scripts/lint_connectors.py $(if $(STRICT),--strict,)
