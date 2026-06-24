@@ -66,6 +66,9 @@ Local node names are data, not code. Prompt resolution uses selected targets and
 configured node names/aliases from host config, `~/.urirun/nodes.json`
 (`URIRUN_NODES_FILE`), `URIRUN_NODES`, `URIRUN_NODE_URL_*`,
 `URIRUN_DOCUMENT_SYNC_NODE`, and `URIRUN_NODE_ALIASES`.
+The dashboard summary merges `~/.urirun/nodes.json` into the mesh before
+discovery, so known nodes appear in Nodes/Contacts even when they are currently
+offline.
 For example:
 
 ```bash

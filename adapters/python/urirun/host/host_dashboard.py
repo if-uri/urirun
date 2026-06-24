@@ -4114,6 +4114,61 @@ def _run_node_uri(
     }
 
 
+def _short_value(value: Any, *, limit: int = 600) -> Any:
+    if isinstance(value, str):
+        return value if len(value) <= limit else value[:limit] + "..."
+    if isinstance(value, dict):
+        return {str(k): _short_value(v, limit=limit) for k, v in value.items() if k not in {"bytes_b64", "dataUri"}}
+    if isinstance(value, list):
+        return [_short_value(item, limit=limit) for item in value[:20]]
+    return value
+
+
+def _compact_remote_run(run: dict) -> dict:
+    envelope = run.get("envelope") if isinstance(run.get("envelope"), dict) else {}
+    result = envelope.get("result") if isinstance(envelope.get("result"), dict) else {}
+    compact = {
+        "ok": bool(run.get("ok")),
+        "envelopeOk": envelope.get("ok"),
+    }
+    if envelope.get("error"):
+        compact["error"] = _short_value(envelope.get("error"))
+    if result:
+        compact["result"] = _short_value({
+            key: result.get(key)
+            for key in ("kind", "status", "ok", "error", "value", "stdout", "stderr")
+            if key in result
+        })
+    value = run.get("value")
+    if value not in ({}, None):
+        compact["value"] = _short_value(value)
+    return {k: v for k, v in compact.items() if v not in ({}, None, "")}
+
+
+def _remote_write_error(run: dict, value: Any, *, expected_sha: str, remote_sha: str | None) -> str:
+    if isinstance(value, dict):
+        error = value.get("error")
+        if isinstance(error, dict):
+            return str(error.get("message") or error)
+        if error:
+            return str(error)
+        if value.get("ok") is False:
+            return "remote write returned ok=false"
+        if not remote_sha:
+            return "remote write returned no sha256"
+        if remote_sha != expected_sha:
+            return f"sha256 mismatch: expected {expected_sha}, got {remote_sha}"
+    envelope = run.get("envelope") if isinstance(run.get("envelope"), dict) else {}
+    error = envelope.get("error")
+    if isinstance(error, dict):
+        return str(error.get("message") or error)
+    if error:
+        return str(error)
+    if value:
+        return f"remote write returned non-object result: {_short_value(value)!r}"
+    return "remote write failed without a result"
+
+
 def _document_archive_pdfs(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
@@ -4155,6 +4210,7 @@ def sync_documents_to_node(
     copied = 0
     failed = 0
     skipped = 0
+    failed_reasons: dict[str, int] = {}
 
     for source in files:
         rel = source.relative_to(source_root)
@@ -4196,10 +4252,13 @@ def sync_documents_to_node(
                 copied += 1
             else:
                 failed += 1
-                item["error"] = value.get("error") or "remote write failed or sha256 mismatch"
+                item["remote"] = _compact_remote_run(run)
+                item["error"] = _remote_write_error(run, run.get("value"), expected_sha=sha256, remote_sha=remote_sha)
+                failed_reasons[item["error"]] = failed_reasons.get(item["error"], 0) + 1
         except Exception as exc:  # noqa: BLE001 - report per-file transfer failures.
             failed += 1
             item.update({"ok": False, "error": str(exc)})
+            failed_reasons[item["error"]] = failed_reasons.get(item["error"], 0) + 1
         results.append(item)
 
     report = {
@@ -4214,6 +4273,7 @@ def sync_documents_to_node(
         "copied": copied,
         "failed": failed,
         "skipped": skipped,
+        "failedReasons": failed_reasons,
         "results": results,
         "updatedAt": _utc_now(),
     }

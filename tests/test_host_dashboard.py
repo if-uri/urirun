@@ -82,6 +82,12 @@ class FakeHostDb:
         items = [item for item in self.logs if stream is None or item["stream"] == stream]
         return list(reversed(items[-limit:]))
 
+    def recent_checks(self, path=None, limit=10):
+        return []
+
+    def db_path(self, path=None):
+        return Path(path or ":memory:")
+
     def delete_logs(self, path, ids, stream=None, event=None):
         clean = set(ids)
         before = len(self.logs)
@@ -1681,6 +1687,63 @@ def test_sync_documents_to_node_copies_pdfs_and_logs_chat(monkeypatch, tmp_path)
     assert fake_db.logs[-1]["stream"] == "chat"
     assert fake_db.logs[-1]["event"] == "message"
     assert "Document sync to laptop completed: 2/2 PDFs" in fake_db.logs[-1]["detail"]["content"]
+
+
+def test_sync_documents_to_node_reports_remote_run_error(monkeypatch, tmp_path):
+    fake_db = FakeHostDb()
+    document_root = tmp_path / "documents"
+    month = document_root / "2026-06"
+    month.mkdir(parents=True)
+    (month / "invoice.pdf").write_bytes(b"pdf")
+
+    def fake_run_node_uri(node_url, uri, payload, **kwargs):
+        return {
+            "ok": False,
+            "envelope": {
+                "ok": False,
+                "error": {"type": "route", "message": "Route not found: fs.file.command.write-b64"},
+            },
+            "value": {"ok": False, "error": "Route not found: fs.file.command.write-b64"},
+        }
+
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    monkeypatch.setattr(host_dashboard, "_run_node_uri", fake_run_node_uri)
+
+    result = host_dashboard.sync_documents_to_node(".", ":memory:", None, {
+        "source_root": str(document_root),
+        "node_url": "http://laptop.local:8766",
+        "node": "laptop",
+    })
+
+    assert result["ok"] is False
+    assert result["failed"] == 1
+    assert result["failedReasons"] == {"Route not found: fs.file.command.write-b64": 1}
+    assert result["results"][0]["error"] == "Route not found: fs.file.command.write-b64"
+    assert result["results"][0]["remote"]["error"]["message"] == "Route not found: fs.file.command.write-b64"
+
+
+def test_sync_documents_to_node_reports_sha256_mismatch(monkeypatch, tmp_path):
+    fake_db = FakeHostDb()
+    document_root = tmp_path / "documents"
+    month = document_root / "2026-06"
+    month.mkdir(parents=True)
+    (month / "invoice.pdf").write_bytes(b"pdf")
+
+    def fake_run_node_uri(node_url, uri, payload, **kwargs):
+        return {"ok": True, "envelope": {"ok": True}, "value": {"ok": True, "path": payload["path"], "sha256": "bad"}}
+
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    monkeypatch.setattr(host_dashboard, "_run_node_uri", fake_run_node_uri)
+
+    result = host_dashboard.sync_documents_to_node(".", ":memory:", None, {
+        "source_root": str(document_root),
+        "node_url": "http://laptop.local:8766",
+        "node": "laptop",
+    })
+
+    assert result["ok"] is False
+    assert "sha256 mismatch" in result["results"][0]["error"]
+    assert result["results"][0]["remoteSha256"] == "bad"
 
 
 def test_uri_invoke_page_action_queues_for_scanner(monkeypatch):
