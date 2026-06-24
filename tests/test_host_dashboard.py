@@ -358,6 +358,52 @@ def test_chat_ask_executes_document_sync_without_llm(monkeypatch):
     assert fake_db.logs[1]["detail"]["generator"]["intent"] == "document-sync"
 
 
+def test_chat_ask_document_sync_error_includes_urifix_recovery(monkeypatch):
+    fake_db = FakeHostDb()
+
+    def fake_sync(project, db, config, payload, **kwargs):
+        raise ValueError("node_url is required when the target node is not present in host config")
+
+    def fake_urifix(prompt, request, result, **kwargs):
+        assert result["error"]["uri"] == "document://host/archive/command/sync-to-node"
+        assert kwargs["node_urls"] == ["lenovo=http://laptop.local:8766"]
+        return {
+            "ok": True,
+            "repaired": True,
+            "patch": {"stepPayload": {"node": "lenovo", "node_url": "http://laptop.local:8766"}},
+            "retry": {
+                "uri": "document://host/archive/command/sync-to-node",
+                "mode": "execute",
+                "payload": {"node": "lenovo", "node_url": "http://laptop.local:8766"},
+            },
+            "recovery": [{"id": "retry-with-node-url", "automatic": True}],
+        }
+
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    monkeypatch.setattr(host_dashboard, "sync_documents_to_node", fake_sync)
+    monkeypatch.setattr(host_dashboard, "_try_urifix_repair", fake_urifix)
+    monkeypatch.setattr(host_dashboard, "_host_config", lambda config, node_urls=None: {"nodes": []})
+
+    result = host_dashboard.chat_ask(
+        ".",
+        ":memory:",
+        None,
+        {
+            "prompt": "wyślij dokumenty do lenovo",
+            "nodes": [],
+            "targets": ["host", "service:phone-scanner"],
+            "execute": True,
+        },
+        node_urls=["lenovo=http://laptop.local:8766"],
+    )
+
+    assert result["ok"] is False
+    assert result["urifix"]["repaired"] is True
+    assert result["retry"]["payload"]["node_url"] == "http://laptop.local:8766"
+    assert result["timeline"][0]["recovery"]["actions"][0]["id"] == "retry-with-node-url"
+    assert fake_db.logs[1]["detail"]["detail"]["retry"]["uri"] == "document://host/archive/command/sync-to-node"
+
+
 def test_chat_ask_returns_recovery_when_planner_fails(monkeypatch):
     class FailingMesh(FakeMesh):
         def make_flow(self, prompt, mesh, selected_nodes=None, use_llm=True):

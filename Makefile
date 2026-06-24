@@ -45,7 +45,7 @@ lint: ## Ruff-lint the Python package (keeps main green; gated in CI).
 	$(PYTHON) -m ruff check adapters/python/urirun
 
 .PHONY: lint-connectors
-lint-connectors: ## Lint every sibling urirun-connector-* package; fail on code/manifest drift (--strict via STRICT=1).
+lint-connectors: ## Lint every sibling urirun-connector-* package; fail on code/manifest drift or a secrets-layer bypass (--strict via STRICT=1).
 	$(PYTHON) scripts/lint_connectors.py $(if $(STRICT),--strict,)
 
 .PHONY: test-v1

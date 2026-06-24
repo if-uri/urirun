@@ -7144,6 +7144,25 @@ def _compact_chat_result(result: dict, payload: dict) -> dict:
     return compacted
 
 
+def _try_urifix_repair(prompt: str, request: dict, result: dict, *, node_urls: list[str] | None = None,
+                       host_config: dict | None = None) -> dict | None:
+    try:
+        from urirun_connector_urifix.core import repair_chain  # type: ignore
+    except Exception:  # noqa: BLE001 - urifix is optional.
+        return None
+    try:
+        fixed = repair_chain(
+            prompt=prompt,
+            request=request,
+            result=result,
+            node_urls=node_urls or [],
+            host_config=host_config or {},
+        )
+    except Exception as exc:  # noqa: BLE001 - never mask the original URI failure.
+        return {"ok": False, "error": str(exc)}
+    return fixed if isinstance(fixed, dict) else None
+
+
 def _needs_screen_document_capture(prompt: str) -> bool:
     text_value = prompt.casefold()
     wants_screen = any(word in text_value for word in ("zrzut", "screenshot", "screen capture", "zrzuty ekranu"))
@@ -7479,6 +7498,33 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
             "results": {"sync-documents-to-node": sync_result} if sync_result else {},
             "error": error,
         }
+        if error:
+            host_config_snapshot = None
+            try:
+                host_config_snapshot = _host_config(config, node_urls)
+            except Exception:
+                host_config_snapshot = None
+            urifix = _try_urifix_repair(
+                prompt,
+                {
+                    "nodes": selected_nodes,
+                    "targets": selected_targets,
+                    "execute": execute,
+                    "no_llm": no_llm,
+                },
+                result,
+                node_urls=node_urls,
+                host_config=host_config_snapshot,
+            )
+            if urifix:
+                result["urifix"] = urifix
+                result["recovery"] = urifix.get("recovery") or []
+                result["patch"] = urifix.get("patch") or {}
+                result["retry"] = urifix.get("retry")
+                timeline[0]["recovery"] = {
+                    "recoverable": bool(result["recovery"]),
+                    "actions": result["recovery"],
+                }
         if not execute or error:
             _add_chat_message(db, _chat_message(
                 "system",
@@ -7494,6 +7540,10 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
                     "timeline": timeline,
                     "results": result.get("results") or {},
                     "error": error,
+                    "recovery": result.get("recovery") or [],
+                    "patch": result.get("patch") or {},
+                    "retry": result.get("retry"),
+                    "urifix": result.get("urifix"),
                 },
             ))
         try:
@@ -7510,6 +7560,8 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
                     "generator": generator,
                     "timeline": timeline,
                     "error": error,
+                    "recovery": result.get("recovery") or [],
+                    "urifix": result.get("urifix"),
                 },
             )
         except Exception:

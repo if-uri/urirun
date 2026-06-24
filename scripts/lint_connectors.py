@@ -12,6 +12,10 @@ monorepo and prints a migration-status table. The exit code is a CI gate:
   executes (``hasAdapterDrift``: code binds one adapter, the manifest advertises
   another). This is exactly the state a connector is in *mid-migration* (handler in
   code, argv still in the manifest), so the gate catches a half-finished refactor.
+* **fail** (exit 1) on a *secrets-layer bypass* — a connector that reads a secret-shaped
+  env var (``*_API_KEY``/``*_TOKEN``/``*_PASSWORD``/…) straight from the process env and
+  never routes a credential through ``urirun.resolve_secret`` or a ``{getv:}``/``{secret:}``
+  reference. Keeps a new connector from regressing past the secrets layer.
 * **pass** (exit 0) for both fully-migrated (``@handler`` + derived manifest) and
   not-yet-started (``@command`` + matching argv manifest) connectors — a connector
   that has not been touched yet is not a failure, only reported as ``OLD-STYLE``.
@@ -58,6 +62,7 @@ def lint_fleet(root: Path) -> list[dict]:
             rows.append({"connector": pkg.name, "state": "ERROR", "error": str(exc),
                          "hasDrift": False, "hasAdapterDrift": False})
             continue
+        secret = rep.get("secretEnvReads") or {}
         rows.append({
             "connector": pkg.name,
             "state": classify(rep),
@@ -67,6 +72,8 @@ def lint_fleet(root: Path) -> list[dict]:
             "handlerRoutes": rep["handlerRoutes"],
             "drift": rep["drift"],
             "adapterDrift": rep.get("adapterDrift"),
+            "secretBypass": bool(secret.get("bypass")),
+            "secretFindings": [f["name"] for f in secret.get("findings", [])],
         })
     return rows
 
@@ -77,6 +84,8 @@ def _flags(row: dict) -> str:
         parts.append("ADAPTER-DRIFT")
     if row.get("hasDrift"):
         parts.append("ROUTE-DRIFT")
+    if row.get("secretBypass"):
+        parts.append(f"SECRET-BYPASS({','.join(row.get('secretFindings', []))})")
     if row.get("error"):
         parts.append(f"error: {row['error']}")
     return " ".join(parts)
@@ -105,6 +114,11 @@ def main(argv: list[str] | None = None) -> int:
     if drifted:
         print(f"\nFAIL: {len(drifted)} connector(s) inconsistent (code/manifest disagree): {', '.join(drifted)}",
               file=sys.stderr)
+        return 1
+    bypass = [r["connector"] for r in rows if r.get("secretBypass")]
+    if bypass:
+        print(f"\nFAIL: {len(bypass)} connector(s) read a secret-shaped env var without the secrets layer "
+              f"(use urirun.resolve_secret): {', '.join(bypass)}", file=sys.stderr)
         return 1
     if args.strict:
         old = [r["connector"] for r in rows if r["state"] == "OLD-STYLE"]
