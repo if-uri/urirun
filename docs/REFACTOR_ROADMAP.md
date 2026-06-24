@@ -54,9 +54,13 @@ Near-term extraction targets:
 - `host/contracts.py` for verification contracts.
 - `host/document_sync.py` for archive sync and node transfer preflight. The
   first split is landed: the transfer loop now lives in `host.document_sync`
-  behind a compatibility wrapper in `host_dashboard.py`. Continue by moving the
-  fs shim/preflight helpers next.
-- `host/service_control.py` for restart/start/status logic.
+  behind a compatibility wrapper in `host_dashboard.py`. The fs transfer route
+  matching and fallback shim now live in `host.fs_transfer`.
+- `host/service_control.py` for restart/start/status logic. First split landed:
+  generic restart command selection/scheduling and chat `port-replace` argv
+  building now live there. Port-owner detection and safe replacement helpers
+  also moved there behind dashboard compatibility wrappers. Scanner restart
+  still stays in the dashboard until its in-process server state is isolated.
 - `host/discovery.py` for URI object registry normalization.
 - `host/scanner_bridge.py` for dashboard-to-scanner API glue.
 

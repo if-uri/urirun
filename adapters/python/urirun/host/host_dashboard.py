@@ -13,11 +13,9 @@ import json
 import mimetypes
 import os
 import re
-import shlex
 import socket
 import ssl
 import subprocess
-import sys
 import textwrap
 import threading
 import time
@@ -33,6 +31,27 @@ from .document_sync import (
     document_archive_pdfs as _document_archive_pdfs_impl,
     document_sync_verification as _document_sync_verification_impl,
     sync_documents_to_node as _sync_documents_to_node_impl,
+)
+from .fs_transfer import (
+    deploy_fs_file_transfer_fallback as _deploy_fs_file_transfer_fallback_impl,
+    ensure_node_uri_routes as _ensure_node_uri_routes_impl,
+    fs_file_transfer_binding as _fs_file_transfer_binding_impl,
+    fs_file_transfer_fallback_bindings as _fs_file_transfer_fallback_bindings_impl,
+    node_has_route as _node_has_route_impl,
+    route_key as _route_key_impl,
+)
+from .service_control import (
+    chat_service_restart_argv as _chat_service_restart_argv_impl,
+    free_port_from_matching_processes as _free_port_from_matching_processes_impl,
+    free_port_from_old_dashboard as _free_port_from_old_dashboard_impl,
+    is_chat_process as _is_chat_process_impl,
+    is_dashboard_process as _is_dashboard_process_impl,
+    is_scanner_process as _is_scanner_process_impl,
+    port_holder_pids as _port_holder_pids_impl,
+    process_cmdline as _process_cmdline_impl,
+    restart_chat_service as _restart_chat_service_impl,
+    schedule_restart_command as _schedule_restart_command_impl,
+    service_restart_argv as _service_restart_argv_impl,
 )
 
 
@@ -1142,9 +1161,23 @@ INDEX_HTML = r"""<!doctype html>
     function renderNodes(nodes) {
       $('nodeCount').textContent = `${nodes.length} configured`;
       $('nodesList').innerHTML = nodes.map((node) => `<div class="item node-row${state.selectedRoutesNode === node.name ? ' node-row-active' : ''}" data-node="${esc(node.name)}" onclick="selectNodeRoutes(this.dataset.node)" title="Kliknij, aby pokazać procesy URI tego węzła">
-        <div><strong>${esc(node.name)}</strong> <span class="pill ${node.reachable ? 'up' : 'down'}">${node.reachable ? 'up' : 'down'}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+          <span><strong>${esc(node.name)}</strong> <span class="pill ${node.reachable ? 'up' : 'down'}">${node.reachable ? 'up' : 'down'}</span></span>
+          <button type="button" data-node="${esc(node.name)}" onclick="event.stopPropagation(); testNodeFromList(this.dataset.node)" title="Przetestuj route'y query tego węzła">Test</button>
+        </div>
         <div class="mono">${esc(node.url)}</div>
         <div class="subtle">${(node.routes || []).length} routes${node.error ? ` · ${esc(node.error)}` : ''}</div>
+        <details class="node-token-form" onclick="event.stopPropagation()" style="margin-top:6px">
+          <summary class="subtle">🔑 Token zarządzania (X-Urirun-Token) · ${node.hasToken ? '✓ ustawiony' : 'brak'}</summary>
+          <div class="stack" style="margin-top:6px">
+            <p class="subtle">Potrzebny do zarządzania zdalnym węzłem — provisioning/deploy i trasy <code>node://</code>. Bez niego takie wywołania zwracają <em>unauthorized</em>. Wartość trafia do systemowego <strong>keyring</strong> (referencja <code>secret://keyring/urirun-node-token/${esc(node.name)}</code>), nigdy do pliku, DOM ani logów.</p>
+            <input type="password" autocomplete="off" class="node-token-input" placeholder="wklej token węzła '${esc(node.name)}'">
+            <div class="artifact-actions">
+              <button type="button" data-node="${esc(node.name)}" onclick="saveNodeTokenFor(this)">🔑 Zapisz token (keyring)</button>
+              <span class="node-token-status subtle"></span>
+            </div>
+          </div>
+        </details>
       </div>`).join('') || empty('No nodes configured — use “➕ Jak dodać node” below to add one.');
       // Surface the how-to-add panel automatically when nothing is configured, so a missing
       // node (e.g. a sync target that failed with "node_url is required") is fixable in place.
@@ -1448,10 +1481,62 @@ INDEX_HTML = r"""<!doctype html>
         filterEl.textContent = '';
       }
       $('routeCount').textContent = `${list.length} routes`;
-      $('routesList').innerHTML = list.slice(0, 30).map((route) => `<div class="item">
-        <div class="mono">${esc(route.uri)}</div>
-        <div class="subtle">${esc(text(route.node))} · ${esc(text(route.kind))} · ${esc(text(route.adapter))}</div>
-      </div>`).join('') || empty(sel ? `Brak procesów URI przypisanych do node:${sel}` : 'No routes discovered');
+      // When a node is selected, offer URI testing: probe all read-only query routes, or tick
+      // specific routes and test just those (commands included = an explicit choice).
+      const testBar = sel ? `<div class="node-test-bar" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <button type="button" data-node="${esc(sel)}" onclick="testNodeRoutes(this.dataset.node, null)">Test query routes</button>
+          <button type="button" data-node="${esc(sel)}" onclick="testNodeRoutes(this.dataset.node, 'selected')">Test selected</button>
+          <span class="subtle" id="nodeTestSummary"></span>
+        </div>` : '';
+      const rows = list.slice(0, 60).map((route) => {
+        const u = esc(route.uri);
+        const cb = sel ? `<input type="checkbox" class="rt-sel" value="${u}"> ` : '';
+        return `<div class="item" data-rt="${u}">
+          <div class="mono">${cb}${u}<span class="route-test subtle"></span></div>
+          <div class="subtle">${esc(text(route.node))} · ${esc(text(route.kind))} · ${esc(text(route.adapter))}</div>
+        </div>`;
+      }).join('') || empty(sel ? `Brak procesów URI przypisanych do node:${sel}` : 'No routes discovered');
+      $('routesList').innerHTML = testBar + rows;
+    }
+
+    function nodeTestSelectedUris() {
+      return [...document.querySelectorAll('#routesList .rt-sel:checked')].map((c) => c.value);
+    }
+
+    async function testNodeRoutes(node, mode) {
+      if (!node) return;
+      const uris = mode === 'selected' ? nodeTestSelectedUris() : null;
+      if (mode === 'selected' && (!uris || !uris.length)) { alert('Zaznacz route(y) do przetestowania.'); return; }
+      const summaryEl = $('nodeTestSummary');
+      if (summaryEl) summaryEl.textContent = 'testowanie...';
+      document.querySelectorAll('#routesList .route-test').forEach((s) => { s.textContent = ''; s.title = ''; });
+      writeUrlState({ action: 'nodes:test-routes', node, mode: mode || 'query' }, { replace: true });
+      try {
+        const res = await api('/api/nodes/test-routes', {
+          method: 'POST', body: JSON.stringify({ node, ...(uris ? { uris } : {}) }),
+        });
+        renderNodeTestResults(res);
+      } catch (error) {
+        if (summaryEl) summaryEl.textContent = 'błąd: ' + error.message;
+        alert(error.message);
+      }
+    }
+
+    function renderNodeTestResults(res) {
+      const summaryEl = $('nodeTestSummary');
+      if (!res || res.ok === false) {
+        if (summaryEl) summaryEl.textContent = 'błąd: ' + ((res && res.error) || 'test failed');
+        return;
+      }
+      if (summaryEl) summaryEl.textContent = `${res.okCount}/${res.tested} ok · ${res.reachable} reachable · ${res.broken} broken (${esc(res.mode)})`;
+      const badge = { 'ok': '✅', 'handler-error': '⚠️', 'not-found': '⛔', 'unreachable': '🚫' };
+      const byUri = {};
+      (res.results || []).forEach((r) => { byUri[r.uri] = r; });
+      document.querySelectorAll('#routesList .item[data-rt]').forEach((el) => {
+        const r = byUri[el.dataset.rt];
+        const slot = el.querySelector('.route-test');
+        if (r && slot) { slot.textContent = ` ${badge[r.status] || '?'} ${r.status}`; slot.title = r.detail || ''; }
+      });
     }
 
     // Click a node -> filter the URI Processes column to that node (click again / "(wszystkie)" to clear).
@@ -1461,6 +1546,16 @@ INDEX_HTML = r"""<!doctype html>
       const summary = state.summary || {};
       renderNodes(summary.nodes || []);
       renderRoutes(summary.routes || []);
+    }
+    // "Test" button on a node row: reveal that node's routes (so the result badges have a home),
+    // then probe its read-only query routes — one click, no need to open the column first.
+    function testNodeFromList(name) {
+      if (!name) return;
+      state.selectedRoutesNode = name;
+      const summary = state.summary || {};
+      renderNodes(summary.nodes || []);
+      renderRoutes(summary.routes || []);
+      testNodeRoutes(name, null);
     }
     function clearRoutesNodeFilter() {
       state.selectedRoutesNode = null;
@@ -4493,147 +4588,106 @@ def _run_node_uri(
     }
 
 
-def _route_key(uri: str) -> tuple[str, str]:
+def _route_inputs_example(route: dict) -> dict:
+    """A minimal example payload for a route, derived from its declared input schema
+    (defaults + required-field placeholders) — enough to make a query route dispatch."""
+    schema = route.get("inputSchema") or (route.get("config") or {}).get("inputSchema") or {}
+    if not isinstance(schema, dict) or not schema:
+        return {}
     try:
-        scheme, rest = str(uri).split("://", 1)
-        parts = rest.split("/", 1)
-        return scheme, parts[1] if len(parts) > 1 else ""
-    except Exception:
-        return str(uri), ""
+        import urirun
+        return urirun._example_payload(schema)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _classify_route_run(envelope: Any, value: Any) -> tuple[str, str]:
+    """Classify one route probe: ``ok`` (handler succeeded), ``handler-error`` (route DID
+    dispatch but returned ok=False — e.g. bad/empty input), ``not-found`` (no such route on the
+    node), or ``unreachable`` (transport/None). ``ok`` and ``handler-error`` both mean the route
+    EXISTS; ``not-found``/``unreachable`` mean it is missing or broken."""
+    err = (envelope.get("error") if isinstance(envelope, dict) else None) or {}
+    if isinstance(err, dict):
+        msg = str(err.get("message") or "")
+        if str(err.get("category") or "") == "NOT_FOUND" or "route not found" in msg.lower():
+            return "not-found", msg or "route not found"
+    if isinstance(value, dict):
+        if value.get("ok") is False:
+            return "handler-error", str(value.get("error") or "")[:200]
+        return "ok", ""
+    if isinstance(value, str):
+        return "ok", value.strip()[:120]
+    if isinstance(envelope, dict) and not envelope.get("ok"):
+        detail = (err.get("message") if isinstance(err, dict) else None) or envelope.get("error") or "no result"
+        return "unreachable", str(detail)[:200]
+    return "ok", ""
+
+
+def node_test_routes(project: str, db: str | None, config: str | None, payload: dict, *,
+                     node_urls: list[str] | None = None, token: str | None = None,
+                     identity: str | None = None) -> dict:
+    """Probe a node's URIs and report which respond. ``payload``: ``{node, uris?}``. With
+    ``uris`` the caller's exact selection is tested (may include command routes — explicit
+    opt-in); without it, only the node's read-only ``*/query/*`` routes run (safe default).
+    Each route gets an example payload from its input schema; results classify ok / reachable /
+    missing so a node's surface can be health-checked from the dashboard."""
+    node = str((payload or {}).get("node") or "").strip()
+    if not node:
+        return {"ok": False, "error": "node is required"}
+    selected = [str(u).strip() for u in ((payload or {}).get("uris") or []) if str(u).strip()]
+    node_url = _node_url_from_config(config, node_urls, node)
+    if not node_url:
+        return {"ok": False, "error": f"no node_url resolvable for '{node}'", "node": node}
+    tok = _node_token_for(node, token)
+    try:
+        client = _node_client(node_url, token=tok, identity=identity)
+        routemap = {str(r.get("uri", "")): r for r in client.routes()}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"cannot reach node: {exc}", "node": node, "nodeUrl": node_url}
+    if selected:
+        targets = [u for u in selected if u]
+        missing_sel = {u for u in selected if u not in routemap}
+    else:
+        targets = sorted(u for u in routemap if "/query/" in u)  # safe read-only default
+        missing_sel = set()
+    results = []
+    for uri in targets:
+        route = routemap.get(uri, {})
+        try:
+            env = client.run(uri, _route_inputs_example(route))
+            status, detail = _classify_route_run(env, client.value(env))
+        except Exception as exc:  # noqa: BLE001
+            status, detail = "unreachable", f"{type(exc).__name__}: {exc}"[:200]
+        results.append({"uri": uri, "ok": status == "ok", "status": status, "detail": detail,
+                        **({"note": "not advertised on this node"} if uri in missing_sel else {})})
+    reachable = sum(1 for r in results if r["status"] in ("ok", "handler-error"))
+    return {
+        "ok": True, "node": node, "nodeUrl": node_url,
+        "mode": "selected" if selected else "query",
+        "tested": len(results), "okCount": sum(1 for r in results if r["ok"]),
+        "reachable": reachable, "broken": len(results) - reachable,
+        "results": results,
+    }
+
+
+def _route_key(uri: str) -> tuple[str, str]:
+    return _route_key_impl(uri)
 
 
 def _node_has_route(routes: list[dict], uri: str) -> bool:
-    want = _route_key(uri)
-    return any(_route_key(str(route.get("uri") or "")) == want for route in routes if isinstance(route, dict))
-
-
-_FS_FILE_TRANSFER_CODE = r'''
-from __future__ import annotations
-
-import base64
-import hashlib
-import os
-import time
-from pathlib import Path
-from typing import Any
-
-
-def _expand_path(path: str) -> Path:
-    return Path(os.path.expandvars(os.path.expanduser(path))).resolve()
-
-
-def _unique_path(path: Path) -> Path:
-    if not path.exists():
-        return path
-    stem, suffix = path.stem, path.suffix
-    counter = 1
-    while True:
-        candidate = path.with_name(f"{stem}_{counter}{suffix}")
-        if not candidate.exists():
-            return candidate
-        counter += 1
-
-
-def read_b64(path: str = "", max_bytes: int = 3_000_000) -> dict[str, Any]:
-    source = _expand_path(path)
-    if not source.is_file():
-        return {"ok": False, "error": f"not a file: {source}"}
-    size = source.stat().st_size
-    if max_bytes > 0 and size > max_bytes:
-        return {"ok": False, "error": f"file too large for read-b64: {size} > {max_bytes}",
-                "path": str(source), "bytes": size}
-    data = source.read_bytes()
-    return {"ok": True, "connector": "fs-file-transfer-shim", "path": str(source), "name": source.name,
-            "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-            "bytes_b64": base64.b64encode(data).decode("ascii")}
-
-
-def write_b64(path: str = "", bytes_b64: str = "", overwrite: bool = False,
-              make_dirs: bool = True) -> dict[str, Any]:
-    if not path:
-        return {"ok": False, "error": "path is required"}
-    if not bytes_b64:
-        return {"ok": False, "error": "bytes_b64 is required"}
-    target = _expand_path(path)
-    if make_dirs:
-        target.parent.mkdir(parents=True, exist_ok=True)
-    elif not target.parent.is_dir():
-        return {"ok": False, "error": f"directory does not exist: {target.parent}"}
-    final = target if overwrite else _unique_path(target)
-    try:
-        data = base64.b64decode(bytes_b64.encode("ascii"), validate=True)
-    except Exception as exc:
-        return {"ok": False, "error": f"invalid base64 payload: {exc}"}
-    tmp = final.with_name(f".{final.name}.tmp-{os.getpid()}-{int(time.time() * 1000)}")
-    tmp.write_bytes(data)
-    tmp.replace(final)
-    return {"ok": True, "connector": "fs-file-transfer-shim", "path": str(final), "requestedPath": str(target),
-            "overwritten": bool(overwrite and final == target), "renamed": final != target,
-            "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
-'''
+    return _node_has_route_impl(routes, uri)
 
 
 def _fs_file_transfer_binding(uri: str) -> dict:
-    is_read = "/file/query/read-b64" in str(uri)
-    return {
-        "uri": uri,
-        "kind": "local-function",
-        "adapter": "local-function-subprocess",
-        "python": {
-            "type": "python",
-            "module": "urirun_fs_file_transfer",
-            "export": "read_b64" if is_read else "write_b64",
-        },
-        "inputSchema": {
-            "type": "object",
-            "additionalProperties": True,
-            "properties": {
-                "path": {"type": "string"},
-                **({"max_bytes": {"type": "integer"}} if is_read else {
-                    "bytes_b64": {"type": "string"},
-                    "overwrite": {"type": "boolean"},
-                    "make_dirs": {"type": "boolean"},
-                }),
-            },
-            "required": ["path"] if is_read else ["path", "bytes_b64"],
-        },
-        "policy": {"allowExecute": True},
-        "meta": {
-            "label": "Host-supplied fs file transfer shim",
-            "connector": "fs-file-transfer-shim",
-            "source": "host-dashboard-preflight",
-        },
-    }
+    return _fs_file_transfer_binding_impl(uri)
 
 
 def _fs_file_transfer_fallback_bindings(required_uris: list[str]) -> dict:
-    bindings = {
-        uri: _fs_file_transfer_binding(uri)
-        for uri in required_uris
-        if "/file/command/write-b64" in str(uri) or "/file/query/read-b64" in str(uri)
-    }
-    return {"version": "urirun.bindings.v2", "bindings": bindings}
+    return _fs_file_transfer_fallback_bindings_impl(required_uris)
 
 
 def _deploy_fs_file_transfer_fallback(client: Any, required_uris: list[str], *, timeout: float) -> dict:
-    bindings = _fs_file_transfer_fallback_bindings(required_uris)
-    if not bindings.get("bindings"):
-        return {"ok": False, "error": "no fs file-transfer routes requested"}
-    try:
-        result = client.deploy(
-            bindings=bindings,
-            code={"urirun_fs_file_transfer.py": _FS_FILE_TRANSFER_CODE},
-            allow=["fs://**"],
-            merge=True,
-            timeout=timeout,
-        )
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc), "bindings": sorted(bindings["bindings"])}
-    return {
-        "ok": bool(result.get("ok", True)),
-        "result": _short_value(result),
-        "bindings": sorted(bindings["bindings"]),
-    }
+    return _deploy_fs_file_transfer_fallback_impl(client, required_uris, timeout=timeout)
 
 
 def _ensure_node_uri_routes(
@@ -4646,43 +4700,16 @@ def _ensure_node_uri_routes(
     timeout: float = 120.0,
     roots: Any = None,
 ) -> dict:
-    """Preflight the exact URI routes a node-side workflow needs.
-
-    Scheme-level checks are insufficient for split connectors such as fs://:
-    a node may expose fs://duplicates/... while still missing fs://file/... .
-    """
-    client = _node_client(node_url, token=token, identity=identity)
-    before = client.routes()
-    missing = [uri for uri in required_uris if not _node_has_route(before, uri)]
-    ensured: list[dict] = []
-    attempted_route_keys: set[tuple[str, str]] = set()
-    for uri in missing:
-        key = _route_key(uri)
-        if key in attempted_route_keys:
-            continue
-        attempted_route_keys.add(key)
-        scheme = uri.split("://", 1)[0] if "://" in uri else uri
-        ensured.append(client.ensure_scheme(scheme, roots=roots, install=True, route=uri))
-    after = client.routes() if missing else before
-    remaining = [uri for uri in required_uris if not _node_has_route(after, uri)]
-    fallback = None
-    if remaining and all(str(uri).startswith("fs://") for uri in remaining):
-        fallback = _deploy_fs_file_transfer_fallback(client, remaining, timeout=timeout)
-        after = client.routes()
-        remaining = [uri for uri in required_uris if not _node_has_route(after, uri)]
-    return {
-        "ok": not remaining,
-        "node": node,
-        "nodeUrl": node_url,
-        "requiredRoutes": required_uris,
-        "missingBefore": missing,
-        "missingAfter": remaining,
-        "ensured": ensured,
-        "hostFallback": fallback,
-        "routeCountBefore": len(before),
-        "routeCountAfter": len(after),
-        "timeout": timeout,
-    }
+    return _ensure_node_uri_routes_impl(
+        node_url,
+        required_uris,
+        node=node,
+        node_client=_node_client,
+        token=token,
+        identity=identity,
+        timeout=timeout,
+        roots=roots,
+    )
 
 
 def _short_value(value: Any, *, limit: int = 600) -> Any:
@@ -5021,16 +5048,20 @@ def _scanned_entry_seen(entry: dict, seen: dict[str, set[str]]) -> bool:
     return any(entry[key] and entry[key] in bucket for key, bucket in seen.items())
 
 
-def _backfill_scanned_id_log(index: dict) -> None:
-    docs = [item for item in index.get("documents", []) if isinstance(item, dict)]
-    if not docs:
-        return
-    existing = _iter_scanned_id_log()
-    seen: dict[str, set[str]] = {
+def _scanned_seen_buckets(existing: list[dict]) -> dict[str, set[str]]:
+    """Index the existing scanned-id log by each identity key for O(1) duplicate checks."""
+    return {
         "docId": {str(i.get("docId") or "") for i in existing if i.get("docId")},
         "sourceSha256": {str(i.get("sourceSha256") or "") for i in existing if i.get("sourceSha256")},
         "textSha256": {str(i.get("textSha256") or "") for i in existing if i.get("textSha256")},
     }
+
+
+def _backfill_scanned_id_log(index: dict) -> None:
+    docs = [item for item in index.get("documents", []) if isinstance(item, dict)]
+    if not docs:
+        return
+    seen = _scanned_seen_buckets(_iter_scanned_id_log())
     for item in docs:
         entry = _scanned_log_entry(item)
         if _scanned_entry_seen(entry, seen):
@@ -6132,6 +6163,20 @@ def _supersede_archived_document(*, duplicate: dict, existing_meta: dict, extrac
     return extracted, month, archive_dir, filename, superseded_of, merged_fields
 
 
+def _archive_month(extracted: dict) -> str:
+    """The YYYY-MM archive bucket from the document's date, or the current month."""
+    if re.match(r"^20\d{2}-\d{2}", str(extracted.get("date", ""))):
+        return str(extracted["date"])[:7]
+    return time.strftime("%Y-%m", time.gmtime())
+
+
+def _existing_document_meta(duplicate: dict) -> dict:
+    """The duplicate record's metadata dict, or a flat projection of its top-level fields."""
+    if isinstance(duplicate.get("metadata"), dict):
+        return duplicate["metadata"]
+    return {key: duplicate.get(key) for key in ("type", "date", "contractor", "amount", "currency")}
+
+
 def _archive_scanned_document(
     *,
     display_path: Path,
@@ -6155,7 +6200,7 @@ def _archive_scanned_document(
     dhash = _image_dhash(display_path)
     phash = _image_phash(display_path)
     new_completeness = _metadata_completeness(extracted)
-    month = str(extracted["date"])[:7] if re.match(r"^20\d{2}-\d{2}", str(extracted.get("date", ""))) else time.strftime("%Y-%m", time.gmtime())
+    month = _archive_month(extracted)
     root = _document_archive_root()
     archive_dir = root / month
     filename = _document_filename_with_id(_canonical_document_filename(extracted), doc_id)
@@ -6174,9 +6219,7 @@ def _archive_scanned_document(
         superseded_of = None
         merged_fields: list[str] = []
         if duplicate:
-            existing_meta = duplicate.get("metadata") if isinstance(duplicate.get("metadata"), dict) else {
-                key: duplicate.get(key) for key in ("type", "date", "contractor", "amount", "currency")
-            }
+            existing_meta = _existing_document_meta(duplicate)
             # Supersede only an already-archived document (index_match), and only when the
             # new scan reads strictly more complete metadata (e.g. amount known vs unknown).
             can_supersede = index_match is not None and new_completeness > _metadata_completeness(existing_meta)
@@ -7233,6 +7276,30 @@ def _capture_candidate_result(project: str, payload: dict, *, uri: str, mime: st
     }
 
 
+def _capture_display_path(crop: dict, path: Path) -> Path:
+    """The cropped image when the auto-crop succeeded, else the original frame."""
+    return Path(crop["path"]) if crop.get("ok") and crop.get("path") else path
+
+
+def _capture_ocr_and_detect(path: Path, display_path: Path, payload: dict, archive: bool) -> tuple[dict, dict]:
+    """OCR the frame and extract document metadata for a capture.
+
+    OCRs the full original frame, not the crop: PaddleOCR handles the background and the crop
+    tended to cut the header/footer (losing seller name / "Do zapłaty" total). The crop is kept
+    only as the display thumbnail. Set URIRUN_SCANNER_OCR_FULLFRAME=0 to OCR the crop (legacy).
+    Transient candidates (archive=False) use the cheap tesseract read + regex path; only a kept
+    document pays for the full backend and the optional LLM/vision metadata pass."""
+    ocr_source = path if _truthy_env("URIRUN_SCANNER_OCR_FULLFRAME", "1") else display_path
+    ocr = _local_image_ocr(str(ocr_source), backend=None if archive else "tesseract")
+    detected_document = _extract_document_metadata(
+        str(ocr.get("text") or ""),
+        captured_at=payload.get("capturedAt"),
+        image_path=str(path) if archive else None,
+        use_llm=archive,
+    )
+    return ocr, detected_document
+
+
 def scanner_capture(project: str, db: str | None, payload: dict) -> dict:
     _prune_scanner_staging()
     mode = str(payload.get("mode") or "").lower()
@@ -7244,25 +7311,8 @@ def scanner_capture(project: str, db: str | None, payload: dict) -> dict:
     path = root / name
     path.write_bytes(raw)
     crop = _auto_crop_receipt(path)
-    display_path = Path(crop["path"]) if crop.get("ok") and crop.get("path") else path
-    # OCR the full original frame, not the crop: PaddleOCR handles the background and the
-    # crop tended to cut the header/footer (losing seller name / "Do zapłaty" total). The
-    # crop is kept only as the display thumbnail / archived preview. Set
-    # URIRUN_SCANNER_OCR_FULLFRAME=0 to OCR the crop instead (legacy behaviour).
-    ocr_source = path if _truthy_env("URIRUN_SCANNER_OCR_FULLFRAME", "1") else display_path
-    # Transient "best frame" candidates (archive=False) only need a cheap read for quality
-    # scoring; the chosen frame is re-OCR'd with the full backend at archive time
-    # (_scanner_best_take). This keeps the live loop responsive while the kept document
-    # still gets the accurate paddle read.
-    ocr = _local_image_ocr(str(ocr_source), backend=None if archive else "tesseract")
-    # LLM metadata extraction (incl. the optional vision pass on the full frame) is paid only
-    # for a kept document. Transient candidate frames stay on the cheap regex path.
-    detected_document = _extract_document_metadata(
-        str(ocr.get("text") or ""),
-        captured_at=payload.get("capturedAt"),
-        image_path=str(path) if archive else None,
-        use_llm=archive,
-    )
+    display_path = _capture_display_path(crop, path)
+    ocr, detected_document = _capture_ocr_and_detect(path, display_path, payload, archive)
     quality = _document_frame_quality(crop, ocr, detected_document, display_path)
     overlay = _scanner_crop_overlay(path, crop, quality)
     overlay_path = str(overlay.get("path") or "") if overlay.get("ok") else ""
@@ -7442,6 +7492,12 @@ def _store_best_finish(series: dict, series_id: str, best: dict, document: dict,
         )
 
 
+def _best_crop_and_ocr(best: dict) -> tuple[dict, dict]:
+    crop = best.get("crop") if isinstance(best.get("crop"), dict) else {}
+    ocr = best.get("ocr") if isinstance(best.get("ocr"), dict) else {}
+    return crop, ocr
+
+
 def scanner_best_finish(project: str, db: str | None, payload: dict) -> dict:
     _prune_scanner_staging()
     series_id = str(payload.get("seriesId") or "").strip()
@@ -7467,8 +7523,7 @@ def scanner_best_finish(project: str, db: str | None, payload: dict) -> dict:
         return _best_finish_store_failure(series_id, series, status="failed",
                                           error="best candidate file is missing",
                                           best=best, project=project)
-    crop = best.get("crop") if isinstance(best.get("crop"), dict) else {}
-    ocr = best.get("ocr") if isinstance(best.get("ocr"), dict) else {}
+    crop, ocr = _best_crop_and_ocr(best)
     # Candidates were scored with the cheap OCR backend; pay for the accurate full read
     # (paddle full-frame) once, on the single frame we are about to keep. Falls back to the
     # candidate's OCR if the re-read fails.
@@ -7826,48 +7881,16 @@ def _uri_mode(value: Any) -> str:
 
 
 def _service_restart_argv(payload: dict, *, service: str, env_prefix: str, default_unit: str) -> tuple[list[str] | None, dict]:
-    manager = str(payload.get("manager") or os.environ.get(f"{env_prefix}_RESTART_MANAGER") or "").strip().lower()
-    if manager in {"systemd", "systemctl"}:
-        unit = str(payload.get("unit") or os.environ.get(f"{env_prefix}_SYSTEMD_UNIT") or default_unit).strip()
-        if not unit:
-            return None, {"error": "systemd unit is empty"}
-        return ["systemctl", "--user", "restart", unit], {"manager": "systemd", "unit": unit}
-
-    configured = str(os.environ.get(f"{env_prefix}_RESTART_CMD") or "").strip()
-    if configured:
-        try:
-            argv = shlex.split(configured)
-        except ValueError as exc:
-            return None, {"error": f"invalid {env_prefix}_RESTART_CMD: {exc}"}
-        if argv:
-            return argv, {"manager": "command", "source": f"{env_prefix}_RESTART_CMD"}
-
-    return None, {
-        "error": f"{service} restart is not configured",
-        "configureAnyOf": [
-            "payload.manager=systemd with optional payload.unit",
-            f"{env_prefix}_RESTART_MANAGER=systemd",
-            f"{env_prefix}_RESTART_CMD='<restart command>'",
-        ],
-        "examplePayload": {"manager": "systemd", "unit": default_unit},
-    }
+    return _service_restart_argv_impl(
+        payload,
+        service=service,
+        env_prefix=env_prefix,
+        default_unit=default_unit,
+    )
 
 
 def _schedule_restart_command(argv: list[str], payload: dict, meta: dict) -> dict:
-    delay = float(payload.get("delaySeconds") or 0.35)
-    runner = (
-        "import subprocess, sys, time; "
-        "time.sleep(float(sys.argv[1])); "
-        "raise SystemExit(subprocess.run(sys.argv[2:]).returncode)"
-    )
-    subprocess.Popen(
-        [sys.executable, "-c", runner, str(delay), *argv],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
-    return {"ok": True, "scheduled": True, "delaySeconds": delay, "command": argv, **meta}
+    return _schedule_restart_command_impl(argv, payload, meta)
 
 
 def _chat_service_restart_argv(
@@ -7879,36 +7902,7 @@ def _chat_service_restart_argv(
     identity: str | None,
     payload: dict,
 ) -> tuple[list[str] | None, dict]:
-    import shutil
-
-    script = str(payload.get("command") or os.environ.get("URIRUN_CHAT_SERVICE_CMD") or "").strip()
-    if not script:
-        script = shutil.which("urirun-service-chat") or str(Path(sys.executable).with_name("urirun-service-chat"))
-    if not script or (os.path.sep in script and not Path(script).expanduser().exists()):
-        return None, {
-            "error": "urirun-service-chat command was not found",
-            "configureAnyOf": [
-                "install urirun-service-chat in the active venv",
-                "payload.command=/path/to/urirun-service-chat",
-                "URIRUN_CHAT_SERVICE_CMD=/path/to/urirun-service-chat",
-            ],
-        }
-    host = str(payload.get("host") or os.environ.get("URIRUN_CHAT_HOST", "127.0.0.1"))
-    port = int(payload.get("port") or os.environ.get("URIRUN_CHAT_PORT", "8194"))
-    argv = [script, "restart", "--project", str(Path(project).expanduser().resolve()), "--host", host, "--port", str(port)]
-    if db:
-        argv.extend(["--db", db])
-    if config:
-        argv.extend(["--config", config])
-    for node_url in node_urls or []:
-        argv.extend(["--node-url", node_url])
-    if token:
-        argv.extend(["--token", token])
-    if identity:
-        argv.extend(["--identity", identity])
-    if str(payload.get("forcePortKill") or payload.get("force") or "").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--force-replace")
-    return argv, {"manager": "port-replace", "port": port, "commandSource": script}
+    return _chat_service_restart_argv_impl(project, db, config, node_urls, token, identity, payload)
 
 
 def restart_chat_service(
@@ -7921,23 +7915,15 @@ def restart_chat_service(
     token: str | None = None,
     identity: str | None = None,
 ) -> dict:
-    argv, meta = _service_restart_argv(
+    return _restart_chat_service_impl(
         payload,
-        service="chat",
-        env_prefix="URIRUN_CHAT",
-        default_unit="urirun-service-chat.service",
+        project=project,
+        db=db,
+        config=config,
+        node_urls=node_urls,
+        token=token,
+        identity=identity,
     )
-    meta.setdefault("exampleUri", "dashboard://host/service/chat/command/restart")
-    if not argv:
-        fallback_argv, auto_meta = _chat_service_restart_argv(project, db, config, node_urls, token, identity, payload)
-        if fallback_argv:
-            argv = fallback_argv
-            meta = {"exampleUri": meta.get("exampleUri"), **auto_meta}
-        else:
-            meta = {**meta, **auto_meta}
-    if not argv:
-        return {"ok": False, **meta}
-    return _schedule_restart_command(argv, payload, meta)
 
 
 def _phone_scanner_service_id(bind_host: str, port: int) -> str:
@@ -8357,6 +8343,16 @@ def summary(project: str, db: str | None, config: str | None, node_urls: list[st
     artifacts = _public_artifacts(host_db.list_artifacts(db, limit=10), project)
     logs = host_db.recent_logs(db, limit=10)
     nodes = discovered.get("nodes") or []
+    # Annotate each node with whether a management token (X-Urirun-Token) is on file in the
+    # keyring, so the Nodes view can show per-node token status / a "set token" affordance
+    # without ever exposing the value.
+    for node in nodes:
+        node_name = node.get("name")
+        if node_name:
+            try:
+                node["hasToken"] = bool(_node_token_for(node_name))
+            except Exception:  # noqa: BLE001 - keyring probe must never break the summary
+                node["hasToken"] = False
     routes = discovered.get("routes") or []
     services = _service_contacts()
     host_routes = _host_registry_routes()
@@ -9759,6 +9755,11 @@ def create_handler(
                     payload = _read_json(self)
                     _json_response(self, 200, documents_reconcile(project, db, payload))
                     return
+                if parsed.path == "/api/nodes/test-routes":
+                    payload = _read_json(self)
+                    _json_response(self, 200, node_test_routes(project, db, config, payload,
+                                                               node_urls=node_urls, token=token, identity=identity))
+                    return
                 if parsed.path == "/api/nodes/add":
                     payload = _read_json(self)
                     _json_response(self, 200, node_add(config, payload))
@@ -9811,50 +9812,25 @@ def create_handler(
 
 
 def _port_holder_pids(port: int) -> list[int]:
-    """PIDs currently LISTENing on `port` (best effort via ss)."""
-    try:
-        out = subprocess.run(["ss", "-ltnpH"], capture_output=True, text=True, timeout=5).stdout
-    except Exception:  # noqa: BLE001
-        return []
-    pids: list[int] = []
-    for line in out.splitlines():
-        norm = " ".join(line.split())
-        if f":{port} " not in norm:
-            continue
-        pids.extend(int(m) for m in re.findall(r"pid=(\d+)", norm))
-    return pids
+    return _port_holder_pids_impl(port)
 
 
 def _process_cmdline(pid: int) -> str:
-    try:
-        with open(f"/proc/{pid}/cmdline", "rb") as fh:
-            return fh.read().replace(b"\x00", b" ").decode("utf-8", "replace")
-    except OSError:
-        return ""
+    return _process_cmdline_impl(pid)
 
 
 def _is_dashboard_process(pid: int) -> bool:
     """True only if `pid` is a urirun host dashboard serve process (cmdline check). The guard
     that keeps auto-replace from ever killing an unrelated service that owns the port."""
-    cmd = _process_cmdline(pid)
-    return "host dashboard serve" in cmd
+    return _is_dashboard_process_impl(pid, process_cmdline_fn=_process_cmdline)
 
 
 def _is_scanner_process(pid: int) -> bool:
-    cmd = _process_cmdline(pid)
-    return any(term in cmd for term in (
-        "urirun-service-scanner",
-        "urirun-scanner",
-        "urirun_service_scanner",
-    ))
+    return _is_scanner_process_impl(pid, process_cmdline_fn=_process_cmdline)
 
 
 def _is_chat_process(pid: int) -> bool:
-    cmd = _process_cmdline(pid)
-    return any(term in cmd for term in (
-        "urirun-service-chat",
-        "urirun_service_chat",
-    ))
+    return _is_chat_process_impl(pid, process_cmdline_fn=_process_cmdline)
 
 
 def _free_port_from_matching_processes(
@@ -9865,56 +9841,20 @@ def _free_port_from_matching_processes(
     is_target: Any,
     event_prefix: str,
 ) -> dict:
-    import signal
-
-    me = os.getpid()
-
-    def holders() -> list[int]:
-        return [p for p in _port_holder_pids(port) if p != me]
-
-    def targets() -> list[int]:
-        return [p for p in holders() if force or is_target(p)]
-
-    initial_holders = holders()
-    initial_targets = targets()
-    skipped = [p for p in initial_holders if p not in initial_targets]
-    killed: list[int] = []
-    for pid in initial_targets:
-        try:
-            os.kill(pid, signal.SIGTERM)
-            killed.append(pid)
-            if emit:
-                print(json.dumps({"event": f"{event_prefix}.replacing_old", "pid": pid, "port": port}), flush=True)
-        except OSError:
-            pass
-    if initial_targets:
-        deadline = time.time() + 8.0
-        while time.time() < deadline:
-            if not targets():
-                break
-            time.sleep(0.2)
-        for pid in targets():
-            try:
-                os.kill(pid, signal.SIGKILL)
-                killed.append(pid)
-                if emit:
-                    print(json.dumps({"event": f"{event_prefix}.force_killed_old", "pid": pid, "port": port}), flush=True)
-            except OSError:
-                pass
-        time.sleep(0.3)
-
-    remaining = holders()
-    remaining_blockers = [p for p in remaining if force or is_target(p)]
-    return {
-        "ok": not remaining_blockers and (force or not skipped),
-        "port": port,
-        "force": bool(force),
-        "holders": initial_holders,
-        "targets": initial_targets,
-        "skipped": [{"pid": p, "cmdline": _process_cmdline(p)} for p in skipped],
-        "killed": sorted(set(killed)),
-        "remaining": [{"pid": p, "cmdline": _process_cmdline(p)} for p in remaining],
-    }
+    return _free_port_from_matching_processes_impl(
+        port,
+        force=force,
+        emit=emit,
+        is_target=is_target,
+        event_prefix=event_prefix,
+        port_holder_pids_fn=_port_holder_pids,
+        process_cmdline_fn=_process_cmdline,
+        kill_fn=os.kill,
+        getpid_fn=os.getpid,
+        sleep_fn=time.sleep,
+        time_fn=time.time,
+        emit_fn=print,
+    )
 
 
 def _free_port_from_old_scanner(port: int, *, force: bool = False, emit: bool = False) -> dict:
@@ -9947,33 +9887,16 @@ def _free_port_from_old_dashboard(port: int) -> None:
     """Before binding, terminate a previous dashboard instance still holding `port` so the new
     one can start cleanly. SAFETY: only kills processes whose cmdline is a urirun host
     dashboard serve — never an unrelated service that happens to own the port."""
-    import signal
-
-    me = os.getpid()
-
-    def stale() -> list[int]:
-        return [p for p in _port_holder_pids(port) if p != me and _is_dashboard_process(p)]
-
-    targets = stale()
-    for pid in targets:
-        try:
-            os.kill(pid, signal.SIGTERM)
-            print(json.dumps({"event": "urirun.host_dashboard.replacing_old", "pid": pid, "port": port}), flush=True)
-        except OSError:
-            pass
-    if not targets:
-        return
-    deadline = time.time() + 8.0
-    while time.time() < deadline:
-        if not stale():
-            return
-        time.sleep(0.2)
-    for pid in stale():  # last resort for a stubborn holder
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except OSError:
-            pass
-    time.sleep(0.3)
+    _free_port_from_old_dashboard_impl(
+        port,
+        is_dashboard_process_fn=_is_dashboard_process,
+        port_holder_pids_fn=_port_holder_pids,
+        kill_fn=os.kill,
+        getpid_fn=os.getpid,
+        sleep_fn=time.sleep,
+        time_fn=time.time,
+        emit_fn=print,
+    )
 
 
 def serve(

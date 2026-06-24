@@ -405,5 +405,74 @@ class RemoteWriteErrorTests(unittest.TestCase):
         self.assertIn("sha256 mismatch", msg)
 
 
+class NodeTestRoutesTests(unittest.TestCase):
+    """Probe a node's URIs from the dashboard: query routes by default (safe), or a selection."""
+
+    class _FakeClient:
+        def __init__(self, envs):
+            self._envs = envs
+
+        def routes(self):
+            return [{"uri": u} for u in self._envs]
+
+        def run(self, uri, payload):
+            return self._envs[uri]
+
+        def value(self, env):
+            result = env.get("result") if isinstance(env, dict) else None
+            return result.get("value", {}) if isinstance(result, dict) else {}
+
+    ENVS = {
+        "fs://host/file/query/blob": {"ok": True, "result": {"value": {"ok": True, "sha256": "abc"}}},
+        "fs://host/path/query/stat": {"ok": False, "error": {"category": "NOT_FOUND",
+                                                             "message": "Route not found: fs.path.query"}},
+        "env://n/runtime/query/health": {"ok": True, "result": {"value": {"ok": True, "version": "1"}}},
+        "fs://host/file/command/write_blob": {"ok": True, "result": {"value": {"ok": True}}},
+    }
+
+    def _patched(self):
+        fake = self._FakeClient(self.ENVS)
+        return [
+            patch.object(host_dashboard, "_node_url_from_config", lambda *a, **k: "http://n:8765"),
+            patch.object(host_dashboard, "_node_client", lambda *a, **k: fake),
+            patch.object(host_dashboard, "_node_token_for", lambda node, fb=None: fb),
+        ]
+
+    def test_query_mode_tests_only_query_routes_and_classifies(self):
+        ctx = self._patched()
+        [p.start() for p in ctx]
+        try:
+            r = host_dashboard.node_test_routes("p", None, None, {"node": "n"})
+        finally:
+            [p.stop() for p in ctx]
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["mode"], "query")
+        self.assertEqual(r["tested"], 3)            # the 3 /query/ routes, NOT the command
+        self.assertEqual(r["okCount"], 2)           # blob + health
+        self.assertEqual(r["reachable"], 2)         # not-found stat is not reachable
+        self.assertEqual(r["broken"], 1)
+        statuses = {x["uri"]: x["status"] for x in r["results"]}
+        self.assertEqual(statuses["fs://host/path/query/stat"], "not-found")
+        self.assertEqual(statuses["fs://host/file/query/blob"], "ok")
+
+    def test_selected_mode_tests_exact_uris_including_commands(self):
+        ctx = self._patched()
+        [p.start() for p in ctx]
+        try:
+            r = host_dashboard.node_test_routes("p", None, None,
+                                                {"node": "n", "uris": ["fs://host/file/command/write_blob"]})
+        finally:
+            [p.stop() for p in ctx]
+        self.assertEqual(r["mode"], "selected")
+        self.assertEqual(r["tested"], 1)
+        self.assertEqual(r["okCount"], 1)
+
+    def test_missing_node_url_is_reported(self):
+        with patch.object(host_dashboard, "_node_url_from_config", lambda *a, **k: None):
+            r = host_dashboard.node_test_routes("p", None, None, {"node": "ghost"})
+        self.assertFalse(r["ok"])
+        self.assertIn("no node_url", r["error"])
+
+
 if __name__ == "__main__":
     unittest.main()

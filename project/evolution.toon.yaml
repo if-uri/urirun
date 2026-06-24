@@ -1,10 +1,10 @@
-# code2llm/evolution | 1415 func | 79f | 2026-06-24
-# generated in 0.01s
+# code2llm/evolution | 1444 func | 81f | 2026-06-24
+# generated in 0.03s
 
 NEXT[10] (ranked by impact):
   [1] !! SPLIT           adapters/python/urirun/host/host_dashboard.py
-      WHY: 10040L, 0 classes, max CC=100
-      EFFORT: ~4h  IMPACT: 1004000
+      WHY: 9953L, 0 classes, max CC=100
+      EFFORT: ~4h  IMPACT: 995300
 
   [2] !! SPLIT           adapters/python/urirun/runtime/v2.py
       WHY: 2024L, 1 classes, max CC=14
@@ -18,41 +18,41 @@ NEXT[10] (ranked by impact):
       WHY: CC=100 exceeds 15
       EFFORT: ~1h  IMPACT: 6000
 
-  [5] !  SPLIT-FUNC      _archive_scanned_document  CC=17  fan=45
-      WHY: CC=17 exceeds 15
-      EFFORT: ~1h  IMPACT: 765
-
-  [6] !! SPLIT-FUNC      NodeClient.ensure_scheme  CC=32  fan=21
+  [5] !! SPLIT-FUNC      NodeClient.ensure_scheme  CC=32  fan=21
       WHY: CC=32 exceeds 15
       EFFORT: ~1h  IMPACT: 672
 
-  [7] !! SPLIT-FUNC      uri_invoke  CC=26  fan=23
+  [6] !! SPLIT-FUNC      uri_invoke  CC=26  fan=23
       WHY: CC=26 exceeds 15
       EFFORT: ~1h  IMPACT: 598
 
-  [8] !  SPLIT-FUNC      scanner_capture  CC=18  fan=29
-      WHY: CC=18 exceeds 15
-      EFFORT: ~1h  IMPACT: 522
-
-  [9] !! SPLIT-FUNC      NodeClient._local_connector_deploy_payload  CC=25  fan=20
+  [7] !! SPLIT-FUNC      NodeClient._local_connector_deploy_payload  CC=25  fan=20
       WHY: CC=25 exceeds 15
       EFFORT: ~1h  IMPACT: 500
 
-  [10] !  SPLIT-FUNC      artifacts_cleanup_orphan_sidecars  CC=19  fan=23
+  [8] !! SPLIT-FUNC      node_test_routes  CC=26  fan=19
+      WHY: CC=26 exceeds 15
+      EFFORT: ~1h  IMPACT: 494
+
+  [9] !  SPLIT-FUNC      artifacts_cleanup_orphan_sidecars  CC=19  fan=23
       WHY: CC=19 exceeds 15
       EFFORT: ~1h  IMPACT: 437
 
+  [10] !  SPLIT-FUNC      artifacts_delete  CC=18  fan=21
+      WHY: CC=18 exceeds 15
+      EFFORT: ~1h  IMPACT: 378
+
 
 RISKS[3]:
-  ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 269 import paths
+  ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 278 import paths
   ⚠ Splitting adapters/python/urirun/runtime/v2.py may break 125 import paths
   ⚠ Splitting adapters/python/urirun/node/mesh.py may break 96 import paths
 
 METRICS-TARGET:
-  CC̄:          4.9 → ≤3.4
+  CC̄:          4.8 → ≤3.4
   max-CC:      100 → ≤20
   god-modules: 14 → 0
-  high-CC(≥15): 20 → ≤10
+  high-CC(≥15): 18 → ≤9
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
@@ -80,4 +80,4 @@ PATTERNS (language parser shared logic):
     - Standardized FunctionInfo/ClassInfo models
 
 HISTORY:
-  prev CC̄=4.9 → now CC̄=4.9
+  prev CC̄=4.9 → now CC̄=4.8
