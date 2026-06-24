@@ -4891,6 +4891,25 @@ def _find_duplicate_document(index: dict, *, doc_id: str, source_sha256: str, te
     return match
 
 
+def _artifact_schema_known(type_id: str) -> bool | None:
+    """Whether ``type_id`` matches a registered urirun-artifacts schema id.
+
+    Bridges the file-artifact's document ``type`` (e.g. ``paragon``/``faktura``) to the
+    urirun-artifacts schema registry WITHOUT making it a hard dependency: returns ``None``
+    when the registry is not installed (validation skipped), else ``True``/``False``.
+    """
+    normalized = str(type_id or "").strip().lower()
+    if not normalized:
+        return None
+    try:
+        import urirun_artifacts  # noqa: F401  (import registers the models)
+        from urirun_artifacts import registry
+        known = {str(i).strip().lower() for i in registry.all_ids()}
+    except Exception:  # noqa: BLE001
+        return None
+    return normalized in known
+
+
 def _archive_scanned_document(
     *,
     display_path: Path,
@@ -5034,6 +5053,7 @@ def _archive_scanned_document(
             "cropPath": str(display_path),
         }
         _write_document_pdf(display_path, pdf_path, metadata=pdf_meta, ocr_text=ocr_text)
+        _document_schema_known = _artifact_schema_known(extracted.get("type"))
         entry = {
             "docId": doc_id,
             "docIdProvider": docid_info.get("provider"),
@@ -5059,6 +5079,10 @@ def _archive_scanned_document(
             "text": ocr_text,
             "crop": crop,
             "createdAt": _utc_now(),
+            # Bridge to the urirun-artifacts schema registry: annotate whether the document
+            # type is a known schema (None when the registry isn't installed). Non-fatal.
+            "schemaKnown": _document_schema_known,
+            "schemaId": str(extracted.get("type") or "").strip().lower() if _document_schema_known else None,
             **extracted,
         }
         json_path.write_text(

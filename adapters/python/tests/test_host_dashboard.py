@@ -6,7 +6,9 @@ import io
 import importlib.util
 import json
 import os
+import sys
 import tempfile
+import types
 import threading
 import unittest
 import urllib.request
@@ -217,6 +219,29 @@ class DocumentIndexReconcileTests(unittest.TestCase):
             # Change is persisted to the index file.
             persisted = json.loads(index_path.read_text(encoding="utf-8"))
             self.assertEqual([d["docId"] for d in persisted["documents"]], ["ALIVE"])
+
+
+class ArtifactSchemaValidationTests(unittest.TestCase):
+    """Bridge file-artifact `type` to the urirun-artifacts schema registry (if installed)."""
+
+    def test_returns_none_for_empty_type(self):
+        self.assertIsNone(host_dashboard._artifact_schema_known(""))
+        self.assertIsNone(host_dashboard._artifact_schema_known(None))
+
+    def test_known_and_unknown_against_fake_registry(self):
+        registry_mod = types.ModuleType("urirun_artifacts.registry")
+        registry_mod.all_ids = lambda: ["faktura", "rachunek", "paragon"]
+        pkg = types.ModuleType("urirun_artifacts")
+        pkg.registry = registry_mod
+        with patch.dict(sys.modules, {"urirun_artifacts": pkg, "urirun_artifacts.registry": registry_mod}):
+            self.assertTrue(host_dashboard._artifact_schema_known("Paragon"))   # case-insensitive
+            self.assertTrue(host_dashboard._artifact_schema_known("faktura"))
+            self.assertFalse(host_dashboard._artifact_schema_known("dokument"))  # generic, not a schema
+
+    def test_returns_none_when_registry_missing(self):
+        # Force the import to fail -> validation gracefully skipped.
+        with patch.dict(sys.modules, {"urirun_artifacts": None}):
+            self.assertIsNone(host_dashboard._artifact_schema_known("faktura"))
 
 
 if __name__ == "__main__":
