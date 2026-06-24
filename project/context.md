@@ -5,12 +5,12 @@
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 102, json: 13, shell: 10, yaml: 5, csharp: 4
+- **Languages**: python: 103, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1669
+- **Total Functions**: 1672
 - **Total Classes**: 30
-- **Modules**: 162
-- **Entry Points**: 557
+- **Modules**: 163
+- **Entry Points**: 558
 
 ## Architecture by Module
 
@@ -85,6 +85,11 @@
 - **Classes**: 1
 - **File**: `domain_monitor.py`
 
+### adapters.python.urirun.host.scanner_bridge
+- **Functions**: 25
+- **Classes**: 1
+- **File**: `scanner_bridge.py`
+
 ### adapters.python.urirun.runtime.v1
 - **Functions**: 25
 - **File**: `v1.py`
@@ -92,11 +97,6 @@
 ### adapters.python.urirun.node.task_cli
 - **Functions**: 25
 - **File**: `task_cli.py`
-
-### adapters.python.urirun.host.scanner_bridge
-- **Functions**: 25
-- **Classes**: 1
-- **File**: `scanner_bridge.py`
 
 ### adapters.python.urirun.node.transport
 - **Functions**: 24
@@ -189,17 +189,17 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 ### adapters.python.urirun.host.domain_monitor._route_flow
 - **Calls**: str, adapters.python.urirun.host.domain_monitor.check_domain, adapters.python.urirun.host.domain_monitor.run_daily, rc.payload.get, rc.payload.get, adapters.python.urirun.host.domain_monitor.expected_records, adapters.python.urirun.host.domain_monitor._db, adapters.python.urirun.host.domain_monitor._project
 
-### adapters.python.urirun.runtime.codegen.gen_command
-- **Calls**: v2.load_registry_arg, getattr, print, adapters.python.urirun.runtime.codegen.proto_from_registry, getattr, None.write_text, None.write_text, print
-
-### adapters.python.urirun.connectors.connect_catalog._cmd_list
-- **Calls**: adapters.python.urirun.connectors.connect_catalog.fetch_catalog, adapters.python.urirun.connectors.connect_catalog._connectors, getattr, max, adapters.python.urirun.connectors.connect_catalog._emit_json, print, None.join, print
-
 ### adapters.python.urirun.host.scanner_bridge.scanner_live_state_from_streams
 - **Calls**: sorted, adapters.python.urirun.host.scanner_bridge.scanner_public_candidate_for_live, document.get, public_streams.append, utc_now, max, stream.get, isinstance
 
 ### adapters.python.urirun.host.scanner_bridge.register_scanner_result
 - **Calls**: None.is_file, str, adapters.python.urirun.host.scanner_bridge.scanner_result_content, deps.chat_message, deps.add_chat_message, None.is_file, attachments.append, document.get
+
+### adapters.python.urirun.runtime.codegen.gen_command
+- **Calls**: v2.load_registry_arg, getattr, print, adapters.python.urirun.runtime.codegen.proto_from_registry, getattr, None.write_text, None.write_text, print
+
+### adapters.python.urirun.connectors.connect_catalog._cmd_list
+- **Calls**: adapters.python.urirun.connectors.connect_catalog.fetch_catalog, adapters.python.urirun.connectors.connect_catalog._connectors, getattr, max, adapters.python.urirun.connectors.connect_catalog._emit_json, print, None.join, print
 
 ### adapters.python.urirun.node.manage.connector_install
 > Install a connector from ANY source into the node's venv:
@@ -220,8 +220,8 @@ a node may expose
 Falls back to full discovery (and refreshes the index) when the schem
 - **Calls**: adapters.python.urirun.runtime.discovery._scheme_of, adapters.python.urirun.runtime.discovery.load_index, list, adapters.python.urirun.runtime.discovery.build_index, v2.entry_point_bindings, bindings.extend, v2.compile_registry, None.get
 
-### examples.node-file-transfer.fs_transfer.write_b64
-- **Calls**: examples.node-file-transfer.fs_transfer._expand_path, final.with_name, tmp.write_bytes, tmp.replace, target.parent.mkdir, examples.node-file-transfer.fs_transfer._unique_path, base64.b64decode, str
+### adapters.python.urirun.node.mesh.NodeHandler._get
+- **Calls**: self.path.partition, adapters.python.urirun.node.mesh.send_json, adapters.python.urirun.node.mesh.send_json, adapters.python.urirun.node.mesh.send_json, self.path.startswith, self._stream_events, adapters.python.urirun.node.mesh.send_json, adapters.python.urirun.node.mesh.send_json
 
 ## Process Flows
 
@@ -460,22 +460,26 @@ Key functions that process and transform data:
 ### adapters.python.urirun.host.document_sync._parse_sync_params
 - **Output to**: None.resolve, adapters.python.urirun.host.document_sync._resolve_node_params, adapters.python.urirun.host.document_sync._build_sync_params, None.strip, None.expanduser
 
-### adapters.python.urirun.runtime.v1._run_process
-- **Output to**: config.get, config.get, subprocess.run, policy.get, progress.active
+### adapters.python.urirun.runtime.cli._add_connectors_subparser
+> The `connectors` command tree (list/show/install/index/resolve/check/lint/
+verify/new/smoke/from-spe
+- **Output to**: subparsers.add_parser, connectors_parser.add_subparsers, argparse.ArgumentParser, connectors_common.add_argument, connectors_sub.add_parser
 
-### adapters.python.urirun.runtime.v1._run_process_streaming
-- **Output to**: subprocess.Popen, progress.register_proc, threading.Timer, timer.start, enumerate
+### adapters.python.urirun.runtime.cli._add_node_subparser
+> The `node` command tree (init/config/list/stop/routes/serve). Extracted from _build_parser to cut fa
+- **Output to**: subparsers.add_parser, node_parser.add_subparsers, argparse.ArgumentParser, node_common.add_argument, node_sub.add_parser
 
-### adapters.python.urirun.runtime.v2.validate_input
-- **Output to**: adapters.python.urirun.runtime.v2._input_values, adapters.python.urirun.runtime.v2._schema_for, Draft202012Validator.check_schema, set, adapters.python.urirun.runtime.v2._apply_defaults
+### adapters.python.urirun.runtime.cli._add_host_task_subparser
+> The `host task` tree (planfile ticket lifecycle: plan/bindings/schedule/list/show/next/create/claim/
+- **Output to**: host_sub.add_parser, host_task.add_subparsers, argparse.ArgumentParser, task_common.add_argument, argparse.ArgumentParser
 
-### adapters.python.urirun.runtime.v2.run_local_function_subprocess
-> Run a ``local-function`` handler in a fresh process via the shared
-``python -m urirun.exec`` runner 
-- **Output to**: subprocess.run, None.get, py.get, py.get, runtime.PolicyError
+### adapters.python.urirun.runtime.cli._add_host_data_subparser
+> `host data` tree (SQLite context: bindings/init/dataset-create/datasets/record-upsert/records).
+- **Output to**: host_sub.add_parser, host_data.add_subparsers, argparse.ArgumentParser, data_common.add_argument, data_sub.add_parser
 
-### adapters.python.urirun.runtime.v2._run_parse
-- **Output to**: reglib.parse_uri, reglib.translate, _RunAbort, str, str
+### adapters.python.urirun.runtime.cli._add_host_monitor_subparser
+> `host monitor` tree (HTTP/DNS/domain monitoring: bindings/http/dns/domain/daily).
+- **Output to**: host_sub.add_parser, host_monitor.add_subparsers, argparse.ArgumentParser, monitor_common.add_argument, monitor_common.add_argument
 
 ## Behavioral Patterns
 

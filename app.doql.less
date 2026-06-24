@@ -57,6 +57,11 @@ workflow[name="lint"] {
   step-1: run cmd=$(PYTHON) -m ruff check adapters/python/urirun;
 }
 
+workflow[name="complexity"] {
+  trigger: manual;
+  step-1: run cmd=$(PYTHON) scripts/cc_gate.py;
+}
+
 workflow[name="lint-connectors"] {
   trigger: manual;
   step-1: run cmd=$(PYTHON) scripts/lint_connectors.py $(if $(STRICT),--strict,);

@@ -128,7 +128,7 @@ class NodeClient:
         before = None
         if merge and allow:
             try:
-                before = _get(self.base + "/health", timeout=min(timeout, 8.0), headers=self._auth())
+                before = _get(f"{self.base}/health", timeout=min(timeout, 8.0), headers=self._auth())
             except Exception:
                 before = None
         raw = json.dumps(body).encode("utf-8")
@@ -255,7 +255,7 @@ class NodeClient:
             }
             for uri, (_m, export) in specs.items()
         }
-        return {"ok": True, "module": flat, "code": {flat + ".py": source},
+        return {"ok": True, "module": flat, "code": {f"{flat}.py": source},
                 "bindings": {"version": "urirun.bindings.v2", "bindings": bindings}}
 
     def _ensure_via_host_deploy(self, scheme: str, route: str | None, install: bool) -> dict:

@@ -171,6 +171,11 @@ preflight detail then contains `hostFallback`: pushed bindings for
 This is intentionally narrower than installing the whole fs connector; it is
 only the primitive needed for verified document transfer.
 
+That `/deploy` is admin-gated, so the sync authorizes it with the per-node token
+(keyring) when set, otherwise the dashboard's enrolled key (`--identity`). Verified
+on the Lenovo node (key-auth, no token): the fs route was auto-deployed and 12 PDFs
+were transferred and read-back-verified to `~/Downloads/urirun-scans`.
+
 The sync result is contract-verified. A file counts as copied only when the
 write result returns the expected SHA-256 and the final read-back query returns
 the same SHA-256:
@@ -330,6 +335,14 @@ The dashboard mirrors visible operator state into the URL:
 This is only UI state. The command body still travels in the JSON payload sent to
 `POST /api/chat/ask`. The URL may include `prompt_len` or action markers for
 debugging, but large prompt bodies should not be treated as authoritative state.
+
+Mirrored keys include `view`/`tab`, `targets`, `discovery`, `chat`, the task
+`sprint`/`queue` filters, `execute`/`no_llm`, and — in the Nodes view — `kind`, the
+selected node-kind tab (`server`/`pc`/`rdp`/`smartphone`/`browser-debug`/`webpage`/
+`api`/`device`/…). Clicking a node-kind tab does a `replaceState` (no history spam);
+loading `?kind=<tab>` restores that tab if it names a real one. All writes go through
+the single `writeUrlState(changes, {replace})` helper, so new state must be added
+there rather than touching `history` directly.
 
 ## Service Control
 

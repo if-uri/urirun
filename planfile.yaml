@@ -1161,19 +1161,6 @@ sprints:
     model_hints:
       planning: balanced
       implementation: balanced
-  - id: ticket-47a2ceb6
-    name: Fix string-concat issues
-    description: Resolve 1 string-concat issues in adapters/python/urirun/connectors/connector_lint.py
-    task_type: prefactor
-    priority: medium
-    estimate: 1d
-    files:
-    - adapters/python/urirun/connectors/connector_lint.py
-    rule_id: string-concat
-    count: 1
-    model_hints:
-      planning: balanced
-      implementation: balanced
   - id: ticket-daef9f77
     name: Fix magic-numbers issues
     description: Resolve 1 magic-numbers issues in adapters/python/urirun/connectors/connector_lint.py
@@ -1313,6 +1300,19 @@ sprints:
     files:
     - adapters/python/urirun/host/discovery.py
     rule_id: string-concat
+    count: 2
+    model_hints:
+      planning: balanced
+      implementation: balanced
+  - id: ticket-7614d828
+    name: Fix unused-imports issues
+    description: Resolve 2 unused-imports issues in adapters/python/urirun/host/discovery.py
+    task_type: prefactor
+    priority: medium
+    estimate: 1d
+    files:
+    - adapters/python/urirun/host/discovery.py
+    rule_id: unused-imports
     count: 2
     model_hints:
       planning: balanced

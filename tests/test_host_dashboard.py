@@ -2033,6 +2033,31 @@ def test_free_port_from_old_android_node_only_kills_android_service(monkeypatch)
     assert killed
 
 
+def test_merge_live_webpage_nodes_keeps_device_and_relay_urls(monkeypatch):
+    monkeypatch.setattr(host_dashboard, "phone_web_nodes", lambda payload: {
+        "ok": True,
+        "devices": [{
+            "id": "web1",
+            "name": "android-web1",
+            "online": True,
+            "nodeUrl": "http://host:8195/api/webpage-node/relay/web1",
+            "relayUrl": "http://host:8195/api/webpage-node/relay/web1",
+            "clientIp": "192.168.188.44",
+            "clientUrl": "http://192.168.188.44",
+            "routes": ["webpage://web1/page/query/info"],
+        }],
+    })
+
+    nodes = []
+    host_dashboard._merge_live_webpage_nodes(nodes)
+
+    assert nodes[0]["name"] == "android-web1"
+    assert nodes[0]["url"] == "http://host:8195/api/webpage-node/relay/web1"
+    assert nodes[0]["relayUrl"] == "http://host:8195/api/webpage-node/relay/web1"
+    assert nodes[0]["clientIp"] == "192.168.188.44"
+    assert nodes[0]["displayUrl"] == "http://192.168.188.44"
+
+
 def test_sync_documents_to_node_copies_pdfs_and_logs_chat(monkeypatch, tmp_path):
     fake_db = FakeHostDb()
     document_root = tmp_path / "documents"

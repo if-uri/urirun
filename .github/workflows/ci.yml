@@ -20,6 +20,10 @@ jobs:
         run: |
           python -m pip install ruff
           make lint
+      - name: Complexity gate (no Python function over CC=15)
+        run: |
+          python -m pip install radon
+          make complexity
       - run: make test
       - name: Verify urirun[grpc] optional extra
         run: |

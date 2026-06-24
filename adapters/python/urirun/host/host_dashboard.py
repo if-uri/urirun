@@ -604,6 +604,14 @@ INDEX_HTML = r"""<!doctype html>
     }
     .ticket-form-grid .ticket-form-full { grid-column: 1 / -1; }
     .ticket-form-grid textarea { width: 100%; resize: vertical; }
+    .qr-block { border-top: 1px solid var(--line-soft); padding-top: 6px; }
+    .qr-block summary { cursor: pointer; }
+    .qr-wrap { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+    .qr-img { width: 120px; height: 120px; image-rendering: pixelated; background: #fff; padding: 4px; border-radius: 6px; }
+    .qr-img-lg { width: 260px; height: 260px; image-rendering: pixelated; background: #fff; padding: 8px; border-radius: 8px; }
+    .qr-link { word-break: break-all; font-size: 12px; }
+    .qr-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; z-index: 1000; }
+    .qr-overlay-card { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 10px; padding: 16px; display: grid; gap: 10px; justify-items: center; max-width: 90vw; }
     .artifact-file-grid {
       display: grid;
       gap: 8px;
@@ -882,6 +890,7 @@ INDEX_HTML = r"""<!doctype html>
         <button data-view="activity">Activity</button>
       </div>
       <button id="scannerBtn" type="button">Phone Scanner</button>
+      <button id="phoneQrBtn" type="button" title="Pokaz QR tego widoku do otwarcia na telefonie" onclick="showViewQr()">Telefon (QR)</button>
       <span class="pill" id="activeTabPill">overview</span>
       <button class="primary" id="refreshBtn">Refresh</button>
     </div>
@@ -1648,10 +1657,14 @@ INDEX_HTML = r"""<!doctype html>
       $('nodesList').innerHTML = nodes.map((node) => `<div class="item node-row${state.selectedRoutesNode === node.name ? ' node-row-active' : ''}" data-node="${esc(node.name)}" onclick="selectNodeRoutes(this.dataset.node)" title="Kliknij, aby pokazać procesy URI tego węzła">
         <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
           <span><strong>${esc(node.name)}</strong> <span class="pill ${node.reachable ? 'up' : 'down'}">${node.reachable ? 'up' : 'down'}</span>${node.kind ? ` <span class="pill kind">${esc(node.kind)}</span>` : ''}</span>
-          <button type="button" data-node="${esc(node.name)}" onclick="event.stopPropagation(); testNodeFromList(this.dataset.node)" title="Przetestuj route'y query tego węzła">Test</button>
+          <span style="display:flex;gap:6px">
+            <button type="button" data-node="${esc(node.name)}" onclick="event.stopPropagation(); testNodeFromList(this.dataset.node)" title="Przetestuj route'y query tego węzła">Test</button>
+            <button type="button" class="danger" data-node="${esc(node.name)}" data-transient="${node.transient ? '1' : ''}" onclick="event.stopPropagation(); removeNode(this.dataset.node, this.dataset.transient === '1')" title="${node.transient ? 'Węzeł chwilowy (live) — zniknie po rozłączeniu; usuń z widoku' : 'Usuń węzeł z host config'}">✕ Usuń</button>
+          </span>
         </div>
         <div class="mono">${esc(node.url)}</div>
         <div class="subtle">${(node.routes || []).length} routes${node.error ? ` · ${esc(node.error)}` : ''}</div>
+        ${qrDetails(node.url, `node:${node.name}`, node.kind)}
         <details class="node-token-form" onclick="event.stopPropagation()" style="margin-top:6px">
           <summary class="subtle">🔑 Token zarządzania (X-Urirun-Token) · ${node.hasToken ? '✓ ustawiony' : 'brak'}</summary>
           <div class="stack" style="margin-top:6px">
@@ -1672,6 +1685,63 @@ INDEX_HTML = r"""<!doctype html>
     }
 
     // Copy a value (config path, host URL) to the clipboard with light visual feedback.
+    // ---- Phone QR codes: open a plugin / webpage / view on a smartphone by scanning ----
+    // Phones cannot reach the 127.0.0.1 dashboard, so QR targets use the LAN base from summary.lan
+    // (env URIRUN_LAN_QR_BASE, default the android-node on :8195); camera-type targets use https.
+    function lanBase(secure) {
+      const lan = (state.summary && state.summary.lan) || {};
+      const base = (secure ? lan.secureBase : lan.base) || 'http://192.168.188.212:8195';
+      return base.replace(/\/+$/, '');
+    }
+    function lanNeedsSecure(s) { return /camera|webcam|scanner|getusermedia|mediadevices/i.test(String(s || '')); }
+    // Build a LAN-openable URL: rebase an absolute http(s) URL onto the LAN host, or append a path.
+    function lanUrl(pathOrUrl, secure) {
+      const value = String(pathOrUrl || '').trim();
+      const useSecure = secure === undefined ? lanNeedsSecure(value) : secure;
+      const base = lanBase(useSecure);
+      if (/^https?:\/\//i.test(value)) {
+        try {
+          const u = new URL(value);
+          // Already LAN/remote-reachable (a real node host) -> keep as-is; only upgrade to https
+          // when the target needs it (camera). Localhost = the dashboard -> rebase to the LAN base.
+          if (!/^(127\.|0\.0\.0\.0$|localhost$)/i.test(u.hostname)) {
+            if (useSecure && u.protocol === 'http:') u.protocol = 'https:';
+            return u.toString();
+          }
+          return base + u.pathname + u.search + u.hash;
+        } catch (e) { return value; }
+      }
+      if (!value) return base + '/';
+      return base + (value.startsWith('/') ? value : '/' + value);
+    }
+    function qrSrc(url) { return '/api/nodes/qr?url=' + encodeURIComponent(url); }
+    // Collapsible QR block reused by node cards and widget cards.
+    function qrDetails(pathOrUrl, label, kind) {
+      const url = lanUrl(pathOrUrl);
+      return `<details class="qr-block" onclick="event.stopPropagation()" style="margin-top:6px">
+        <summary class="subtle">📱 QR (otworz na telefonie)${kind ? ` · ${esc(kind)}` : ''}</summary>
+        <div class="qr-wrap"><img class="qr-img" loading="lazy" src="${qrSrc(url)}" alt="QR ${esc(label || url)}">
+          <a class="mono qr-link" href="${esc(url)}" target="_blank" rel="noreferrer">${esc(url)}</a></div>
+      </details>`;
+    }
+    // Toolbar action: show a QR of the CURRENT view (LAN base + current path) in an overlay.
+    function showViewQr() {
+      const url = lanUrl(window.location.pathname + window.location.search, false);
+      let box = document.getElementById('qrOverlay');
+      if (!box) {
+        box = document.createElement('div'); box.id = 'qrOverlay'; box.className = 'qr-overlay';
+        box.addEventListener('click', (e) => { if (e.target === box) box.remove(); });
+        document.body.appendChild(box);
+      }
+      box.innerHTML = `<div class="qr-overlay-card">
+        <div class="stream-head"><strong>Otworz ten widok na telefonie</strong>
+          <button type="button" onclick="document.getElementById('qrOverlay').remove()">✕</button></div>
+        <img class="qr-img-lg" src="${qrSrc(url)}" alt="QR ${esc(url)}">
+        <a class="mono qr-link" href="${esc(url)}" target="_blank" rel="noreferrer">${esc(url)}</a>
+        <p class="subtle">Baza LAN: ${esc(lanBase(false))} · skanuj aparatem telefonu (ta sama siec Wi-Fi)</p>
+      </div>`;
+    }
+
     async function copyHostValue(btn, value) {
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(value || '');
@@ -1792,6 +1862,23 @@ INDEX_HTML = r"""<!doctype html>
     }
     function saveNodeFromForm() {
       saveNode(($('addNodeName') || {}).value || '', ($('addNodeUrl') || {}).value || '');
+    }
+
+    // Remove a node from the nodes list. Persistent nodes are deleted from host config;
+    // transient (live webpage) nodes are forgotten in the 8195 service so they stop reappearing.
+    async function removeNode(name, transient) {
+      if (!name) return;
+      const msg = transient
+        ? `Usunąć chwilowy węzeł „${name}"? (rozłączy stronę web; wróci, jeśli ją odświeżysz)`
+        : `Usunąć węzeł „${name}" z host config?`;
+      if (!window.confirm(msg)) return;
+      try {
+        const res = await api('/api/nodes/remove', { method: 'POST', body: JSON.stringify({ name, transient: !!transient }) });
+        if (!res.ok) throw new Error(res.error || 'nie udało się usunąć');
+        if (typeof load === 'function') load().catch(() => {});
+      } catch (error) {
+        window.alert('Błąd usuwania: ' + error.message);
+      }
     }
 
     // Smartphone node enrollment: ask the host for a QR pointing at the android-node setup
@@ -2158,7 +2245,7 @@ INDEX_HTML = r"""<!doctype html>
 	        <span class="contact-body">
 	          <label class="contact-title" for="${esc(inputId)}">${esc(contact.label)}</label>
 	          <span class="pill ${pillClass}">${esc(contact.status || contact.kind)}</span>
-	          <span class="contact-meta">${esc(contact.url || contact.meta || '')}</span>
+	          <span class="contact-meta">${esc(contact.meta || contact.url || '')}</span>
 	          ${actions ? `<span class="contact-actions">${actions}</span>` : ''}
 	        </span>
 	      </div>`;
@@ -2177,6 +2264,9 @@ INDEX_HTML = r"""<!doctype html>
           reachable: !!node.reachable,
           disabled: !node.reachable,
           url: node.url || '',
+          meta: node.displayUrl && node.displayUrl !== node.url
+            ? ('device: ' + node.displayUrl + (node.relayUrl || node.url ? ' | relay: ' + (node.relayUrl || node.url) : ''))
+            : (node.url || ''),
         })),
 	        ...services.map((service) => ({
 	          id: service.id || `service:${service.name}`,
@@ -3043,6 +3133,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div class="subtle">${esc(service.url || service.bindUrl || safeView.updatedAt || '')}</div>
         ${serviceWidgetLinks(service, safeView)}
+        ${qrDetails(service.url || service.bindUrl || ('/services/view?target=' + encodeURIComponent(target)), service.name || target, 'widget')}
         <div class="widget-preview">${preview}</div>
       </div>`;
     }
@@ -5197,7 +5288,7 @@ def chat_delete_messages(db: str | None, payload: dict) -> dict:
 
 
 from . import document_metadata as _document_metadata
-from .document_metadata import (  # noqa: F401 - re-exported for backward compat
+from .document_metadata import (  # noqa: F401,E402 - re-export shim placed where the funcs were
     _LLM_DOC_TYPES,
     _LLM_FIELDS_SPEC,
     _coerce_amount,
@@ -6771,7 +6862,7 @@ def _archive_scanned_document(
 
 
 
-from .scanner_net import (  # noqa: F401 - re-exported for backward compat
+from .scanner_net import (  # noqa: F401,E402 - re-export shim placed where the funcs were
     _ensure_tls_cert,
     _lan_host,
     _phone_scanner_external_status,
@@ -8475,6 +8566,7 @@ def summary(project: str, db: str | None, config: str | None, node_urls: list[st
         "serviceCount": len(services),
         "host": host,
         "hostRoutes": host_routes,
+        "lan": _lan_qr_profile(),
         "nodeTypes": _node_type_profiles_impl(),
         "objects": objects,
         "nodes": nodes,
@@ -8973,6 +9065,73 @@ def configured_node_api_request(config: str | None, node_urls: list[str] | None,
     return _configured_api_call(node, api, payload)
 
 
+def node_remove(config: str | None, payload: dict) -> dict:
+    """Remove a node. Persistent nodes are dropped from host config + the nodes.json mirror +
+    the kind sidecar. Transient (live webpage) nodes aren't in config — they are forgotten in
+    the android-node service (port 8195) so they stop reappearing on the next summary poll."""
+    from urirun.node import config as node_config
+    payload = payload if isinstance(payload, dict) else {}
+    name = str(payload.get("name") or "").strip()
+    transient = bool(payload.get("transient"))
+    if not name:
+        return {"ok": False, "error": "name is required"}
+
+    removed = False
+    # 1. host config
+    try:
+        cfg = node_config.load_host_config(config)
+        nodes = cfg.get("nodes", [])
+        kept = [n for n in nodes if n.get("name") != name]
+        if len(kept) != len(nodes):
+            cfg["nodes"] = kept
+            node_config.save_host_config(cfg, config)
+            removed = True
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"could not update host config: {exc}"}
+
+    # 2. nodes.json mirror (urifix)
+    try:
+        nodes_path = os.environ.get("URIRUN_NODES_FILE") or os.path.expanduser("~/.urirun/nodes.json")
+        if os.path.exists(nodes_path):
+            with open(nodes_path, encoding="utf-8") as fh:
+                loaded = json.load(fh)
+            inner = loaded.get("nodes") if isinstance(loaded, dict) else None
+            target = inner if isinstance(inner, dict) else (loaded if isinstance(loaded, dict) else {})
+            if name in target:
+                target.pop(name, None)
+                with open(nodes_path, "w", encoding="utf-8") as fh:
+                    json.dump(loaded, fh, indent=2)
+                removed = True
+    except Exception:  # noqa: BLE001 - mirror cleanup is best-effort
+        pass
+
+    # 3. kind sidecar
+    try:
+        kinds = _node_kinds()
+        if name in kinds:
+            kinds.pop(name, None)
+            kp = _node_kinds_path()
+            with open(kp, "w", encoding="utf-8") as fh:
+                json.dump(kinds, fh, indent=2)
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 4. transient/live webpage node: ask the 8195 service to forget it
+    forgot = False
+    if transient or not removed:
+        try:
+            import urllib.request
+            url = _android_node_service_url().rstrip("/") + "/api/webpage-node/forget"
+            req = urllib.request.Request(url, data=json.dumps({"name": name, "id": name}).encode(),
+                                         headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                forgot = bool(json.loads(resp.read() or "{}").get("ok"))
+        except Exception:  # noqa: BLE001 - service may be down or lack the endpoint
+            pass
+
+    return {"ok": True, "name": name, "removed": removed, "forgot": forgot, "transient": transient}
+
+
 def _node_kinds_path() -> str:
     return os.environ.get("URIRUN_NODE_KINDS_FILE") or os.path.expanduser("~/.urirun/node-kinds.json")
 
@@ -9101,6 +9260,11 @@ def _merge_live_webpage_nodes(nodes: list) -> None:
         nodes.append({
             "name": name,
             "url": dev.get("nodeUrl") or "",
+            "displayUrl": dev.get("clientUrl") or dev.get("clientIp") or dev.get("pageUrl") or dev.get("nodeUrl") or "",
+            "relayUrl": dev.get("relayUrl") or dev.get("nodeUrl") or "",
+            "clientIp": dev.get("clientIp") or "",
+            "clientUrl": dev.get("clientUrl") or "",
+            "pageUrl": dev.get("pageUrl") or "",
             "reachable": bool(dev.get("online")),
             "kind": "webpage",
             "transient": True,
@@ -10311,6 +10475,15 @@ _CONNECTOR_BINDINGS_GROUP = "urirun.bindings"
 _CONNECTOR_INSTALL_TIMEOUT = 300
 
 
+def _lan_qr_profile() -> dict:
+    """LAN-reachable base URL used to build phone QR codes. Phones cannot reach the 127.0.0.1
+    dashboard, so QR targets point at a LAN address (env URIRUN_LAN_QR_BASE, default the android-node
+    service on :8195). secureBase (https) is for views browsers only allow over TLS, e.g. camera."""
+    base = (os.environ.get("URIRUN_LAN_QR_BASE") or "http://192.168.188.212:8195").strip().rstrip("/")
+    secure = base.replace("http://", "https://", 1) if base.startswith("http://") else base
+    return {"base": base, "secureBase": secure}
+
+
 def _connector_pip_tail(source: str, spec: str) -> list[str] | None:
     """Translate a (source, spec) pair into the pip-install argv tail, or None when the source is
     not host pip-installable (npm/docker/http live in their own runtimes). This is the native
@@ -11073,6 +11246,10 @@ def create_handler(
                 if parsed.path in {"/api/nodes/add", "/api/nodes/api/add"}:
                     payload = _read_json(self)
                     _json_response(self, 200, node_add(config, payload))
+                    return
+                if parsed.path in {"/api/nodes/remove", "/api/nodes/delete"}:
+                    payload = _read_json(self)
+                    _json_response(self, 200, node_remove(config, payload))
                     return
                 if parsed.path == "/api/nodes/api/request":
                     payload = _read_json(self)
