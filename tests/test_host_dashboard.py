@@ -338,9 +338,15 @@ def test_chat_ask_plans_document_sync_without_llm(monkeypatch):
     assert result["decisionLoop"]["execution"]["status"] == "dry-run"
     assert result["decisionLoop"]["nextIntent"]["id"] == "execute-document-sync"
     assert fake_db.logs[0]["detail"]["role"] == "user"
+    assert fake_db.logs[0]["detail"]["detail"]["requestedNodes"] == []
+    assert fake_db.logs[0]["detail"]["detail"]["requestedTargets"] == ["host", "service:phone-scanner"]
+    assert fake_db.logs[0]["detail"]["detail"]["selectedNodes"] == ["lenovo"]
+    assert fake_db.logs[0]["detail"]["detail"]["resolvedTargets"] == ["host", "service:phone-scanner", "node:lenovo"]
+    assert fake_db.logs[0]["detail"]["detail"]["intent"]["target"] == "node:lenovo"
     assert fake_db.logs[1]["detail"]["content"] == "dry-run: document sync URI step"
+    assert fake_db.logs[1]["detail"]["detail"]["schema"] == "urirun.decision-loop.v1"
     assert fake_db.logs[1]["detail"]["detail"]["decisionLoop"]["execution"]["status"] == "dry-run"
-    assert fake_db.logs[2]["detail"]["generator"]["intent"] == "document-sync"
+    assert fake_db.logs[2]["detail"]["decisionLoop"]["intent"]["id"] == "document-sync"
 
 
 def test_chat_ask_executes_document_sync_without_llm(monkeypatch):
@@ -377,7 +383,8 @@ def test_chat_ask_executes_document_sync_without_llm(monkeypatch):
     assert calls[0]["kwargs"]["node_urls"] == ["laptop=http://laptop.local:8766"]
     assert fake_db.logs[0]["detail"]["role"] == "user"
     assert fake_db.logs[1]["event"] == "ask"
-    assert fake_db.logs[1]["detail"]["generator"]["intent"] == "document-sync"
+    assert fake_db.logs[1]["detail"]["decisionLoop"]["intent"]["id"] == "document-sync"
+    assert fake_db.logs[1]["detail"]["decisionLoop"]["execution"]["status"] == "done"
 
 
 def test_chat_ask_document_sync_error_includes_urifix_recovery(monkeypatch):
@@ -421,14 +428,13 @@ def test_chat_ask_document_sync_error_includes_urifix_recovery(monkeypatch):
 
     assert result["ok"] is False
     assert result["urifix"]["repaired"] is True
-    assert result["retry"]["payload"]["node_url"] == "http://laptop.local:8766"
     assert result["decisionLoop"]["execution"]["status"] == "retryable"
     assert result["decisionLoop"]["observation"]["kind"] == "uri-step-failed"
     assert result["decisionLoop"]["nextIntent"]["id"] == "repair-uri-chain"
     assert result["decisionLoop"]["nextIntent"]["automatic"] is True
     assert result["decisionLoop"]["nextIntent"]["retry"]["payload"]["node_url"] == "http://laptop.local:8766"
-    assert result["timeline"][0]["recovery"]["actions"][0]["id"] == "retry-with-node-url"
-    assert fake_db.logs[1]["detail"]["detail"]["retry"]["uri"] == "document://host/archive/command/sync-to-node"
+    assert result["timeline"][0]["recoverable"] is True
+    assert fake_db.logs[1]["detail"]["detail"]["decisionLoop"]["nextIntent"]["retry"]["uri"] == "document://host/archive/command/sync-to-node"
     assert fake_db.logs[1]["detail"]["detail"]["decisionLoop"]["nextIntent"]["uri"] == "urifix://host/chain/command/repair"
 
 

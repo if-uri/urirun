@@ -1,6 +1,19 @@
 PYTHON ?= python3
 NODE ?= node
 CC ?= cc
+HOST_DB ?= $(HOME)/.urirun/host.db
+LOG_DIR ?= /tmp/urirun-services
+URIRUN_BIN ?= $(CURDIR)/venv/bin
+CHAT_SERVICE ?= $(URIRUN_BIN)/urirun-service-chat
+SCANNER_SERVICE ?= $(URIRUN_BIN)/urirun-service-scanner
+CHAT_HOST ?= 127.0.0.1
+CHAT_PORT ?= 8194
+SCANNER_HOST ?= 0.0.0.0
+SCANNER_PORT ?= 8196
+NODE_URLS ?=
+FORCE_REPLACE ?=
+NODE_URL_ARGS = $(foreach url,$(NODE_URLS),--node-url $(url))
+FORCE_REPLACE_ARG = $(if $(FORCE_REPLACE),--force-replace,)
 
 .DEFAULT_GOAL := help
 
@@ -47,6 +60,37 @@ lint: ## Ruff-lint the Python package (keeps main green; gated in CI).
 .PHONY: lint-connectors
 lint-connectors: ## Lint every sibling urirun-connector-* package; fail on code/manifest drift or a secrets-layer bypass (--strict via STRICT=1).
 	$(PYTHON) scripts/lint_connectors.py $(if $(STRICT),--strict,)
+
+.PHONY: restart
+restart: restart-chat ## Restart the local chat dashboard service in the background.
+
+.PHONY: restart-services
+restart-services: restart-chat restart-scanner ## Restart chat dashboard and phone scanner services in the background.
+
+.PHONY: restart-chat
+restart-chat: ## Restart urirun-service-chat on CHAT_PORT (default 8194).
+	@test -x "$(CHAT_SERVICE)" || { echo "missing $(CHAT_SERVICE); install urirun-service-chat in the venv"; exit 1; }
+	@mkdir -p "$(LOG_DIR)"
+	@nohup "$(CHAT_SERVICE)" restart --project "$(CURDIR)" --db "$(HOST_DB)" --host "$(CHAT_HOST)" --port "$(CHAT_PORT)" $(NODE_URL_ARGS) $(FORCE_REPLACE_ARG) >"$(LOG_DIR)/chat.log" 2>&1 &
+	@sleep 1
+	@curl -fsS --max-time 2 "http://$(CHAT_HOST):$(CHAT_PORT)/api/summary" >/dev/null || { echo "chat failed to start; log:"; tail -40 "$(LOG_DIR)/chat.log"; exit 1; }
+	@echo "chat: http://$(CHAT_HOST):$(CHAT_PORT)/"
+	@echo "log:  $(LOG_DIR)/chat.log"
+
+.PHONY: restart-scanner
+restart-scanner: ## Restart urirun-service-scanner on SCANNER_PORT (default 8196).
+	@test -x "$(SCANNER_SERVICE)" || { echo "missing $(SCANNER_SERVICE); install urirun-service-scanner in the venv"; exit 1; }
+	@mkdir -p "$(LOG_DIR)"
+	@nohup "$(SCANNER_SERVICE)" restart --project "$(CURDIR)" --db "$(HOST_DB)" --host "$(SCANNER_HOST)" --port "$(SCANNER_PORT)" $(NODE_URL_ARGS) $(FORCE_REPLACE_ARG) >"$(LOG_DIR)/scanner.log" 2>&1 &
+	@sleep 1
+	@curl -kfsS --max-time 2 "https://127.0.0.1:$(SCANNER_PORT)/api/scanner/live" >/dev/null || { echo "scanner failed to start; log:"; tail -40 "$(LOG_DIR)/scanner.log"; exit 1; }
+	@echo "scanner: https://$(SCANNER_HOST):$(SCANNER_PORT)/scanner"
+	@echo "log:     $(LOG_DIR)/scanner.log"
+
+.PHONY: service-status
+service-status: ## Check local chat/scanner HTTP reachability.
+	@curl -fsS --max-time 2 "http://$(CHAT_HOST):$(CHAT_PORT)/api/summary" >/dev/null && echo "chat: up http://$(CHAT_HOST):$(CHAT_PORT)/" || echo "chat: down http://$(CHAT_HOST):$(CHAT_PORT)/"
+	@curl -kfsS --max-time 2 "https://127.0.0.1:$(SCANNER_PORT)/api/scanner/live" >/dev/null && echo "scanner: up https://127.0.0.1:$(SCANNER_PORT)/scanner" || echo "scanner: down https://127.0.0.1:$(SCANNER_PORT)/scanner"
 
 .PHONY: test-v1
 test-v1: ## Run urirun v1 parameter-binding smoke checks.

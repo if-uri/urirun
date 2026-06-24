@@ -7247,19 +7247,35 @@ def _compact_chat_result(result: dict, payload: dict) -> dict:
 
 
 def _try_urifix_repair(prompt: str, request: dict, result: dict, *, node_urls: list[str] | None = None,
-                       host_config: dict | None = None) -> dict | None:
+                       host_config: dict | None = None, known_nodes: list[str] | dict | None = None,
+                       apply: bool = False, registry: Any = None) -> dict | None:
+    """Diagnose (and, when apply=True + a registry are given, resolve) a failed URI chain via the
+    urifix connector. `known_nodes` lets urifix resolve a missing node URL from the host's known
+    set; urifix also reads ~/.urirun/nodes.json on its own. apply is left False here so a recovery
+    that has side effects (e.g. a document transfer) stays an explicit, surfaced retry, not an
+    automatic one."""
     try:
         from urirun_connector_urifix.core import repair_chain  # type: ignore
     except Exception:  # noqa: BLE001 - urifix is optional.
         return None
+    kwargs: dict[str, Any] = {
+        "prompt": prompt,
+        "request": request,
+        "result": result,
+        "node_urls": node_urls or [],
+        "host_config": host_config or {},
+    }
+    # Forward the newer args only when supported, so the host stays compatible with an older urifix.
+    import inspect
+    params = inspect.signature(repair_chain).parameters
+    if "known_nodes" in params and known_nodes is not None:
+        kwargs["known_nodes"] = known_nodes
+    if "apply" in params and apply:
+        kwargs["apply"] = True
+    if "registry" in params and registry is not None:
+        kwargs["registry"] = registry
     try:
-        fixed = repair_chain(
-            prompt=prompt,
-            request=request,
-            result=result,
-            node_urls=node_urls or [],
-            host_config=host_config or {},
-        )
+        fixed = repair_chain(**kwargs)
     except Exception as exc:  # noqa: BLE001 - never mask the original URI failure.
         return {"ok": False, "error": str(exc)}
     return fixed if isinstance(fixed, dict) else None

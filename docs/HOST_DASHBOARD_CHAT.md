@@ -49,6 +49,19 @@ See also:
 The important rule is that chat is not a second protocol. It is an operator view
 over URI actions.
 
+User chat messages distinguish the raw UI selection from resolved routing:
+
+- `requestedNodes` / `requestedTargets` — what the browser form submitted,
+- `selectedNodes` / `selectedTargets` — what the dashboard will use for the run,
+- `resolvedNodes` / `resolvedTargets` — alias of the resolved routing state for
+  display/debugging,
+- `intent` — deterministic intent inferred from the prompt, when one matched.
+
+For example, a user can select only `host` and `service:phone-scanner`, but write
+"copy documents to Lenovo laptop". The stored user message should then preserve
+the raw request and also show `selectedNodes: ["lenovo"]` plus
+`selectedTargets: [..., "node:lenovo"]`.
+
 For autonomous work, the dashboard also emits a `decisionLoop` block on supported
 deterministic flows. That block is the normalized control shape:
 
@@ -257,6 +270,27 @@ For a reliable chat run:
 
    ```bash
    urirun-service-chat serve --project /home/tom/github/if-uri/urirun --db ~/.urirun/host.db
+   ```
+
+   During development, the shortest restart path from the `urirun/` directory is:
+
+   ```bash
+   make restart
+   ```
+
+   Useful variants:
+
+   ```bash
+   make restart-chat
+   make restart-scanner
+   make restart-services
+   make service-status
+   ```
+
+   Node URLs can be passed without editing config:
+
+   ```bash
+   make restart NODE_URLS='lenovo=http://192.168.188.201:8766'
    ```
 
 2. Pass node URLs when the host config does not contain them:

@@ -30,6 +30,10 @@ clearly answer "what should happen next?".
 
 `DecisionLoop` is the stable answer to that question.
 
+The chat layer may keep both requested and resolved routing fields. `requested*`
+means what the UI submitted. `selected*`/`resolved*` means what the host inferred
+and actually used to build the flow.
+
 ## Shape
 
 ```json
@@ -185,4 +189,3 @@ If `urifix://` cannot fill the missing precondition, keep the next intent manual
   }
 }
 ```
-
