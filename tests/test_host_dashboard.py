@@ -142,15 +142,25 @@ def test_dashboard_html_tracks_tabs_actions_and_chat_fullscreen():
     assert "data-view=\"artifacts\"" in html
     assert "/api/artifacts?limit=80" in html
     assert "/api/artifacts/delete" in html
+    assert "/api/artifacts/cleanup-orphans" in html
     assert "artifactSelectVisibleBtn" in html
     assert "artifactDeleteSelectedBtn" in html
     assert "artifactDeleteVisibleBtn" in html
+    assert "artifactCleanupOrphansBtn" in html
+    assert "artifactCopyJsonBtn" in html
     assert "artifactClearSelectionBtn" in html
     assert "artifactSelectionSummary" in html
     assert "name=\"artifactSelect\"" in html
     assert "data-artifact-delete" in html
     assert "selectedArtifactIds" in html
     assert "deleteArtifacts" in html
+    assert "copyArtifactsJson" in html
+    assert "artifactTableJsonRow" in html
+    assert "__urirunLastCopiedArtifactsJson" in html
+    assert "artifactIdsForDelete" in html
+    assert "duplicateIds" in html
+    assert "duplicateCount" in html
+    assert "cleanupArtifactOrphans" in html
     assert "artifactRenderKey" in html
     assert "chatRenderKey" in html
     assert "artifact-thumb-pdf" in html
@@ -374,6 +384,39 @@ def test_artifacts_delete_respects_delete_files_false_string(monkeypatch, tmp_pa
     assert fake_db.artifacts == []
 
 
+def test_artifacts_cleanup_orphan_sidecars_removes_json_without_document(monkeypatch, tmp_path):
+    fake_db = FakeHostDb()
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    document_root = tmp_path / "documents"
+    monkeypatch.setenv("URIRUN_DOCUMENT_DIR", str(document_root))
+    monkeypatch.setenv("URIRUN_DOCUMENT_INDEX", str(document_root / "index.json"))
+    monkeypatch.setenv("URIRUN_SCANNED_ID_LOG", str(document_root / "scanned.id.jsonl"))
+    month = document_root / "2026-06"
+    month.mkdir(parents=True)
+    orphan = month / "orphan_doc-1.json"
+    kept = month / "kept_doc-2.json"
+    kept_pdf = month / "kept_doc-2.pdf"
+    index = document_root / "index.json"
+    scanned = document_root / "scanned.id.jsonl"
+    orphan.write_text("{}", encoding="utf-8")
+    kept.write_text("{}", encoding="utf-8")
+    kept_pdf.write_bytes(b"%PDF")
+    index.write_text('{"documents":[]}', encoding="utf-8")
+    scanned.write_text("{}\n", encoding="utf-8")
+
+    result = host_dashboard.artifacts_cleanup_orphan_sidecars(str(tmp_path), str(tmp_path), {"deleteFiles": True})
+
+    assert result["ok"] is True
+    assert result["filesDeleted"] == 1
+    assert orphan.exists() is False
+    assert kept.exists() is True
+    assert kept_pdf.exists() is True
+    assert index.exists() is True
+    assert scanned.exists() is True
+    assert fake_db.logs[-1]["stream"] == "artifacts"
+    assert fake_db.logs[-1]["event"] == "cleanup-orphans"
+
+
 def test_public_artifact_uses_existing_preview_and_marks_missing_files(tmp_path):
     pdf = tmp_path / "invoice.pdf"
     image = tmp_path / "invoice.jpg"
@@ -434,6 +477,36 @@ def test_artifacts_api_hides_missing_files_by_default(monkeypatch, tmp_path):
         "scanner://host/capture/ok",
     ]
     assert payload["artifacts"][0]["fileExists"] is False
+
+
+def test_artifacts_api_dedupes_same_file_path_by_default(monkeypatch, tmp_path):
+    fake_db = FakeHostDb()
+    existing = tmp_path / "scan.pdf"
+    existing.write_bytes(b"%PDF-1.4\n")
+    scan = fake_db.register_artifact("db", "camera-scan", "scanner://host/capture/dup", str(existing), {})
+    pdf = fake_db.register_artifact("db", "document-pdf", "document://host/capture/dup", str(existing), {})
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+
+    status, payload = host_dashboard._dashboard_api_response("/api/artifacts", str(tmp_path), "db", None, parse_qs("limit=10"))
+
+    assert status == 200
+    assert len(payload["artifacts"]) == 1
+    assert payload["artifacts"][0]["id"] == pdf["id"]
+    assert payload["artifacts"][0]["kind"] == "document-pdf"
+    assert payload["artifacts"][0]["duplicateCount"] == 2
+    assert payload["artifacts"][0]["duplicateIds"] == [scan["id"]]
+    assert set(payload["artifacts"][0]["duplicateArtifactIds"]) == {scan["id"], pdf["id"]}
+
+    status, payload = host_dashboard._dashboard_api_response(
+        "/api/artifacts",
+        str(tmp_path),
+        "db",
+        None,
+        parse_qs("limit=10&includeDuplicates=1"),
+    )
+
+    assert status == 200
+    assert {item["id"] for item in payload["artifacts"]} == {scan["id"], pdf["id"]}
 
 
 def test_chat_ask_reports_missing_screen_capture_capability(monkeypatch):
@@ -778,6 +851,7 @@ def test_uri_invoke_lists_supported_host_actions():
     assert "scanner://page/camera/command/torch" in uris
     assert "scanner://page/camera/command/best-pdf" in uris
     assert "scanner://host/capture/command/run" in uris
+    assert "dashboard://host/service/chat/command/restart" in uris
     assert "document://host/archive/command/sync-to-node" in uris
     assert all("layer" in item for item in result["actions"])
 
@@ -812,6 +886,43 @@ def test_uri_invoke_execute_session_logs(monkeypatch):
     assert result["ok"] is True
     assert result["invokedUri"] == "scanner://host/session/command/log"
     assert fake_db.logs[-1]["detail"]["detail"]["href"] == "https://host/scanner"
+
+
+def test_uri_invoke_chat_restart_requires_configuration(monkeypatch):
+    monkeypatch.delenv("URIRUN_CHAT_RESTART_MANAGER", raising=False)
+    monkeypatch.delenv("URIRUN_CHAT_RESTART_CMD", raising=False)
+
+    result = host_dashboard.uri_invoke(".", ":memory:", None, {
+        "uri": "service://host/chat/command/restart",
+        "mode": "execute",
+    })
+
+    assert result["ok"] is False
+    assert result["invokedUri"] == "service://host/chat/command/restart"
+    assert "not configured" in result["error"]
+
+
+def test_uri_invoke_chat_restart_schedules_systemd(monkeypatch):
+    calls = []
+
+    class _P:
+        pass
+
+    monkeypatch.setattr(host_dashboard.subprocess, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _P())
+
+    result = host_dashboard.uri_invoke(".", ":memory:", None, {
+        "uri": "service://host/chat/command/restart",
+        "mode": "execute",
+        "payload": {"manager": "systemd", "unit": "urirun-service-chat.service", "delaySeconds": 0.01},
+    })
+
+    assert result["ok"] is True
+    assert result["scheduled"] is True
+    assert result["manager"] == "systemd"
+    assert result["command"] == ["systemctl", "--user", "restart", "urirun-service-chat.service"]
+    assert calls
+    assert calls[0][0][-4:] == ["systemctl", "--user", "restart", "urirun-service-chat.service"]
+    assert calls[0][1]["start_new_session"] is True
 
 
 def test_sync_documents_to_node_copies_pdfs_and_logs_chat(monkeypatch, tmp_path):
@@ -1004,7 +1115,7 @@ def test_chat_torch_prompt_starts_camera_and_queues_light(monkeypatch):
 def test_scanner_capture_rejects_low_quality_without_chat_attachment(monkeypatch, tmp_path):
     fake_db = FakeHostDb()
     monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
-    monkeypatch.setattr(host_dashboard, "_local_image_ocr", lambda path: {"ok": True, "backend": "mock", "text": "VAT", "chars": 3})
+    monkeypatch.setattr(host_dashboard, "_local_image_ocr", lambda path, backend=None: {"ok": True, "backend": "mock", "text": "VAT", "chars": 3})
     monkeypatch.setenv("URIRUN_SCANNER_DIR", str(tmp_path))
     raw = base64.b64encode(b"fake-jpeg").decode("ascii")
 
@@ -1026,13 +1137,14 @@ def test_scanner_capture_uses_receipt_crop_for_preview_and_ocr(monkeypatch, tmp_
     seen_ocr_paths = []
     monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
     monkeypatch.setenv("URIRUN_SCANNER_DIR", str(tmp_path))
+    monkeypatch.setenv("URIRUN_SCANNER_OCR_FULLFRAME", "0")
 
     def fake_crop(path):
         crop_path = Path(path).with_name("cropped.jpg")
         crop_path.write_bytes(b"cropped")
         return {"ok": True, "path": str(crop_path), "box": [1, 2, 3, 4], "width": 2, "height": 2}
 
-    def fake_ocr(path):
+    def fake_ocr(path, backend=None):
         seen_ocr_paths.append(path)
         return {"ok": True, "backend": "mock", "text": "PARAGON", "chars": 7}
 
@@ -1052,6 +1164,49 @@ def test_scanner_capture_uses_receipt_crop_for_preview_and_ocr(monkeypatch, tmp_
     assert fake_db.artifacts[0]["path"] == str(tmp_path / "cropped.jpg")
     assert result["message"]["attachments"] == []
     assert result["message"]["detail"]["ocr"]["text"] == "PARAGON"
+
+
+def test_scanner_capture_ocrs_full_frame_by_default(monkeypatch, tmp_path):
+    # Default (URIRUN_SCANNER_OCR_FULLFRAME unset → on): OCR runs on the original full
+    # frame so the header/footer is never lost to the crop, while the crop stays the
+    # preview/archived artifact.
+    fake_db = FakeHostDb()
+    seen_ocr_paths = []
+    monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
+    monkeypatch.setenv("URIRUN_SCANNER_DIR", str(tmp_path))
+    monkeypatch.delenv("URIRUN_SCANNER_OCR_FULLFRAME", raising=False)
+
+    original_paths = []
+
+    def fake_crop(path):
+        original_paths.append(str(path))
+        crop_path = Path(path).with_name("cropped.jpg")
+        crop_path.write_bytes(b"cropped")
+        return {"ok": True, "path": str(crop_path), "box": [1, 2, 3, 4], "width": 2, "height": 2}
+
+    def fake_ocr(path, backend=None):
+        seen_ocr_paths.append((path, backend))
+        return {"ok": True, "backend": "paddle", "text": "PARAGON", "chars": 7}
+
+    monkeypatch.setattr(host_dashboard, "_auto_crop_receipt", fake_crop)
+    monkeypatch.setattr(host_dashboard, "_local_image_ocr", fake_ocr)
+    raw = base64.b64encode(b"fake-jpeg").decode("ascii")
+
+    result = host_dashboard.scanner_capture(str(tmp_path), ":memory:", {
+        "image": f"data:image/jpeg;base64,{raw}",
+        "width": 100,
+        "height": 200,
+        "source": "phone",
+    })
+
+    assert result["ok"] is True
+    # OCR saw the original frame, not the crop, with the env-default (full) backend.
+    assert [p for p, _ in seen_ocr_paths] == original_paths
+    assert seen_ocr_paths[0][1] is None
+    seen_ocr_paths = [p for p, _ in seen_ocr_paths]
+    assert seen_ocr_paths != [str(tmp_path / "cropped.jpg")]
+    # The crop is still the stored artifact/preview.
+    assert fake_db.artifacts[0]["path"] == str(tmp_path / "cropped.jpg")
 
 
 def test_scanner_capture_candidate_scores_without_archiving(monkeypatch, tmp_path):
@@ -1074,13 +1229,19 @@ def test_scanner_capture_candidate_scores_without_archiving(monkeypatch, tmp_pat
             "orientation": {"enabled": True, "width": 260, "height": 420},
         }
 
+    candidate_backends = []
+
+    def fake_ocr(path, backend=None):
+        candidate_backends.append(backend)
+        return {
+            "ok": True,
+            "backend": "mock",
+            "text": "PARAGON FISKALNY\nALLEGRO\nDATA 2026-03-15\nRAZEM 123,45 PLN",
+            "chars": 61,
+        }
+
     monkeypatch.setattr(host_dashboard, "_auto_crop_receipt", fake_crop)
-    monkeypatch.setattr(host_dashboard, "_local_image_ocr", lambda path: {
-        "ok": True,
-        "backend": "mock",
-        "text": "PARAGON FISKALNY\nALLEGRO\nDATA 2026-03-15\nRAZEM 123,45 PLN",
-        "chars": 61,
-    })
+    monkeypatch.setattr(host_dashboard, "_local_image_ocr", fake_ocr)
     raw = base64.b64encode(b"candidate-frame").decode("ascii")
 
     result = host_dashboard.scanner_capture(str(tmp_path), ":memory:", {
@@ -1100,6 +1261,8 @@ def test_scanner_capture_candidate_scores_without_archiving(monkeypatch, tmp_pat
     assert result["series"]["best"]["frameIndex"] == 1
     assert fake_db.artifacts == []
     assert fake_db.logs == []
+    # Transient candidate scored with the cheap backend, not the heavy paddle read.
+    assert candidate_backends == ["tesseract"]
 
 
 def test_scanner_best_finish_archives_best_candidate(monkeypatch, tmp_path):
@@ -1122,15 +1285,14 @@ def test_scanner_best_finish_archives_best_candidate(monkeypatch, tmp_path):
             "orientation": {"enabled": True, "width": 280, "height": 460},
         }
 
+    good_text = "PARAGON FISKALNY\nALLEGRO SP Z O O\nDATA 2026-03-15\nRAZEM 123,45 PLN"
+    # Two cheap candidate reads (weak, good) then one full re-read of the kept best frame.
     ocr_items = iter([
         {"ok": True, "backend": "mock", "text": "blur", "chars": 4},
-        {
-            "ok": True,
-            "backend": "mock",
-            "text": "PARAGON FISKALNY\nALLEGRO SP Z O O\nDATA 2026-03-15\nRAZEM 123,45 PLN",
-            "chars": 72,
-        },
+        {"ok": True, "backend": "mock", "text": good_text, "chars": 72},
+        {"ok": True, "backend": "paddle", "text": good_text, "chars": 72},
     ])
+    ocr_backends = []
 
     def fake_archive(**kwargs):
         pdf = tmp_path / "best.pdf"
@@ -1145,8 +1307,12 @@ def test_scanner_best_finish_archives_best_candidate(monkeypatch, tmp_path):
             "metadata": {"type": "paragon", "date": "2026-03-15", "contractor": "ALLEGRO", "amount": "123.45", "currency": "PLN"},
         }
 
+    def fake_ocr(path, backend=None):
+        ocr_backends.append(backend)
+        return next(ocr_items)
+
     monkeypatch.setattr(host_dashboard, "_auto_crop_receipt", fake_crop)
-    monkeypatch.setattr(host_dashboard, "_local_image_ocr", lambda path: next(ocr_items))
+    monkeypatch.setattr(host_dashboard, "_local_image_ocr", fake_ocr)
     monkeypatch.setattr(host_dashboard, "_archive_scanned_document", fake_archive)
 
     for idx, raw in enumerate((b"weak-frame", b"good-frame"), start=1):
@@ -1168,6 +1334,8 @@ def test_scanner_best_finish_archives_best_candidate(monkeypatch, tmp_path):
     assert result["document"]["docId"] == "DOC-PAR-BEST"
     assert [item["kind"] for item in fake_db.artifacts] == ["camera-scan", "document-pdf"]
     assert [item["kind"] for item in fake_db.logs[-1]["detail"]["attachments"]] == ["document-pdf"]
+    # Candidates scored cheap (tesseract); the kept best frame was re-OCR'd with the full default backend.
+    assert ocr_backends == ["tesseract", "tesseract", None]
 
 
 def test_archive_scanned_document_writes_pdf_json_index_and_detects_duplicate(monkeypatch, tmp_path):
@@ -1709,7 +1877,7 @@ def test_scanner_capture_rejects_low_quality_scan(monkeypatch, tmp_path):
     monkeypatch.setattr(host_dashboard, "_auto_crop_receipt",
                         lambda path: {"ok": False, "reason": "no document", "originalPath": str(path)})
     monkeypatch.setattr(host_dashboard, "_local_image_ocr",
-                        lambda p: {"ok": False, "text": "", "chars": 0})
+                        lambda p, backend=None: {"ok": False, "text": "", "chars": 0})
     archived = []
     monkeypatch.setattr(host_dashboard, "_archive_scanned_document",
                         lambda **kw: archived.append(kw) or {"ok": True})
@@ -1734,7 +1902,7 @@ def test_scanner_capture_archives_when_quality_passes(monkeypatch, tmp_path):
     monkeypatch.setattr(host_dashboard, "_auto_crop_receipt",
                         lambda path: {"ok": True, "path": str(path), "bboxArea": 0.42, "width": 240, "height": 360})
     monkeypatch.setattr(host_dashboard, "_local_image_ocr",
-                        lambda p: {"ok": True, "backend": "mock", "chars": 90,
+                        lambda p, backend=None: {"ok": True, "backend": "mock", "chars": 90,
                                    "text": "PARAGON FISKALNY\nALLEGRO\nRAZEM 12,00 PLN\nData 2026-06-19"})
     monkeypatch.setattr(host_dashboard, "_document_frame_quality",
                         lambda *a, **k: {"score": 88.0, "documentLike": True, "reasons": ["crop"], "visual": {}})

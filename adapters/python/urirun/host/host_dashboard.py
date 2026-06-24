@@ -13,9 +13,11 @@ import json
 import mimetypes
 import os
 import re
+import shlex
 import socket
 import ssl
 import subprocess
+import sys
 import textwrap
 import threading
 import time
@@ -726,6 +728,8 @@ INDEX_HTML = r"""<!doctype html>
               <button type="button" id="artifactClearSelectionBtn">Clear</button>
               <button type="button" class="danger" id="artifactDeleteSelectedBtn">Delete selected</button>
               <button type="button" class="danger" id="artifactDeleteVisibleBtn">Delete visible</button>
+              <button type="button" id="artifactCleanupOrphansBtn">Cleanup orphan JSON</button>
+              <button type="button" id="artifactCopyJsonBtn">Copy JSON</button>
               <button type="button" id="artifactRefreshBtn">Refresh files</button>
             </div>
           </div>
@@ -1206,11 +1210,13 @@ INDEX_HTML = r"""<!doctype html>
       const download = url ? `<a href="${esc(url)}" download>download</a>` : '';
       const missing = path && item.fileExists === false ? '<span class="pill down">missing file</span>' : '';
       const selected = id && state.selectedArtifactIds.has(id) ? 'checked' : '';
+      const duplicateCount = Number(item.duplicateCount || 0);
+      const duplicates = duplicateCount > 1 ? `<span class="pill">${duplicateCount} records</span>` : '';
       return `<div class="artifact-file-row">
         <div><input type="checkbox" name="artifactSelect" value="${esc(id)}" ${selected}></div>
         ${artifactThumb(item)}
         <div>
-          <div class="artifact-name"><strong>${esc(name)}</strong><span class="pill">${esc(item.kind || 'artifact')}</span>${missing}</div>
+          <div class="artifact-name"><strong>${esc(name)}</strong><span class="pill">${esc(item.kind || 'artifact')}</span>${duplicates}${missing}</div>
           <div class="mono">${esc(path || item.uri || '')}</div>
           <div class="artifact-actions">${openLink}${download}</div>
         </div>
@@ -1235,6 +1241,16 @@ INDEX_HTML = r"""<!doctype html>
       return [...state.selectedArtifactIds].filter((id) => visible.has(id));
     }
 
+    function artifactIdsForDelete(ids) {
+      const selected = new Set((ids || []).filter(Boolean));
+      const out = new Set(selected);
+      (state.artifacts || []).forEach((item) => {
+        if (!item || !selected.has(item.id)) return;
+        (item.duplicateIds || []).forEach((id) => out.add(id));
+      });
+      return [...out];
+    }
+
     function updateArtifactSelectionControls() {
       const visibleCount = visibleArtifactIds().length;
       const selectedCount = selectedVisibleArtifactIds().length;
@@ -1243,6 +1259,7 @@ INDEX_HTML = r"""<!doctype html>
       $('artifactDeleteVisibleBtn').disabled = visibleCount === 0;
       $('artifactSelectVisibleBtn').disabled = visibleCount === 0;
       $('artifactClearSelectionBtn').disabled = selectedCount === 0;
+      $('artifactCopyJsonBtn').disabled = visibleCount === 0;
     }
 
     function renderArtifactFileGrid(items) {
@@ -1259,7 +1276,9 @@ INDEX_HTML = r"""<!doctype html>
       return compactJson({
         selected: [...state.selectedArtifactIds].sort(),
         items: (items || []).map((item) => [
-          item.id, item.kind, item.uri, item.path, item.created_at, item.meta || null,
+          item.id, item.kind, item.uri, item.path, item.created_at,
+          item.duplicateCount || 0, item.duplicateIds || [],
+          item.meta || null,
         ]),
       });
     }
@@ -1290,15 +1309,61 @@ INDEX_HTML = r"""<!doctype html>
     async function deleteArtifacts(ids) {
       const clean = [...new Set((ids || []).filter(Boolean))];
       if (!clean.length) return;
+      const expanded = artifactIdsForDelete(clean);
       const result = await api('/api/artifacts/delete', {
         method: 'POST',
-        body: JSON.stringify({ ids: clean, deleteFiles: true }),
+        body: JSON.stringify({ ids: expanded, deleteFiles: true }),
       });
-      clean.forEach((id) => state.selectedArtifactIds.delete(id));
-      state.artifacts = state.artifacts.filter((item) => !clean.includes(item.id));
+      expanded.forEach((id) => state.selectedArtifactIds.delete(id));
+      state.artifacts = state.artifacts.filter((item) => !expanded.includes(item.id));
       renderArtifacts(state.artifacts, { force: true });
       await loadArtifacts();
       writeUrlState({ action: 'artifacts:delete', deleted: result.deleted || 0 }, { replace: true });
+    }
+
+    async function cleanupArtifactOrphans() {
+      const result = await api('/api/artifacts/cleanup-orphans', {
+        method: 'POST',
+        body: JSON.stringify({ deleteFiles: true }),
+      });
+      await loadArtifacts();
+      writeUrlState({ action: 'artifacts:cleanup-orphans', deleted: result.filesDeleted || 0 }, { replace: true });
+    }
+
+    function artifactTableJsonRow(item) {
+      const path = text(item.path);
+      return {
+        id: text(item.id),
+        kind: text(item.kind),
+        name: basename(path || item.uri || item.id),
+        uri: text(item.uri),
+        path,
+        fileExists: item.fileExists === undefined ? null : Boolean(item.fileExists),
+        previewExists: item.previewExists === undefined ? null : Boolean(item.previewExists),
+        visualPath: text(item.visualPath),
+        filePreviewUrl: text(item.filePreviewUrl),
+        previewUrl: text(item.previewUrl),
+        duplicateCount: Number(item.duplicateCount || 1),
+        duplicateIds: item.duplicateIds || [],
+        duplicateArtifactIds: item.duplicateArtifactIds || [],
+        duplicateUris: item.duplicateUris || [],
+        created_at: text(item.created_at),
+        metadata: item.meta || {},
+      };
+    }
+
+    async function copyArtifactsJson() {
+      const rows = (state.artifacts || []).map(artifactTableJsonRow);
+      if (!rows.length) return;
+      const content = JSON.stringify({
+        generatedAt: new Date().toISOString(),
+        source: 'urirun-dashboard-artifacts',
+        count: rows.length,
+        artifacts: rows,
+      }, null, 2);
+      await copyTextToClipboard(content);
+      window.__urirunLastCopiedArtifactsJson = content;
+      writeUrlState({ action: 'artifacts:copy-json', copied: rows.length }, { replace: true });
     }
 
     function basename(path) {
@@ -2082,6 +2147,12 @@ INDEX_HTML = r"""<!doctype html>
     });
     $('artifactDeleteVisibleBtn').addEventListener('click', () => {
       deleteArtifacts(visibleArtifactIds()).catch((error) => alert(error.message));
+    });
+    $('artifactCleanupOrphansBtn').addEventListener('click', () => {
+      cleanupArtifactOrphans().catch((error) => alert(error.message));
+    });
+    $('artifactCopyJsonBtn').addEventListener('click', () => {
+      copyArtifactsJson().catch((error) => alert(error.message));
     });
     $('widgetRefreshBtn').addEventListener('click', () => {
       writeUrlState({ action: 'widgets:refresh' }, { replace: true });
@@ -3171,11 +3242,72 @@ def _public_artifacts(artifacts: list[dict], project: str) -> list[dict]:
     return [_public_artifact(artifact, project) for artifact in artifacts]
 
 
-def _visible_public_artifacts(artifacts: list[dict], project: str, *, include_missing: bool = False) -> list[dict]:
+def _artifact_dedupe_key(item: dict) -> tuple[str, str]:
+    path = str(item.get("path") or item.get("visualPath") or "")
+    if path:
+        try:
+            return ("path", str(Path(path).expanduser().resolve()))
+        except Exception:  # noqa: BLE001
+            return ("path", str(Path(path).expanduser()))
+    uri = str(item.get("uri") or item.get("id") or "")
+    return ("uri", uri)
+
+
+def _artifact_dedupe_rank(item: dict) -> tuple[int, int, str]:
+    kind_rank = {
+        "document-pdf": 0,
+        "camera-scan": 1,
+        "receipt-crop": 2,
+        "dashboard-qr": 3,
+    }
+    missing_rank = 0 if item.get("fileExists") or item.get("previewExists") else 10
+    return (missing_rank, kind_rank.get(str(item.get("kind") or ""), 5), str(item.get("created_at") or ""))
+
+
+def _dedupe_public_artifacts(public: list[dict]) -> list[dict]:
+    groups: dict[tuple[str, str], list[dict]] = {}
+    order: list[tuple[str, str]] = []
+    for item in public:
+        key = _artifact_dedupe_key(item)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(item)
+
+    out: list[dict] = []
+    for key in order:
+        group = groups[key]
+        if len(group) == 1:
+            out.append(group[0])
+            continue
+        keep = sorted(group, key=_artifact_dedupe_rank)[0].copy()
+        keep_id = str(keep.get("id") or "")
+        duplicate_ids = [str(item.get("id")) for item in group if item.get("id") and str(item.get("id")) != keep_id]
+        keep["duplicateCount"] = len(group)
+        keep["duplicateIds"] = duplicate_ids
+        keep["duplicateArtifactIds"] = [str(item.get("id")) for item in group if item.get("id")]
+        keep["duplicateUris"] = [
+            str(item.get("uri"))
+            for item in group
+            if item.get("uri") and str(item.get("uri")) != str(keep.get("uri") or "")
+        ]
+        out.append(keep)
+    return out
+
+
+def _visible_public_artifacts(
+    artifacts: list[dict],
+    project: str,
+    *,
+    include_missing: bool = False,
+    include_duplicates: bool = False,
+) -> list[dict]:
     public = _public_artifacts(artifacts, project)
-    if include_missing:
+    if not include_missing:
+        public = [item for item in public if item.get("fileExists") or item.get("previewExists")]
+    if include_duplicates:
         return public
-    return [item for item in public if item.get("fileExists") or item.get("previewExists")]
+    return _dedupe_public_artifacts(public)
 
 
 def _collect_attachments(value: Any, project: str, *, limit: int = 24) -> list[dict]:
@@ -3289,7 +3421,7 @@ def _local_image_ocr_tesseract(path: str) -> dict:
     return {"ok": True, "backend": "tesseract", "text": text, "chars": len(text)}
 
 
-def _local_image_ocr(path: str) -> dict:
+def _local_image_ocr(path: str, backend: str | None = None) -> dict:
     """OCR a scanned image for the phone-scanner pipeline.
 
     Prefers the urirun-connector-ocr ``auto`` cascade, whose first backend is PaddleOCR
@@ -3298,8 +3430,13 @@ def _local_image_ocr(path: str) -> dict:
     the header/footer to an aggressive crop. Falls back to direct tesseract when the
     connector or paddle is unavailable. Set ``URIRUN_SCANNER_OCR_BACKEND=tesseract`` to
     force the old path.
+
+    ``backend`` overrides the env default for one call. The live "best frame" loop scores
+    transient candidates with the cheap ``tesseract`` backend and only pays for the full
+    paddle read on the document it actually keeps (manual Scan, or the chosen best frame),
+    so a 30s/frame OCR never piles up behind the ~3s capture interval.
     """
-    backend = str(os.environ.get("URIRUN_SCANNER_OCR_BACKEND", "auto")).strip().lower()
+    backend = str(backend if backend is not None else os.environ.get("URIRUN_SCANNER_OCR_BACKEND", "auto")).strip().lower()
     if backend in {"", "tesseract"}:
         return _local_image_ocr_tesseract(path)
     try:
@@ -5167,7 +5304,11 @@ def scanner_capture(project: str, db: str | None, payload: dict) -> dict:
     # crop is kept only as the display thumbnail / archived preview. Set
     # URIRUN_SCANNER_OCR_FULLFRAME=0 to OCR the crop instead (legacy behaviour).
     ocr_source = path if _truthy_env("URIRUN_SCANNER_OCR_FULLFRAME", "1") else display_path
-    ocr = _local_image_ocr(str(ocr_source))
+    # Transient "best frame" candidates (archive=False) only need a cheap read for quality
+    # scoring; the chosen frame is re-OCR'd with the full backend at archive time
+    # (_scanner_best_take). This keeps the live loop responsive while the kept document
+    # still gets the accurate paddle read.
+    ocr = _local_image_ocr(str(ocr_source), backend=None if archive else "tesseract")
     detected_document = _extract_document_metadata(str(ocr.get("text") or ""), captured_at=payload.get("capturedAt"))
     quality = _document_frame_quality(crop, ocr, detected_document, display_path)
     uri = f"scanner://host/capture/{digest[:16]}"
@@ -5332,6 +5473,13 @@ def scanner_best_finish(project: str, db: str | None, payload: dict) -> dict:
         return {"ok": False, "error": "best candidate file is missing", "seriesId": series_id, "best": _public_scanner_candidate(best)}
     crop = best.get("crop") if isinstance(best.get("crop"), dict) else {}
     ocr = best.get("ocr") if isinstance(best.get("ocr"), dict) else {}
+    # Candidates were scored with the cheap OCR backend; pay for the accurate full read
+    # (paddle full-frame) once, on the single frame we are about to keep. Falls back to the
+    # candidate's OCR if the re-read fails.
+    ocr_source = original_path if _truthy_env("URIRUN_SCANNER_OCR_FULLFRAME", "1") else display_path
+    refreshed = _local_image_ocr(str(ocr_source))
+    if refreshed.get("ok") and str(refreshed.get("text") or "").strip():
+        ocr = refreshed
     digest = str(best.get("sha256") or _file_sha256(original_path))
     try:
         document = _archive_scanned_document(
@@ -5619,6 +5767,14 @@ def _uri_action_catalog() -> list[dict]:
             "where": "host dashboard /api/uri/invoke",
         },
         {
+            "uri": "dashboard://host/service/chat/command/restart",
+            "layer": "dashboard",
+            "kind": "command",
+            "label": "Restart the chat dashboard service through a configured supervisor",
+            "sideEffects": ["service-restart"],
+            "where": "host dashboard /api/uri/invoke",
+        },
+        {
             "uri": "document://host/archive/command/sync-to-node",
             "layer": "host",
             "kind": "command",
@@ -5641,6 +5797,9 @@ def _uri_action_lookup(uri: str) -> dict | None:
         "scanner://page/torch": "scanner://page/camera/command/torch",
         "scanner://page/torch-button": "scanner://page/ui/button/torch/command/click",
         "dashboard://host/actions/query/list": "scanner://host/actions/query/list",
+        "dashboard://host/chat/command/restart": "dashboard://host/service/chat/command/restart",
+        "service://host/chat/command/restart": "dashboard://host/service/chat/command/restart",
+        "service://chat/command/restart": "dashboard://host/service/chat/command/restart",
         "document://host/archive/sync": "document://host/archive/command/sync-to-node",
     }
     target = aliases.get(uri)
@@ -5654,6 +5813,55 @@ def _uri_mode(value: Any) -> str:
     if mode in {"execute", "exec", "run"}:
         return "execute"
     return "dry-run"
+
+
+def _chat_restart_argv(payload: dict) -> tuple[list[str] | None, dict]:
+    manager = str(payload.get("manager") or os.environ.get("URIRUN_CHAT_RESTART_MANAGER") or "").strip().lower()
+    if manager in {"systemd", "systemctl"}:
+        unit = str(payload.get("unit") or os.environ.get("URIRUN_CHAT_SYSTEMD_UNIT") or "urirun-service-chat.service").strip()
+        if not unit:
+            return None, {"error": "systemd unit is empty"}
+        return ["systemctl", "--user", "restart", unit], {"manager": "systemd", "unit": unit}
+
+    configured = str(os.environ.get("URIRUN_CHAT_RESTART_CMD") or "").strip()
+    if configured:
+        try:
+            argv = shlex.split(configured)
+        except ValueError as exc:
+            return None, {"error": f"invalid URIRUN_CHAT_RESTART_CMD: {exc}"}
+        if argv:
+            return argv, {"manager": "command", "source": "URIRUN_CHAT_RESTART_CMD"}
+
+    return None, {
+        "error": "chat restart is not configured",
+        "configureAnyOf": [
+            "payload.manager=systemd with optional payload.unit",
+            "URIRUN_CHAT_RESTART_MANAGER=systemd",
+            "URIRUN_CHAT_RESTART_CMD='<restart command>'",
+        ],
+        "exampleUri": "dashboard://host/service/chat/command/restart",
+        "examplePayload": {"manager": "systemd", "unit": "urirun-service-chat.service"},
+    }
+
+
+def restart_chat_service(payload: dict) -> dict:
+    argv, meta = _chat_restart_argv(payload)
+    if not argv:
+        return {"ok": False, **meta}
+    delay = float(payload.get("delaySeconds") or 0.35)
+    runner = (
+        "import subprocess, sys, time; "
+        "time.sleep(float(sys.argv[1])); "
+        "raise SystemExit(subprocess.run(sys.argv[2:]).returncode)"
+    )
+    subprocess.Popen(
+        [sys.executable, "-c", runner, str(delay), *argv],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return {"ok": True, "scheduled": True, "delaySeconds": delay, "command": argv, **meta}
 
 
 def _uri_simulated_result(uri: str, mode: str, action_payload: dict, action: dict | None) -> dict:
@@ -5691,6 +5899,7 @@ def uri_invoke(
     if not uri:
         raise ValueError("uri is required")
     action = _uri_action_lookup(uri)
+    effective_uri = str(action.get("uri") if action else uri)
 
     if uri in {"scanner://host/actions/query/list", "dashboard://host/actions/query/list"}:
         return {"ok": True, "mode": mode, "actions": _uri_action_catalog(), "invokedUri": uri}
@@ -5711,13 +5920,13 @@ def uri_invoke(
             source=str(payload.get("source") or "uri-invoke"),
         )
 
-    if uri in {"scanner://host/capture/command/run", "scanner://host/capture"}:
+    if effective_uri in {"scanner://host/capture/command/run", "scanner://host/capture"}:
         result = scanner_capture(project, db, action_payload)
-    elif uri in {"scanner://host/best/command/finish", "scanner://host/best/finish"}:
+    elif effective_uri in {"scanner://host/best/command/finish", "scanner://host/best/finish"}:
         result = scanner_best_finish(project, db, action_payload)
-    elif uri in {"scanner://host/session/command/log", "scanner://host/session"}:
+    elif effective_uri in {"scanner://host/session/command/log", "scanner://host/session"}:
         result = scanner_session(db, action_payload)
-    elif uri == "dashboard://host/phone-scanner/command/start":
+    elif effective_uri == "dashboard://host/phone-scanner/command/start":
         result = ensure_phone_scanner_service(
             project,
             db,
@@ -5726,7 +5935,9 @@ def uri_invoke(
             token=token,
             identity=identity,
         )
-    elif uri in {"document://host/archive/command/sync-to-node", "document://host/archive/sync"}:
+    elif effective_uri == "dashboard://host/service/chat/command/restart":
+        result = restart_chat_service(action_payload)
+    elif effective_uri in {"document://host/archive/command/sync-to-node", "document://host/archive/sync"}:
         result = sync_documents_to_node(
             project,
             db,
@@ -6391,6 +6602,60 @@ def artifacts_delete(project: str, db: str | None, payload: dict) -> dict:
     return result
 
 
+def artifacts_cleanup_orphan_sidecars(project: str, db: str | None, payload: dict) -> dict:
+    delete_files = _payload_bool(payload, "deleteFiles", True)
+    include_artifact_dir = _payload_bool(payload, "includeArtifactDir", False)
+    roots = [Path(os.environ.get("URIRUN_DOCUMENT_DIR", "~/.urirun/documents")).expanduser()]
+    if include_artifact_dir:
+        roots.append(Path(os.environ.get("URIRUN_ARTIFACT_DIR", "~/.urirun/artifacts")).expanduser())
+    global_metadata = _global_document_metadata_paths()
+    sibling_suffixes = (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".bin")
+    files: list[dict] = []
+    seen: set[Path] = set()
+    for root in roots:
+        try:
+            resolved_root = root.resolve()
+        except OSError:
+            continue
+        if not resolved_root.is_dir():
+            continue
+        for candidate in resolved_root.rglob("*.json"):
+            try:
+                target = candidate.resolve()
+            except OSError:
+                continue
+            if target in seen or target in global_metadata or target.name == "index.json":
+                continue
+            seen.add(target)
+            if not _artifact_file_delete_allowed(str(target), project):
+                files.append({"path": str(target), "role": "orphan-sidecar", "deleted": False, "skipped": True, "error": "path is outside allowed artifact roots"})
+                continue
+            siblings = [target.with_suffix(suffix) for suffix in sibling_suffixes]
+            if any(path.is_file() for path in siblings):
+                continue
+            info = {"path": str(target), "role": "orphan-sidecar", "deleted": False, "skipped": False, "error": ""}
+            if delete_files:
+                try:
+                    target.unlink()
+                    info["deleted"] = True
+                except OSError as exc:
+                    info["error"] = str(exc)
+            else:
+                info["skipped"] = True
+                info["error"] = "dry run"
+            files.append(info)
+    result = {
+        "ok": True,
+        "filesDeleted": len([item for item in files if item.get("deleted")]),
+        "files": files,
+    }
+    try:
+        _host_db().add_log(db, "artifacts", "cleanup-orphans", result)
+    except Exception:  # noqa: BLE001
+        pass
+    return result
+
+
 def _dashboard_api_response(path: str, project: str, db: str | None, config: str | None, query: dict, node_urls: list[str] | None = None) -> tuple[int, dict]:
     """Resolve a dashboard /api/* path to an (HTTP status, JSON payload) pair."""
     if path == "/api/summary":
@@ -6418,7 +6683,16 @@ def _dashboard_api_response(path: str, project: str, db: str | None, config: str
         host_db = _host_db()
         artifacts = host_db.list_artifacts(db, kind=_first(query, "kind"), limit=int(_first(query, "limit", "20") or 20))
         include_missing = str(_first(query, "includeMissing", "") or "").lower() in {"1", "true", "yes", "on"}
-        return 200, {"ok": True, "artifacts": _visible_public_artifacts(artifacts, project, include_missing=include_missing)}
+        include_duplicates = str(_first(query, "includeDuplicates", "") or "").lower() in {"1", "true", "yes", "on"}
+        return 200, {
+            "ok": True,
+            "artifacts": _visible_public_artifacts(
+                artifacts,
+                project,
+                include_missing=include_missing,
+                include_duplicates=include_duplicates,
+            ),
+        }
     if path == "/api/chat/history":
         return 200, chat_history(db, project, limit=int(_first(query, "limit", "80") or 80))
     if path == "/api/services/live":
@@ -6515,6 +6789,10 @@ def create_handler(
                 if parsed.path == "/api/artifacts/delete":
                     payload = _read_json(self)
                     _json_response(self, 200, artifacts_delete(project, db, payload))
+                    return
+                if parsed.path == "/api/artifacts/cleanup-orphans":
+                    payload = _read_json(self)
+                    _json_response(self, 200, artifacts_cleanup_orphan_sidecars(project, db, payload))
                     return
                 if parsed.path == "/api/uri/invoke":
                     payload = _read_json(self)
