@@ -90,6 +90,9 @@ def test_execute_flow_self_heals_then_succeeds(monkeypatch) -> None:
             return {"uri": uri, "ok": True, "result": {"value": {
                 "controlStrategies": {"cdp": True, "atspi": True, "vision": True},
                 "cdpFeasible": True, "controllable": True, "best": "cdp"}}}
+        if "/surface/query/current" in uri:                    # non-login surface -> no upgrade
+            return {"uri": uri, "ok": True, "result": {"value": {
+                "kind": "browser", "app": "chrome", "browser": {"url": "https://example.com", "title": "x"}}}}
         # remediation URIs (cdp/session/ensure, cdp/page/ready, ui/command/act) -> ok
         if "/cdp/" in uri or "/ui/command/act" in uri:
             calls["remediation"].append(uri)

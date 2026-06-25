@@ -197,7 +197,7 @@ def recovery_actions(error: dict, *, step: dict | None = None, routes: list[dict
 
 
 def recovery_plan(error: dict, *, step: dict | None = None, routes: list[dict] | None = None,
-                  environment: dict | None = None) -> dict:
+                  environment: dict | None = None, surface: dict | None = None) -> dict:
     actions = recovery_actions(error, step=step, routes=routes)
     plan = {
         "recoverable": bool(actions),
@@ -205,8 +205,8 @@ def recovery_plan(error: dict, *, step: dict | None = None, routes: list[dict] |
         "actions": actions,
     }
     # Experience-driven layer: name the root cause + a specific, partly auto-applicable fix,
-    # fitted to what the node's environment can actually do when a profile is supplied.
-    diagnosis = diagnose(error, step=step, routes=routes, environment=environment)
+    # fitted to the node's environment + foreground surface when those are supplied.
+    diagnosis = diagnose(error, step=step, routes=routes, environment=environment, surface=surface)
     if diagnosis:
         plan["diagnosis"] = diagnosis
     return plan

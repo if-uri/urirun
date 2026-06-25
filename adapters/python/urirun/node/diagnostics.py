@@ -33,6 +33,16 @@ def _target(step: dict | None) -> str:
     return "host"
 
 
+def _target_of(actions: list[dict]) -> str:
+    """The node a diagnosis is about, read back from its remediation URIs — fit_to_environment
+    has no step, only the actions. Falls back to ``host``."""
+    for a in actions or []:
+        u = str(a.get("uri") or "")
+        if "://" in u:
+            return u.split("://", 1)[1].split("/", 1)[0] or "host"
+    return "host"
+
+
 class _Rule:
     def __init__(self, rid: str, patterns: list[str], cause: str, remediation: Callable[[str], list[dict]],
                  *, categories: set[str] | None = None, schemes: set[str] | None = None,
@@ -165,34 +175,61 @@ PLAYBOOK: list[_Rule] = [
 ]
 
 
+_RULE_BY_ID = {r.id: r for r in PLAYBOOK}
+_LOGIN_HINTS = ("authwall", "login", "log in", "sign in", "signin", "sign-in",
+                "zaloguj", "logowanie", "/uas/", "/login")
+
+
+def _is_login_surface(surface: dict | None) -> bool:
+    """The foreground surface (kvm ``surface/query/current``) is a login / authwall page."""
+    if not isinstance(surface, dict):
+        return False
+    b = surface.get("browser") or {}
+    win = surface.get("window") or {}
+    blob = f"{b.get('url', '')} {b.get('title', '')} {win.get('title', '')}".lower()
+    return any(h in blob for h in _LOGIN_HINTS)
+
+
+def _build(rule: _Rule, step: dict | None) -> dict:
+    actions = rule.remediation(_target(step))
+    return {"rule": rule.id, "cause": rule.cause, "confidence": rule.confidence,
+            "remediation": actions,
+            "autoApplicable": [a["id"] for a in actions if a.get("automatic")]}
+
+
 def diagnose(error: dict, *, step: dict | None = None, routes: list[dict] | None = None,
-             environment: dict | None = None) -> dict | None:
+             environment: dict | None = None, surface: dict | None = None) -> dict | None:
     """Match an error against the playbook → a structured diagnosis, or None if no rule fits.
 
     Returns ``{rule, cause, confidence, remediation, autoApplicable}`` where ``remediation`` is
     the list of fix actions (URIs) and ``autoApplicable`` lists the ids safe to apply unattended.
-    When ``environment`` (the node's ``env/query/profile``) is given, the remediation is FITTED
-    to what the machine can actually do — infeasible fixes are flagged and dropped from
-    ``autoApplicable`` so the self-heal never wastes a round-trip on, say, CDP where no Chrome
-    exists, and the diagnosis names the missing capability instead."""
+    ``environment`` (node ``env/query/profile``) FITS the remediation to the machine. ``surface``
+    (node ``surface/query/current``) lets a login/authwall page UPGRADE a generic "target not
+    located" to the real cause — ``not-logged-in`` — so the self-heal recommends an auth re-launch
+    (human-gated) instead of futilely ensuring CDP and retrying against a login wall."""
     message = str((error or {}).get("message") or "").casefold()
     category = str((error or {}).get("category") or "")
     uri = str((step or {}).get("uri") or "")
     scheme = uri.split("://", 1)[0] if "://" in uri else ""
-    if not message:
+    login = _is_login_surface(surface)
+
+    matched = None
+    if message:
+        for rule in PLAYBOOK:
+            if rule.matches(message, category, scheme):
+                matched = rule
+                break
+    # surface upgrade: on a login page, a UI failure (or no message rule, on a browser/kvm step)
+    # is an AUTH problem, not a missing element — name it not-logged-in (more specific cause).
+    if login and (matched is None and scheme in ("kvm", "browser")
+                  or (matched is not None and matched.id == "ui-target-not-located")):
+        matched = _RULE_BY_ID["not-logged-in"]
+    if matched is None:
         return None
-    for rule in PLAYBOOK:
-        if rule.matches(message, category, scheme):
-            actions = rule.remediation(_target(step))
-            diag = {
-                "rule": rule.id,
-                "cause": rule.cause,
-                "confidence": rule.confidence,
-                "remediation": actions,
-                "autoApplicable": [a["id"] for a in actions if a.get("automatic")],
-            }
-            return fit_to_environment(diag, environment) if environment else diag
-    return None
+    diag = _build(matched, step)
+    if surface is not None:
+        diag["surface"] = {"kind": surface.get("kind"), "loginDetected": login}
+    return fit_to_environment(diag, environment) if environment else diag
 
 
 def fit_to_environment(diagnosis: dict, environment: dict) -> dict:
@@ -213,6 +250,22 @@ def fit_to_environment(diagnosis: dict, environment: dict) -> dict:
             a["feasible"] = bool(controllable)
         else:
             a["feasible"] = True
+    # SURFACE ESCALATION (the three-sessions lesson, made a recovery INPUT not just a doctor
+    # warning): on Wayland the os-level pixel surface (vision/atspi) is the unreliable one —
+    # hot-corner mismaps, capture/action-space drift. For a UI/input failure where a CDP Chrome
+    # is feasible and CDP isn't already the fix, prepend a surface switch so the self-heal
+    # escalates the WHOLE surface to coordinate-free DOM control instead of retrying os-level.
+    rem = diagnosis.get("remediation") or []
+    ui_failure = any(s in str(a.get("uri") or "") for a in rem for s in ("/ui/", "/cdp/", "/input/"))
+    os_level_unreliable = bool(environment.get("wayland")) and environment.get("best") in (None, "atspi", "vision")
+    already_cdp = any(str(a.get("id") or "").startswith("ensure-cdp")
+                      or ("/cdp/" in str(a.get("uri") or "") and a.get("automatic")) for a in rem)
+    if ui_failure and os_level_unreliable and cdp_feasible and not already_cdp:
+        rem.insert(0, {"id": "escalate-surface-cdp", "kind": "provision", "automatic": True,
+                       "feasible": True, "uri": f"kvm://{_target_of(rem)}/cdp/session/command/ensure",
+                       "label": "OS-level pixel input is unreliable on this Wayland surface — escalate to "
+                                "CDP (coordinate-free DOM control) instead of retrying os-level pixels."})
+        diagnosis["surfaceEscalation"] = "os-level->cdp"
     diagnosis["autoApplicable"] = [a["id"] for a in (diagnosis.get("remediation") or [])
                                    if a.get("automatic") and a.get("feasible", True)]
     diagnosis["environmentFit"] = {"controllable": bool(controllable),

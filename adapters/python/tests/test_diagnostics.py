@@ -81,6 +81,31 @@ class DiagnoseTests(unittest.TestCase):
         self.assertIsNone(diagnose(_err("")))  # empty message never matches
 
 
+class SurfaceUpgradeTests(unittest.TestCase):
+    STEP = {"uri": "kvm://laptop/ui/command/click"}
+    LOGIN = {"kind": "browser", "browser": {"url": "https://www.linkedin.com/authwall", "title": "Sign In"}}
+    FEED = {"kind": "browser", "browser": {"url": "https://www.linkedin.com/feed/", "title": "Feed"}}
+
+    def test_target_not_located_on_login_page_becomes_not_logged_in(self):
+        d = diagnose(_err("ui-click: target not located"), step=self.STEP, surface=self.LOGIN)
+        self.assertEqual(d["rule"], "not-logged-in")             # surface upgrades the cause
+        self.assertTrue(d["surface"]["loginDetected"])
+
+    def test_target_not_located_on_feed_stays_ui_target(self):
+        d = diagnose(_err("ui-click: target not located"), step=self.STEP, surface=self.FEED)
+        self.assertEqual(d["rule"], "ui-target-not-located")     # not a login page -> no upgrade
+
+    def test_empty_message_on_login_surface_for_kvm_step(self):
+        d = diagnose(_err(""), step=self.STEP, surface=self.LOGIN)
+        self.assertEqual(d["rule"], "not-logged-in")             # login page + UI step, no message rule
+        d2 = diagnose(_err(""), step={"uri": "fs://laptop/file/command/read"}, surface=self.LOGIN)
+        self.assertIsNone(d2)                                    # non-UI scheme -> no surface upgrade
+
+    def test_surface_none_keeps_message_diagnosis(self):
+        d = diagnose(_err("ui-click: target not located"), step=self.STEP, surface=None)
+        self.assertEqual(d["rule"], "ui-target-not-located")     # backward compatible
+
+
 class FitToEnvironmentTests(unittest.TestCase):
     STEP = {"uri": "kvm://lap/ui/command/click"}
 

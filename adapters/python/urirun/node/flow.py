@@ -16,7 +16,7 @@ from typing import Any
 
 from urirun import result_data, v2_service
 from urirun.node._util import json_write, now_id, slug
-from urirun.node.diagnostics import fit_to_environment
+from urirun.node.diagnostics import diagnose, fit_to_environment
 from urirun.node.recovery import (
     apply_auto_remediation,
     can_retry_step,
@@ -494,26 +494,6 @@ def _action_error(env: dict) -> Any:
     return value.get("error") if isinstance(value, dict) else None
 
 
-def _node_environment(target: str, registry: dict, cache: dict) -> dict | None:
-    """Fetch + cache the node's ``env/query/profile`` so the recovery engine can FIT
-    remediation to what the machine can actually do — drop infeasible CDP fixes, and escalate
-    the SURFACE to CDP when os-level pixel input is unreliable here (the three-sessions lesson,
-    made a recovery INPUT, not just a doctor warning). Lazy: only fetched on a step failure.
-    ``None`` if the route isn't served (older node) — the diagnosis then stays unfitted."""
-    if target in cache:
-        return cache[target]
-    prof = None
-    try:
-        env = v2_service.call(f"kvm://{target}/env/query/profile", {}, registry, mode="execute")
-        val = result_data(env) if isinstance(env, dict) else None
-        if isinstance(val, dict) and val.get("ok"):
-            prof = val
-    except Exception:  # noqa: BLE001 - a missing profile route must not break recovery.
-        prof = None
-    cache[target] = prof
-    return prof
-
-
 def _flow_step_failure(step: dict, exc: BaseException, routes: list[dict], environment: dict | None = None) -> dict:
     error = exception_error(exc, uri=str(step.get("uri") or ""))
     return {
@@ -545,19 +525,27 @@ def _flow_timeline_entry(step: dict, env: dict, routes: list[dict], *, attempt: 
     return entry
 
 
-def _fetch_env_profile(step: dict, registry: dict) -> dict | None:
-    """Best-effort fetch of the failing node's capability profile (kvm env/query/profile),
-    so the self-heal fits its remediation to the live machine. None on any hiccup — fitting
-    is an optimisation, never a correctness dependency."""
+def _fetch_kvm_query(step: dict, registry: dict, route: str, marker: str) -> dict | None:
+    """Best-effort fetch of a kvm read-only query (env/query/profile, surface/query/current)
+    for the failing node, so the self-heal fits its remediation to the live machine + surface.
+    None on any hiccup — this context is an optimisation, never a correctness dependency."""
     target = route_target(str(step.get("uri") or ""))
     if not target:
         return None
     try:
-        env = v2_service.call(f"kvm://{target}/env/query/profile", {}, registry, mode="execute")
+        env = v2_service.call(f"kvm://{target}/{route}", {}, registry, mode="execute")
         value = result_data(env)
-        return value if isinstance(value, dict) and "controlStrategies" in value else None
+        return value if isinstance(value, dict) and marker in value else None
     except Exception:  # noqa: BLE001
         return None
+
+
+def _fetch_env_profile(step: dict, registry: dict) -> dict | None:
+    return _fetch_kvm_query(step, registry, "env/query/profile", "controlStrategies")
+
+
+def _fetch_surface(step: dict, registry: dict) -> dict | None:
+    return _fetch_kvm_query(step, registry, "surface/query/current", "kind")
 
 
 def _run_step(
@@ -617,10 +605,17 @@ def _run_step(
         # so the loop repairs the cause instead of just aborting with a named diagnosis.
         diagnosis = (entry.get("recovery") or {}).get("diagnosis")
         if recover and execute and not healed and diagnosis and diagnosis.get("autoApplicable"):
-            # Fit the fix to the node's LIVE capabilities before spending round-trips: a CDP
-            # remediation is pointless where no Chrome exists, an OCR retry where no tesseract.
+            # Re-diagnose with the node's LIVE capabilities + foreground surface before spending
+            # round-trips: a CDP fix is pointless where no Chrome exists, an OCR retry where no
+            # tesseract, and a "target not located" on a LOGIN page is really not-logged-in (so
+            # we recommend an auth re-launch, human-gated, instead of looping ensure-CDP+retry).
             env_profile = _fetch_env_profile(step, registry)
-            if env_profile:
+            surface = _fetch_surface(step, registry)
+            recontext = diagnose(entry["error"], step=step, routes=routes,
+                                 environment=env_profile, surface=surface)
+            if recontext:
+                diagnosis = recontext
+            elif env_profile:
                 diagnosis = fit_to_environment(diagnosis, env_profile)
             applied = apply_auto_remediation(diagnosis, registry)
             healed = True
@@ -647,6 +642,31 @@ def _circuit_break(reason: str, timeline: list, results: dict, recoveries: list)
     return out
 
 
+def _preflight(flow: dict, registry: dict) -> list[dict]:
+    """Provision the surfaces a flow KNOWS up-front it will need, BEFORE running — proactive,
+    not reactive. A flow with ``cdp/page/*`` steps needs a live CDP session; if CDP is feasible
+    but not reachable on that node, bring it up once now so the first ``cdp/page`` step doesn't
+    fail-then-self-heal. Idempotent (``ensure`` reuses an existing session)."""
+    entries: list[dict] = []
+    cdp_targets = sorted({route_target(str(s.get("uri") or "")) for s in flow.get("steps") or []
+                          if "/cdp/page/" in str(s.get("uri") or "")})
+    for target in cdp_targets:
+        if not target:
+            continue
+        prof = _fetch_env_profile({"uri": f"kvm://{target}/_"}, registry)
+        cdp = (prof or {}).get("cdp") or {}
+        if prof and not cdp.get("reachable") and (cdp.get("feasible") or prof.get("cdpFeasible")):
+            uri = f"kvm://{target}/cdp/session/command/ensure"
+            try:
+                env = v2_service.call(uri, {}, registry, mode="execute")
+                ok = bool(env.get("ok"))
+            except Exception:  # noqa: BLE001 - a failed preflight must not abort the flow; the
+                ok = False     # reactive self-heal stays as the backstop.
+            entries.append({"id": f"preflight:cdp:{target}", "uri": uri, "target": target,
+                            "ok": ok, "type": "preflight", "action": "provision-surface"})
+    return entries
+
+
 def execute_flow(flow: dict, mesh: dict, registry: dict, execute: bool, *, recover: bool = True,
                  max_retries: int = 1, max_wall_clock: float = 180.0, max_remediations: int = 6) -> dict:
     old_map = os.environ.get("URI_SERVICE_MAP")
@@ -658,6 +678,8 @@ def execute_flow(flow: dict, mesh: dict, registry: dict, execute: bool, *, recov
     start = time.monotonic()
     remediations_used = 0
     try:
+        if execute and recover:
+            timeline.extend(_preflight(flow, registry))   # provision known surfaces up-front
         for step in flow["steps"]:
             # circuit-breaker: bound the WHOLE flow for unattended autonomy — a bad plan must not
             # spin self-healing forever and burn the node. Checked before each step + after each

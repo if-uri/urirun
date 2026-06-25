@@ -1,5 +1,5 @@
 # System Architecture Analysis
-<!-- generated in 0.00s -->
+<!-- generated in 0.01s -->
 
 ## Overview
 
@@ -7,10 +7,10 @@
 - **Primary Language**: python
 - **Languages**: python: 104, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1687
+- **Total Functions**: 1697
 - **Total Classes**: 31
 - **Modules**: 164
-- **Entry Points**: 561
+- **Entry Points**: 560
 
 ## Architecture by Module
 
@@ -41,6 +41,10 @@
 - **Functions**: 43
 - **File**: `_registry.py`
 
+### adapters.python.urirun.node.flow
+- **Functions**: 37
+- **File**: `flow.py`
+
 ### adapters.python.urirun.node.client
 - **Functions**: 35
 - **Classes**: 1
@@ -57,10 +61,6 @@
 ### adapters.python.urirun.host.host_db
 - **Functions**: 33
 - **File**: `host_db.py`
-
-### adapters.python.urirun.node.flow
-- **Functions**: 32
-- **File**: `flow.py`
 
 ### adapters.python.urirun.runtime.errors
 - **Functions**: 31
@@ -565,6 +565,7 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.daemon.serve` - 41 calls
 - `adapters.python.urirun.host.host_dashboard.scanner_capture` - 40 calls
 - `adapters.python.urirun.host.host_dashboard.summary` - 37 calls
+- `adapters.python.urirun.node.diagnostics.fit_to_environment` - 37 calls
 - `adapters.python.urirun.host.host_dashboard.restart_phone_scanner_service` - 33 calls
 - `adapters.python.urirun.runtime._runtime.main` - 33 calls
 - `adapters.python.urirun.runtime.v2_adopt.main` - 31 calls
@@ -574,6 +575,7 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.host.host_dashboard.connector_install` - 29 calls
 - `adapters.python.urirun.host.host_dashboard.artifacts_dedupe_rows` - 29 calls
 - `adapters.python.urirun.runtime.adopt_pack.adopt` - 28 calls
+- `adapters.python.urirun.node.flow.execute_flow` - 28 calls
 - `adapters.python.urirun.runtime.errors.info` - 27 calls
 - `adapters.python.urirun.connectors.connector_lint.verify_connector` - 27 calls
 - `adapters.python.urirun.host.host_dashboard.phone_node_qr` - 26 calls
@@ -595,8 +597,6 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.node.manage.capability_check` - 23 calls
 - `adapters.python.urirun.host.host_dashboard.serve` - 22 calls
-- `adapters.python.urirun.runtime.errors.problem` - 22 calls
-- `adapters.python.urirun.connectors.resolver.index_local` - 22 calls
 
 ## System Interactions
 
