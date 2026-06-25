@@ -1,5 +1,5 @@
 # System Architecture Analysis
-<!-- generated in 0.00s -->
+<!-- generated in 0.01s -->
 
 ## Overview
 
@@ -7,7 +7,7 @@
 - **Primary Language**: python
 - **Languages**: python: 105, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1726
+- **Total Functions**: 1736
 - **Total Classes**: 40
 - **Modules**: 165
 - **Entry Points**: 575
@@ -75,14 +75,14 @@
 - **Classes**: 1
 - **File**: `_runtime.py`
 
+### adapters.python.urirun.node.manage
+- **Functions**: 29
+- **File**: `manage.py`
+
 ### adapters.python.urirun.host.planfile_adapter
 - **Functions**: 26
 - **Classes**: 1
 - **File**: `planfile_adapter.py`
-
-### adapters.python.urirun.node.manage
-- **Functions**: 26
-- **File**: `manage.py`
 
 ### adapters.python.urirun.host.domain_monitor
 - **Functions**: 25
@@ -180,11 +180,6 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 ### adapters.python.urirun.host.document_sync.sync_documents_to_node
 - **Calls**: adapters.python.urirun.host.document_sync._parse_sync_params, deps.archive_pdfs, adapters.python.urirun.host.document_sync._check_preflight, deps.verification, adapters.python.urirun.host.document_sync._log_and_chat_report, adapters.python.urirun.host.document_sync._log_and_chat_report, adapters.python.urirun.host.document_sync._upload_file, item.get
 
-### adapters.python.urirun.node.manage.capability_check
-> Is a ``scheme`` (optionally a specific ``route``) served by a connector INSTALLED in
-this environment? Pure read-only capability introspection exposed
-- **Calls**: None.strip, None.strip, adapters.python.urirun.node.manage._installed_route_owners, None.lower, adapters.python.urirun.node.manage._route_key, sorted, sorted, sorted
-
 ### adapters.python.urirun.runtime.errors.problem
 > Project an error envelope to RFC 9457 ``application/problem+json``.
 - **Calls**: dict, adapters.python.urirun.runtime.errors.category_meta, err.get, adapters.python.urirun.runtime.errors.classify, err.get, adapters.python.urirun.runtime.errors.error_code, err.get, err.get
@@ -222,6 +217,12 @@ this environment? Pure read-only capability introspection exposed
 Scheme-level checks are insufficient for split connectors such as fs://:
 a node may expose
 - **Calls**: node_client, client.routes, set, adapters.python.urirun.host.fs_transfer.route_key, attempted_route_keys.add, ensured.append, client.routes, all
+
+### adapters.python.urirun.runtime.discovery.registry_for_uri
+> Compile a registry for just the connector owning ``uri``'s scheme (+ builtins).
+
+Falls back to full discovery (and refreshes the index) when the schem
+- **Calls**: adapters.python.urirun.runtime.discovery._scheme_of, adapters.python.urirun.runtime.discovery.load_index, list, adapters.python.urirun.runtime.discovery.build_index, v2.entry_point_bindings, bindings.extend, v2.compile_registry, None.get
 
 ## Process Flows
 
@@ -357,10 +358,6 @@ child processes t
 - **Methods**: 4
 - **Key Methods**: adapters.ruby.urirun.Connector.initialize, adapters.ruby.urirun.Connector.command, adapters.ruby.urirun.Connector.bindings, adapters.ruby.urirun.Connector.bindings_json
 
-### adapters.csharp.Urirun.Connector
-- **Methods**: 3
-- **Key Methods**: adapters.csharp.Urirun.Connector.Connector, adapters.csharp.Urirun.Connector.Command, adapters.csharp.Urirun.Connector.BindingsJson
-
 ### adapters.python.urirun.node.reversible.Connector
 > The ADOPTION CONTRACT. A connector enters the engine by providing these three.
 - **Methods**: 3
@@ -379,9 +376,9 @@ run dete
 - **Methods**: 3
 - **Key Methods**: adapters.python.urirun.node.reversible.TwinMemory.remember, adapters.python.urirun.node.reversible.TwinMemory.known_good, adapters.python.urirun.node.reversible.TwinMemory.drift
 
-### adapters.python.urirun.node.diagnostics._Rule
-- **Methods**: 2
-- **Key Methods**: adapters.python.urirun.node.diagnostics._Rule.__init__, adapters.python.urirun.node.diagnostics._Rule.matches
+### adapters.csharp.Urirun.Connector
+- **Methods**: 3
+- **Key Methods**: adapters.csharp.Urirun.Connector.Connector, adapters.csharp.Urirun.Connector.Command, adapters.csharp.Urirun.Connector.BindingsJson
 
 ### adapters.python.urirun.node.reversible.CallableTransport
 > Adapt any ``fn(uri, payload) -> dict`` into a Transport (e.g. a NodeClient.run bound
@@ -394,6 +391,10 @@ method, or a te
 self-sufficie
 - **Methods**: 2
 - **Key Methods**: adapters.python.urirun.node.reversible.Twin.scan, adapters.python.urirun.node.reversible.Twin.rescan
+
+### adapters.python.urirun.node.diagnostics._Rule
+- **Methods**: 2
+- **Key Methods**: adapters.python.urirun.node.diagnostics._Rule.__init__, adapters.python.urirun.node.diagnostics._Rule.matches
 
 ## Data Transformation Functions
 
@@ -570,7 +571,6 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.v1.main` - 44 calls
 - `adapters.python.urirun.runtime.daemon.serve` - 41 calls
 - `adapters.python.urirun.host.host_dashboard.scanner_capture` - 40 calls
-- `adapters.python.urirun.node.diagnostics.fit_to_environment` - 38 calls
 - `adapters.python.urirun.host.host_dashboard.summary` - 37 calls
 - `adapters.python.urirun.node.flow.execute_flow` - 34 calls
 - `adapters.python.urirun.host.host_dashboard.restart_phone_scanner_service` - 33 calls
@@ -601,8 +601,9 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.testing.smoke` - 23 calls
 - `adapters.python.urirun.host.document_sync.sync_documents_to_node` - 23 calls
 - `adapters.python.urirun.runtime.v1.run` - 23 calls
-- `adapters.python.urirun.node.manage.capability_check` - 23 calls
 - `adapters.python.urirun.host.host_dashboard.serve` - 22 calls
+- `adapters.python.urirun.runtime.errors.problem` - 22 calls
+- `adapters.python.urirun.connectors.resolver.index_local` - 22 calls
 
 ## System Interactions
 

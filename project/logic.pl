@@ -1,5 +1,5 @@
 % ── Project Metadata ─────────────────────────────────────
-project_metadata('urirun', '0.4.143', 'javascript').
+project_metadata('urirun', '0.4.145', 'javascript').
 
 % ── Project Files ────────────────────────────────────────
 project_file('adapters/bash/example/hash-connector.sh', 10, 'shell').
@@ -27,13 +27,13 @@ project_file('adapters/python/tests/test_connector_sdk.py', 63, 'python').
 project_file('adapters/python/tests/test_connector_smoke.py', 83, 'python').
 project_file('adapters/python/tests/test_daemon.py', 41, 'python').
 project_file('adapters/python/tests/test_declarative.py', 103, 'python').
-project_file('adapters/python/tests/test_diagnostics.py', 174, 'python').
+project_file('adapters/python/tests/test_diagnostics.py', 180, 'python').
 project_file('adapters/python/tests/test_discovery.py', 127, 'python').
 project_file('adapters/python/tests/test_dispatch_protocol.py', 81, 'python').
 project_file('adapters/python/tests/test_domain_monitor.py', 162, 'python').
 project_file('adapters/python/tests/test_errors.py', 291, 'python').
 project_file('adapters/python/tests/test_exec.py', 147, 'python').
-project_file('adapters/python/tests/test_flow_reversible.py', 85, 'python').
+project_file('adapters/python/tests/test_flow_reversible.py', 118, 'python').
 project_file('adapters/python/tests/test_flow_rollup.py', 171, 'python').
 project_file('adapters/python/tests/test_gap5_authoring.py', 105, 'python').
 project_file('adapters/python/tests/test_host_dashboard.py', 479, 'python').
@@ -52,7 +52,7 @@ project_file('adapters/python/tests/test_planfile_adapter.py', 344, 'python').
 project_file('adapters/python/tests/test_public_api.py', 191, 'python').
 project_file('adapters/python/tests/test_refactor_helpers.py', 151, 'python').
 project_file('adapters/python/tests/test_registry_portable.py', 47, 'python').
-project_file('adapters/python/tests/test_reversible.py', 249, 'python').
+project_file('adapters/python/tests/test_reversible.py', 314, 'python').
 project_file('adapters/python/tests/test_routing.py', 73, 'python').
 project_file('adapters/python/tests/test_scheduler.py', 62, 'python').
 project_file('adapters/python/tests/test_secrets.py', 168, 'python').
@@ -111,15 +111,15 @@ project_file('adapters/python/urirun/node/_util.py', 38, 'python').
 project_file('adapters/python/urirun/node/_version.py', 77, 'python').
 project_file('adapters/python/urirun/node/client.py', 559, 'python').
 project_file('adapters/python/urirun/node/config.py', 210, 'python').
-project_file('adapters/python/urirun/node/diagnostics.py', 284, 'python').
-project_file('adapters/python/urirun/node/flow.py', 893, 'python').
+project_file('adapters/python/urirun/node/diagnostics.py', 325, 'python').
+project_file('adapters/python/urirun/node/flow.py', 899, 'python').
 project_file('adapters/python/urirun/node/formatting.py', 79, 'python').
 project_file('adapters/python/urirun/node/keyauth.py', 174, 'python').
-project_file('adapters/python/urirun/node/manage.py', 431, 'python').
+project_file('adapters/python/urirun/node/manage.py', 424, 'python').
 project_file('adapters/python/urirun/node/mesh.py', 1976, 'python').
 project_file('adapters/python/urirun/node/paths.py', 39, 'python').
 project_file('adapters/python/urirun/node/recovery.py', 300, 'python').
-project_file('adapters/python/urirun/node/reversible.py', 249, 'python').
+project_file('adapters/python/urirun/node/reversible.py', 307, 'python').
 project_file('adapters/python/urirun/node/routing.py', 144, 'python').
 project_file('adapters/python/urirun/node/task_cli.py', 343, 'python').
 project_file('adapters/python/urirun/node/transport.py', 529, 'python').
@@ -161,7 +161,7 @@ project_file('adapters/rust/examples/hash_connector.rs', 13, 'rust').
 project_file('adapters/rust/src/lib.rs', 40, 'rust').
 project_file('adapters/ts/example/hash-connector.ts', 11, 'typescript').
 project_file('adapters/ts/urirun.ts', 42, 'typescript').
-project_file('app.doql.less', 176, 'less').
+project_file('app.doql.less', 178, 'less').
 project_file('examples/matrix/Dockerfile.bash', 7, 'shell').
 project_file('examples/matrix/Dockerfile.go', 7, 'go').
 project_file('examples/matrix/emit_python.py', 20, 'python').
@@ -311,6 +311,10 @@ python_function('adapters/python/tests/test_flow_reversible.py', 'test_rollback_
 python_function('adapters/python/tests/test_flow_reversible.py', 'test_rollback_flow_escalates_on_failed_inverse', 1, 2, 4).
 python_function('adapters/python/tests/test_flow_reversible.py', 'test_rollback_flow_noop_when_nothing_reversible', 1, 2, 3).
 python_function('adapters/python/tests/test_flow_reversible.py', 'test_run_flow_document_attaches_reversible_ledger', 1, 5, 5).
+python_function('adapters/python/tests/test_flow_reversible.py', '_stub_run', 3, 1, 2).
+python_function('adapters/python/tests/test_flow_reversible.py', 'test_compensation_undoes_on_goal_failure', 1, 5, 6).
+python_function('adapters/python/tests/test_flow_reversible.py', 'test_no_compensation_on_success', 1, 2, 5).
+python_function('adapters/python/tests/test_flow_reversible.py', 'test_compensation_is_opt_in', 1, 2, 5).
 python_function('adapters/python/tests/test_flow_rollup.py', '_env', 1, 1, 0).
 python_function('adapters/python/tests/test_flow_rollup.py', 'test_action_ok_folds_inner_result_ok', 0, 3, 2).
 python_function('adapters/python/tests/test_flow_rollup.py', 'test_action_ok_false_when_transport_fails', 0, 2, 1).
@@ -1206,8 +1210,15 @@ python_function('adapters/python/urirun/node/diagnostics.py', '_target', 1, 7, 4
 python_function('adapters/python/urirun/node/diagnostics.py', '_target_of', 1, 6, 3).
 python_function('adapters/python/urirun/node/diagnostics.py', '_is_login_surface', 1, 5, 4).
 python_function('adapters/python/urirun/node/diagnostics.py', '_build', 2, 3, 3).
-python_function('adapters/python/urirun/node/diagnostics.py', 'diagnose', 1, 19, 8).
-python_function('adapters/python/urirun/node/diagnostics.py', 'fit_to_environment', 2, 32, 8).
+python_function('adapters/python/urirun/node/diagnostics.py', 'diagnose', 1, 11, 9).
+python_function('adapters/python/urirun/node/diagnostics.py', '_match_rule', 3, 4, 2).
+python_function('adapters/python/urirun/node/diagnostics.py', '_surface_upgrade', 3, 6, 0).
+python_function('adapters/python/urirun/node/diagnostics.py', '_cdp_feasible', 1, 3, 2).
+python_function('adapters/python/urirun/node/diagnostics.py', '_controllable', 1, 3, 4).
+python_function('adapters/python/urirun/node/diagnostics.py', '_mark_feasibility', 3, 7, 3).
+python_function('adapters/python/urirun/node/diagnostics.py', '_os_level_unreliable', 1, 4, 2).
+python_function('adapters/python/urirun/node/diagnostics.py', '_maybe_escalate_surface', 3, 14, 7).
+python_function('adapters/python/urirun/node/diagnostics.py', 'fit_to_environment', 2, 7, 7).
 python_function('adapters/python/urirun/node/flow.py', '_flow_format', 2, 3, 2).
 python_function('adapters/python/urirun/node/flow.py', 'flow_document', 1, 3, 2).
 python_function('adapters/python/urirun/node/flow.py', 'write_flow_document', 3, 3, 7).
@@ -1246,7 +1257,7 @@ python_function('adapters/python/urirun/node/flow.py', 'execute_flow', 4, 25, 18
 python_function('adapters/python/urirun/node/flow.py', '_flow_stdout', 1, 6, 2).
 python_function('adapters/python/urirun/node/flow.py', '_run_goal_check', 2, 17, 7).
 python_function('adapters/python/urirun/node/flow.py', 'verify_flow_execution', 2, 15, 7).
-python_function('adapters/python/urirun/node/flow.py', 'run_flow_document', 2, 10, 10).
+python_function('adapters/python/urirun/node/flow.py', 'run_flow_document', 2, 15, 11).
 python_function('adapters/python/urirun/node/flow.py', '_flow_transport', 1, 1, 7).
 python_function('adapters/python/urirun/node/flow.py', 'rollback_flow', 2, 6, 9).
 python_function('adapters/python/urirun/node/formatting.py', 'format_table', 3, 6, 9).
@@ -1289,7 +1300,7 @@ python_function('adapters/python/urirun/node/manage.py', '_read_connector_manife
 python_function('adapters/python/urirun/node/manage.py', 'registry_installed', 0, 11, 10).
 python_function('adapters/python/urirun/node/manage.py', '_installed_route_owners', 0, 7, 6).
 python_function('adapters/python/urirun/node/manage.py', '_route_key', 1, 3, 1).
-python_function('adapters/python/urirun/node/manage.py', 'capability_check', 0, 17, 13).
+python_function('adapters/python/urirun/node/manage.py', 'capability_check', 0, 8, 10).
 python_function('adapters/python/urirun/node/manage.py', 'registry_adopt', 0, 1, 0).
 python_function('adapters/python/urirun/node/manage.py', 'package_list', 0, 7, 5).
 python_function('adapters/python/urirun/node/manage.py', 'runtime_info', 0, 2, 3).
@@ -1386,10 +1397,12 @@ python_function('adapters/python/urirun/node/reversible.py', 'parse', 1, 1, 2).
 python_function('adapters/python/urirun/node/reversible.py', 'path_of', 1, 1, 1).
 python_function('adapters/python/urirun/node/reversible.py', 'sig', 1, 1, 4).
 python_function('adapters/python/urirun/node/reversible.py', '_step_kind', 1, 2, 0).
+python_function('adapters/python/urirun/node/reversible.py', 'environment_fingerprint', 1, 2, 3).
 python_function('adapters/python/urirun/node/reversible.py', 'local_transport', 1, 1, 3).
 python_function('adapters/python/urirun/node/reversible.py', 'rollback_partial_flow', 4, 2, 3).
 python_function('adapters/python/urirun/node/reversible.py', '_inner_value', 1, 5, 2).
-python_function('adapters/python/urirun/node/reversible.py', 'ledger_from_execution', 1, 10, 7).
+python_function('adapters/python/urirun/node/reversible.py', '_inverse_uri', 2, 3, 4).
+python_function('adapters/python/urirun/node/reversible.py', 'ledger_from_execution', 1, 10, 8).
 python_function('adapters/python/urirun/node/routing.py', 'uri_is_denied', 1, 2, 1).
 python_function('adapters/python/urirun/node/routing.py', 'route_is_safe', 2, 3, 2).
 python_function('adapters/python/urirun/node/routing.py', 'routes_from_registry', 2, 8, 5).
@@ -2147,6 +2160,7 @@ python_method('DiagnoseTests', 'test_debugger_down_proposes_dedicated_profile', 
 python_method('DiagnoseTests', 'test_node_exec_timeout', 0, 1, 4).
 python_method('DiagnoseTests', 'test_route_not_served_gated_on_not_found', 0, 1, 4).
 python_method('DiagnoseTests', 'test_route_not_served_category_gate', 0, 1, 3).
+python_method('DiagnoseTests', 'test_environment_drift_recaptures', 0, 1, 4).
 python_method('DiagnoseTests', 'test_not_logged_in', 0, 1, 3).
 python_method('DiagnoseTests', 'test_stale_node_urirun_beats_generic_route_not_served', 0, 1, 3).
 python_method('DiagnoseTests', 'test_empty_target', 0, 1, 3).
@@ -2443,6 +2457,16 @@ python_method('FlowBridgeTests', '_execution', 0, 1, 1).
 python_method('FlowBridgeTests', 'test_ledger_extracts_only_steps_with_an_inverse', 0, 3, 4).
 python_method('FlowBridgeTests', 'test_rollback_flow_undoes_lifo_with_whole_flow_proof', 0, 2, 10).
 python_method('FlowBridgeTests', 'test_rollback_flow_escalates_on_residual_mutation', 0, 1, 10).
+python_class('adapters/python/tests/test_reversible.py', 'TwinMemoryTests').
+python_method('TwinMemoryTests', 'test_remember_then_no_drift_on_same_env', 0, 1, 6).
+python_method('TwinMemoryTests', 'test_drift_detected_on_display_change', 0, 1, 5).
+python_method('TwinMemoryTests', 'test_no_known_good_yet_is_not_drift', 0, 1, 3).
+python_method('TwinMemoryTests', 'test_fingerprint_ignores_non_env_dims', 0, 1, 2).
+python_class('adapters/python/tests/test_reversible.py', 'NodelessInverseRebaseTests').
+python_method('NodelessInverseRebaseTests', '_exec', 2, 1, 0).
+python_method('NodelessInverseRebaseTests', 'test_path_inverse_rebased_to_forward_node', 0, 1, 4).
+python_method('NodelessInverseRebaseTests', 'test_full_uri_inverse_left_unchanged', 0, 1, 3).
+python_method('NodelessInverseRebaseTests', 'test_inverse_without_uri_or_path_skipped', 0, 1, 3).
 python_class('adapters/python/tests/test_scheduler.py', 'SchedulerTests').
 python_method('SchedulerTests', 'test_systemd_preview_and_install', 0, 1, 9).
 python_method('SchedulerTests', 'test_cli_schedule_cron_preview', 0, 1, 9).
@@ -2576,6 +2600,10 @@ python_class('adapters/python/urirun/node/reversible.py', 'ReversibleProcess').
 python_method('ReversibleProcess', 'execute', 3, 8, 8).
 python_method('ReversibleProcess', 'rollback', 2, 4, 5).
 python_method('ReversibleProcess', 'rollback_flow', 3, 6, 5).
+python_class('adapters/python/urirun/node/reversible.py', 'TwinMemory').
+python_method('TwinMemory', 'remember', 2, 1, 1).
+python_method('TwinMemory', 'known_good', 1, 1, 1).
+python_method('TwinMemory', 'drift', 2, 3, 2).
 python_class('adapters/python/urirun/runtime/_runtime.py', 'PolicyError').
 python_class('adapters/python/urirun/runtime/progress.py', 'RunControl').
 python_method('RunControl', '__init__', 2, 1, 1).
@@ -2726,8 +2754,10 @@ sumd_workflow_step('service-status', 2, 'curl -kfsS --max-time 2 "https://127.0.
 sumd_workflow('test-v1', 'manual').
 sumd_workflow('test-v2', 'manual').
 sumd_workflow('build', 'manual').
-sumd_workflow_step('build', 1, 'rm -rf adapters/python/dist').
-sumd_workflow_step('build', 2, 'cd adapters/python && $(PYTHON) -m build').
+sumd_workflow_step('build', 1, '# also remove build/ : `cd adapters/python && python -m build` puts cwd on sys.path, so a').
+sumd_workflow_step('build', 2, '# stale ./build/ dir shadows PyPA build ("\'build\' is a package and cannot be directly executed").').
+sumd_workflow_step('build', 3, 'rm -rf adapters/python/dist adapters/python/build').
+sumd_workflow_step('build', 4, 'cd adapters/python && $(PYTHON) -m build').
 sumd_workflow('publish', 'manual').
 sumd_workflow_step('publish', 1, 'cd adapters/python && $(PYTHON) -m twine upload --skip-existing dist/*').
 sumd_workflow('release', 'manual').

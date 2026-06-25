@@ -1,7 +1,7 @@
-# urirun | 165f 40346L | yaml:5,txt:3,shell:10,python:105,yml:2,json:13,javascript:3,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,c:1,cpp:1,csharp:4,ruby:2 | 2026-06-25
-# generated in 0.03s
-# stats: 1726 func | 0 cls | 165 mod | CC̄=4.7 | critical:9 | cycles:0
-# alerts[5]: fan-out create_handler=59; fan-out _archive_scanned_document=43; CC fit_to_environment=32; fan-out _write_document_pdf=32; fan-out serve=30
+# urirun | 165f 40382L | yaml:5,txt:3,shell:10,python:105,yml:2,json:13,javascript:3,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,c:1,cpp:1,csharp:4,ruby:2 | 2026-06-25
+# generated in 0.04s
+# stats: 1736 func | 0 cls | 165 mod | CC̄=4.7 | critical:6 | cycles:0
+# alerts[5]: fan-out create_handler=59; fan-out _archive_scanned_document=43; fan-out _write_document_pdf=32; fan-out serve=30; fan-out _add_host_subparser=29
 # hotspots[5]: create_handler fan=59; _archive_scanned_document fan=43; _write_document_pdf fan=32; serve fan=30; summary fan=29
 # evolution: CC̄ 4.7→4.7 (flat 0.0)
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
@@ -84,11 +84,11 @@ M[165]:
   adapters/python/urirun/node/_version.py,76
   adapters/python/urirun/node/client.py,558
   adapters/python/urirun/node/config.py,209
-  adapters/python/urirun/node/diagnostics.py,301
+  adapters/python/urirun/node/diagnostics.py,324
   adapters/python/urirun/node/flow.py,898
   adapters/python/urirun/node/formatting.py,78
   adapters/python/urirun/node/keyauth.py,173
-  adapters/python/urirun/node/manage.py,430
+  adapters/python/urirun/node/manage.py,443
   adapters/python/urirun/node/mesh.py,1975
   adapters/python/urirun/node/paths.py,38
   adapters/python/urirun/node/recovery.py,299
@@ -172,15 +172,6 @@ M[165]:
   tree.sh,4
   v1/js/urirun-v1.js,343
 D:
-  adapters/python/urirun/node/diagnostics.py:
-    e: _Rule,_target,_target_of,_is_login_surface,_build,diagnose,fit_to_environment
-    _Rule: __init__(4),matches(3)
-    _target(step)
-    _target_of(actions)
-    _is_login_surface(surface)
-    _build(rule;step)
-    diagnose(error)
-    fit_to_environment(diagnosis;environment)
   adapters/python/urirun/node/flow.py:
     e: _flow_format,flow_document,write_flow_document,load_flow_document,first_url,nl_key,append_if_available,requested_folder_path,_flow_intents,_append_target_steps,heuristic_flow,json_from_text,_uri_segments,_uri_matches_template,_uri_is_available,_normalize_flow_step,_normalize_flow_task,normalize_flow,normalize_flow_or_explain,llm_flow,make_flow,_dig_path,resolve_step_payload,_action_ok,_action_error,_flow_step_failure,_flow_timeline_entry,_fetch_kvm_query,_fetch_env_profile,_fetch_surface,_run_step,_circuit_break,_preflight,_rollback_partial,execute_flow,_flow_stdout,_run_goal_check,verify_flow_execution,run_flow_document,_flow_transport,rollback_flow
     _flow_format(path;requested)
@@ -224,34 +215,6 @@ D:
     run_flow_document(document;mesh)
     _flow_transport(mesh)
     rollback_flow(execution;mesh)
-  adapters/python/urirun/node/manage.py:
-    e: _pip,_install_policy,_classify_source,_policy_allows,install_policy,package_install,_refresh_install_caches,_project_root,connector_install,_connector_match,_scan_local_connectors,_augment_local_routes,_list_installed_connectors,connector_discover,_derive_local_routes,_read_json_manifest,_read_tellmesh_manifest,_read_connector_manifest,registry_installed,_installed_route_owners,_route_key,capability_check,registry_adopt,package_list,runtime_info,bindings
-    _pip(args;timeout)
-    _install_policy()
-    _classify_source(s)
-    _policy_allows(kind;source;policy)
-    install_policy()
-    package_install()
-    _refresh_install_caches()
-    _project_root(path)
-    connector_install()
-    _connector_match(obj;match)
-    _scan_local_connectors(roots;match)
-    _augment_local_routes(local;payload)
-    _list_installed_connectors(match)
-    connector_discover()
-    _derive_local_routes(mf;path)
-    _read_json_manifest(mf;path)
-    _read_tellmesh_manifest(mf;path)
-    _read_connector_manifest(mf;path)
-    registry_installed()
-    _installed_route_owners()
-    _route_key(uri)
-    capability_check()
-    registry_adopt()
-    package_list()
-    runtime_info()
-    bindings(name)
   adapters/python/urirun/__init__.py:
     e: Connector,parse_uri,build_invocation,dispatch,command,shell,handler,_example_payload,ok,fail,plan,tag,policy,resolve_secret,action_space,result_data,result_degraded,run_steps,tool_binding,connector_bindings,entry_point_bindings,entry_point_binding_document,entry_point_registry,error_bindings,compat_report,compile_registry,list_routes,validate_binding_document,run,connector,load_manifest,connector_emit,connector_cli,connector_main,_connector_cli_routes,_connector_run_command
     Connector: __post_init__(0),uri(1),_meta(1),command(1),shell(1),cli(1),_add_route_arguments(2),_build_cli_parser(2),_dispatch_cli(3),handler(1),registry(1),bindings(0),_live_bindings(0),manifest(1),mcp_tools(0),a2a_card(0)  # Small convention helper for connector packages.
@@ -1134,6 +1097,22 @@ Connector a...
     _configured_api_routes(name;node)
     discover_node(node)
     discover_mesh(config)
+  adapters/python/urirun/node/diagnostics.py:
+    e: _Rule,_target,_target_of,_is_login_surface,_build,diagnose,_match_rule,_surface_upgrade,_cdp_feasible,_controllable,_mark_feasibility,_os_level_unreliable,_maybe_escalate_surface,fit_to_environment
+    _Rule: __init__(4),matches(3)
+    _target(step)
+    _target_of(actions)
+    _is_login_surface(surface)
+    _build(rule;step)
+    diagnose(error)
+    _match_rule(message;category;scheme)
+    _surface_upgrade(matched;login;scheme)
+    _cdp_feasible(env)
+    _controllable(env)
+    _mark_feasibility(remediation;cdp_feasible;controllable)
+    _os_level_unreliable(env)
+    _maybe_escalate_surface(diagnosis;env;cdp_feasible)
+    fit_to_environment(diagnosis;environment)
   scripts/lint_connectors.py:
     e: classify,lint_fleet,_flags,_print_fleet_report,_lint_exit_code,main
     classify(rep)
@@ -1432,6 +1411,37 @@ Connector a...
     expandBinding()
     expandBindings()
     compileRegistry()
+  adapters/python/urirun/node/manage.py:
+    e: _pip,_install_policy,_classify_source,_policy_allows,install_policy,package_install,_refresh_install_caches,_project_root,connector_install,_connector_match,_scan_local_connectors,_augment_local_routes,_list_installed_connectors,connector_discover,_derive_local_routes,_read_json_manifest,_read_tellmesh_manifest,_read_connector_manifest,registry_installed,_installed_route_owners,_route_key,_scheme_of,_scope_to_scheme,_match_routes,capability_check,registry_adopt,package_list,runtime_info,bindings
+    _pip(args;timeout)
+    _install_policy()
+    _classify_source(s)
+    _policy_allows(kind;source;policy)
+    install_policy()
+    package_install()
+    _refresh_install_caches()
+    _project_root(path)
+    connector_install()
+    _connector_match(obj;match)
+    _scan_local_connectors(roots;match)
+    _augment_local_routes(local;payload)
+    _list_installed_connectors(match)
+    connector_discover()
+    _derive_local_routes(mf;path)
+    _read_json_manifest(mf;path)
+    _read_tellmesh_manifest(mf;path)
+    _read_connector_manifest(mf;path)
+    registry_installed()
+    _installed_route_owners()
+    _route_key(uri)
+    _scheme_of(uri)
+    _scope_to_scheme(owners;scheme)
+    _match_routes(scoped;route)
+    capability_check()
+    registry_adopt()
+    package_list()
+    runtime_info()
+    bindings(name)
   scripts/repin_connectors.py:
     e: find_root,pypi_has,repin_text,classify,_pypi_write_guard,_repin_one,main
     find_root(explicit)
@@ -1998,6 +2008,7 @@ Connector a...
     Connector: Connector(-1),Command(-1),BindingsJson(-1)
   goal.yaml:
   planfile.yaml:
+  Makefile:
   requirements.txt:
   tree.sh:
   prefact.yaml:
@@ -2077,7 +2088,6 @@ Connector a...
   adapters/csharp/obj/Debug/net8.0/urirun-connector.AssemblyInfo.cs:
     i: System,System.Reflection
   adapters/ruby/example/hash_connector.rb:
-  Makefile:
   package.json:
   adapters/js/package.json:
   adapters/python/pyproject.toml:

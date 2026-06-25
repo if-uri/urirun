@@ -231,17 +231,8 @@ def diagnose(error: dict, *, step: dict | None = None, routes: list[dict] | None
     scheme = uri.split("://", 1)[0] if "://" in uri else ""
     login = _is_login_surface(surface)
 
-    matched = None
-    if message:
-        for rule in PLAYBOOK:
-            if rule.matches(message, category, scheme):
-                matched = rule
-                break
-    # surface upgrade: on a login page, a UI failure (or no message rule, on a browser/kvm step)
-    # is an AUTH problem, not a missing element — name it not-logged-in (more specific cause).
-    if login and (matched is None and scheme in ("kvm", "browser")
-                  or (matched is not None and matched.id == "ui-target-not-located")):
-        matched = _RULE_BY_ID["not-logged-in"]
+    matched = _match_rule(message, category, scheme)
+    matched = _surface_upgrade(matched, login, scheme)
     if matched is None:
         return None
     diag = _build(matched, step)
@@ -250,51 +241,83 @@ def diagnose(error: dict, *, step: dict | None = None, routes: list[dict] | None
     return fit_to_environment(diag, environment) if environment else diag
 
 
-def fit_to_environment(diagnosis: dict, environment: dict) -> dict:
-    """Annotate each remediation action with ``feasible`` for THIS environment and recompute
-    ``autoApplicable`` to feasible-only. A CDP fix needs a chrome binary (cdpFeasible); an
-    OCR/desktop retry needs SOME working control strategy (controllable). When nothing can
-    drive the UI, prepend an honest 'install tesseract / grant /dev/uinput / provide a CDP
-    Chrome' action and mark the env unfit."""
-    cs = environment.get("controlStrategies") or {}
-    cdp_feasible = bool(cs.get("cdp")) or bool(environment.get("cdpFeasible"))
-    controllable = environment.get("controllable", any(cs.values()) if cs else True)
-    for a in diagnosis.get("remediation") or []:
-        uri = str(a.get("uri") or "")
+def _match_rule(message: str, category: str, scheme: str) -> _Rule | None:
+    """First playbook rule whose signature matches (or None) — first match wins by order."""
+    if not message:
+        return None
+    return next((r for r in PLAYBOOK if r.matches(message, category, scheme)), None)
+
+
+def _surface_upgrade(matched: _Rule | None, login: bool, scheme: str) -> _Rule | None:
+    """On a login page, a UI failure (or no rule, on a browser/kvm step) is an AUTH problem,
+    not a missing element — upgrade to not-logged-in (the more specific cause)."""
+    if not login:
+        return matched
+    no_rule_ui_step = matched is None and scheme in ("kvm", "browser")
+    weak_ui_rule = matched is not None and matched.id == "ui-target-not-located"
+    return _RULE_BY_ID["not-logged-in"] if (no_rule_ui_step or weak_ui_rule) else matched
+
+
+def _cdp_feasible(env: dict) -> bool:
+    cs = env.get("controlStrategies") or {}
+    return bool(cs.get("cdp")) or bool(env.get("cdpFeasible"))
+
+
+def _controllable(env: dict) -> bool:
+    cs = env.get("controlStrategies") or {}
+    return bool(env.get("controllable", any(cs.values()) if cs else True))
+
+
+def _mark_feasibility(remediation: list, cdp_feasible: bool, controllable: bool) -> None:
+    """Tag each remediation action with whether THIS environment can support it."""
+    for a in remediation:
         aid = str(a.get("id") or "")
-        if "/cdp/" in uri or aid.startswith("ensure-cdp"):
+        if "/cdp/" in str(a.get("uri") or "") or aid.startswith("ensure-cdp"):
             a["feasible"] = cdp_feasible
         elif aid in ("retry-via-act", "retry-bounded", "wait-page-ready"):
-            a["feasible"] = bool(controllable)
+            a["feasible"] = controllable
         else:
             a["feasible"] = True
-    # SURFACE ESCALATION (the three-sessions lesson, made a recovery INPUT not just a doctor
-    # warning): on Wayland the os-level pixel surface (vision/atspi) is the unreliable one —
-    # hot-corner mismaps, capture/action-space drift. For a UI/input failure where a CDP Chrome
-    # is feasible and CDP isn't already the fix, prepend a surface switch so the self-heal
-    # escalates the WHOLE surface to coordinate-free DOM control instead of retrying os-level.
+
+
+def _os_level_unreliable(env: dict) -> bool:
+    """Prefer the Mutter ground-truth flag (surface_report -> env.osLevelReliable); fall back
+    to the wayland+best heuristic only when reliability is unknown."""
+    reliable = env.get("osLevelReliable")
+    if reliable is False:
+        return True
+    return reliable is None and bool(env.get("wayland")) and env.get("best") in (None, "atspi", "vision")
+
+
+def _maybe_escalate_surface(diagnosis: dict, env: dict, cdp_feasible: bool) -> None:
+    """The three-sessions lesson as a recovery INPUT: on an unreliable Wayland os-level surface,
+    a UI/input failure that has no CDP fix yet gets the WHOLE surface escalated to coordinate-free
+    DOM control instead of retrying mis-mapped pixels."""
     rem = diagnosis.get("remediation") or []
     ui_failure = any(s in str(a.get("uri") or "") for a in rem for s in ("/ui/", "/cdp/", "/input/"))
-    # Prefer the Mutter ground-truth flag (surface_report -> env.osLevelReliable) when present;
-    # fall back to the wayland+best heuristic only when reliability is unknown.
-    reliable = environment.get("osLevelReliable")
-    os_level_unreliable = (reliable is False) or (
-        reliable is None and bool(environment.get("wayland"))
-        and environment.get("best") in (None, "atspi", "vision"))
     already_cdp = any(str(a.get("id") or "").startswith("ensure-cdp")
                       or ("/cdp/" in str(a.get("uri") or "") and a.get("automatic")) for a in rem)
-    if ui_failure and os_level_unreliable and cdp_feasible and not already_cdp:
+    if ui_failure and cdp_feasible and not already_cdp and _os_level_unreliable(env):
         rem.insert(0, {"id": "escalate-surface-cdp", "kind": "provision", "automatic": True,
                        "feasible": True, "uri": f"kvm://{_target_of(rem)}/cdp/session/command/ensure",
                        "label": "OS-level pixel input is unreliable on this Wayland surface — escalate to "
                                 "CDP (coordinate-free DOM control) instead of retrying os-level pixels."})
         diagnosis["surfaceEscalation"] = "os-level->cdp"
+
+
+def fit_to_environment(diagnosis: dict, environment: dict) -> dict:
+    """Fit a diagnosis to what the machine can ACTUALLY do: mark each remediation ``feasible``,
+    escalate the surface when os-level is unreliable, recompute ``autoApplicable`` to feasible
+    auto actions, and — when nothing can drive the UI — prepend an honest install/grant action."""
+    cdp_feasible, controllable = _cdp_feasible(environment), _controllable(environment)
+    _mark_feasibility(diagnosis.get("remediation") or [], cdp_feasible, controllable)
+    _maybe_escalate_surface(diagnosis, environment, cdp_feasible)
     diagnosis["autoApplicable"] = [a["id"] for a in (diagnosis.get("remediation") or [])
                                    if a.get("automatic") and a.get("feasible", True)]
-    diagnosis["environmentFit"] = {"controllable": bool(controllable),
+    diagnosis["environmentFit"] = {"controllable": controllable,
                                    "best": environment.get("best"), "cdpFeasible": cdp_feasible}
     if not controllable:
-        diagnosis["remediation"].insert(0, {
+        diagnosis.setdefault("remediation", []).insert(0, {
             "id": "enable-ui-control", "kind": "provision", "automatic": False, "feasible": True,
             "label": "This environment cannot drive a UI: install tesseract / grant /dev/uinput, "
                      "or launch a CDP Chrome (env/query/profile shows what's missing)."})

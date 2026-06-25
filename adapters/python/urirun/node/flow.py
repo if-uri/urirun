@@ -607,35 +607,41 @@ def _run_step(
             })
             attempt += 1
             continue
-        # SELF-HEAL: a diagnosed failure with auto-applicable remediation (e.g. ensure a CDP
-        # session, wait for the page, adopt a scheme) gets FIXED once, then the step retried —
-        # so the loop repairs the cause instead of just aborting with a named diagnosis.
-        diagnosis = (entry.get("recovery") or {}).get("diagnosis")
-        if recover and execute and not healed and diagnosis and diagnosis.get("autoApplicable"):
-            # Re-diagnose with the node's LIVE capabilities + foreground surface before spending
-            # round-trips: a CDP fix is pointless where no Chrome exists, an OCR retry where no
-            # tesseract, and a "target not located" on a LOGIN page is really not-logged-in (so
-            # we recommend an auth re-launch, human-gated, instead of looping ensure-CDP+retry).
-            env_profile = _fetch_env_profile(step, registry)
-            surface = _fetch_surface(step, registry)
-            recontext = diagnose(entry["error"], step=step, routes=routes,
-                                 environment=env_profile, surface=surface)
-            if recontext:
-                diagnosis = recontext
-            elif env_profile:
-                diagnosis = fit_to_environment(diagnosis, env_profile)
-            applied = apply_auto_remediation(diagnosis, registry)
-            healed = True
-            timeline_entries.append({
-                "id": f"{step['id']}:self-heal", "uri": step["uri"],
-                "target": route_target(step["uri"]), "ok": any(a["ok"] for a in applied),
-                "type": "recovery", "action": "self-heal", "rule": diagnosis.get("rule"),
-                "applied": applied,
-            })
-            if any(a["ok"] for a in applied):
-                attempt = 0
-                continue
+        # SELF-HEAL: a diagnosed failure with auto-applicable remediation gets FIXED once, then
+        # the step retried — so the loop repairs the cause instead of just aborting.
+        if recover and execute and not healed:
+            heal_entry, healed_ok = _attempt_self_heal(step, entry, registry, routes)
+            if heal_entry is not None:
+                timeline_entries.append(heal_entry)
+                healed = True
+                if healed_ok:
+                    attempt = 0
+                    continue
         return env, timeline_entries, recovery_entries, True
+
+
+def _attempt_self_heal(step: dict, entry: dict, registry: dict, routes: list[dict]) -> tuple[dict | None, bool]:
+    """Re-diagnose with the node's LIVE capabilities + foreground surface, apply the auto
+    remediation ONCE, and return (self-heal timeline entry, healed_ok). Re-contextualising avoids
+    futile round-trips: a CDP fix where no Chrome exists, an OCR retry where no tesseract, or
+    looping ensure-CDP against a LOGIN page (really not-logged-in). (None, False) when there is
+    nothing auto-applicable to try."""
+    diagnosis = (entry.get("recovery") or {}).get("diagnosis")
+    if not (diagnosis and diagnosis.get("autoApplicable")):
+        return None, False
+    env_profile = _fetch_env_profile(step, registry)
+    surface = _fetch_surface(step, registry)
+    recontext = diagnose(entry["error"], step=step, routes=routes, environment=env_profile, surface=surface)
+    if recontext:
+        diagnosis = recontext
+    elif env_profile:
+        diagnosis = fit_to_environment(diagnosis, env_profile)
+    applied = apply_auto_remediation(diagnosis, registry)
+    healed_ok = any(a["ok"] for a in applied)
+    heal_entry = {"id": f"{step['id']}:self-heal", "uri": step["uri"],
+                  "target": route_target(step["uri"]), "ok": healed_ok, "type": "recovery",
+                  "action": "self-heal", "rule": diagnosis.get("rule"), "applied": applied}
+    return heal_entry, healed_ok
 
 
 def _circuit_break(reason: str, timeline: list, results: dict, recoveries: list) -> dict:

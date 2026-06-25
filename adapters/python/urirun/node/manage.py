@@ -342,6 +342,26 @@ def _route_key(uri: str) -> str:
     return f"{scheme}://*/{tail}"
 
 
+def _scheme_of(uri: str) -> str:
+    return uri.split("://", 1)[0].lower() if "://" in uri else ""
+
+
+def _scope_to_scheme(owners: dict, scheme: str) -> dict:
+    """Route-owner map filtered to ``scheme`` (or all owners when no scheme)."""
+    return {u: c for u, c in owners.items() if not scheme or _scheme_of(u) == scheme}
+
+
+def _match_routes(scoped: dict, route: str) -> tuple[list, list]:
+    """(matching route URIs, owning connectors). With ``route`` -> only that route
+    (host-segment-insensitive); without -> every route in scope."""
+    if route:
+        want = _route_key(route)
+        routes = sorted(u for u in scoped if _route_key(u) == want)
+        return routes, sorted({scoped[u] for u in routes})
+    routes = sorted(scoped)
+    return routes, sorted(set(scoped.values()))
+
+
 def capability_check(**payload: Any) -> dict:
     """Is a ``scheme`` (optionally a specific ``route``) served by a connector INSTALLED in
     this environment? Pure read-only capability introspection exposed AS A URI:
@@ -356,15 +376,8 @@ def capability_check(**payload: Any) -> dict:
     route = str(payload.get("route") or "").strip()
     if route and "://" in route and not scheme:
         scheme = route.split("://", 1)[0].lower()
-    owners = _installed_route_owners()
-    scoped = {u: c for u, c in owners.items()
-              if not scheme or (u.split("://", 1)[0].lower() == scheme if "://" in u else False)}
-    if route:
-        want = _route_key(route)
-        routes = sorted(u for u in scoped if _route_key(u) == want)
-    else:
-        routes = sorted(scoped)
-    connectors = sorted({scoped[u] for u in routes}) if route else sorted(set(scoped.values()))
+    scoped = _scope_to_scheme(_installed_route_owners(), scheme)
+    routes, connectors = _match_routes(scoped, route)
     return {"ok": True, "available": bool(routes), "scheme": scheme or None,
             "route": route or None, "connectors": connectors, "routes": routes, "count": len(routes)}
 

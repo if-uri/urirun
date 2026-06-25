@@ -129,8 +129,10 @@ workflow[name="test-v2"] {
 
 workflow[name="build"] {
   trigger: manual;
-  step-1: run cmd=rm -rf adapters/python/dist;
-  step-2: run cmd=cd adapters/python && $(PYTHON) -m build;
+  step-1: run cmd=# also remove build/ : `cd adapters/python && python -m build` puts cwd on sys.path, so a;
+  step-2: run cmd=# stale ./build/ dir shadows PyPA build ("'build' is a package and cannot be directly executed").;
+  step-3: run cmd=rm -rf adapters/python/dist adapters/python/build;
+  step-4: run cmd=cd adapters/python && $(PYTHON) -m build;
 }
 
 workflow[name="publish"] {
