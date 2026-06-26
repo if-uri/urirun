@@ -1901,6 +1901,29 @@ def _run_inprocess_connector_uri(uri: str, action_payload: dict, db: str | None 
             "error": (env.get("error") or {}).get("message") if not env.get("ok") else None}
 
 
+def _make_local_dispatch_uri(registry: dict, run_mode: str):
+    """Build a dispatch_uri callable: mesh registry first, in-process connectors second.
+
+    The two-tier lookup lets diag://, fix://, and twin:// URIs — which are registered
+    in-process via urirun.connector() but not exposed as mesh routes — be reached by
+    the flow runner when those connectors are installed locally.
+
+    Tier 1 (mesh): v2_service.call with the mesh registry — fast, covers served nodes.
+    Tier 2 (in-process): _run_inprocess_connector_uri via discovery — covers installed
+    connectors that aren't mesh-exposed (diag, fix, twin, widget, artifact, …)."""
+    from urirun import v2_service as _v2
+
+    def _dispatch(uri: str, payload: dict | None = None) -> dict | None:
+        r = _v2.call(uri, payload or {}, registry, mode=run_mode)
+        if r and r.get("ok"):
+            return r
+        if (r.get("error") or {}).get("category") == "NOT_FOUND":
+            return _run_inprocess_connector_uri(uri, payload or {})
+        return r
+
+    return _dispatch
+
+
 _UNROUTED = object()  # sentinel: _uri_invoke_route matched no built-in route (distinct from a handler returning None)
 
 _SVC_PORT_MAP = {"phone-scanner": 8196, "chat": 8194, "android-node": 8195}
@@ -3613,9 +3636,8 @@ def _chat_ask_general(
             _recall = _suggest_recall(flow, twin_memory)
         else:
             _recall = None
-        from urirun import v2_service as _v2  # noqa: PLC0415
         _run_mode = "execute" if execute else "dry-run"
-        _dispatch = lambda _uri, _payload: _v2.call(_uri, _payload, registry, mode=_run_mode)
+        _dispatch = _make_local_dispatch_uri(registry, _run_mode)
         execution = mesh.execute_flow(flow, discovered, registry, execute=execute, memory=twin_memory,
                                       dispatch_uri=_dispatch)
     finally:

@@ -797,7 +797,8 @@ class ThinDriverTests(unittest.TestCase):
         call_uris = [e["uri"] for e in envelope.events if e["phase"] == "call"]
         self.assertIn("browser://host/cdp/page/command/navigate", call_uris)
         self.assertIn("browser://host/cdp/page/command/fill", call_uris)
-        self.assertIn("flow://host/goal/query/verify", call_uris)
+        self.assertTrue(any("goal/query/verify" in u for u in call_uris),
+                        f"goal/query/verify not found in event stream: {call_uris}")
 
     def test_B_flow_aware_step_self_heals_no_central_retry(self):
         """Scenario B: flaky step returns retry, consults diag://, heals on second attempt.
@@ -842,7 +843,8 @@ class ThinDriverTests(unittest.TestCase):
 
     def test_C_twin_aware_step_self_blocks_rollback_runs(self):
         """Scenario C: step with no-inverse self-blocks (returns rollback);
-        driver calls twin://…/rollback and returns failed — no rollback code in driver."""
+        driver applies the ledger inverses directly — no connector hop needed.
+        The navigate step returned an inverse, so it gets undone LIFO."""
         from urirun.node.flow import FlowEnvelope, execute_flow
         steps = [
             {"id": "navigate", "uri": "browser://host/cdp/page/command/navigate"},
@@ -850,26 +852,33 @@ class ThinDriverTests(unittest.TestCase):
         ]
         flow = {"steps": steps}
         envelope = FlowEnvelope(flow_id="C", goal={})
-        rollback_calls = []
+        inverse_calls = []
 
         def dispatch(uri, payload=None):
+            if "navigate-back" in uri:
+                # inverse of navigate — should be called during rollback
+                inverse_calls.append(uri)
+                return {"ok": True}
+            if "cdp/page/command/navigate" in uri:
+                # mutating step: returns its inverse
+                return {"ok": True, "next": {"kind": "continue"},
+                        "inverse": {"uri": "browser://host/cdp/page/command/navigate-back",
+                                    "args": {"url": "about:blank"}}}
             if "window/command/close" in uri:
                 # twin-aware: no inverse → self-block
                 return {"ok": False, "reversible": False,
                         "next": {"kind": "rollback"}, "why": "no inverse"}
-            if "flow/command/rollback" in uri:
-                rollback_calls.append(uri)
-                return {"ok": True, "rolledBack": ["browser://host/cdp/page/command/navigate"],
-                        "next": {"kind": "failed"}}
             return {"ok": True, "next": {"kind": "continue"}}
 
         result = execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
                               dispatch_uri=dispatch, envelope=envelope)
 
         self.assertFalse(result["ok"])
-        self.assertTrue(rollback_calls, "twin://…/rollback must be called")
-        self.assertIn("twin://", rollback_calls[0])
+        # driver applied ledger inverses directly via dispatch_uri (no twin:// connector hop)
+        self.assertEqual(inverse_calls, ["browser://host/cdp/page/command/navigate-back"])
         self.assertIn("rollback", result)
+        self.assertTrue(result["rollback"]["ok"])
+        self.assertIn("browser://host/cdp/page/command/navigate-back", result["rollback"]["undone"])
 
     def test_D_event_stream_reconstructs_flow(self):
         """Scenario D: the complete envelope.events stream reconstructs the flow sequence,
@@ -907,6 +916,113 @@ class ThinDriverTests(unittest.TestCase):
         self.assertIn("retry", return_nexts)
         self.assertIn("continue", return_nexts)
 
+    def test_circuit_break_fires_when_retries_exceeded(self):
+        """_thin_circuit_break aborts the flow when retries_used > max_retries.
+
+        Two-step flow: step 1 triggers a retry (retries_used→1, retry succeeds).
+        Circuit-break check fires at step 2 because retries_used=1 > max_retries=0."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        steps = [
+            {"id": "s1", "uri": "kvm://host/ui/command/click"},
+            {"id": "s2", "uri": "kvm://host/ui/command/type"},
+        ]
+        flow = {"steps": steps}
+        envelope = FlowEnvelope(flow_id="cb-retries")
+        attempt = {"n": {}}
+
+        def dispatch(uri, payload=None):
+            if "goal/query/verify" in uri or "preflight" in uri:
+                return {"ok": True, "next": {"kind": "continue"}}
+            name = uri.split("/")[-1]
+            n = attempt["n"].get(name, 0)
+            attempt["n"][name] = n + 1
+            if "click" in name and n == 0:
+                return {"ok": False, "next": {"kind": "retry"}}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        result = execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                              dispatch_uri=dispatch, envelope=envelope,
+                              max_retries=0)
+
+        self.assertFalse(result["ok"])
+        msg = result.get("error", {}).get("message", "")
+        self.assertIn("exceeded", msg, f"circuit break message missing 'exceeded': {msg}")
+
+    def test_circuit_break_fires_when_remediations_exceeded(self):
+        """_thin_circuit_break aborts the flow when remediations_used > max_remediations.
+
+        Two-step flow: step 1 retries with healed=True (remediations_used→1, retry succeeds).
+        Circuit-break fires at step 2 because remediations_used=1 > max_remediations=0."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        steps = [
+            {"id": "s1", "uri": "kvm://host/ui/command/click"},
+            {"id": "s2", "uri": "kvm://host/ui/command/type"},
+        ]
+        flow = {"steps": steps}
+        envelope = FlowEnvelope(flow_id="cb-heals")
+        attempt = {"n": {}}
+
+        def dispatch(uri, payload=None):
+            if "goal/query/verify" in uri or "preflight" in uri:
+                return {"ok": True, "next": {"kind": "continue"}}
+            name = uri.split("/")[-1]
+            n = attempt["n"].get(name, 0)
+            attempt["n"][name] = n + 1
+            if "click" in name and n == 0:
+                return {"ok": False, "next": {"kind": "retry"}, "healed": True}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        result = execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                              dispatch_uri=dispatch, envelope=envelope,
+                              max_remediations=0)
+
+        self.assertFalse(result["ok"])
+        msg = result.get("error", {}).get("message", "")
+        self.assertIn("exceeded", msg, f"circuit break message missing 'exceeded': {msg}")
+
+    def test_preflight_called_when_execute_true(self):
+        """_thin_driver calls twin://host/flow/command/preflight before the step loop."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        steps = [{"id": "s", "uri": "kvm://host/cdp/page/command/click"}]
+        flow = {"steps": steps}
+        envelope = FlowEnvelope(flow_id="pf-test")
+        preflight_calls = []
+
+        def dispatch(uri, payload=None):
+            if "flow/command/preflight" in uri:
+                preflight_calls.append(uri)
+                return {"ok": True, "provisioned": []}
+            if "goal/query/verify" in uri:
+                return {"ok": True, "next": {"kind": "done"}}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                     dispatch_uri=dispatch, envelope=envelope)
+
+        self.assertEqual(len(preflight_calls), 1,
+                         "preflight must be called exactly once before the loop")
+
+    def test_preflight_skipped_when_execute_false(self):
+        """_thin_driver does NOT call preflight in dry-run mode (execute=False)."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        steps = [{"id": "s", "uri": "kvm://host/cdp/page/command/click"}]
+        flow = {"steps": steps}
+        envelope = FlowEnvelope(flow_id="pf-dryrun")
+        preflight_calls = []
+
+        def dispatch(uri, payload=None):
+            if "flow/command/preflight" in uri:
+                preflight_calls.append(uri)
+                return {"ok": True, "provisioned": []}
+            if "goal/query/verify" in uri:
+                return {"ok": True, "next": {"kind": "done"}}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=False,
+                     dispatch_uri=dispatch, envelope=envelope)
+
+        self.assertEqual(preflight_calls, [], "preflight must be skipped in dry-run mode")
+
     def test_existing_execute_flow_unchanged_without_envelope(self):
         """Prove zero regression: execute_flow without envelope= still runs the full
         orchestrator path and returns the same structure as before."""
@@ -918,6 +1034,190 @@ class ThinDriverTests(unittest.TestCase):
         self.assertIn("timeline", result)
         self.assertIn("results", result)
         self.assertNotIn("envelope", result)   # old path never returns envelope
+
+
+class ThinDriverRollbackTests(unittest.TestCase):
+    """Regression suite for bugs in the rollback path of _thin_driver:
+    1. Ledger must be filled from step inverses (was always empty → rollback was a no-op).
+    2. Rollback applies inverses directly through dispatch_uri (no empty-registry connector hop).
+    3. Contract is unified — both paths produce identical undo output."""
+
+    def _make_steps(self, *uris):
+        return [{"id": u.split("/")[-1], "uri": u} for u in uris]
+
+    def test_ledger_populated_from_step_inverse(self):
+        """After a successful step that returns `inverse`, envelope.ledger has one entry
+        with the correct inverse URI and args — Bug 1 regression."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        envelope = FlowEnvelope(flow_id="ledger-test")
+        nav_inv = {"uri": "browser://host/cdp/page/command/navigate-back", "args": {"url": "prev"}}
+
+        def dispatch(uri, payload=None):
+            if "navigate" in uri and "back" not in uri:
+                return {"ok": True, "next": {"kind": "continue"}, "inverse": nav_inv}
+            if "goal/query/verify" in uri:
+                return {"ok": True, "next": {"kind": "done"}}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        flow = {"steps": self._make_steps("browser://host/cdp/page/command/navigate")}
+        execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                     dispatch_uri=dispatch, envelope=envelope)
+
+        self.assertEqual(len(envelope.ledger), 1)
+        entry = envelope.ledger[0]
+        self.assertEqual(entry["uri"], "browser://host/cdp/page/command/navigate")
+        self.assertEqual(entry["inverse"], "browser://host/cdp/page/command/navigate-back")
+        self.assertEqual(entry["args"], {"url": "prev"})
+
+    def test_rollback_applies_inverses_lifo(self):
+        """When a later step fails with next:rollback, inverses are applied in reverse order
+        (LIFO) — Bug 2 regression: direct dispatch, not connector hop."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        envelope = FlowEnvelope(flow_id="lifo-test")
+        inv_a = {"uri": "kvm://host/window/command/restore-a", "args": {}}
+        inv_b = {"uri": "kvm://host/window/command/restore-b", "args": {}}
+        applied: list[str] = []
+        step_calls: dict[str, int] = {"n": 0}
+
+        def dispatch(uri, payload=None):
+            if uri == "kvm://host/window/command/open-a":
+                return {"ok": True, "next": {"kind": "continue"}, "inverse": inv_a}
+            if uri == "kvm://host/window/command/open-b":
+                return {"ok": True, "next": {"kind": "continue"}, "inverse": inv_b}
+            if uri == "kvm://host/window/command/close-destructive":
+                return {"ok": False, "reversible": False, "next": {"kind": "rollback"}}
+            if "restore-a" in uri or "restore-b" in uri:
+                applied.append(uri)
+                return {"ok": True}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        flow = {"steps": [
+            {"id": "a", "uri": "kvm://host/window/command/open-a"},
+            {"id": "b", "uri": "kvm://host/window/command/open-b"},
+            {"id": "bad", "uri": "kvm://host/window/command/close-destructive"},
+        ]}
+        result = execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                              dispatch_uri=dispatch, envelope=envelope)
+
+        self.assertFalse(result["ok"])
+        # LIFO: B's inverse before A's
+        self.assertEqual(applied, [inv_b["uri"], inv_a["uri"]])
+        self.assertTrue(result["rollback"]["ok"])
+        self.assertEqual(result["rollback"]["undone"], [inv_b["uri"], inv_a["uri"]])
+
+    def test_rollback_noop_when_no_inverses_returned(self):
+        """If no step returned an inverse, rollback is a clean no-op:
+        ok=False (flow failed), rollback.ok=True, rollback.undone=[]."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        envelope = FlowEnvelope(flow_id="noop-rollback")
+
+        def dispatch(uri, payload=None):
+            if "query/read" in uri:
+                return {"ok": True, "next": {"kind": "continue"}}  # query: no inverse
+            if "write/destroy" in uri:
+                return {"ok": False, "next": {"kind": "rollback"}}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        flow = {"steps": [
+            {"id": "r", "uri": "fs://host/file/query/read"},
+            {"id": "x", "uri": "fs://host/file/write/destroy"},
+        ]}
+        result = execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                              dispatch_uri=dispatch, envelope=envelope)
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(envelope.ledger, [])
+        self.assertTrue(result["rollback"]["ok"])
+        self.assertEqual(result["rollback"]["undone"], [])
+
+    def test_rollback_stops_and_reports_stuck_on_inverse_failure(self):
+        """If an inverse call fails, rollback halts and reports the stuck URI and reason."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        envelope = FlowEnvelope(flow_id="stuck-rollback")
+        inv_a = {"uri": "kvm://host/window/command/restore-a", "args": {}}
+        inv_b = {"uri": "kvm://host/window/command/restore-b", "args": {}}
+
+        def dispatch(uri, payload=None):
+            if uri == "kvm://host/window/command/open-a":
+                return {"ok": True, "next": {"kind": "continue"}, "inverse": inv_a}
+            if uri == "kvm://host/window/command/open-b":
+                return {"ok": True, "next": {"kind": "continue"}, "inverse": inv_b}
+            if uri == "kvm://host/window/command/close-bad":
+                return {"ok": False, "next": {"kind": "rollback"}}
+            if "restore-b" in uri:
+                # B's inverse fails
+                return {"ok": False, "error": "display not reachable"}
+            if "restore-a" in uri:
+                return {"ok": True}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        flow = {"steps": [
+            {"id": "a", "uri": "kvm://host/window/command/open-a"},
+            {"id": "b", "uri": "kvm://host/window/command/open-b"},
+            {"id": "bad", "uri": "kvm://host/window/command/close-bad"},
+        ]}
+        result = execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                              dispatch_uri=dispatch, envelope=envelope)
+
+        self.assertFalse(result["ok"])
+        rb = result["rollback"]
+        self.assertFalse(rb["ok"])
+        self.assertEqual(rb["stuck"], inv_b["uri"])
+        self.assertIn("display not reachable", rb["reason"])
+        # restore-a was NOT called — stopped at B
+        self.assertEqual(rb["undone"], [])
+
+    def test_ledger_vs_execution_same_inverse_set(self):
+        """Thin-driver envelope.ledger contains the same inverse URIs as ledger_from_execution
+        would derive from the equivalent execute_flow timeline — two representations, same data."""
+        from urirun.node.flow import FlowEnvelope, execute_flow
+        from urirun.node.reversible import ledger_from_execution
+        inv_nav = {"uri": "browser://host/cdp/page/command/back", "args": {}}
+        inv_click = {"uri": "browser://host/cdp/page/command/unclick", "args": {}}
+
+        call_count = {"n": 0}
+
+        def dispatch(uri, payload=None):
+            if "navigate" in uri:
+                # Step result has inverse nested under result.value (envelope-wrapped shape)
+                return {"ok": True, "next": {"kind": "continue"},
+                        "result": {"value": {"inverse": inv_nav}}}
+            if "click" in uri:
+                return {"ok": True, "next": {"kind": "continue"}, "inverse": inv_click}
+            if "goal/query/verify" in uri:
+                return {"ok": True, "next": {"kind": "done"}}
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        steps = [
+            {"id": "nav", "uri": "browser://host/cdp/page/command/navigate"},
+            {"id": "click", "uri": "browser://host/cdp/page/command/click"},
+        ]
+        flow = {"steps": steps}
+
+        # Thin-driver path
+        envelope = FlowEnvelope(flow_id="compare")
+        execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                     dispatch_uri=dispatch, envelope=envelope)
+        thin_inverses = [e["inverse"] for e in envelope.ledger]
+
+        # Simulate what ledger_from_execution sees:
+        # orchestrator stores the transport envelope in results (result.value wraps the connector payload).
+        # The thin driver returns unwrapped dicts — but both shapes resolve to the same inverse URIs.
+        synthetic_execution = {
+            "timeline": [
+                {"id": "nav",   "uri": "browser://host/cdp/page/command/navigate",   "ok": True},
+                {"id": "click", "uri": "browser://host/cdp/page/command/click",       "ok": True},
+            ],
+            "results": {
+                "nav":   {"result": {"value": {"inverse": inv_nav}}},
+                "click": {"result": {"value": {"inverse": inv_click}}},
+            },
+        }
+        orch_ledger = ledger_from_execution(synthetic_execution)
+        orch_inverses = [t.inverse.uri for t in orch_ledger]
+
+        self.assertEqual(thin_inverses, orch_inverses,
+                         "thin-driver ledger and orchestrator ledger_from_execution must agree")
 
 
 if __name__ == "__main__":

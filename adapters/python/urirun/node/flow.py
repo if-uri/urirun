@@ -1675,3 +1675,69 @@ def rollback_flow(execution: dict, mesh: dict, *, scan_uri: str | None = None) -
                     "reason": f"inverse failed ({res.get('error')}) — KNOWN-BAD → escalate"}
         undone.append(tr.inverse.uri)
     return {"ok": True, "undone": undone, "proof": "none (no scan route given)"}
+
+
+# ── URI surfaces: twin://host/flow/ handlers ─────────────────────────────────
+# These make the orchestrator's internal operations addressable on the mesh so
+# the thin driver (and remote callers) can route to them by URI.
+
+def _uri_goal_verify(payload: dict) -> dict:
+    """Handler for twin://<node>/flow/goal/query/verify.
+
+    Payload: {goal: {uri, path?, contains?, equals?, present?}, results: {…}, mesh?: {…}}
+    Returns: {ok, checks: [{check, ok, …}]}
+
+    Two paths:
+    • goal has a `uri` → call it through mesh/registry to read end-state, assert the
+      post-condition (contains/equals/present). This is what closes the 'every step green
+      but nothing achieved' gap.
+    • goal has no `uri` (e.g. {reached: true} from FlowEnvelope) → treat as trivially
+      passed (the envelope sets goal, but without a verification spec there is nothing
+      to assert — report honestly rather than silently failing)."""
+    import urirun  # noqa: PLC0415
+    goal = payload.get("goal") or {}
+    results = payload.get("results") or {}
+    mesh = payload.get("mesh") or {}
+
+    goal_uri = goal.get("uri")
+    if not goal_uri:
+        # No assertion URI — the envelope carries task metadata, not a verifiable spec.
+        return urirun.ok(checks=[], note="no goal URI in envelope — nothing to assert",
+                         next={"kind": "done"})
+
+    registry = registry_from_routes((mesh.get("routes") or []))
+    dispatch = lambda uri, pl=None: v2_service.call(uri, pl or {}, registry, mode="execute")
+    passed, detail = _run_goal_check(goal, dispatch)
+    checks = [{"check": "goal", "uri": goal_uri, "ok": passed, **detail}]
+    return {**urirun.ok(ok=passed), "checks": checks,
+            "next": {"kind": "done" if passed else "rollback"}}
+
+
+def _uri_preflight(payload: dict) -> dict:
+    """Handler for twin://<node>/flow/command/preflight.
+
+    Payload: {steps: […], mesh?: {…}}
+    Returns: {ok, timeline: [{…preflight entries…}]}
+
+    Called by _thin_driver before the main loop when the plan has CDP steps.
+    Provisions CDP sessions proactively so the first cdp/page step doesn't
+    fail-then-self-heal."""
+    import urirun  # noqa: PLC0415
+    steps = payload.get("steps") or []
+    mesh = payload.get("mesh") or {}
+    registry = registry_from_routes((mesh.get("routes") or []))
+    flow = {"steps": steps}
+    entries = _preflight(flow, registry)
+    all_ok = all(e.get("ok", True) for e in entries)
+    return {**urirun.ok(ok=all_ok), "timeline": entries, "count": len(entries)}
+
+
+try:
+    import urirun as _urirun  # noqa: PLC0415
+    _flow_conn = _urirun.connector("flow", scheme="twin")
+    _flow_conn.handler("flow/goal/query/verify",
+                       meta={"label": "Verify flow goal state post-execution"})(_uri_goal_verify)
+    _flow_conn.handler("flow/command/preflight",
+                       meta={"label": "Provision surfaces before the main flow loop"})(_uri_preflight)
+except Exception:  # noqa: BLE001 - connector registration is optional
+    pass

@@ -5,17 +5,17 @@
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 117, json: 13, shell: 10, yaml: 5, csharp: 4
+- **Languages**: python: 118, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1839
-- **Total Classes**: 45
-- **Modules**: 177
-- **Entry Points**: 650
+- **Total Functions**: 1853
+- **Total Classes**: 46
+- **Modules**: 178
+- **Entry Points**: 663
 
 ## Architecture by Module
 
 ### adapters.python.urirun.host.host_dashboard
-- **Functions**: 186
+- **Functions**: 155
 - **File**: `host_dashboard.py`
 
 ### adapters.python.urirun.runtime.v2
@@ -23,16 +23,17 @@
 - **Classes**: 1
 - **File**: `v2.py`
 
+### adapters.python.urirun.node.flow
+- **Functions**: 84
+- **Classes**: 1
+- **File**: `flow.py`
+
 ### v1.js.urirun-v1
 - **Functions**: 68
 - **File**: `urirun-v1.js`
 
-### adapters.python.urirun.node.flow
-- **Functions**: 66
-- **File**: `flow.py`
-
 ### adapters.python.urirun.host.scanner_bridge
-- **Functions**: 61
+- **Functions**: 63
 - **Classes**: 1
 - **File**: `scanner_bridge.py`
 
@@ -50,6 +51,11 @@
 - **Functions**: 51
 - **File**: `object_registry.py`
 
+### adapters.python.urirun.host.document_sync
+- **Functions**: 50
+- **Classes**: 2
+- **File**: `document_sync.py`
+
 ### adapters.python.urirun.node.node_cli
 - **Functions**: 48
 - **File**: `node_cli.py`
@@ -57,11 +63,6 @@
 ### adapters.python.urirun.runtime._registry
 - **Functions**: 43
 - **File**: `_registry.py`
-
-### adapters.python.urirun.host.document_sync
-- **Functions**: 42
-- **Classes**: 2
-- **File**: `document_sync.py`
 
 ### adapters.python.urirun.connectors.connector_lint
 - **Functions**: 38
@@ -105,6 +106,9 @@
 ## Key Entry Points
 
 Main execution flows into the system:
+
+### adapters.python.urirun.host.document_sync.write_document_pdf
+- **Calls**: None.resolve, None.resolve, target.parent.mkdir, min, None.encode, None.splitlines, ops.append, None.encode
 
 ### adapters.python.urirun.runtime._scan.main
 - **Calls**: list, argparse.ArgumentParser, parser.add_subparsers, subparsers.add_parser, scan.add_argument, scan.add_argument, scan.add_argument, scan.add_argument
@@ -154,6 +158,13 @@ line
 > Chain steps: replace "$ref:<i>.<field.path>" with an earlier step's output.
 - **Calls**: isinstance, isinstance, isinstance, re.match, re.sub, NodeClient.resolve_refs, NodeClient.resolve_refs, int
 
+### adapters.python.urirun.node.reversible._uri_rollback
+> Handler for twin://<node>/flow/command/rollback.
+
+Two calling conventions accepted:
+  1. {ledger: [{uri, inverse, args, before, after}], mesh?, scan_u
+- **Calls**: payload.get, adapters.python.urirun.node.reversible.ReversibleProcess.rollback_flow, payload.get, payload.get, payload.get, ReversibleProcess, proc.rollback_flow, payload.get
+
 ### adapters.python.urirun.runtime.v2_grpc.main
 - **Calls**: argparse.ArgumentParser, parser.add_subparsers, sub.add_parser, s.add_argument, s.add_argument, s.add_argument, s.add_argument, s.add_argument
 
@@ -191,6 +202,13 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 ### adapters.python.urirun.node.server.NodeHandler._handle_enroll
 - **Calls**: adapters.python.urirun.node.server.read_raw, keyauth.verify_request, keyauth.token_matches, print, adapters.python.urirun.node.server.send_json, adapters.python.urirun.node.server.send_json, keyauth.available, adapters.python.urirun.node.server.send_json
 
+### adapters.python.urirun.host.document_sync.merge_metadata_fields
+> Fuse two scans of the same document into one best-of-both record.
+
+Picks each field by weighted consensus, so a value one scan misread or left
+blank (
+- **Calls**: _docid_merge_records, dict, RuntimeError, None.get, list, dict, _DocidFieldSource, _DocidFieldSource
+
 ### examples.matrix.verify.main
 - **Calls**: contracts.get, sorted, None.removesuffix, adapters.python.urirun.validate_binding_document, examples.matrix.verify.essential, contracts.items, json.load, print
 
@@ -208,81 +226,65 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 ``sw``/``sh`` default to the injected screen-size resolver; ``c
 - **Calls**: adapters.python.urirun.connectors.inputs.uinput.compute_abs, adapters.python.urirun.connectors.inputs.uinput._create_abs, adapters.python.urirun.connectors.inputs.uinput.uinput_available, BackendError, float, float, os.write, time.sleep
 
-### adapters.python.urirun.node.manage.connector_install
-> Install a connector from ANY source into the node's venv:
-- a catalog id ("browser-control") → urirun-connector-<id> (PyPI, then if-uri GitHub),
-- a l
-- **Calls**: None.strip, adapters.python.urirun.node.manage._classify_source, adapters.python.urirun.node.manage._install_policy, adapters.python.urirun.node.manage._policy_allows, res.get, payload.get, payload.get, payload.get
-
-### adapters.python.urirun.host.scanner_bridge.register_scanner_result
-- **Calls**: None.is_file, str, adapters.python.urirun.host.scanner_bridge.scanner_result_content, deps.chat_message, deps.add_chat_message, None.is_file, attachments.append, document.get
-
-### adapters.python.urirun.host.fs_transfer.ensure_node_uri_routes
-> Preflight exact URI routes needed by a node-side workflow.
-
-Scheme-level checks are insufficient for split connectors such as fs://:
-a node may expose
-- **Calls**: node_client, client.routes, set, adapters.python.urirun.host.fs_transfer.route_key, attempted_route_keys.add, ensured.append, client.routes, all
-
 ## Process Flows
 
 Key execution flows identified:
 
-### Flow 1: main
+### Flow 1: write_document_pdf
+```
+write_document_pdf [adapters.python.urirun.host.document_sync]
+```
+
+### Flow 2: main
 ```
 main [adapters.python.urirun.runtime._scan]
 ```
 
-### Flow 2: collect_attachments
+### Flow 3: collect_attachments
 ```
 collect_attachments [adapters.python.urirun.host.artifacts_admin]
   └─> preview_url
 ```
 
-### Flow 3: _stream_events
+### Flow 4: _stream_events
 ```
 _stream_events [adapters.python.urirun.node.server.NodeHandler]
   └─ →> _parse_sse_query
   └─ →> _sse_initial_cursor
 ```
 
-### Flow 4: _handle_deploy
+### Flow 5: _handle_deploy
 ```
 _handle_deploy [adapters.python.urirun.node.server.NodeHandler]
   └─ →> read_raw
   └─ →> send_json
 ```
 
-### Flow 5: _handle_run
+### Flow 6: _handle_run
 ```
 _handle_run [adapters.python.urirun.node.server.NodeHandler]
   └─ →> read_raw
 ```
 
-### Flow 6: _build_cli_parser
+### Flow 7: _build_cli_parser
 ```
 _build_cli_parser [adapters.python.urirun.Connector]
 ```
 
-### Flow 7: _cmd_upgrade
+### Flow 8: _cmd_upgrade
 ```
 _cmd_upgrade [adapters.python.urirun.runtime.v2]
   └─> _resolve_pip_targets
 ```
 
-### Flow 8: _handler_worker_main
+### Flow 9: _handler_worker_main
 ```
 _handler_worker_main [adapters.python.urirun.runtime.worker]
 ```
 
-### Flow 9: resolve_refs
+### Flow 10: resolve_refs
 ```
 resolve_refs [adapters.python.urirun.node.client.NodeClient]
-```
-
-### Flow 10: _worker_main
-```
-_worker_main [adapters.python.urirun.runtime.worker]
 ```
 
 ## Key Classes
@@ -502,11 +504,6 @@ verify/new/smoke/from-spe
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.Connector.handler
 
-### recursion__short_value
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun.host.fs_transfer._short_value
-
 ### recursion__field_type
 - **Type**: recursion
 - **Confidence**: 0.90
@@ -542,15 +539,15 @@ verify/new/smoke/from-spe
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.runtime.secrets.redact
 
-### recursion__short_value
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun.host.host_dashboard._short_value
-
 ### recursion__uri_action_lookup
 - **Type**: recursion
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.host.host_dashboard._uri_action_lookup
+
+### recursion_short_value
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun.host.fs_transfer.short_value
 
 ### state_machine_Urirun
 - **Type**: state_machine
@@ -562,11 +559,17 @@ verify/new/smoke/from-spe
 - **Confidence**: 0.70
 - **Functions**: adapters.ts.urirun.Connector.command, adapters.ts.urirun.Connector.document, adapters.ts.urirun.Connector.toJSON, adapters.ts.urirun.Connector.connector
 
+### state_machine_Connector
+- **Type**: state_machine
+- **Confidence**: 0.70
+- **Functions**: adapters.php.Urirun.Connector.__construct, adapters.php.Urirun.Connector.target, adapters.php.Urirun.Connector.command, adapters.php.Urirun.Connector.bindings, adapters.php.Urirun.Connector.bindingsJson
+
 ## Public API Surface
 
 Functions exposed as public API (no underscore prefix):
 
 - `adapters.python.urirun.host.host_dashboard.create_handler` - 141 calls
+- `adapters.python.urirun.host.document_sync.write_document_pdf` - 71 calls
 - `adapters.python.urirun.runtime._scan.main` - 59 calls
 - `adapters.python.urirun.runtime._registry.main` - 56 calls
 - `adapters.python.urirun.host.host_dashboard.scanner_best_finish` - 48 calls
@@ -580,10 +583,10 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.host.host_dashboard.restart_phone_scanner_service` - 33 calls
 - `adapters.python.urirun.host.scanner_bridge.scanner_crop_overlay` - 33 calls
 - `adapters.python.urirun.runtime.v2_adopt.main` - 31 calls
-- `adapters.python.urirun.node.node_cli.copy_id_command` - 30 calls
-- `adapters.python.urirun.host.host_dashboard.chat_ask` - 30 calls
 - `adapters.python.urirun.node.recovery.normalize_error` - 30 calls
+- `adapters.python.urirun.node.node_cli.copy_id_command` - 30 calls
 - `adapters.python.urirun.host.document_sync.scanned_log_entry` - 29 calls
+- `adapters.python.urirun.host.host_dashboard.chat_ask` - 29 calls
 - `adapters.python.urirun.host.host_dashboard.connector_install` - 29 calls
 - `adapters.python.urirun.host.host_dashboard.artifacts_dedupe_rows` - 29 calls
 - `adapters.python.urirun.runtime.adopt_pack.adopt` - 28 calls
@@ -601,10 +604,9 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.v2.validate_binding_document` - 24 calls
 - `adapters.python.urirun.connectors.connector_lint.lint_connector` - 24 calls
 - `adapters.python.urirun.connectors.resolver.resolve` - 24 calls
-- `adapters.python.urirun.node.node_cli.watch_command` - 24 calls
 - `adapters.python.urirun.host.host_dashboard.startup_phone_qr` - 24 calls
+- `adapters.python.urirun.node.node_cli.watch_command` - 24 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
-- `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.host.object_registry.configured_api_headers` - 23 calls
 
 ## System Interactions
@@ -613,6 +615,10 @@ How components interact:
 
 ```mermaid
 graph TD
+    write_document_pdf --> resolve
+    write_document_pdf --> mkdir
+    write_document_pdf --> min
+    write_document_pdf --> encode
     main --> list
     main --> ArgumentParser
     main --> add_subparsers
@@ -639,10 +645,6 @@ graph TD
     _handle_run --> _dispatch_control_ur
     _handle_run --> _run_target
     _build_cli_parser --> ArgumentParser
-    _build_cli_parser --> add_subparsers
-    _build_cli_parser --> add_parser
-    _cmd_upgrade --> getattr
-    _cmd_upgrade --> _resolve_pip_targets
 ```
 
 ## Reverse Engineering Guidelines
