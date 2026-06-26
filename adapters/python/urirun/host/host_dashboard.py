@@ -906,6 +906,8 @@ def restart_phone_scanner_service(
         ensure_fn=ensure_phone_scanner_service,
         free_port_fn=_free_port_from_old_scanner,
         external_status_fn=_phone_scanner_external_status,
+        service_restart_argv_fn=_service_restart_argv_impl,
+        schedule_restart_fn=_schedule_restart_command_impl,
     )
 
 

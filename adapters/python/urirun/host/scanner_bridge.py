@@ -16,7 +16,7 @@ from urllib.parse import quote
 from .document_sync import load_document_index as _load_document_index, file_sha256 as _file_sha256
 
 
-def __query_value(query: dict, name: str, default: "str | None" = None) -> "str | None":
+def _query_value(query: dict, name: str, default: "str | None" = None) -> "str | None":
     values = query.get(name)
     return values[0] if values else default
 

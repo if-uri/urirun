@@ -203,7 +203,14 @@ def audit(root: Path, spec: dict) -> Report:
 # ───────────────────────────────────────────────────────── reporting ──── #
 
 def _short(mod: str, package: set[str]) -> str:
-    return mod.replace("urirun.host.", "host.").replace("urirun.", "")
+    """Abbreviate sub-namespaces but keep a bare ``urirun.X`` (top-level shim) fully qualified,
+    so e.g. the top-level shim ``urirun._registry`` is never confused with the sibling
+    ``rt._registry`` (``urirun.runtime._registry``)."""
+    for long, abbr in (("urirun.host.", "host."), ("urirun.node.", "node."),
+                       ("urirun.runtime.", "rt.")):
+        if mod.startswith(long):
+            return abbr + mod[len(long):]
+    return mod
 
 
 def print_report(rep: Report, spec: dict) -> None:

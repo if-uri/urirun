@@ -18,11 +18,6 @@ from .scanner_net import (
     _url_host,
     _write_qr_png,
 )
-from .service_control import (
-    schedule_restart_command as _schedule_restart_command,
-    service_restart_argv as _service_restart_argv,
-)
-
 if TYPE_CHECKING:
     pass
 
@@ -241,10 +236,12 @@ def restart_phone_scanner_service(
     ensure_fn: "Callable[..., dict]",
     free_port_fn: "Callable[..., dict]",
     external_status_fn: "Callable[..., dict] | None" = None,
+    service_restart_argv_fn: "Callable[..., tuple]",
+    schedule_restart_fn: "Callable[..., dict]",
 ) -> dict:
     payload = payload or {}
     force_port_kill = str(payload.get("forcePortKill") or payload.get("force") or "").strip().lower() in {"1", "true", "yes", "on"}
-    argv, meta = _service_restart_argv(
+    argv, meta = service_restart_argv_fn(
         payload,
         service="phone-scanner",
         env_prefix="URIRUN_PHONE_SCANNER",
@@ -252,7 +249,7 @@ def restart_phone_scanner_service(
     )
     meta.setdefault("exampleUri", "dashboard://host/service/phone-scanner/command/restart")
     if argv:
-        return _schedule_restart_command(argv, payload, meta)
+        return schedule_restart_fn(argv, payload, meta)
 
     bind_host = str(payload.get("host") or os.environ.get("URIRUN_PHONE_SCANNER_HOST", "0.0.0.0"))
     scanner_port = int(payload.get("port") or os.environ.get("URIRUN_PHONE_SCANNER_PORT", "8196"))

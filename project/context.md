@@ -5,12 +5,12 @@
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 130, json: 13, shell: 10, yaml: 5, csharp: 4
+- **Languages**: python: 133, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1941
-- **Total Classes**: 57
-- **Modules**: 190
-- **Entry Points**: 670
+- **Total Functions**: 1959
+- **Total Classes**: 59
+- **Modules**: 193
+- **Entry Points**: 673
 
 ## Architecture by Module
 
@@ -18,11 +18,6 @@
 - **Functions**: 122
 - **Classes**: 1
 - **File**: `v2.py`
-
-### adapters.python.urirun.node.flow
-- **Functions**: 96
-- **Classes**: 1
-- **File**: `flow.py`
 
 ### adapters.python.urirun.host.host_dashboard
 - **Functions**: 83
@@ -32,19 +27,20 @@
 - **Functions**: 68
 - **File**: `urirun-v1.js`
 
+### adapters.python.urirun.node.flow
+- **Functions**: 67
+- **Classes**: 1
+- **File**: `flow.py`
+
 ### adapters.python.urirun.host.scanner_bridge
-- **Functions**: 65
+- **Functions**: 66
 - **Classes**: 1
 - **File**: `scanner_bridge.py`
 
 ### adapters.python.urirun.host.document_sync
-- **Functions**: 59
+- **Functions**: 61
 - **Classes**: 2
 - **File**: `document_sync.py`
-
-### adapters.python.urirun.host.object_registry
-- **Functions**: 57
-- **File**: `object_registry.py`
 
 ### adapters.python.urirun.node.server
 - **Functions**: 56
@@ -59,6 +55,10 @@
 ### adapters.python.urirun.node.node_cli
 - **Functions**: 48
 - **File**: `node_cli.py`
+
+### adapters.python.urirun.host.object_registry
+- **Functions**: 46
+- **File**: `object_registry.py`
 
 ### adapters.python.urirun.node.reversible
 - **Functions**: 44
@@ -128,7 +128,7 @@ Main execution flows into the system:
 - **Calls**: adapters.python.urirun.host.dashboard_api._safe_tickets, adapters.python.urirun.host.dashboard_api._host_db, adapters.python.urirun.host.dashboard_api._mesh, host_db.recent_checks, _public_artifacts, host_db.recent_logs, _annotate_node_tokens_impl, _annotate_node_kinds
 
 ### adapters.python.urirun.host.scanner_service.restart_phone_scanner_service
-- **Calls**: adapters.python.urirun.host.host_dashboard._service_restart_argv, meta.setdefault, str, int, adapters.python.urirun.host.scanner_service.phone_scanner_service_id, free_port_fn, replaced.get, _ext_status
+- **Calls**: service_restart_argv_fn, meta.setdefault, str, int, adapters.python.urirun.host.scanner_service.phone_scanner_service_id, free_port_fn, replaced.get, _ext_status
 
 ### adapters.python.urirun.runtime._runtime.main
 - **Calls**: list, argparse.ArgumentParser, parser.add_subparsers, subparsers.add_parser, add_source, run_parser.add_argument, run_parser.add_argument, run_parser.add_argument
@@ -260,7 +260,6 @@ summary [adapters.python.urirun.host.host_dashboard]
 ```
 restart_phone_scanner_service [adapters.python.urirun.host.scanner_service]
   └─> phone_scanner_service_id
-  └─ →> _service_restart_argv
 ```
 
 ### Flow 7: _stream_events
@@ -393,15 +392,17 @@ child processes t
 - **Methods**: 3
 - **Key Methods**: adapters.python.urirun.connectors.backend_registry.Backend.missing, adapters.python.urirun.connectors.backend_registry.Backend.platform_ok, adapters.python.urirun.connectors.backend_registry.Backend.available
 
-### adapters.csharp.Urirun.Connector
-- **Methods**: 3
-- **Key Methods**: adapters.csharp.Urirun.Connector.Connector, adapters.csharp.Urirun.Connector.Command, adapters.csharp.Urirun.Connector.BindingsJson
-
 ### adapters.python.urirun.node.reversible.Connector
 > The ADOPTION CONTRACT. A connector enters the engine by providing these three.
 - **Methods**: 3
 - **Key Methods**: adapters.python.urirun.node.reversible.Connector.call, adapters.python.urirun.node.reversible.Connector.scan_uri, adapters.python.urirun.node.reversible.Connector.schema
 - **Inherits**: Protocol
+
+### adapters.python.urirun.node.reversible.ReversibleProcess
+> The engine: execute with the invariant, build the ledger, roll back with proof. It
+knows NO connecto
+- **Methods**: 3
+- **Key Methods**: adapters.python.urirun.node.reversible.ReversibleProcess.execute, adapters.python.urirun.node.reversible.ReversibleProcess.rollback, adapters.python.urirun.node.reversible.ReversibleProcess.rollback_flow
 
 ## Data Transformation Functions
 
@@ -434,12 +435,6 @@ Key functions that process and transform data:
 
 ### adapters.python.urirun.host.host_db._validate_record
 - **Output to**: None.validate, dataset.get, Draft202012Validator
-
-### adapters.python.urirun.host.object_registry._node_add_parse_payload
-> Extract and normalise scalar fields from a node-add payload.
-
-Returns (name, raw_url, kind, meta, ta
-- **Output to**: None.strip, None.strip, payload.get, payload.get, payload.get
 
 ### adapters.python.urirun.host.dispatch.inprocess_fallback
 > Call an installed connector URI in-process via the urirun runtime.
@@ -493,6 +488,9 @@ Returns None when no connector o
 > Execute an installed in-process connector URI (widget://, artifact://, …) through the
 urirun runtime
 - **Output to**: discovery.registry_for_uri, urirun.run, urirun.result_data, adapters.python.urirun.host.host_dashboard.register_tagged_artifact, bool
+
+### adapters.python.urirun.host.host_dashboard._free_port_from_matching_processes
+- **Output to**: _free_port_from_matching_processes_impl, is_target
 
 ## Behavioral Patterns
 
@@ -587,6 +585,7 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.host.scanner_bridge.scanner_capture` - 40 calls
 - `adapters.python.urirun.host.host_dashboard.summary` - 38 calls
 - `adapters.python.urirun.host.artifacts_admin.collect_attachments` - 37 calls
+- `scripts.extraction_audit.print_report` - 36 calls
 - `adapters.python.urirun.host.scanner_service.restart_phone_scanner_service` - 33 calls
 - `adapters.python.urirun.host.scanner_bridge.scanner_crop_overlay` - 33 calls
 - `adapters.python.urirun.runtime._runtime.main` - 33 calls
@@ -609,7 +608,6 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime._runtime.run` - 25 calls
 - `adapters.python.urirun.runtime.v2_grpc.main` - 25 calls
 - `adapters.python.urirun.node.server.apply_deploy` - 25 calls
-- `adapters.python.urirun.host.object_registry.probe_node_token` - 24 calls
 - `adapters.python.urirun.host.scanner_service.startup_phone_qr` - 24 calls
 - `adapters.python.urirun.runtime.v2.run_local_function_subprocess` - 24 calls
 - `adapters.python.urirun.runtime.v2.validate_binding_document` - 24 calls
@@ -647,7 +645,7 @@ graph TD
     summary --> _mesh
     summary --> recent_checks
     summary --> _public_artifacts
-    restart_phone_scanne --> _service_restart_arg
+    restart_phone_scanne --> service_restart_argv
     restart_phone_scanne --> setdefault
     restart_phone_scanne --> str
     restart_phone_scanne --> int

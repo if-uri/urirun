@@ -33,21 +33,6 @@ uri-copy-id = "urirun.node.mesh:copy_id_cli"
 where = ["."]
 include = ["urirun*"]
 
-[tool.pfix]
-# Self-healing Python configuration
-model = "openrouter/qwen/qwen3-coder-next"
-auto_apply = false
-auto_install_deps = true
-auto_restart = false
-max_retries = 3
-create_backups = false
-git_auto_commit = false
-
-[tool.pfix.runtime_todo]
-enabled = true
-todo_file = "TODO.md"
-min_severity = "low"
-deduplicate = true
 
 [tool.costs]
 # AI Cost tracking configuration
@@ -61,6 +46,9 @@ max_commits = 500
 
 # Cost thresholds for badge colors (USD)
 badge_color_thresholds = { low = 1.0, medium = 5.0, high = 10.0, critical = 50.0 }
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
 
 [tool.ruff.lint.per-file-ignores]
 # Deferred imports placed after code break import cycles between the runtime
