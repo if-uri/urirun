@@ -73,6 +73,27 @@ class TestCaptureEpisode(unittest.TestCase):
         self.assertIsNone(ids)
         self.assertEqual(durable_memory().known_good_episodes(), [])
 
+    def test_reversible_steps_generate_proofs(self):
+        self._seed_env("host")
+        flow = {"steps": [
+            {"id": "s1", "uri": "kvm://host/input/command/type"},
+            {"id": "s2", "uri": "kvm://host/window/command/focus"},
+        ]}
+        timeline = [
+            {"id": "s1", "uri": "kvm://host/input/command/type", "ok": True,
+             "reversible": True, "inverse": {"uri": "kvm://host/input/command/type_undo"}},
+            {"id": "s2", "uri": "kvm://host/window/command/focus", "ok": True,
+             "reversible": False},
+        ]
+        capture_episode(execute=True, flow=flow, prompt="wpisz tekst", selected_targets=["host"],
+                        timeline=timeline, results={}, status="ok")
+        ep = durable_memory().known_good_episodes()[0]
+        self.assertEqual(len(ep["proofs"]), 1, "only reversible steps produce proofs")
+        pf = ep["proofs"][0]
+        self.assertEqual(pf["uri"], "kvm://host/input/command/type")
+        self.assertTrue(pf["verdict"])
+        self.assertTrue(pf["proof_key"].startswith("pf-"))
+
     def test_failed_run_persisted_but_not_recalled(self):
         flow = {"steps": [{"id": "s1", "uri": "kvm://host/x/command/y"}]}
         capture_episode(execute=True, flow=flow, prompt="zrób coś", selected_targets=["host"],

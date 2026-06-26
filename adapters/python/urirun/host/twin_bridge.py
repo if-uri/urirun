@@ -418,7 +418,24 @@ def api_twin_state(project: str, db: "str | None", config: "str | None", query: 
     degraded_flows = mem.degraded_flows() if hasattr(mem, "degraded_flows") else []
     proof_store = getattr(mem, "proof_store", None)
     proofs = list(proof_store.values()) if hasattr(proof_store, "values") else []
-    episodes = mem.known_good_episodes() if hasattr(mem, "known_good_episodes") else []
+    all_episodes = mem.known_good_episodes() if hasattr(mem, "known_good_episodes") else []
+    # Split episodes by outcome status so the UI never conflates ok/degraded/failed under
+    # one flow_key. Deduplicate noisy health-check episodes: keep only the latest per goal.
+    _seen_health: dict = {}
+    episodes_ok: list = []
+    episodes_failed: list = []
+    for ep in all_episodes:
+        status = (ep.get("outcome") or {}).get("status") or ""
+        goal = ep.get("goal") or ""
+        is_health = "health" in goal.lower() or "sprawdz" in goal.lower()
+        if is_health:
+            _seen_health[goal] = ep  # keep only latest (episodes are newest-first)
+            continue
+        if status == "failed":
+            episodes_failed.append(ep)
+        else:
+            episodes_ok.append(ep)
+    health_episodes = list(_seen_health.values())
     return 200, {
         "ok": True,
         "nodes": nodes,
@@ -426,6 +443,7 @@ def api_twin_state(project: str, db: "str | None", config: "str | None", query: 
         "total": len(flows),
         "degradedFlows": degraded_flows[:limit],
         "proofs": proofs[:limit],
-        "episodes": episodes[:limit],
+        "episodes": (episodes_ok + health_episodes)[:limit],
+        "failedEpisodes": episodes_failed[:limit],
         "events": step_events,
     }

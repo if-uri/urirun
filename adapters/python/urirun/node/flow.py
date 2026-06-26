@@ -819,15 +819,28 @@ def run_flow_document(document: dict, mesh: dict, *, execute: bool, rollback_on_
 
 
 def _in_process_discovery(uri: str, payload: dict | None = None) -> "dict | None":
-    """Tier-2 fallback: resolve *uri* through installed connectors (entry-point scan).
+    """Tier-2 fallback: resolve *uri* through installed connectors (entry-point scan),
+    then through DECORATED_BINDINGS (connector.handler() registrations not in entry points).
 
     Called by make_dispatch_uri when Tier 1 (mesh) returns NOT_FOUND.  Returns None when
     the connector is also absent in-process, letting make_dispatch surface the NOT_FOUND."""
     try:
         import urirun as _u  # noqa: PLC0415
-        from urirun.runtime import discovery as _disc  # noqa: PLC0415
+        from urirun.runtime import discovery as _disc, v2 as _v2  # noqa: PLC0415
         reg2 = _disc.registry_for_uri(uri, "urirun.bindings")
         env = _u.run(uri, reg2, payload=dict(payload or {}),
+                     mode="execute", policy={"allowExecute": True})
+        if (env.get("error") or {}).get("category") != "NOT_FOUND":
+            val = (env.get("result") or {}).get("value") if isinstance(env.get("result"), dict) else None
+            return {"ok": bool(env.get("ok")), "result": val,
+                    "error": (env.get("error") or {}).get("message") if not env.get("ok") else None}
+        # Tier 2b: DECORATED_BINDINGS — connector.handler() registrations that have no entry point
+        # (e.g. the twin:// connector registered by flow.py at module import time).
+        live_binding = _v2.decorated_bindings()["bindings"].get(uri)
+        if live_binding is None:
+            return None
+        reg3 = _u.compile_registry(_v2.build_binding_document([live_binding]))
+        env = _u.run(uri, reg3, payload=dict(payload or {}),
                      mode="execute", policy={"allowExecute": True})
         if (env.get("error") or {}).get("category") == "NOT_FOUND":
             return None

@@ -875,7 +875,17 @@ def _run_execute(executor, ctx: dict, policy: dict, envelope: dict, decision: di
     try:
         result = executor(ctx, policy, True)
         envelope["result"] = result
-        envelope["ok"] = result.get("exitCode", 0) == 0
+        exit_code = result.get("exitCode", 0)
+        envelope["ok"] = exit_code == 0
+        if exit_code != 0 and not envelope.get("error"):
+            _stderr = result.get("stderr") or ""
+            _last_line = _stderr.strip().split("\n")[-1] if _stderr.strip() else ""
+            envelope["error"] = {
+                "type": "subprocess-crash",
+                "message": _last_line or f"process exited {exit_code}",
+                "exitCode": exit_code,
+                "stderr": _stderr[-500:],
+            }
     except KeyError as err:
         envelope["ok"] = False
         envelope["error"] = {"type": "schema", "message": f"unresolved placeholder: {err.args[0]}"}

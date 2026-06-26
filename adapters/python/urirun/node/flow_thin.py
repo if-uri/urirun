@@ -267,9 +267,15 @@ def _thin_step_entry(sid: str, uri: str, r: dict) -> dict:
             entry[_k] = r[_k]
     inv = _extract_inverse(r)
     inv_uri = _resolve_inverse_uri(uri, inv) if inv else None
-    entry["reversible"] = bool(inv_uri)
     if inv_uri:
+        entry["reversible"] = True
         entry["inverse"] = {"uri": inv_uri, "args": (inv or {}).get("args") or {}}
+    elif "/query/" in (uri or ""):
+        # Read-only step: no state change, trivially reversible, no explicit inverse needed.
+        entry["reversible"] = True
+    else:
+        # Command step without a connector-returned inverse — cannot be rolled back.
+        entry["reversible"] = False
     return entry
 
 
@@ -293,7 +299,8 @@ def _thin_goal_verify(dispatch_uri, envelope, timeline: list, results: dict):
     the flow runner works without the connector installed."""
     envelope.record(_THIN_GOAL_URI, "call")
     goal_r = dispatch_uri(_THIN_GOAL_URI, {"goal": envelope.goal, "results": results}) or {}
-    _goal_err_type = (goal_r.get("error") or {}).get("type")
+    _goal_err = goal_r.get("error")
+    _goal_err_type = (_goal_err.get("type") if isinstance(_goal_err, dict) else None)
     if not goal_r.get("ok", True) and _goal_err_type == "registry":
         goal_r = {"ok": True, "goalMet": True, "skipped": "no-verify-handler"}
     goal_ok = goal_r.get("ok", True)
