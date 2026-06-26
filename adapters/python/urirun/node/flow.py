@@ -206,7 +206,7 @@ def _thin_driver(
     max_retries: int = 8,
     max_remediations: int = 6,
     max_wall_clock: float = 180.0,
-    preflight: bool = True,
+    preflight: bool = False,  # no-op: preflight is now injected by _plan_with_preflight
 ) -> dict:
     """Uniform follow-the-intent loop.  No retry branch, no heal branch, no rollback branch.
     Every decision is made by flow-aware processes and returned as `next.kind` in the result.
@@ -214,19 +214,11 @@ def _thin_driver(
     Safety: circuit-breaker (retries / remediations / wall-clock) lives here as a loop
     invariant — the ONLY control-flow concern that cannot be expressed as a step result.
 
-    Preflight: when `preflight=True` and `execute=True`, the driver calls
-    `twin://host/flow/command/preflight` before the main loop so CDP sessions are
-    provisioned up-front instead of failing-then-self-healing reactively."""
+    Preflight is NOT handled here: execute_flow injects a preflight step as step 0 of the
+    plan via _plan_with_preflight. The driver is a pure follow-the-intent loop."""
     start = time.monotonic()
     timeline: list[dict] = []
     results: dict = {}
-
-    if execute and preflight:
-        envelope.record(_THIN_PREFLIGHT_URI, "call")
-        pf_r = dispatch_uri(_THIN_PREFLIGHT_URI, {"steps": steps})
-        envelope.record(_THIN_PREFLIGHT_URI, "return", ok=pf_r.get("ok", True))
-        if isinstance(pf_r.get("timeline"), list):
-            timeline.extend(pf_r["timeline"])
 
     for i, step in enumerate(steps):
         brk = _thin_circuit_break(envelope, timeline, results,
@@ -1131,7 +1123,7 @@ def _attempt_self_heal(
             f"diag://{node}/error/command/classify",
             {"error": entry["error"], "step": step, "routes": routes,
              "environment": env_profile, "surface": surface},
-        )
+        ) or {}
         if classify_result.get("ok") and classify_result.get("diagnosis"):
             diagnosis = classify_result["diagnosis"]
         elif env_profile:
@@ -1140,7 +1132,7 @@ def _attempt_self_heal(
         remediate_result = dispatch_uri(
             f"fix://{node}/error/command/remediate",
             {"diagnosis": diagnosis, "registry": registry},
-        )
+        ) or {}
         applied = remediate_result.get("applied") or []
     else:
         # Direct path: same behaviour as before; no new dependency
@@ -1425,6 +1417,25 @@ def _orchestrate_steps(flow: dict, registry: dict, execute: bool, recover: bool,
     return result
 
 
+def _plan_with_preflight(steps: list[dict], *, execute: bool) -> list[dict]:
+    """Prepend a twin://host/flow/command/preflight step when the plan has CDP steps.
+
+    This makes preflight a first-class step — observable in the timeline and
+    replaceable per-node — instead of a hard-coded side-effect in the driver."""
+    if not execute:
+        return steps
+    has_cdp = any("/cdp/page/" in str(s.get("uri") or "") for s in steps)
+    if not has_cdp:
+        return steps
+    preflight_step = {
+        "id": "preflight",
+        "uri": _THIN_PREFLIGHT_URI,
+        "payload": {"steps": steps},
+        "depends_on": [],
+    }
+    return [preflight_step, *steps]
+
+
 def execute_flow(flow: dict, mesh: dict, registry: dict, execute: bool, *, recover: bool = True,
                  max_retries: int = 1, max_wall_clock: float = 180.0, max_remediations: int = 6,
                  rollback_on_failure: bool = True,
@@ -1444,13 +1455,18 @@ def execute_flow(flow: dict, mesh: dict, registry: dict, execute: bool, *, recov
     if envelope is not None and dispatch_uri is not None:
         old_map = _set_service_map(mesh)
         try:
-            return _thin_driver(flow.get("steps") or [], envelope, dispatch_uri,
-                                registry=registry, execute=execute,
-                                max_retries=max_retries,
-                                max_remediations=max_remediations,
-                                max_wall_clock=max_wall_clock)
+            steps = _plan_with_preflight(flow.get("steps") or [], execute=execute)
+            result = _thin_driver(steps, envelope, dispatch_uri,
+                                  registry=registry, execute=execute,
+                                  max_retries=max_retries,
+                                  max_remediations=max_remediations,
+                                  max_wall_clock=max_wall_clock)
         finally:
             _restore_service_map(old_map)
+        if memory is not None and result.get("ok"):
+            _update_known_good(flow, registry, memory)
+            _remember_known_good_flow(flow, result, memory)
+        return result
     old_map = _set_service_map(mesh)
     results: dict = {}
     timeline: list = []
