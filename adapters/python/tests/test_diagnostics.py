@@ -86,6 +86,37 @@ class DiagnoseTests(unittest.TestCase):
         self.assertIsNone(diagnose(_err("something totally unrecognised")))
         self.assertIsNone(diagnose(_err("")))  # empty message never matches
 
+    # The launch/probe split's signature failure: a page-level query timed out because
+    # cdp/session/command/ensure returned launching:true and the page query raced ahead.
+    # Previously this was unrecognized (no rule matched "page not ready within timeout"),
+    # so the self-heal loop had nothing automatic to apply and the flow just gave up.
+    def test_page_not_ready_routes_to_session_ready_poll(self):
+        d = diagnose(_err("page not ready within timeout", category="DEADLINE_EXCEEDED"),
+                     step={"uri": "kvm://laptop/cdp/page/query/ready"})
+        self.assertEqual(d["rule"], "cdp-session-still-launching")
+        # the fix is the idempotent readiness POLL (not re-calling ensure, which would
+        # spawn a competing Chrome over the profile lock), then retry the page query
+        uris = [a.get("uri") for a in d["remediation"]]
+        self.assertIn("kvm://laptop/cdp/session/query/ready", uris)
+        self.assertIn("kvm://laptop/cdp/page/query/ready", uris)
+        # both are safe to apply unattended (poll + bounded retry)
+        self.assertIn("poll-cdp-session-ready", d["autoApplicable"])
+        self.assertIn("retry-page-ready", d["autoApplicable"])
+
+    def test_debugger_not_reachable_also_matches_launching_rule(self):
+        # await_ready's timeout message — same root cause (session mid launch), must hit
+        # the same rule, not fall through to the generic transient bucket.
+        d = diagnose(_err("debugger not reachable within timeout", category="DEADLINE_EXCEEDED"),
+                     step={"uri": "kvm://laptop/cdp/session/query/ready"})
+        self.assertEqual(d["rule"], "cdp-session-still-launching")
+
+    def test_page_not_ready_gate_requires_deadline_category(self):
+        # the rule is gated on DEADLINE_EXCEEDED — a 'page not ready' with a different
+        # category (e.g. INTERNAL) is a different failure class and must NOT match.
+        d = diagnose(_err("page not ready within timeout", category="INTERNAL"),
+                     step={"uri": "kvm://laptop/cdp/page/query/ready"})
+        self.assertIsNone(d)
+
 
 class SurfaceUpgradeTests(unittest.TestCase):
     STEP = {"uri": "kvm://laptop/ui/command/click"}
@@ -173,6 +204,87 @@ class RecoveryPlanEnrichmentTests(unittest.TestCase):
     def test_plan_omits_diagnosis_when_unknown(self):
         plan = recovery.recovery_plan(_err(""), step={"uri": "kvm://laptop/ui/command/click"})
         self.assertNotIn("diagnosis", plan)
+
+
+class CdpPageReadyRecoveryTests(unittest.TestCase):
+    """A cdp/page/* query that times out is the launch/probe split's signature failure.
+    The generic DEADLINE_EXCEEDED plan says 'retry the step' — which re-opens a WS to the
+    same unbound port. The specialized plan leads with the session-ready poll."""
+
+    PAGE_READY_STEP = {"uri": "kvm://laptop/cdp/page/query/ready"}
+
+    def test_deadline_on_cdp_page_query_leads_with_session_ready_poll(self):
+        actions = recovery.recovery_actions(
+            _err("page not ready within timeout", category="DEADLINE_EXCEEDED"),
+            step=self.PAGE_READY_STEP,
+        )
+        ids = [a["id"] for a in actions]
+        self.assertEqual(ids[0], "poll-cdp-session-ready")
+        self.assertEqual(actions[0]["uri"], "kvm://laptop/cdp/session/query/ready")
+        self.assertTrue(actions[0]["automatic"])
+        self.assertIn("retry-page-ready", ids)
+
+    def test_deadline_on_cdp_navigate_also_uses_specialized_plan(self):
+        # navigate opens the same page-level WS — it needs the session bound first too.
+        actions = recovery.recovery_actions(
+            _err("page not ready within timeout", category="DEADLINE_EXCEEDED"),
+            step={"uri": "kvm://laptop/cdp/page/command/navigate"},
+        )
+        self.assertEqual(actions[0]["id"], "poll-cdp-session-ready")
+
+    def test_unavailable_on_cdp_page_query_still_uses_generic_transient(self):
+        # UNAVAILABLE is a transport/node-down signal, not the launch/probe race — keep
+        # the generic plan (check health, retry, refresh discovery) for that category.
+        actions = recovery.recovery_actions(
+            _err("connection refused", category="UNAVAILABLE"),
+            step=self.PAGE_READY_STEP,
+        )
+        ids = [a["id"] for a in actions]
+        self.assertEqual(ids[0], "check-target-health")
+        self.assertIn("retry-transient-step", ids)
+        self.assertNotIn("poll-cdp-session-ready", ids)
+
+    def test_non_cdp_deadline_still_uses_generic_transient(self):
+        # a non-CDP DEADLINE_EXCEEDED (e.g. an env health query) is unchanged.
+        actions = recovery.recovery_actions(
+            _err("timed out", category="DEADLINE_EXCEEDED"),
+            step={"uri": "env://laptop/runtime/query/health"},
+        )
+        ids = [a["id"] for a in actions]
+        self.assertEqual(ids[0], "check-target-health")
+        self.assertIn("retry-transient-step", ids)
+
+
+class ConnectorRequiredDiagnosisTests(unittest.TestCase):
+    """connector_required errors get a named diagnosis with install/adopt remediation."""
+
+    SSH_STEP = {"uri": "ssh://server/file/query/list"}
+    MEDIA_STEP = {"uri": "media://nas/stream/query/list"}
+
+    def test_connector_required_message_matches(self):
+        d = diagnose(_err("ssh:// execution needs a dedicated connector"), step=self.SSH_STEP)
+        self.assertIsNotNone(d)
+        self.assertEqual(d["rule"], "connector-required")
+
+    def test_api_kind_message_matches(self):
+        d = diagnose(_err("mqtt interfaces require a dedicated connector/service"),
+                     step={"uri": "configured://hub/api/query/status"})
+        self.assertEqual(d["rule"], "connector-required")
+
+    def test_adopt_connector_is_auto_applicable(self):
+        d = diagnose(_err("media:// execution needs a dedicated connector"), step=self.MEDIA_STEP)
+        self.assertIn("adopt-connector", d["autoApplicable"])
+
+    def test_install_and_deploy_are_human_gated(self):
+        d = diagnose(_err("ssh:// execution needs a dedicated connector"), step=self.SSH_STEP)
+        ids_auto = d["autoApplicable"]
+        self.assertNotIn("install-connector", ids_auto)
+        self.assertNotIn("deploy-connector", ids_auto)
+
+    def test_connector_required_error_string_matches(self):
+        # The error FIELD value is also used as message text by some callers.
+        d = diagnose(_err("connector_required"), step=self.SSH_STEP)
+        self.assertEqual(d["rule"], "connector-required")
 
 
 if __name__ == "__main__":

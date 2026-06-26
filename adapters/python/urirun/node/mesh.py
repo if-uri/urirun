@@ -1951,6 +1951,19 @@ def node_stop_command(args: argparse.Namespace) -> int:
     return 0 if all(r["stopped"] for r in results) else 1
 
 
+def _resolve_registry_source(registry_arg: str | None, node_registry: str | None) -> str | None:
+    """Resolve a registry path from CLI arg + node config, anchoring relative paths to the workspace."""
+    from urirun.node.config import find_workspace_root
+    source = registry_arg or node_registry
+    if not source or source == ".urirun/registry.merged.json":
+        return str(find_workspace_root(require_file=".urirun/registry.merged.json") / ".urirun/registry.merged.json")
+    if not source.startswith("/"):
+        candidate = find_workspace_root(require_file=source) / source
+        if candidate.exists():
+            return str(candidate)
+    return source
+
+
 def node_command(args: argparse.Namespace) -> int:
     if args.node_command == "init":
         reglib._emit_json(init_node(args.config, args.name, args.registry, args.host, args.port, args.execute), "-")
@@ -1967,7 +1980,7 @@ def node_command(args: argparse.Namespace) -> int:
         return 0
 
     name = args.name or node.get("name") or socket.gethostname()
-    registry_source = args.registry or node.get("registry") or ".urirun/registry.merged.json"
+    registry_source = _resolve_registry_source(args.registry, node.get("registry"))
     registry = v2.load_registry_arg(registry_source)
 
     if args.node_command == "routes":

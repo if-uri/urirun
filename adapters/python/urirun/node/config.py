@@ -21,23 +21,40 @@ DEFAULT_NODE_CONFIG = ".urirun/node.json"
 DEFAULT_NODE_PORT = 8765
 
 
+def find_workspace_root(require_file: str | None = None) -> Path:
+    current = Path.cwd()
+    for parent in [current] + list(current.parents):
+        if (parent / ".urirun").exists() or (parent / ".git").exists():
+            if require_file and not (parent / require_file).exists():
+                continue
+            return parent
+    return current
+
+
 def host_config_path(path: str | None = None) -> Path:
     if path:
         return Path(path)
     env = os.getenv("URIRUN_MESH_CONFIG")
     if env:
         return Path(env)
-    local = Path(DEFAULT_CONFIG)
+    
+    root = find_workspace_root()
+    local = root / DEFAULT_CONFIG
     if local.exists():
         return local
     # fall back to the canonical `host.sh` install location so `urirun host nodes`
     # works out of the box after `curl get.urirun.com/host.sh | bash` (no --config).
     installed = Path.home() / ".urirun-host" / "mesh.json"
-    return installed if installed.exists() else local
+    return installed if installed.exists() else Path(DEFAULT_CONFIG)
 
 
 def node_config_path(path: str | None = None) -> Path:
-    return Path(path or os.getenv("URIRUN_NODE_CONFIG", DEFAULT_NODE_CONFIG))
+    if path:
+        return Path(path)
+    env = os.getenv("URIRUN_NODE_CONFIG")
+    if env:
+        return Path(env)
+    return find_workspace_root() / DEFAULT_NODE_CONFIG
 
 
 def default_host_config(name: str | None = None) -> dict:

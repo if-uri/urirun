@@ -48,7 +48,7 @@ class FakeMesh:
             "serviceMap": {"laptop": "http://laptop.local:8765"},
         }
 
-    def make_flow(self, prompt, mesh, selected_nodes=None, use_llm=True):
+    def make_flow(self, prompt, mesh, selected_nodes=None, use_llm=True, environments=None):
         self.selected_nodes = selected_nodes
         self.use_llm = use_llm
         return (
@@ -1080,7 +1080,7 @@ def test_chat_ask_document_sync_decision_loop_blocks_without_node_url(monkeypatc
 
 def test_chat_ask_returns_recovery_when_planner_fails(monkeypatch):
     class FailingMesh(FakeMesh):
-        def make_flow(self, prompt, mesh, selected_nodes=None, use_llm=True):
+        def make_flow(self, prompt, mesh, selected_nodes=None, use_llm=True, environments=None):
             raise RuntimeError("URIRUN_LLM_MODEL or LLM_MODEL is not set")
 
     fake_mesh = FailingMesh()

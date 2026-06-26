@@ -292,16 +292,26 @@ def _uri_is_available(uri: str, allowed_uris: set[str]) -> bool:
     return any(_uri_matches_template(uri, allowed) for allowed in allowed_uris if "{" in allowed)
 
 
-def _normalize_flow_step(step: dict, index: int, allowed_uris: set[str], used: set[str]) -> dict:
+def _normalize_flow_step(step: dict, index: int, allowed_uris: set[str], used: set[str], routes: list[dict] | None = None) -> dict:
     """Validate and canonicalize one flow step; `used` tracks taken ids to keep them unique."""
     uri = str(step.get("uri", ""))
     if not _uri_is_available(uri, allowed_uris):
         raise ValueError(f"URI is not available: {uri}")
+    
+    payload = step.get("payload") if isinstance(step.get("payload"), dict) else {}
+    if routes:
+        route = next((r for r in routes if r.get("uri") == uri), None)
+        if route and route.get("inputSchema"):
+            import jsonschema
+            try:
+                jsonschema.validate(instance=payload, schema=route["inputSchema"])
+            except jsonschema.ValidationError as e:
+                raise ValueError(f"Payload validation failed for {uri}: {e.message}")
+
     step_id = slug(str(step.get("id") or f"step_{index}"))
     if step_id in used:
         step_id = f"{step_id}_{index}"
     used.add(step_id)
-    payload = step.get("payload") if isinstance(step.get("payload"), dict) else {}
     deps = [slug(str(dep)) for dep in step.get("depends_on", []) if isinstance(dep, str)]
     return {"id": step_id, "uri": uri, "payload": payload, "depends_on": deps}
 
@@ -338,7 +348,7 @@ def _needs_session_ready_after_ensure(prev_uri: str, next_uri: str | None) -> bo
 
 
 def _inject_cdp_ready_probes(steps: list[dict], allowed_uris: set[str],
-                             used: set[str]) -> list[dict]:
+                             used: set[str], routes: list[dict] | None = None) -> list[dict]:
     """Insert a ``cdp/session/query/ready`` step between every ensure→page jump, when
     the probe URI is available. Idempotent: skips when a probe is already present, and
     never injects when the route isn't served (keeps flows runnable on meshes that
@@ -358,7 +368,7 @@ def _inject_cdp_ready_probes(steps: list[dict], allowed_uris: set[str],
         probe = _normalize_flow_step(
             {"id": f"{step['id']}_await_ready", "uri": probe_uri,
              "payload": {"timeout": 25}, "depends_on": [step["id"]]},
-            index=len(steps) + len(out), allowed_uris=allowed_uris, used=used,
+            index=len(steps) + len(out), allowed_uris=allowed_uris, used=used, routes=routes
         )
         out.append(probe)
         # re-point the next step's depends_on at the probe so the chain stays linear.
@@ -371,15 +381,15 @@ def _inject_cdp_ready_probes(steps: list[dict], allowed_uris: set[str],
     return out
 
 
-def normalize_flow(flow: dict, allowed_uris: set[str]) -> dict:
+def normalize_flow(flow: dict, allowed_uris: set[str], routes: list[dict] | None = None) -> dict:
     task = flow.get("task") if isinstance(flow.get("task"), dict) else {}
     raw_steps = flow.get("steps")
     if not isinstance(raw_steps, list) or not raw_steps:
         raise ValueError("flow must contain non-empty steps")
     used: set[str] = set()
-    steps = [_normalize_flow_step(step, index, allowed_uris, used)
+    steps = [_normalize_flow_step(step, index, allowed_uris, used, routes=routes)
              for index, step in enumerate(raw_steps, start=1)]
-    steps = _inject_cdp_ready_probes(steps, allowed_uris, used)
+    steps = _inject_cdp_ready_probes(steps, allowed_uris, used, routes=routes)
     return {"task": _normalize_flow_task(task), "steps": steps}
 
 
@@ -392,7 +402,7 @@ def normalize_flow_or_explain(
     planner_reason: str = "",
 ) -> dict:
     try:
-        return normalize_flow(flow, allowed_uris)
+        return normalize_flow(flow, allowed_uris, routes=routes)
     except ValueError as exc:
         if str(exc) != "flow must contain non-empty steps":
             raise
@@ -1020,7 +1030,7 @@ def verify_flow_execution(document: dict, execution: dict, *, executed: bool, di
 
 def run_flow_document(document: dict, mesh: dict, *, execute: bool, rollback_on_failure: bool = False) -> dict:
     route_uris = {route["uri"] for route in mesh["routes"] if safe_route(route)}
-    flow = normalize_flow(document, route_uris)
+    flow = normalize_flow(document, route_uris, routes=mesh["routes"])
     registry = registry_from_routes(mesh["routes"])
     execution = execute_flow(flow, mesh, registry, execute=execute)
     goal_dispatch = lambda uri, payload=None: v2_service.call(uri, payload or {}, registry, mode="execute")

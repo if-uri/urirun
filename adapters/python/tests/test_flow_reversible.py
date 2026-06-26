@@ -74,7 +74,7 @@ def test_rollback_flow_noop_when_nothing_reversible(monkeypatch):
 def test_run_flow_document_attaches_reversible_ledger(monkeypatch):
     # isolate the reversible-attach: stub execute_flow to a known run, neutralise the rest.
     monkeypatch.setattr(F, "execute_flow", lambda *a, **k: _execution_with_inverses())
-    monkeypatch.setattr(F, "normalize_flow", lambda doc, uris: {"steps": doc.get("steps", [])})
+    monkeypatch.setattr(F, "normalize_flow", lambda doc, uris, routes=None: {"steps": doc.get("steps", [])})
     monkeypatch.setattr(F, "verify_flow_execution", lambda *a, **k: None)
     doc = {"steps": [{"id": "fill", "uri": "kvm://laptop/ui/command/fill", "payload": {}}]}
     result = F.run_flow_document(doc, _mesh(), execute=True)
@@ -86,7 +86,7 @@ def test_run_flow_document_attaches_reversible_ledger(monkeypatch):
 
 def _stub_run(monkeypatch, execution, verification):
     monkeypatch.setattr(F, "execute_flow", lambda *a, **k: execution)
-    monkeypatch.setattr(F, "normalize_flow", lambda doc, uris: {"steps": doc.get("steps", [])})
+    monkeypatch.setattr(F, "normalize_flow", lambda doc, uris, routes=None: {"steps": doc.get("steps", [])})
     monkeypatch.setattr(F, "verify_flow_execution", lambda *a, **k: verification)
 
 

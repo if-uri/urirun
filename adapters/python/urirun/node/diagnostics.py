@@ -104,6 +104,28 @@ PLAYBOOK: list[_Rule] = [
         confidence=0.95,
     ),
     _Rule(
+        "cdp-session-still-launching",
+        [r"page not ready within timeout", r"debugger not reachable within timeout",
+         r"page is still loading", r"document not ready"],
+        "The CDP session is mid launch or the page is mid navigation: ``cdp/session/command/ensure`` "
+        "FIRES the launch and returns immediately (launching:true, port NOT yet bound), and "
+        "``cdp/page/query/ready`` polls document.readyState over a WebSocket to that port — so a "
+        "page-level query fired before the bind completes times out (and the connect-then-eval loop "
+        "looks like 'navigating' forever). Re-calling ``ensure`` would spawn a competing Chrome over "
+        "the profile SingletonLock; the launch/probe split requires the idempotent readiness poll "
+        "``cdp/session/query/ready`` (no launch, just waits for the port to bind), then retry the page query.",
+        lambda t: [
+            {"id": "poll-cdp-session-ready", "kind": "precondition", "automatic": True,
+             "uri": f"kvm://{t}/cdp/session/query/ready",
+             "label": "Poll the CDP debug endpoint until it binds (launch/probe split — does NOT re-launch)."},
+            {"id": "retry-page-ready", "kind": "retry", "automatic": True,
+             "uri": f"kvm://{t}/cdp/page/query/ready",
+             "label": "Retry the page-ready poll now that the session has bound the debug port."},
+        ],
+        categories={"DEADLINE_EXCEEDED"},
+        confidence=0.9,
+    ),
+    _Rule(
         "node-exec-timeout",
         [r"timeoutexpired", r"timed out after \d+\s*second"],
         "A single op exceeded the node's subprocess cap (~30s) — heavy OCR/portal capture, a hung CDP "
@@ -159,6 +181,29 @@ PLAYBOOK: list[_Rule] = [
              "label": "Re-launch CDP Chrome with copy_from=<user chrome profile> so it's logged in (needs consent)."},
         ],
         confidence=0.8,
+    ),
+    _Rule(
+        "connector-required",
+        [r"connector_required", r"needs a dedicated connector",
+         r"require a dedicated connector/service",
+         r"require a dedicated connector"],
+        "The URI scheme needs a connector that implements its protocol, but no such connector "
+        "is installed on this node. The error response includes connectorHint.package and "
+        "connectorHint.installCommand. Install the connector, then re-deploy it to the node "
+        "(urirun host deploy --merge) and adopt it (node://…/registry/command/adopt).",
+        lambda t: [
+            {"id": "check-connector-installed", "kind": "diagnostic", "automatic": False,
+             "uri": f"node://{t}/capability/query/check",
+             "label": "Verify which connectors are installed and adopted on this node."},
+            {"id": "install-connector", "kind": "provision", "automatic": False,
+             "label": "Install the connector package (see connectorHint.installCommand in the error response)."},
+            {"id": "deploy-connector", "kind": "provision", "automatic": False,
+             "label": "Deploy the connector to the node: urirun host deploy --merge <node_url>."},
+            {"id": "adopt-connector", "kind": "provision", "automatic": True,
+             "uri": f"node://{t}/registry/command/adopt",
+             "label": "Adopt the installed connector so its routes go live immediately."},
+        ],
+        confidence=0.9,
     ),
     _Rule(
         "stale-node-urirun",

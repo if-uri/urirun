@@ -102,6 +102,47 @@ def _transient_actions(target: str) -> list[dict]:
     return actions
 
 
+def _cdp_page_ready_actions(step: dict, target: str) -> list[dict]:
+    """Recovery for a ``cdp/page/query/ready`` (or other page-level CDP query) that timed out.
+
+    A page-level query opens a WebSocket to the debug port; it times out when the session
+    is mid launch (``ensure`` returned ``launching:true``) or the page is mid navigation.
+    Retrying the page query blindly re-opens that WS to the same unbound port. The right
+    first action is the launch/probe split's idempotent readiness poll
+    (``cdp/session/query/ready``), then retry the page query."""
+    actions: list[dict] = []
+    if target:
+        actions.append({
+            "id": "poll-cdp-session-ready",
+            "kind": "precondition",
+            "automatic": True,
+            "uri": f"kvm://{target}/cdp/session/query/ready",
+            "label": f"Poll the CDP debug endpoint on {target!r} until it binds (does NOT re-launch).",
+        })
+    actions.append({
+        "id": "retry-page-ready",
+        "kind": "retry",
+        "automatic": True,
+        "label": "Retry the page-level query now that the session has bound the debug port.",
+    })
+    if target:
+        actions.append({
+            "id": "check-target-health",
+            "kind": "diagnostic",
+            "automatic": False,
+            "uri": f"env://{target}/runtime/query/health",
+            "label": f"If the probe keeps timing out, check whether target {target!r} is reachable.",
+        })
+    return actions
+
+
+def _is_cdp_page_level_query(uri: str) -> bool:
+    """A CDP URI that opens a WebSocket to the debug port's page target — i.e. anything
+    under ``/cdp/page/`` except the session-level queries. These time out the same way a
+    ``page/query/ready`` does when the session is mid launch."""
+    return "/cdp/page/" in uri
+
+
 def _not_found_actions(message: str, error: dict, scheme: str) -> list[dict]:
     if "route not found" in message or str(error.get("type") or "") == "registry":
         actions = [{
@@ -188,6 +229,12 @@ def recovery_actions(error: dict, *, step: dict | None = None, routes: list[dict
     if "urirun_llm_model" in message or "llm_model" in message:
         return _llm_model_actions()
     if category in {"UNAVAILABLE", "DEADLINE_EXCEEDED"}:
+        # A CDP page-level query that times out is the launch/probe split's signature
+        # failure: ``ensure`` fired the launch (launching:true, port not yet bound) and
+        # the page query raced ahead. The generic "retry the step" re-opens a WS to the
+        # same unbound port; the right first action is the idempotent session-ready poll.
+        if category == "DEADLINE_EXCEEDED" and _is_cdp_page_level_query(uri):
+            return _cdp_page_ready_actions(step, step_target(step))
         return _transient_actions(step_target(step))
     if category in _STATIC_CATEGORY_ACTIONS:
         return [dict(_STATIC_CATEGORY_ACTIONS[category])]

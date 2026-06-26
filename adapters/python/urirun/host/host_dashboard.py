@@ -25,6 +25,8 @@ import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urirun.node.mesh import EventHub, _sse_initial_cursor, _sse_event_matches, _sse_frame
+TWIN_EVENT_HUB = EventHub(buffer=100)
 from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlparse, urlsplit, urlunsplit
 
 from .document_sync import (
@@ -884,6 +886,7 @@ INDEX_HTML = r"""<!doctype html>
         <button data-view="discovery">Discovery</button>
         <button data-view="artifacts">Artifacts</button>
         <button data-view="widgets">Widgets</button>
+        <button data-view="twin">Digital Twin</button>
         <button data-view="tasks">Tasks</button>
         <button data-view="host">Host</button>
         <button data-view="nodes">Nodes</button>
@@ -953,6 +956,14 @@ INDEX_HTML = r"""<!doctype html>
           <div class="panel-body"><div class="widget-grid" id="widgetGrid"></div></div>
         </article>
       </section>
+
+      <section class="widget-layout view-block" data-section="twin" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="panel-head"><h2>Digital Twin Monitor</h2></div>
+        <div class="panel-body" style="flex: 1; padding: 0;">
+          <iframe src="/twin?source=live" title="Digital Twin Monitor" style="width:100%;height:100%;border:none;min-height:70vh;"></iframe>
+        </div>
+      </section>
+
       <section class="nodes-layout view-block" data-section="host">
         <article class="panel">
           <div class="panel-head">
@@ -1105,7 +1116,7 @@ INDEX_HTML = r"""<!doctype html>
                 <form class="chat-form chat-composer" id="chatForm">
                   <textarea id="chatPrompt" placeholder="Napisz komendę NL do wybranych kontaktów URI..."></textarea>
                   <div class="chat-options">
-                    <label class="check"><input type="checkbox" id="chatExecute"> Execute URI operations</label>
+                    <label class="check"><input type="checkbox" id="chatExecute" checked> Execute URI operations</label>
                     <label class="check"><input type="checkbox" id="chatNoLlm"> Heuristic planner only</label>
                     <button class="primary" type="submit" id="chatAskBtn">Send</button>
                   </div>
@@ -1344,13 +1355,14 @@ INDEX_HTML = r"""<!doctype html>
     <button data-view="discovery">Discovery</button>
     <button data-view="artifacts">Artifacts</button>
     <button data-view="widgets">Widgets</button>
+    <button data-view="twin">Digital Twin</button>
     <button data-view="tasks">Tasks</button>
     <button data-view="host">Host</button>
     <button data-view="nodes">Nodes</button>
     <button data-view="activity">Activity</button>
   </nav>
   <script>
-    const VALID_VIEWS = new Set(['overview', 'chat', 'discovery', 'artifacts', 'widgets', 'tasks', 'host', 'nodes', 'activity']);
+    const VALID_VIEWS = new Set(['overview', 'chat', 'discovery', 'artifacts', 'widgets', 'twin', 'tasks', 'host', 'nodes', 'activity']);
     const params = new URLSearchParams(window.location.search);
     const initialView = VALID_VIEWS.has(params.get('view')) ? params.get('view') : (VALID_VIEWS.has(params.get('tab')) ? params.get('tab') : 'overview');
     const initialChatFull = params.get('chat') === 'full' || params.get('fullscreen') === 'chat';
@@ -1423,7 +1435,7 @@ INDEX_HTML = r"""<!doctype html>
       return {
         sprint: $('sprintFilter') ? $('sprintFilter').value : '',
         queue: $('queueFilter') ? $('queueFilter').value : '',
-        execute: $('chatExecute') && $('chatExecute').checked ? '1' : '',
+        execute: $('chatExecute') && $('chatExecute').checked ? '1' : '0',
         no_llm: $('chatNoLlm') && $('chatNoLlm').checked ? '1' : '',
         targets: state.selectedTargets.join(','),
         discovery: state.discoveryTarget || '',
@@ -1468,7 +1480,7 @@ INDEX_HTML = r"""<!doctype html>
       if ($('sprintFilter') && search.get('sprint')) $('sprintFilter').value = search.get('sprint');
       if ($('queueFilter') && search.has('queue')) $('queueFilter').value = search.get('queue') || '';
       if ($('chatExecute')) {
-        $('chatExecute').checked = search.get('execute') === '1';
+        $('chatExecute').checked = search.get('execute') !== '0';
         $('chatMode').textContent = $('chatExecute').checked ? 'execute' : 'dry-run';
       }
       if ($('chatNoLlm')) $('chatNoLlm').checked = search.get('no_llm') === '1';
@@ -9003,6 +9015,7 @@ def _configured_api_call(node: dict, api: dict, payload: dict) -> dict:
             "error": "connector_required",
             "message": f"{api_kind or 'unknown'} interfaces require a dedicated connector/service",
             "api": {k: v for k, v in api.items() if k != "auth"},
+            "connectorHint": _connector_hint(api_kind),
         }
     method, url, method_error = _resolve_http_method_and_url(node, api, payload)
     if method_error:
@@ -9041,14 +9054,43 @@ def _resolve_node_api_identifiers(payload: dict, uri: str | None) -> tuple[str, 
     return "", node_name, api_id, False
 
 
+_SCHEME_CONNECTOR_PACKAGES: dict[str, str] = {
+    "media": "urirun-connector-media",
+    "camera": "urirun-connector-camera",
+    "ssh": "urirun-connector-ssh",
+    "rtsp": "urirun-connector-rtsp",
+    "smb": "urirun-connector-smb",
+    "nfs": "urirun-connector-nfs",
+    "serial": "urirun-connector-serial",
+    "modbus": "urirun-connector-modbus",
+    "mqtt": "urirun-connector-mqtt",
+    "websocket": "urirun-connector-websocket",
+    "ws": "urirun-connector-websocket",
+}
+
+
+def _connector_hint(scheme: str) -> dict:
+    package = _SCHEME_CONNECTOR_PACKAGES.get(scheme) or f"urirun-connector-{scheme}"
+    return {
+        "scheme": scheme,
+        "package": package,
+        "installCommand": f"pip install {package}",
+        "deployCommand": "urirun host deploy --merge <node_url>",
+        "reason": (f"The {scheme}:// scheme requires a dedicated connector that implements its protocol. "
+                   "Install the connector package, deploy it to the node, then the route goes live."),
+    }
+
+
 def _connector_required_response(scheme: str, node_name: str, safe_api: dict) -> dict:
-    """Build the standard 'connector_required' error for non-HTTP scheme execution."""
+    """Build the standard 'connector_required' error with install/deploy hints."""
     return {
         "ok": False,
         "error": "connector_required",
         "message": f"{scheme}:// execution needs a dedicated connector; configured API metadata is available",
+        "scheme": scheme,
         "node": node_name,
         "api": safe_api,
+        "connectorHint": _connector_hint(scheme),
     }
 
 
@@ -10191,6 +10233,40 @@ def _chat_ask_general_planner_failure(
     return result
 
 
+_DESKTOP_SCHEMES = ("kvm://", "twin://", "browser://")
+
+
+def _flow_has_desktop_step(flow: dict) -> bool:
+    return any(any(sc in str(s.get("uri", "")) for sc in _DESKTOP_SCHEMES) for s in flow.get("steps", []))
+
+
+def _append_twin_widget(execute: bool, flow: dict, attachments: list,
+                        prompt: str, selected_targets: list[str], timeline: list) -> None:
+    """Append a twin-monitor widget attachment when the flow touches a desktop node."""
+    if not execute or not _flow_has_desktop_step(flow):
+        return
+    import time
+    import urllib.parse
+    qs = urllib.parse.urlencode({
+        "source": "live",
+        "execute": "1",
+        "prompt": prompt,
+        "targets": ",".join(selected_targets),
+    })
+    attachments.append({"kind": "twin-monitor", "uri": f"/twin?{qs}", "path": "Digital Twin Widget"})
+    for step in timeline:
+        if step.get("type") == "preflight":
+            continue
+        sig = f"s{int(time.time() * 1000)}"
+        TWIN_EVENT_HUB.publish({
+            "uri": "twin://monitor/event",
+            "twin": {"node": step.get("target", "laptop"), "stateSig": sig},
+            "after": {"stateSig": f"{sig}-done"},
+            "transition": {"forward": {"uri": step.get("uri"), "args": {}}, "inverse": None, "reversible": False},
+            "narration": f"Krok [{step.get('id', '?')}]: {step.get('uri')} (sukces: {step.get('ok')})",
+        })
+
+
 def _general_path_complete(
     result: dict,
     db: str | None,
@@ -10208,18 +10284,7 @@ def _general_path_complete(
     content = f"{status}: {len(timeline)} URI step(s)"
     if result.get("recovery"):
         content += f", {len(result.get('recovery') or [])} recovery action(s)"
-    
-    # Append twin-monitor widget if any kvm:// or twin:// or browser:// route is in the flow
-    if execute and any(
-        "kvm://" in str(s.get("uri", "")) or "twin://" in str(s.get("uri", "")) or "browser://" in str(s.get("uri", "")) 
-        for s in flow.get("steps", [])
-    ):
-        attachments.append({
-            "kind": "twin-monitor",
-            "uri": "/twin",
-            "path": "Digital Twin Widget",
-        })
-
+    _append_twin_widget(execute, flow, attachments, prompt, selected_targets, timeline)
     if attachments:
         content += f", {len(attachments)} attachment(s)"
     _add_chat_message(db, _chat_message(
@@ -10254,6 +10319,82 @@ def _general_path_complete(
         pass
 
 
+def _chat_ask_general_capability_gap(
+    db: str | None,
+    prompt: str,
+    execute: bool,
+    selected_nodes: list[str],
+    selected_targets: list[str],
+    discovered: dict,
+    capability_gap: str,
+) -> dict:
+    """Return the early-exit result when a required URI capability is missing."""
+    generator = {"provider": "host-dashboard", "intent": "capability-check"}
+    flow = {"task": {"id": "capability-gap", "title": "Missing URI capability"}, "steps": []}
+    result = {
+        "ok": False,
+        "prompt": prompt,
+        "execute": execute,
+        "selectedNodes": selected_nodes,
+        "selectedTargets": selected_targets,
+        "generator": generator,
+        "nodeCount": len(discovered.get("nodes") or []),
+        "routeCount": len(discovered.get("routes") or []),
+        "flow": flow,
+        "timeline": [],
+        "results": {},
+        "error": capability_gap,
+    }
+    _add_chat_message(db, _chat_message(
+        "system",
+        "failed: missing screen-capture URI route for requested screenshot-to-document workflow",
+        detail={"prompt": prompt, "execute": execute, "ok": False, "selectedTargets": selected_targets,
+                "generator": generator, "flow": flow, "timeline": [], "results": {}, "error": capability_gap},
+    ))
+    try:
+        _host_db().add_log(db, "chat", "ask", {
+            "prompt": prompt, "execute": execute, "ok": False,
+            "selectedNodes": selected_nodes, "selectedTargets": selected_targets,
+            "generator": generator, "timeline": [], "error": capability_gap,
+        })
+    except Exception:  # noqa: BLE001
+        pass
+    return result
+
+
+def _apply_run_credentials(token: str | None, identity: str | None) -> tuple[str | None, str | None]:
+    """Set URIRUN_RUN_TOKEN/IDENTITY from the request and return the previous values for restore."""
+    old_token = os.environ.get("URIRUN_RUN_TOKEN")
+    old_identity = os.environ.get("URIRUN_RUN_IDENTITY")
+    if token:
+        os.environ["URIRUN_RUN_TOKEN"] = token
+        os.environ.pop("URIRUN_RUN_IDENTITY", None)
+    elif identity:
+        os.environ["URIRUN_RUN_IDENTITY"] = os.path.expanduser(identity)
+        os.environ.pop("URIRUN_RUN_TOKEN", None)
+    return old_token, old_identity
+
+
+def _restore_run_credentials(old_token: str | None, old_identity: str | None) -> None:
+    """Restore URIRUN_RUN_TOKEN/IDENTITY to values saved before the request."""
+    if old_token is None:
+        os.environ.pop("URIRUN_RUN_TOKEN", None)
+    else:
+        os.environ["URIRUN_RUN_TOKEN"] = old_token
+    if old_identity is None:
+        os.environ.pop("URIRUN_RUN_IDENTITY", None)
+    else:
+        os.environ["URIRUN_RUN_IDENTITY"] = old_identity
+
+
+def _fetch_planner_environments_for_nodes(mesh: Any, selected_nodes: list[str], execute: bool,
+                                          registry: Any, discovered: dict) -> list:
+    """Fetch grounded env/surface contexts for reachable selected nodes (only when executing)."""
+    reachable = {n["name"] for n in (discovered.get("nodes") or []) if n.get("reachable")}
+    ground = [n for n in (selected_nodes or []) if n in reachable]
+    return mesh.fetch_planner_environments(ground, registry, discovered) if (execute and ground) else []
+
+
 def _chat_ask_general(
     project: str,
     db: str | None,
@@ -10270,84 +10411,23 @@ def _chat_ask_general(
 ) -> dict:
     """Handle general LLM-to-URI mesh chat requests."""
     mesh = _mesh()
-    old_token = os.environ.get("URIRUN_RUN_TOKEN")
-    old_identity = os.environ.get("URIRUN_RUN_IDENTITY")
-    if token:
-        os.environ["URIRUN_RUN_TOKEN"] = token
-        os.environ.pop("URIRUN_RUN_IDENTITY", None)
-    elif identity:
-        os.environ["URIRUN_RUN_IDENTITY"] = os.path.expanduser(identity)
-        os.environ.pop("URIRUN_RUN_TOKEN", None)
+    old_token, old_identity = _apply_run_credentials(token, identity)
     try:
         discovered = mesh.discover_mesh(_host_config(config, node_urls))
         capability_gap = _screen_document_capability_gap(prompt, discovered, selected_nodes, selected_targets)
         if capability_gap:
-            result = {
-                "ok": False,
-                "prompt": prompt,
-                "execute": execute,
-                "selectedNodes": selected_nodes,
-                "selectedTargets": selected_targets,
-                "generator": {"provider": "host-dashboard", "intent": "capability-check"},
-                "nodeCount": len(discovered.get("nodes") or []),
-                "routeCount": len(discovered.get("routes") or []),
-                "flow": {"task": {"id": "capability-gap", "title": "Missing URI capability"}, "steps": []},
-                "timeline": [],
-                "results": {},
-                "error": capability_gap,
-            }
-            _add_chat_message(db, _chat_message(
-                "system",
-                "failed: missing screen-capture URI route for requested screenshot-to-document workflow",
-                detail={
-                    "prompt": prompt,
-                    "execute": execute,
-                    "ok": False,
-                    "selectedTargets": selected_targets,
-                    "generator": result["generator"],
-                    "flow": result["flow"],
-                    "timeline": [],
-                    "results": {},
-                    "error": capability_gap,
-                },
-            ))
-            try:
-                _host_db().add_log(db, "chat", "ask", {
-                    "prompt": prompt,
-                    "execute": execute,
-                    "ok": False,
-                    "selectedNodes": selected_nodes,
-                    "selectedTargets": selected_targets,
-                    "generator": result["generator"],
-                    "timeline": [],
-                    "error": capability_gap,
-                })
-            except Exception:  # noqa: BLE001
-                pass
-            return result
+            return _chat_ask_general_capability_gap(
+                db, prompt, execute, selected_nodes, selected_targets, discovered, capability_gap)
         registry = mesh.registry_from_routes(discovered.get("routes") or [])
         try:
-            # profile->planner: ground the LLM on each node's LIVE capabilities + foreground surface
-            # (best control surface, real on-screen labels, drift) so it stops guessing labels/surface.
-            # Only probe REACHABLE nodes — an unreachable node would block the chat request on a network
-            # timeout for no grounding gain.
-            _reachable = {n["name"] for n in (discovered.get("nodes") or []) if n.get("reachable")}
-            _ground = [n for n in (selected_nodes or []) if n in _reachable]
-            environments = mesh.fetch_planner_environments(_ground, registry, discovered) if (execute and _ground) else []
+            environments = _fetch_planner_environments_for_nodes(mesh, selected_nodes, execute, registry, discovered)
             flow, generator = mesh.make_flow(prompt, discovered, selected_nodes=selected_nodes,
                                              use_llm=not no_llm, environments=environments)
         except Exception as exc:  # noqa: BLE001 - return a recovery contract instead of a raw API failure.
             return _chat_ask_general_planner_failure(exc, db, prompt, execute, selected_nodes, selected_targets)
         execution = mesh.execute_flow(flow, discovered, registry, execute=execute)
     finally:
-        if old_token is None:
-            os.environ.pop("URIRUN_RUN_TOKEN", None)
-        else:
-            os.environ["URIRUN_RUN_TOKEN"] = old_token
-        if old_identity is None:
-            os.environ.pop("URIRUN_RUN_IDENTITY", None)
-        else:
-            os.environ["URIRUN_RUN_IDENTITY"] = old_identity
+        _restore_run_credentials(old_token, old_identity)
     result = {
         "ok": bool(execution.get("ok")),
         "prompt": prompt,
@@ -11137,6 +11217,44 @@ def _dashboard_api_response(path: str, project: str, db: str | None, config: str
     return 404, {"ok": False, "error": "not found"}
 
 
+def _handle_events_sse(handler, parsed):
+    import queue
+    params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+    schemes = {s for s in (params.get("scheme", "").split(",")) if s}
+    runs = {r for r in (params.get("run", "").split(",")) if r}
+    last_id = _sse_initial_cursor(TWIN_EVENT_HUB, params, handler.headers)
+    try:
+        handler.send_response(200)
+        handler.send_header("Content-Type", "text/event-stream")
+        handler.send_header("Cache-Control", "no-cache")
+        handler.send_header("Connection", "keep-alive")
+        handler.send_header("Access-Control-Allow-Origin", "*")
+        handler.end_headers()
+        handler.wfile.write(b": connected\n\n")
+        for ev in TWIN_EVENT_HUB.replay_since(last_id):
+            if _sse_event_matches(ev, schemes, runs):
+                handler.wfile.write(_sse_frame(ev))
+        handler.wfile.flush()
+    except (BrokenPipeError, ConnectionResetError, OSError):
+        return
+    q = TWIN_EVENT_HUB.subscribe()
+    try:
+        while True:
+            try:
+                ev = q.get(timeout=15)
+            except queue.Empty:
+                handler.wfile.write(b": keep-alive\n\n")
+                handler.wfile.flush()
+                continue
+            if _sse_event_matches(ev, schemes, runs):
+                handler.wfile.write(_sse_frame(ev))
+                handler.wfile.flush()
+    except (BrokenPipeError, ConnectionResetError, OSError):
+        pass
+    finally:
+        TWIN_EVENT_HUB.unsubscribe(q)
+
+
 def create_handler(
     project: str,
     db: str | None = None,
@@ -11154,6 +11272,9 @@ def create_handler(
             try:
                 if parsed.path == "/health":
                     _json_response(self, 200, {"ok": True})
+                    return
+                if parsed.path == "/events":
+                    _handle_events_sse(self, parsed)
                     return
                 if parsed.path in {"/", "/index.html"}:
                     _html_response(self)
