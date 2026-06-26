@@ -102,6 +102,20 @@ def _step_status(step_ok: bool, degraded: bool) -> str:
     return "applied"
 
 
+def _url_from_results(results: dict, step_id: str) -> "str | None":
+    """The URL a step landed on (browser/CDP navigate, capture), for the NOW/NEXT header's URL
+    field — read from the connector result value, the same shape _step_info_from_results reads."""
+    step_r = results.get(step_id)
+    if not isinstance(step_r, dict):
+        return None
+    res = step_r.get("result")
+    val = res.get("value") if isinstance(res, dict) else None
+    if not isinstance(val, dict):
+        val = step_r
+    u = val.get("url") if isinstance(val, dict) else None
+    return str(u) if u else None
+
+
 def _step_narration(step: dict, step_uri: str, status: str, degraded_reason: str | None,
                     reversible: bool) -> str:
     narration = f"[{step.get('id', '?')}] {step_uri}"
@@ -117,6 +131,7 @@ def _publish_step_event(
     step: dict, node: str, connector_inverse: str | None = None,
     degraded: bool = False, degraded_reason: str | None = None,
     episode_id: str = "", experience_id: str = "", intent_sig: str = "",
+    env_fingerprint: str = "", url: "str | None" = None,
 ) -> None:
     """Emit a StepEvent to TWIN_EVENT_HUB.
 
@@ -134,9 +149,12 @@ def _publish_step_event(
         inverse_str, reversible = _step_inverse(step_uri)
     sig = f"s{int(time.time() * 1000)}"
     surface = "cdp" if ("cdp" in step_uri or "browser" in step_uri) else "kvm"
+    # Real live state when known: the node's known-good env fingerprint (env-…) and the step's
+    # URL fill the NOW/NEXT header; fall back to the per-step sig so the panel is never blank-keyed.
     _before: dict = {
         "node": step.get("target") or node, "os": "linux", "surface": surface,
-        "fingerprint": sig, "stateSig": sig, "url": None, "monitors": [], "window": None,
+        "fingerprint": env_fingerprint or sig, "stateSig": sig, "url": url,
+        "monitors": [], "window": None,
     }
     status = _step_status(step_ok, degraded)
     narration = _step_narration(step, step_uri, status, degraded_reason, reversible)
@@ -156,7 +174,7 @@ def _publish_step_event(
             "before": _before,
             "forward": step_uri,
             "inverse": inverse_str,
-            "after": {**_before, "fingerprint": f"{sig}-done", "stateSig": f"{sig}-done"},
+            "after": {**_before, "stateSig": f"{sig}-done"},  # env identity stable; only position advances
             "reversible": reversible,
         },
     })
@@ -285,6 +303,13 @@ def append_twin_widget(execute: bool, flow: dict, attachments: list,
         return
     node = (selected_targets[0] if selected_targets else None) or "host"
     _results = results or {}
+    # The node's known-good env fingerprint is the live FINGERPRINT for the NOW/NEXT header —
+    # real (env-…), not the synthetic per-step sig that left the panel showing "--".
+    try:
+        from urirun.node.twin_store import durable_memory as _dm  # noqa: PLC0415
+        env_fp = (_dm().known_good(node) or {}).get("fingerprint") or ""
+    except Exception:  # noqa: BLE001 - a missing store must not break the widget
+        env_fp = ""
     for step in timeline:
         if not _is_infra_step(step):
             step_id = step.get("id") or ""
@@ -293,7 +318,8 @@ def append_twin_widget(execute: bool, flow: dict, attachments: list,
             _publish_step_event(step, node, connector_inverse=conn_inv,
                                 degraded=deg, degraded_reason=deg_reason,
                                 episode_id=episode_id, experience_id=experience_id,
-                                intent_sig=intent_sig)
+                                intent_sig=intent_sig, env_fingerprint=env_fp,
+                                url=_url_from_results(_results, step_id))
     TWIN_EVENT_HUB.publish({
         "flowCompleted": True,
         "prompt": prompt,
