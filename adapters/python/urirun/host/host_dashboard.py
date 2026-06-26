@@ -31,9 +31,17 @@ from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlpars
 
 from .document_sync import (
     DocumentSyncDeps,
+    archive_month as _archive_month,
     boolish as _boolish,
     document_archive_pdfs as _document_archive_pdfs_impl,
+    document_archive_root as _document_archive_root,
+    document_files_exist as _document_files_exist,
+    document_index_path as _document_index_path,
+    document_sync_default_dest_root as _document_sync_default_dest_root,
+    document_sync_default_node as _document_sync_default_node,
     document_sync_verification as _document_sync_verification_impl,
+    pdf_stream as _pdf_stream,
+    pdf_text as _pdf_text,
     sync_documents_to_node as _sync_documents_to_node_impl,
 )
 from .discovery import (
@@ -125,7 +133,10 @@ from .service_control import (
     process_cmdline as _process_cmdline_impl,
     restart_chat_service as _restart_chat_service_impl,
     schedule_restart_command as _schedule_restart_command_impl,
+    service_lifecycle_aliases as _service_lifecycle_aliases_impl,
     service_restart_argv as _service_restart_argv_impl,
+    service_status as _service_status_impl,
+    stop_service_pids as _stop_service_pids_impl,
 )
 from .widgets import (
     query_value as _widget_query_value,
@@ -5374,23 +5385,6 @@ def _local_image_ocr(path: str, backend: str | None = None) -> dict:
 
 
 
-def _document_archive_root() -> Path:
-    return Path(os.environ.get("URIRUN_DOCUMENT_DIR", "~/.urirun/documents")).expanduser().resolve()
-
-
-def _document_index_path() -> Path:
-    configured = os.environ.get("URIRUN_DOCUMENT_INDEX")
-    return Path(configured).expanduser().resolve() if configured else _document_archive_root() / "index.json"
-
-
-def _document_sync_default_dest_root() -> str:
-    return os.environ.get("URIRUN_DOCUMENT_SYNC_DEST", "~/Downloads/urirun-scans")
-
-
-def _document_sync_default_node() -> str:
-    return os.environ.get("URIRUN_DOCUMENT_SYNC_NODE", "").strip()
-
-
 def _iter_node_alias_values(value: Any) -> list[str]:
     return _iter_node_alias_values_impl(value)
 
@@ -5809,15 +5803,6 @@ def _save_document_index(index: dict) -> None:
     tmp.replace(path)
 
 
-def _document_files_exist(item: dict) -> bool:
-    """True if the document still has at least one on-disk artifact (PDF or JSON sidecar)."""
-    for key in ("pdfPath", "path", "jsonPath"):
-        value = item.get(key)
-        if value and Path(str(value)).expanduser().is_file():
-            return True
-    return False
-
-
 def _prune_orphaned_documents(index: dict) -> list[dict]:
     """Drop index entries whose PDF and JSON sidecar are both gone from disk.
 
@@ -6055,16 +6040,6 @@ def _document_filename_with_id(filename: str, doc_id: str) -> str:
     if doc_part and doc_part in path.stem:
         return filename
     return f"{path.stem}_{doc_part}{path.suffix or '.pdf'}"
-
-
-def _pdf_text(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode("ascii")
-    text = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-    return text
-
-
-def _pdf_stream(data: bytes) -> bytes:
-    return b"<< /Length " + str(len(data)).encode("ascii") + b" >>\nstream\n" + data + b"\nendstream"
 
 
 def _write_document_pdf(image_path: str | Path, pdf_path: str | Path, *, metadata: dict, ocr_text: str) -> None:
@@ -6709,13 +6684,6 @@ def _supersede_archived_document(*, duplicate: dict, existing_meta: dict, extrac
         if isinstance(item, dict) and item.get("docId") != superseded_of
     ]
     return extracted, month, archive_dir, filename, superseded_of, merged_fields
-
-
-def _archive_month(extracted: dict) -> str:
-    """The YYYY-MM archive bucket from the document's date, or the current month."""
-    if re.match(r"^20\d{2}-\d{2}", str(extracted.get("date", ""))):
-        return str(extracted["date"])[:7]
-    return time.strftime("%Y-%m", time.gmtime())
 
 
 def _existing_document_meta(duplicate: dict) -> dict:
@@ -8015,6 +7983,61 @@ def _uri_action_catalog() -> list[dict]:
             "where": "host dashboard /api/uri/invoke",
         },
         {
+            "uri": "dashboard://host/service/phone-scanner/query/status",
+            "layer": "dashboard", "kind": "query",
+            "label": "Check whether the phone scanner service is running",
+            "sideEffects": [], "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/phone-scanner/command/start",
+            "layer": "dashboard", "kind": "command",
+            "label": "Start the phone scanner service if not already running",
+            "sideEffects": ["service-start", "chat-message", "qr-artifact"],
+            "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/phone-scanner/command/stop",
+            "layer": "dashboard", "kind": "command",
+            "label": "Stop the phone scanner service",
+            "sideEffects": ["service-stop"], "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/chat/query/status",
+            "layer": "dashboard", "kind": "query",
+            "label": "Check whether the chat dashboard service is running",
+            "sideEffects": [], "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/chat/command/start",
+            "layer": "dashboard", "kind": "command",
+            "label": "Start the chat dashboard service if not already running",
+            "sideEffects": ["service-start"], "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/chat/command/stop",
+            "layer": "dashboard", "kind": "command",
+            "label": "Stop the chat dashboard service",
+            "sideEffects": ["service-stop"], "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/android-node/query/status",
+            "layer": "dashboard", "kind": "query",
+            "label": "Check whether the Android/webpage relay service is running",
+            "sideEffects": [], "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/android-node/command/start",
+            "layer": "dashboard", "kind": "command",
+            "label": "Start the Android/webpage relay service if not already running",
+            "sideEffects": ["service-start"], "where": "host dashboard /api/uri/invoke",
+        },
+        {
+            "uri": "dashboard://host/service/android-node/command/stop",
+            "layer": "dashboard", "kind": "command",
+            "label": "Stop the Android/webpage relay service",
+            "sideEffects": ["service-stop"], "where": "host dashboard /api/uri/invoke",
+        },
+        {
             "uri": "document://host/archive/command/sync-to-node",
             "layer": "host",
             "kind": "command",
@@ -8061,16 +8084,10 @@ def _uri_action_lookup(uri: str) -> dict | None:
         "scanner://page/torch": "scanner://page/camera/command/torch",
         "scanner://page/torch-button": "scanner://page/ui/button/torch/command/click",
         "dashboard://host/actions/query/list": "scanner://host/actions/query/list",
-        "dashboard://host/phone-scanner/command/restart": "dashboard://host/service/phone-scanner/command/restart",
-        "service://host/phone-scanner/command/restart": "dashboard://host/service/phone-scanner/command/restart",
-        "service://phone-scanner/command/restart": "dashboard://host/service/phone-scanner/command/restart",
+        **_service_lifecycle_aliases_impl("phone-scanner"),
         "scanner://host/service/command/restart": "dashboard://host/service/phone-scanner/command/restart",
-        "dashboard://host/chat/command/restart": "dashboard://host/service/chat/command/restart",
-        "service://host/chat/command/restart": "dashboard://host/service/chat/command/restart",
-        "service://chat/command/restart": "dashboard://host/service/chat/command/restart",
-        "dashboard://host/android-node/command/restart": "dashboard://host/service/android-node/command/restart",
-        "service://host/android-node/command/restart": "dashboard://host/service/android-node/command/restart",
-        "service://android-node/command/restart": "dashboard://host/service/android-node/command/restart",
+        **_service_lifecycle_aliases_impl("chat"),
+        **_service_lifecycle_aliases_impl("android-node"),
         "webpage://host/service/command/restart": "dashboard://host/service/android-node/command/restart",
         "document://host/archive/sync": "document://host/archive/command/sync-to-node",
         "api://host/node-api/command/request": "configured://host/node-api/command/request",
@@ -8335,6 +8352,51 @@ def _run_inprocess_connector_uri(uri: str, action_payload: dict, db: str | None 
 
 _UNROUTED = object()  # sentinel: _uri_invoke_route matched no built-in route (distinct from a handler returning None)
 
+_SVC_PORT_MAP = {"phone-scanner": 8196, "chat": 8194, "android-node": 8195}
+_SVC_IS_MAP: dict = {}  # populated lazily to avoid circular imports at module load
+
+
+def _svc_port(name: str) -> int:
+    env_key = f"URIRUN_{name.replace('-', '_').upper()}_PORT"
+    return int(os.environ.get(env_key, str(_SVC_PORT_MAP[name])))
+
+
+def _svc_is_map() -> dict:
+    if not _SVC_IS_MAP:
+        _SVC_IS_MAP.update({
+            "phone-scanner": _is_scanner_process_impl,
+            "chat": _is_chat_process_impl,
+            "android-node": _is_android_node_process_impl,
+        })
+    return _SVC_IS_MAP
+
+
+def _service_lifecycle_dispatch(
+    uri: str, project: str, db, config, node_urls, token, identity, payload: dict
+):
+    """Handle query/status, command/start, command/stop for the three named host services."""
+    for svc in _SVC_PORT_MAP:
+        if uri == f"dashboard://host/service/{svc}/query/status":
+            status = _service_status_impl(_svc_port(svc), _svc_is_map()[svc])
+            return {"ok": True, "service": svc, **status}
+        if uri == f"dashboard://host/service/{svc}/command/stop":
+            result = _stop_service_pids_impl(_svc_port(svc), _svc_is_map()[svc])
+            return {"ok": True, "service": svc, **result}
+        if uri == f"dashboard://host/service/{svc}/command/start":
+            status = _service_status_impl(_svc_port(svc), _svc_is_map()[svc])
+            if status["running"]:
+                return {"ok": True, "service": svc, "started": False,
+                        "detail": f"{svc} is already running", **status}
+    if uri == "dashboard://host/service/phone-scanner/command/start":
+        return ensure_phone_scanner_service(project, db, config,
+                                            node_urls=node_urls, token=token, identity=identity)
+    if uri == "dashboard://host/service/chat/command/start":
+        return restart_chat_service(payload, project=project, db=db, config=config,
+                                    node_urls=node_urls, token=token, identity=identity)
+    if uri == "dashboard://host/service/android-node/command/start":
+        return restart_android_node_service(payload)
+    return _UNROUTED
+
 
 def _uri_invoke_route(effective_uri: str, *, project: str, db: str | None, config: str | None,
                       action_payload: dict, node_urls: list[str] | None, token: str | None,
@@ -8380,6 +8442,10 @@ def _uri_invoke_route(effective_uri: str, *, project: str, db: str | None, confi
         )
     if effective_uri == "dashboard://host/service/android-node/command/restart":
         return restart_android_node_service(action_payload)
+    lifecycle = _service_lifecycle_dispatch(effective_uri, project, db, config,
+                                            node_urls, token, identity, action_payload)
+    if lifecycle is not _UNROUTED:
+        return lifecycle
     if effective_uri == "configured://host/node-api/command/request":
         return configured_node_api_request(config, node_urls, action_payload, uri=effective_uri)
     if effective_uri == "configured://host/node-api/query/status":
@@ -10459,6 +10525,20 @@ def _chat_ask_general(
             return _chat_ask_general_capability_gap(
                 db, prompt, execute, selected_nodes, selected_targets, discovered, capability_gap)
         registry = mesh.registry_from_routes(discovered.get("routes") or [])
+        # Proactive check: if specific nodes were targeted but none are reachable, surface a
+        # meaningful early-exit instead of letting make_flow raise "0 safe routes" with a
+        # payload-repair recovery that makes no sense for an offline node.
+        if selected_nodes:
+            reachable_names = {n.get("name") for n in (discovered.get("nodes") or []) if n.get("reachable")}
+            offline = [n for n in selected_nodes if n not in reachable_names]
+            if offline and not reachable_names.intersection(selected_nodes):
+                exc = ValueError(
+                    f"NL flow generated no URI steps. Discovered 0 safe route(s) on node(s) []; "
+                    f"selected {selected_nodes!r}. "
+                    f"Node(s) {offline!r} are offline or unreachable. "
+                    "Check the mesh config or pass --node-url [NAME=]URL. Sample routes: []"
+                )
+                return _chat_ask_general_planner_failure(exc, db, prompt, execute, selected_nodes, selected_targets)
         from urirun.node.twin_store import durable_memory as _durable_memory  # noqa: PLC0415
         twin_memory = _durable_memory() if execute else None
         try:

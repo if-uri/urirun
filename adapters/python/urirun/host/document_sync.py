@@ -2,11 +2,66 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import os
+import re
+import time
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
 from .contracts import file_transfer_verification
+
+
+# --------------------------------------------------------------------------- #
+# Configuration — reads env vars that locate the document archive and sync defaults
+# --------------------------------------------------------------------------- #
+
+def document_archive_root() -> Path:
+    return Path(os.environ.get("URIRUN_DOCUMENT_DIR", "~/.urirun/documents")).expanduser().resolve()
+
+
+def document_index_path() -> Path:
+    configured = os.environ.get("URIRUN_DOCUMENT_INDEX")
+    return Path(configured).expanduser().resolve() if configured else document_archive_root() / "index.json"
+
+
+def document_sync_default_dest_root() -> str:
+    return os.environ.get("URIRUN_DOCUMENT_SYNC_DEST", "~/Downloads/urirun-scans")
+
+
+def document_sync_default_node() -> str:
+    return os.environ.get("URIRUN_DOCUMENT_SYNC_NODE", "").strip()
+
+
+# --------------------------------------------------------------------------- #
+# Pure utilities — no host_dashboard dependencies
+# --------------------------------------------------------------------------- #
+
+def archive_month(extracted: dict) -> str:
+    """The YYYY-MM archive bucket from the document's date, or the current month."""
+    if re.match(r"^20\d{2}-\d{2}", str(extracted.get("date", ""))):
+        return str(extracted["date"])[:7]
+    return time.strftime("%Y-%m", time.gmtime())
+
+
+def pdf_text(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode("ascii")
+    text = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    return text
+
+
+def pdf_stream(data: bytes) -> bytes:
+    return b"<< /Length " + str(len(data)).encode("ascii") + b" >>\nstream\n" + data + b"\nendstream"
+
+
+def document_files_exist(item: dict) -> bool:
+    """True if the document still has at least one on-disk artifact (PDF or JSON sidecar)."""
+    for key in ("pdfPath", "path", "jsonPath"):
+        value = item.get(key)
+        if value and Path(str(value)).expanduser().is_file():
+            return True
+    return False
 
 _DEFAULT_SYNC_TIMEOUT = 120.0
 _MAX_FILE_BYTES = 25_000_000  # 25 MB read-back verification ceiling
