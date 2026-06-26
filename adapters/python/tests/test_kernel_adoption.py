@@ -8,9 +8,17 @@ from __future__ import annotations
 
 import struct
 
+import pytest
+
 from urirun.connectors import backend_registry as registry
 from urirun.connectors.inputs import uinput
-from urirun.connectors.surfaces import cdp
+try:
+    from urirun.connectors.surfaces import cdp
+except ImportError:  # cdp surface extracted to the standalone urirun-cdp package
+    cdp = None
+# This file's checks span the cdp surface; skip them when urirun-cdp isn't installed (e.g. a
+# urirun-only CI checkout). cdp's OWN tests live in urirun-cdp/tests/.
+pytestmark = pytest.mark.skipif(cdp is None, reason="urirun-cdp (cdp surface) not installed")
 
 
 # ─── a whole "mini desktop connector", built ONLY by adopting the kernels ──────────────

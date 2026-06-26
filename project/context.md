@@ -7,10 +7,10 @@
 - **Primary Language**: python
 - **Languages**: python: 142, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1847
+- **Total Functions**: 1854
 - **Total Classes**: 58
 - **Modules**: 202
-- **Entry Points**: 691
+- **Entry Points**: 692
 
 ## Architecture by Module
 
@@ -139,13 +139,6 @@ Main execution flows into the system:
 ### adapters.python.urirun.node.server.NodeHandler._handle_deploy
 - **Calls**: adapters.python.urirun.node.server.read_raw, body.get, print, adapters.python.urirun.node.server.send_json, adapters.python.urirun.node.server.send_json, self._admin_ok, adapters.python.urirun.node.server.send_json, json.loads
 
-### adapters.python.urirun.host.dispatch.inprocess_fallback
-> Call an installed connector URI in-process via the urirun runtime.
-
-Returns None when no connector owns the route (so the caller can raise the
-correct
-- **Calls**: uri.startswith, adapters.python.urirun.host.dispatch._flow_scheme_dispatch, discovery.registry_for_uri, urirun.run, _u.result_data, bool, None.get, urirun.compile_registry
-
 ### adapters.python.urirun.node.reversible._uri_rollback
 > Handler for twin://<node>/flow/command/rollback.
 
@@ -229,6 +222,9 @@ Returns:
 `uploaded` means the remote write acknowledged the file. `verified` means th
 - **Calls**: list, set, set, adapters.python.urirun.host.contracts.verification_check, adapters.python.urirun.host.contracts.verification_check, all, len, len
 
+### adapters.python.urirun.runtime.codegen.gen_command
+- **Calls**: v2.load_registry_arg, getattr, print, adapters.python.urirun.runtime.codegen.proto_from_registry, getattr, None.write_text, None.write_text, print
+
 ## Process Flows
 
 Key execution flows identified:
@@ -272,29 +268,27 @@ _handle_deploy [adapters.python.urirun.node.server.NodeHandler]
   └─ →> send_json
 ```
 
-### Flow 7: inprocess_fallback
-```
-inprocess_fallback [adapters.python.urirun.host.dispatch]
-  └─> _flow_scheme_dispatch
-      └─ →> durable_memory
-```
-
-### Flow 8: _uri_rollback
+### Flow 7: _uri_rollback
 ```
 _uri_rollback [adapters.python.urirun.node.reversible]
   └─ →> rollback_flow
 ```
 
-### Flow 9: _build_cli_parser
+### Flow 8: _build_cli_parser
 ```
 _build_cli_parser [adapters.python.urirun.Connector]
 ```
 
-### Flow 10: _cmd_upgrade
+### Flow 9: _cmd_upgrade
 ```
 _cmd_upgrade [adapters.python.urirun.runtime.v2]
   └─> _resolve_pip_targets
       └─ →> fn
+```
+
+### Flow 10: _handler_worker_main
+```
+_handler_worker_main [adapters.python.urirun.runtime.worker]
 ```
 
 ## Key Classes
@@ -401,15 +395,17 @@ child processes t
 - **Methods**: 3
 - **Key Methods**: adapters.python.urirun.connectors.backend_registry.Backend.missing, adapters.python.urirun.connectors.backend_registry.Backend.platform_ok, adapters.python.urirun.connectors.backend_registry.Backend.available
 
-### adapters.csharp.Urirun.Connector
-- **Methods**: 3
-- **Key Methods**: adapters.csharp.Urirun.Connector.Connector, adapters.csharp.Urirun.Connector.Command, adapters.csharp.Urirun.Connector.BindingsJson
-
 ### adapters.python.urirun.node.reversible.Connector
 > The ADOPTION CONTRACT. A connector enters the engine by providing these three.
 - **Methods**: 3
 - **Key Methods**: adapters.python.urirun.node.reversible.Connector.call, adapters.python.urirun.node.reversible.Connector.scan_uri, adapters.python.urirun.node.reversible.Connector.schema
 - **Inherits**: Protocol
+
+### adapters.python.urirun.node.reversible.ReversibleProcess
+> The engine: execute with the invariant, build the ledger, roll back with proof. It
+knows NO connecto
+- **Methods**: 3
+- **Key Methods**: adapters.python.urirun.node.reversible.ReversibleProcess.execute, adapters.python.urirun.node.reversible.ReversibleProcess.rollback, adapters.python.urirun.node.reversible.ReversibleProcess.rollback_flow
 
 ## Data Transformation Functions
 
@@ -442,6 +438,12 @@ Key functions that process and transform data:
 
 ### adapters.python.urirun.host.host_db._validate_record
 - **Output to**: None.validate, dataset.get, Draft202012Validator
+
+### adapters.python.urirun.host.node_cli._parse_api_json_args
+> Parse ``--api`` JSON strings into a list of dicts.
+
+Returns ``(apis, error_rc)`` where *error_rc* is
+- **Output to**: getattr, apis.append, json.loads, isinstance, reglib._emit_json
 
 ### adapters.python.urirun.host.object_registry._node_add_parse_payload
 > Extract and normalise scalar fields from a node-add payload.
@@ -500,10 +502,6 @@ verify/new/smoke/from-spe
 ### adapters.python.urirun.runtime.cli._add_host_data_subparser
 > `host data` tree (SQLite context: bindings/init/dataset-create/datasets/record-upsert/records).
 - **Output to**: host_sub.add_parser, host_data.add_subparsers, argparse.ArgumentParser, data_common.add_argument, data_sub.add_parser
-
-### adapters.python.urirun.runtime.cli._add_host_monitor_subparser
-> `host monitor` tree (HTTP/DNS/domain monitoring: bindings/http/dns/domain/daily).
-- **Output to**: host_sub.add_parser, host_monitor.add_subparsers, argparse.ArgumentParser, monitor_common.add_argument, monitor_common.add_argument
 
 ## Behavioral Patterns
 
@@ -600,7 +598,6 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.host.connector_admin.connector_install` - 29 calls
 - `adapters.python.urirun.host.chat_orchestrator.chat_ask` - 29 calls
 - `adapters.python.urirun.runtime.adopt_pack.adopt` - 28 calls
-- `adapters.python.urirun.host.dispatch.inprocess_fallback` - 28 calls
 - `adapters.python.urirun.runtime.errors.info` - 27 calls
 - `adapters.python.urirun.runtime._runtime.run` - 27 calls
 - `adapters.python.urirun.connectors.connector_lint.verify_connector` - 27 calls
@@ -609,21 +606,22 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.codegen.proto_from_registry` - 25 calls
 - `adapters.python.urirun.runtime.v2_grpc.main` - 25 calls
 - `adapters.python.urirun.node.server.apply_deploy` - 25 calls
+- `adapters.python.urirun.host.node_cli.watch_command` - 24 calls
 - `adapters.python.urirun.host.object_registry.probe_node_token` - 24 calls
 - `adapters.python.urirun.runtime.v2.run_local_function_subprocess` - 24 calls
 - `adapters.python.urirun.runtime.v2.validate_binding_document` - 24 calls
 - `adapters.python.urirun.connectors.connector_lint.lint_connector` - 24 calls
 - `adapters.python.urirun.connectors.resolver.resolve` - 24 calls
-- `adapters.python.urirun.host.node_cli.watch_command` - 24 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
 - `adapters.python.urirun.host.node_api.configured_api_headers` - 23 calls
 - `adapters.python.urirun.runtime.v1.run` - 23 calls
+- `adapters.python.urirun.host.node_cli.deploy_command` - 22 calls
 - `adapters.python.urirun.host.host_dashboard.serve` - 22 calls
 - `adapters.python.urirun.runtime.errors.problem` - 22 calls
 - `adapters.python.urirun.connectors.resolver.index_local` - 22 calls
 - `adapters.python.urirun.node.doctor.format_doctor_report` - 22 calls
-- `adapters.python.urirun.host.node_cli.deploy_command` - 22 calls
 - `adapters.python.urirun.host.host_db.search_records` - 21 calls
+- `adapters.python.urirun.host.node_cli.probe_command` - 21 calls
 - `adapters.python.urirun.host.dashboard_api.chat_history` - 21 calls
 - `adapters.python.urirun.host.host_dashboard.uri_invoke` - 21 calls
 

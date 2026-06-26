@@ -13,6 +13,7 @@
 # wins, install/fix hints) but for "is the world ready?" rather than "which tool runs the action".
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -113,6 +114,31 @@ def ensure(precondition: str, ctx: dict | None = None, *, auto: bool = True) -> 
     if errors:
         result["attempts"] = errors
     return result
+
+
+_HUMAN_KEYWORDS = ("grant", "permission", "portal", "log in", "login", "authorize", "consent")
+
+
+def need_from_backend_error(message: str, precondition: str = "capture-backend") -> dict | None:
+    """Bridge a ``backend_registry.BackendError`` message into a ready:// acquire item.
+
+    This is the integration that closes the capture class: when every capture backend fails ("no
+    available backend … options: grim (install: grim)" / a Wayland portal grant not given), the
+    connector turns the dead-end into a one-tap readiness NEED — `next: {kind: "acquire"}` with a
+    hint — instead of a silent degraded envelope. A human-gated need (grant/login/permission) is
+    asked once; a missing tool carries its install hint. Returns None when the message has no
+    actionable need (so the caller keeps its own error). Shape matches ``ensure``'s acquire result."""
+    msg = str(message or "").strip()
+    low = msg.lower()
+    human = any(k in low for k in _HUMAN_KEYWORDS)
+    installs = [s.strip() for grp in re.findall(r"install:\s*([^)]+)", msg)
+               for s in grp.split(",") if s.strip()]
+    if not (human or installs or "no available backend" in low or "all backends failed" in low):
+        return None
+    return {"ok": False, "satisfied": False, "precondition": precondition,
+            "next": {"kind": "acquire"},
+            "acquire": {"precondition": precondition, "hint": msg,
+                        "humanGated": human, "install": installs}}
 
 
 def status(precondition: str, ctx: dict | None = None) -> dict:

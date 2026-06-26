@@ -1,12 +1,12 @@
-# redup/duplication | 19 groups | 130f 37619L | 2026-06-26
+# redup/duplication | 19 groups | 130f 37634L | 2026-06-26
 
 SUMMARY:
   files_scanned: 130
-  total_lines:   37619
+  total_lines:   37634
   dup_groups:    19
   dup_fragments: 44
   saved_lines:   148
-  scan_ms:       1052
+  scan_ms:       1072
 
 HOTSPOTS[7] (files with most duplication):
   runtime/v2.py  dup=41L  groups=4  frags=8  (0.1%)
@@ -35,7 +35,7 @@ DUPLICATES[19] (ranked by impact):
       host/service_control.py:236-245  (is_android_node_process)
   [37c319f997d4baa8]   STRU  flow_bindings  L=3 N=4 saved=9 sim=1.00
       node/flow_uri.py:84-86  (flow_bindings)
-      node/preconditions.py:186-188  (ready_bindings)
+      node/preconditions.py:212-214  (ready_bindings)
       node/skill.py:238-240  (skill_bindings)
       node/skill.py:243-245  (session_bindings)
   [c0959dfe39e9f547]   STRU  _api_checks  L=8 N=2 saved=8 sim=1.00

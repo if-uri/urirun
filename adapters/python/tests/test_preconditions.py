@@ -93,5 +93,28 @@ class ReadyURIHandlerTests(unittest.TestCase):
         self.assertIsInstance(P.ready_bindings(), dict)
 
 
+class BackendErrorBridgeTests(unittest.TestCase):
+    """need_from_backend_error: a BackendError → a one-tap ready acquire item (closes capture)."""
+
+    def test_human_gated_grant(self):
+        r = P.need_from_backend_error(
+            "no available backend for 'capture' on linux-wayland; options: portal (grant: screen-capture permission)")
+        self.assertEqual(r["next"], {"kind": "acquire"})
+        self.assertTrue(r["acquire"]["humanGated"])
+
+    def test_missing_tool_carries_install_hint(self):
+        r = P.need_from_backend_error("no available backend for 'capture' on linux; options: grim (install: grim)")
+        self.assertFalse(r["acquire"]["humanGated"])
+        self.assertEqual(r["acquire"]["install"], ["grim"])
+
+    def test_all_backends_failed_is_actionable(self):
+        self.assertEqual(P.need_from_backend_error("all backends failed for 'capture': portal denied")["next"],
+                         {"kind": "acquire"})
+
+    def test_non_actionable_returns_none(self):
+        self.assertIsNone(P.need_from_backend_error("some unrelated runtime error"))
+        self.assertIsNone(P.need_from_backend_error(""))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,8 @@
-# urirun | 1847 func | 124f | 43461L | python | 2026-06-26
+# urirun | 1854 func | 124f | 43476L | python | 2026-06-26
 # generated in 0.00s
 
 HEALTH:
-  CC̄=4.7  critical=235 (limit:10)  dup=2  cycles=0
+  CC̄=4.7  critical=236 (limit:10)  dup=2  cycles=0
 
 ALERTS[20]:
   !!! high_fan_out     summary = 30 (limit:10)
@@ -12,16 +12,16 @@ ALERTS[20]:
   !!! high_fan_out     _build_parser = 25 (limit:10)
   !!! high_fan_out     main = 25 (limit:10)
   !!! high_fan_out     NodeHandler._handle_run = 24 (limit:10)
+  !!! high_fan_out     _run_streamed = 23 (limit:10)
   !!! high_fan_out     _add_host_task_subparser = 23 (limit:10)
   !!! high_fan_out     main = 23 (limit:10)
-  !!! high_fan_out     _run_streamed = 23 (limit:10)
 
 MODULES[203] (top by size):
   M[adapters/python/urirun/host/html_templates.py] 4916L C:0 F:3 CC↑6 D:0 (python)
   M[adapters/python/urirun/runtime/v2.py] 2018L C:2 F:119 CC↑14 D:4 (python)
   M[adapters/python/urirun/host/host_dashboard.py] 1822L C:0 F:85 CC↑14 D:1 (python)
   M[planfile.yaml] 1319L C:0 F:0 CC↑0 D:0 (yaml)
-  M[adapters/python/urirun/node/server.py] 996L C:3 F:55 CC↑14 D:2 (python)
+  M[adapters/python/urirun/node/server.py] 996L C:3 F:55 CC↑14 D:3 (python)
   M[adapters/python/urirun/node/flow.py] 993L C:0 F:41 CC↑15 D:7 (python)
   M[adapters/python/urirun/host/object_registry.py] 981L C:0 F:46 CC↑14 D:0 (python)
   M[adapters/python/urirun/host/chat_orchestrator.py] 950L C:1 F:24 CC↑18 D:0 (python)
@@ -42,11 +42,11 @@ HOTSPOTS[10]:
   ★ _build_parser fan=25  // Orchestrates 25 calls
 
 REFACTOR[15]:
-  [1] H/H Split god module adapters/python/urirun/node/flow_thin.py (542L, 1 classes)
-  [2] H/H Split god module adapters/python/urirun/host/chat_orchestrator.py (950L, 1 classes)
-  [3] H/H Split god module adapters/python/urirun/runtime/_runtime.py (593L, 1 classes)
-  [4] H/H Split god module adapters/python/urirun/host/node_cli.py (899L, 0 classes)
-  [5] H/H Split god module adapters/python/urirun/node/flow.py (993L, 0 classes)
+  [1] H/H Split god module adapters/python/urirun/host/chat_orchestrator.py (950L, 1 classes)
+  [2] H/H Split god module adapters/python/urirun/runtime/_runtime.py (593L, 1 classes)
+  [3] H/H Split god module adapters/python/urirun/host/node_cli.py (899L, 0 classes)
+  [4] H/H Split god module adapters/python/urirun/node/flow.py (993L, 0 classes)
+  [5] H/H Split god module adapters/python/urirun/node/flow_planner.py (696L, 0 classes)
 
 EVOLUTION:
-  2026-06-26 CC̄=4.7 crit=235 43461L // Automated analysis
+  2026-06-26 CC̄=4.7 crit=236 43476L // Automated analysis
