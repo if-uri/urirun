@@ -248,6 +248,85 @@
             height: 130px;
         }
 
+        .flows-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .flows-header {
+            padding: 8px 15px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .flows-header:hover { background: rgba(6,182,212,0.05); }
+
+        .flows-header-title {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.75rem;
+        }
+
+        .flows-header-count {
+            color: var(--cyan-inverse);
+            font-size: 0.75rem;
+        }
+
+        .flows-body {
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+
+        .flows-body.collapsed { display: none; }
+
+        .flow-row {
+            padding: 4px 15px;
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+            border-bottom: 1px solid rgba(30,41,59,0.5);
+        }
+
+        .flow-row:last-child { border-bottom: none; }
+
+        .flow-ts {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .flow-prompt {
+            color: var(--amber-forward);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .flow-meta {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .flows-empty {
+            padding: 10px 15px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
         .telemetry-row {
             display: flex;
             gap: 20px;
@@ -394,6 +473,16 @@
                 <span style="font-size: 0.8rem; color: var(--text-muted)">TIMELINE (Rollback/History):</span>
                 <input type="range" min="0" max="0" value="0" class="timeline-slider" id="timelineSlider">
                 <span id="timelinePos" style="font-size: 0.8rem; width: 40px; text-align: right">0/0</span>
+            </div>
+        </div>
+
+        <div class="flows-panel" id="flowsPanel">
+            <div class="flows-header" id="flowsToggle">
+                <span class="flows-header-title">&#128190; Known-Good Flows</span>
+                <span class="flows-header-count" id="flowsCount">loading...</span>
+            </div>
+            <div class="flows-body collapsed" id="flowsBody">
+                <div class="flows-empty" id="flowsEmpty" style="display:none">No known-good flows yet. Run a flow with execute=true to record one.</div>
             </div>
         </div>
     </div>
@@ -785,6 +874,7 @@
                         applyEvent(ev);
                         updateSlider();
                         updateUrlState();
+                        if (ev.flowCompleted) loadFlows();
                     } catch (err) {
                         console.error('Invalid twin frame:', e.data);
                     }
@@ -831,6 +921,60 @@
                 renderMonitors(mapAfter, ev.transition.after, true);
             }
         });
+
+        // ─── Known-Good Flows panel ─────────────────────────────────────────────
+        const flowsToggle = document.getElementById('flowsToggle');
+        const flowsBody = document.getElementById('flowsBody');
+        const flowsCount = document.getElementById('flowsCount');
+        const flowsEmpty = document.getElementById('flowsEmpty');
+        let flowsCollapsed = true;
+
+        flowsToggle.addEventListener('click', () => {
+            flowsCollapsed = !flowsCollapsed;
+            flowsBody.classList.toggle('collapsed', flowsCollapsed);
+        });
+
+        function _fmtTs(ts) {
+            if (!ts) return '';
+            try {
+                const d = new Date(ts);
+                return d.toLocaleString(undefined, {month:'short', day:'numeric',
+                    hour:'2-digit', minute:'2-digit'});
+            } catch { return ts.slice(0, 16).replace('T', ' '); }
+        }
+
+        function renderFlows(flows) {
+            const old = flowsBody.querySelectorAll('.flow-row');
+            old.forEach(el => el.remove());
+            if (!flows || flows.length === 0) {
+                flowsEmpty.style.display = '';
+                flowsCount.innerText = '0 flows';
+                return;
+            }
+            flowsEmpty.style.display = 'none';
+            flowsCount.innerText = `${flows.length} flow${flows.length === 1 ? '' : 's'}`;
+            flows.slice(0, 20).forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'flow-row';
+                const steps = (f.steps || []).length;
+                const nodes = (f.nodes || []).join(', ') || '—';
+                row.innerHTML =
+                    `<span class="flow-ts">${_fmtTs(f.ts)}</span>` +
+                    `<span class="flow-prompt" title="${(f.prompt||'').replace(/"/g,'&quot;')}">${f.prompt || '(no prompt)'}</span>` +
+                    `<span class="flow-meta">${steps}s · ${nodes}</span>`;
+                flowsBody.appendChild(row);
+            });
+        }
+
+        function loadFlows() {
+            fetch('/api/twin/flows?limit=20')
+                .then(r => r.ok ? r.json() : null)
+                .then(d => { if (d) renderFlows(d.flows); })
+                .catch(() => { flowsCount.innerText = 'unavailable'; });
+        }
+
+        // Load once on init, refresh after each live SSE event
+        loadFlows();
 
         // Initialize from URL or load DEMO
         setTimeout(() => {

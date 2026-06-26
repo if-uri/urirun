@@ -318,17 +318,27 @@ CC fix: `node/doctor.py::_check_api` was CC=16 — extracted `_parse_non_http_ad
 - Add authenticated host callback registration for webpage nodes so opening the
   page can persist the node in the host mesh without a manual "save as node"
   click.
-- **Fleet discipline — Phase F (fleet now ~37 connectors, needs different hygiene
-  than a single project):**
-  1. Extend `test_kernel_adoption` across the whole fleet — a contract test that
-     fails in CI when *any* connector calls a symbol absent from
-     `surfaces.cdp`/`backend_registry`/`inputs.uinput`. At 37 connectors, this
-     is not optional; it is the seam-guard against gen-50 style regressions
-     (`cdp._evaluate→cdp.evaluate` class).
-  2. `connector_scaffold` (413 L) generates a connector that *imports* kernel
-     modules, not one that duplicates infrastructure — every new connector starts
-     small by construction.
-  3. `connector_lint` (602 L) wired as fleet-wide CI gate.
+
+## Landed (2026-06-26): Fleet discipline Phase F — kernel symbol gate
+
+**`lint_kernel_symbols(pkg_dir) → {ok, violations, scanned}` (2026-06-26):**
+Static AST scan added to `urirun.connectors.connector_lint`. Walks every `.py` file
+in a connector package and cross-checks all `from urirun.connectors.surfaces.cdp import X`
+and `cdp.X` attribute-access patterns against the frozen public contract in
+`_KERNEL_CONTRACTS`. Same check for `backend_registry` and `inputs.uinput`.
+
+**Fleet clean:** 0 violations across all 35 `urirun-connector-*` repos.
+
+**7 new unit tests** in `test_kernel_adoption.py`:
+- `test_lint_kernel_symbols_clean_connector_ok` — no kernel import → ok
+- `test_lint_kernel_symbols_bad_direct_import_caught` — `from cdp import _evaluate` → violation
+- `test_lint_kernel_symbols_bad_attribute_access_caught` — `cdp._evaluate()` → violation
+- `test_lint_kernel_symbols_good_attribute_access_passes` — `cdp.evaluate()` → ok
+- `test_lint_kernel_symbols_backend_registry_checked` — `from backend_registry import _internal_fn` → violation
+- `test_lint_kernel_symbols_kvm_connector_is_clean` — kvm repo scan → passes
+- `test_fleet_kernel_symbols_all_connectors_clean` — all 35 connectors → 0 violations (skips in CI)
+
+**1040 passed, CC gate OK.**
 
 P2:
 

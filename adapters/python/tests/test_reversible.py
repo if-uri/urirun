@@ -338,6 +338,47 @@ class PlannerContextTests(unittest.TestCase):
         c = planner_context("lap", drifted, memory=m)
         self.assertTrue(any("DRIFTED" in g for g in c["guidance"]))
 
+    def test_planner_context_exposes_action_matrix(self):
+        """actionMatrix from profile flows into facts so the LLM sees per-action executability."""
+        matrix = {
+            "cdp":    {"locate": "executable", "click": "executable", "type": "executable",
+                       "navigate": "executable", "screenshot": "executable"},
+            "atspi":  {"locate": "executable", "click": "executable", "type": "not_executable",
+                       "navigate": "not_applicable", "screenshot": "not_applicable"},
+            "uinput": {"locate": "not_applicable", "click": "executable", "type": "not_executable",
+                       "navigate": "not_applicable", "screenshot": "blocked"},
+            "vision": {"locate": "degraded", "click": "degraded", "type": "not_applicable",
+                       "navigate": "not_applicable", "screenshot": "blocked"},
+        }
+        prof = {**self.CDP, "actionMatrix": matrix, "wayland": True}
+        ctx = planner_context("lap", prof)
+        self.assertEqual(ctx["facts"]["actionMatrix"], matrix)
+
+    def test_planner_context_wayland_type_rule_in_guidance(self):
+        """When actionMatrix marks atspi/uinput type as not_executable, guidance must ban them."""
+        matrix = {
+            "cdp":    {"locate": "executable", "click": "executable", "type": "executable",
+                       "navigate": "executable", "screenshot": "executable"},
+            "atspi":  {"locate": "executable", "click": "executable", "type": "not_executable",
+                       "navigate": "not_applicable", "screenshot": "not_applicable"},
+            "uinput": {"locate": "not_applicable", "click": "executable", "type": "not_executable",
+                       "navigate": "not_applicable", "screenshot": "blocked"},
+            "vision": {"locate": "not_applicable", "click": "not_applicable", "type": "not_applicable",
+                       "navigate": "not_applicable", "screenshot": "not_applicable"},
+        }
+        prof = {**self.CDP, "actionMatrix": matrix}
+        ctx = planner_context("lap", prof)
+        type_rule = [g for g in ctx["guidance"] if "TYPE" in g and "NOT EXECUTABLE" in g]
+        self.assertTrue(type_rule, "guidance must contain a TYPE ban when atspi/uinput type=not_executable")
+        self.assertIn("atspi", type_rule[0])
+        self.assertIn("uinput", type_rule[0])
+
+    def test_planner_context_no_type_rule_when_matrix_absent(self):
+        """Without actionMatrix, no spurious type-ban guidance is emitted."""
+        ctx = planner_context("lap", self.CDP)
+        type_rule = [g for g in ctx["guidance"] if "TYPE" in g and "NOT EXECUTABLE" in g]
+        self.assertFalse(type_rule, "no type-ban when actionMatrix is absent")
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -374,4 +415,5 @@ class PlausibilityTests(unittest.TestCase):
         ctx = planner_context("lap", {"controllable": True, "best": "atspi", "osLevelReliable": False})
         self.assertEqual(ctx["confidence"]["level"], "verify")
         self.assertTrue(any("confidence is 'verify'" in g for g in ctx["guidance"]))
+
 

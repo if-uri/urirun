@@ -372,6 +372,117 @@ def lint_connector(pkg_dir: str | Path) -> dict:
     }
 
 
+# ─── Kernel symbol contract ──────────────────────────────────────────────────
+# Public symbols each kernel module exports. Static: updated here whenever the
+# kernel contract changes (test_kernel_adoption.py is the canonical source).
+_KERNEL_CONTRACTS: dict[str, frozenset[str]] = {
+    "urirun.connectors.surfaces.cdp": frozenset({
+        "configure", "endpoint", "reachable", "navigate", "page_ready",
+        "evaluate", "CdpError", "command", "nav_history", "current_url",
+        "read_scroll", "write_scroll", "read_forms", "write_forms",
+        "read_storage",
+        # private symbols intentionally used by shim layers:
+        "_pages",
+    }),
+    "urirun.connectors.backend_registry": frozenset({
+        "configure", "current_platform", "have_bin", "have_mod",
+        "BackendError", "Backend", "backend", "dispatch", "registry_report",
+    }),
+    "urirun.connectors.inputs.uinput": frozenset({
+        "configure", "calib_from_env", "uinput_available", "compute_abs",
+        "abs_click",
+    }),
+}
+
+
+def _collect_kernel_imports(tree: ast.Module) -> dict[str, str]:
+    """Map local alias → kernel module path for all kernel-module imports.
+
+    ``from urirun.connectors.surfaces.cdp import evaluate`` → ``{"evaluate": "...cdp"}``
+    ``import urirun.connectors.surfaces.cdp as cdp`` → ``{"cdp": "...cdp"}``
+    """
+    mapping: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if mod in _KERNEL_CONTRACTS:
+                for alias in node.names:
+                    local = alias.asname or alias.name
+                    mapping[local] = mod
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name in _KERNEL_CONTRACTS:
+                    local = alias.asname or alias.name.split(".")[-1]
+                    mapping[local] = alias.name
+    return mapping
+
+
+def _kernel_attribute_accesses(tree: ast.Module, kernel_aliases: dict[str, str]) -> list[tuple[str, str, int]]:
+    """Walk the AST and yield (alias, attr, lineno) for every ``alias.attr`` where
+    ``alias`` maps to a kernel module. Catches ``cdp.foo``, ``backend.foo``, etc."""
+    results = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            name = node.value.id
+            if name in kernel_aliases:
+                results.append((name, node.attr, node.lineno))
+    return results
+
+
+def _kernel_direct_imports(tree: ast.Module) -> list[tuple[str, str, int]]:
+    """Yield (module, name, lineno) for 'from kernel_mod import name' forms."""
+    results = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if mod in _KERNEL_CONTRACTS:
+                for alias in node.names:
+                    results.append((mod, alias.name, node.lineno))
+    return results
+
+
+def lint_kernel_symbols(pkg_dir: str | Path) -> dict:
+    """Static-scan a connector package for calls to kernel symbols absent from the contract.
+
+    Returns ``{"violations": [...], "ok": bool}`` where each violation is
+    ``{file, line, module, symbol, reason}``. Safe against connectors that don't
+    import any kernel module — they return ``{"violations": [], "ok": True}``."""
+    root = Path(pkg_dir)
+    violations: list[dict] = []
+    py_files = _connector_py_files(root)
+    for path in py_files:
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+            tree = ast.parse(source, filename=str(path))
+        except SyntaxError:
+            continue
+        # Direct 'from kernel import name' — check the name is in contract
+        for mod, name, lineno in _kernel_direct_imports(tree):
+            contract = _KERNEL_CONTRACTS.get(mod, frozenset())
+            if name not in contract:
+                violations.append({
+                    "file": str(path.relative_to(root)),
+                    "line": lineno,
+                    "module": mod,
+                    "symbol": name,
+                    "reason": "symbol absent from kernel contract",
+                })
+        # 'import kernel as alias; alias.attr' — check attr is in contract
+        aliases = _collect_kernel_imports(tree)
+        for alias, attr, lineno in _kernel_attribute_accesses(tree, aliases):
+            mod = aliases[alias]
+            contract = _KERNEL_CONTRACTS.get(mod, frozenset())
+            if attr not in contract:
+                violations.append({
+                    "file": str(path.relative_to(root)),
+                    "line": lineno,
+                    "module": mod,
+                    "symbol": attr,
+                    "reason": "attribute access on kernel module not in contract",
+                })
+    return {"ok": not violations, "violations": violations, "scanned": len(py_files)}
+
+
 def _desired_machine_fields(code_routes: list[dict]) -> dict:
     """The manifest machine fields a connector's decorator routes should project to."""
     routes = sorted({r["uri"] for r in code_routes})

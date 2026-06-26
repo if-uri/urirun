@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2026-06-26
+
+### Fixed
+- Fix string-concat issues (ticket-3145ffbd)
+
 ## [0.1.10] - 2026-06-24
 
 ### Fixed
@@ -190,6 +195,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expose their schema too. See `examples/28-llm-novnc-desktop` (an LLM drives a noVNC
   Docker desktop from an NL intent; the desktop driver is a *connector*, the schema in
   the action space is the only core change).
+
+## [0.4.157] - 2026-06-26
+
+### Docs
+- Update README.md
+- Update SUMD.md
+- Update SUMR.md
+- Update TODO.md
+- Update docs/REFACTOR_ROADMAP.md
+- Update project/README.md
+- Update project/context.md
+
+### Other
+- Update adapters/python/tests/test_flow.py
+- Update adapters/python/tests/test_flow_twin.py
+- Update adapters/python/tests/test_host_integrations.py
+- Update adapters/python/tests/test_kernel_adoption.py
+- Update adapters/python/tests/test_refactor_helpers.py
+- Update adapters/python/tests/test_reversible.py
+- Update adapters/python/tests/test_server.py
+- Update adapters/python/tests/test_version.py
+- Update adapters/python/urirun/connectors/connector_lint.py
+- Update adapters/python/urirun/host/host_dashboard.py
+- ... and 23 more files
 
 ## [0.4.156] - 2026-06-26
 

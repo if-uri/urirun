@@ -202,3 +202,117 @@ def test_fetch_planner_environments_threads_memory_into_planner_context(monkeypa
     F.fetch_planner_environments(["laptop"], {}, memory=mem)
     assert len(received_memory) == 1
     assert received_memory[0] is mem          # the same memory object was threaded through
+
+
+# ─── remember_known_good_flow wiring ────────────────────────────────────────
+
+def test_execute_flow_remembers_flow_on_success(monkeypatch):
+    """After a successful execute_flow, the flow sequence is stored in memory.flow_store."""
+    def _call(uri, payload, registry, mode="execute"):
+        if "env/query/profile" in uri:
+            return {"ok": True, "result": {"value": _profile()}}
+        return {"ok": True, "result": {"value": {"ok": True}}}
+    monkeypatch.setattr(F.v2_service, "call", _call)
+    mem = TwinMemory()
+    result = F.execute_flow(_flow(), _mesh(), {}, execute=True, recover=False, memory=mem)
+    assert result["ok"]
+    # flow_store must have exactly one entry (the completed flow)
+    flows = mem.known_good_flows()
+    assert len(flows) == 1
+    rec = flows[0]
+    assert rec["ok"] is True
+    assert len(rec["steps"]) == 1
+    assert "s1" == rec["steps"][0]["id"]
+
+
+def test_execute_flow_does_not_remember_on_failure(monkeypatch):
+    """A failed flow must NOT be added to flow_store."""
+    def _call(uri, payload, registry, mode="execute"):
+        if "env/query/profile" in uri:
+            return {"ok": True, "result": {"value": _profile()}}
+        return {"ok": False, "error": "injected", "result": {"value": {"ok": False}}}
+    monkeypatch.setattr(F.v2_service, "call", _call)
+    mem = TwinMemory()
+    result = F.execute_flow(_flow(), _mesh(), {}, execute=True, recover=False,
+                            rollback_on_failure=False, memory=mem)
+    assert not result["ok"]
+    assert mem.known_good_flows() == []
+
+
+def test_execute_flow_remember_flow_key_is_uri_stable(monkeypatch):
+    """Two flows with the same URI sequence but different payloads share one flow_store slot."""
+    def _call(uri, payload, registry, mode="execute"):
+        if "env/query/profile" in uri:
+            return {"ok": True, "result": {"value": _profile()}}
+        return {"ok": True, "result": {"value": {"ok": True}}}
+    monkeypatch.setattr(F.v2_service, "call", _call)
+    mem = TwinMemory()
+    flow_a = {"steps": [{"id": "s1", "uri": "kvm://laptop/cdp/page/command/navigate",
+                          "payload": {"url": "https://linkedin.com"}}]}
+    flow_b = {"steps": [{"id": "s1", "uri": "kvm://laptop/cdp/page/command/navigate",
+                          "payload": {"url": "https://github.com"}}]}
+    F.execute_flow(flow_a, _mesh(), {}, execute=True, recover=False, memory=mem)
+    F.execute_flow(flow_b, _mesh(), {}, execute=True, recover=False, memory=mem)
+    # Same URI → same key → one slot (second overwrites first)
+    assert len(mem.known_good_flows()) == 1
+
+
+def test_execute_flow_no_memory_is_noop_for_flow_store(monkeypatch):
+    """When memory=None, execute_flow does not crash and flow_store is not touched."""
+    def _call(uri, payload, registry, mode="execute"):
+        return {"ok": True, "result": {"value": {"ok": True}}}
+    monkeypatch.setattr(F.v2_service, "call", _call)
+    result = F.execute_flow(_flow(), _mesh(), {}, execute=True, recover=False, memory=None)
+    assert result["ok"]   # no AttributeError or crash
+
+
+# ─── suggest_recall ──────────────────────────────────────────────────────────
+
+def test_suggest_recall_returns_none_when_flow_not_remembered():
+    mem = TwinMemory()
+    assert F.suggest_recall(_flow(), mem) is None
+
+
+def test_suggest_recall_returns_record_after_successful_run(monkeypatch):
+    def _call(uri, payload, registry, mode="execute"):
+        if "env/query/profile" in uri:
+            return {"ok": True, "result": {"value": _profile()}}
+        return {"ok": True, "result": {"value": {"ok": True}}}
+    monkeypatch.setattr(F.v2_service, "call", _call)
+    mem = TwinMemory()
+    F.execute_flow(_flow(), _mesh(), {}, execute=True, recover=False, memory=mem)
+    rec = F.suggest_recall(_flow(), mem)
+    assert rec is not None
+    assert rec["ok"] is True
+    assert len(rec["steps"]) == 1
+
+
+def test_suggest_recall_same_uris_different_payloads_hits_same_slot(monkeypatch):
+    """suggest_recall is payload-agnostic: same URI sequence = same key."""
+    def _call(uri, payload, registry, mode="execute"):
+        if "env/query/profile" in uri:
+            return {"ok": True, "result": {"value": _profile()}}
+        return {"ok": True, "result": {"value": {"ok": True}}}
+    monkeypatch.setattr(F.v2_service, "call", _call)
+    mem = TwinMemory()
+    flow_a = {"steps": [{"id": "s1", "uri": "kvm://laptop/cdp/page/command/navigate",
+                          "payload": {"url": "https://linkedin.com"}}]}
+    flow_b = {"steps": [{"id": "s1", "uri": "kvm://laptop/cdp/page/command/navigate",
+                          "payload": {"url": "https://github.com"}}]}
+    F.execute_flow(flow_a, _mesh(), {}, execute=True, recover=False, memory=mem)
+    # flow_b has same URI → same key → recall hits
+    assert F.suggest_recall(flow_b, mem) is not None
+
+
+def test_suggest_recall_different_uri_sequence_returns_none(monkeypatch):
+    def _call(uri, payload, registry, mode="execute"):
+        if "env/query/profile" in uri:
+            return {"ok": True, "result": {"value": _profile()}}
+        return {"ok": True, "result": {"value": {"ok": True}}}
+    monkeypatch.setattr(F.v2_service, "call", _call)
+    mem = TwinMemory()
+    F.execute_flow(_flow(), _mesh(), {}, execute=True, recover=False, memory=mem)
+    # Completely different URI → different key → no recall
+    other_flow = {"steps": [{"id": "s1", "uri": "fs://laptop/file/command/write",
+                              "payload": {}}]}
+    assert F.suggest_recall(other_flow, mem) is None

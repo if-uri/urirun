@@ -13,6 +13,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from urirun.node.flow import json_from_text as _json_from_text
+
 
 _MAX_SHORT_NAME_LEN = 72
 _SHORT_NAME_TRUNCATE_LEN = 69
@@ -82,17 +84,7 @@ class TaskPlanningResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-def _json_from_text(text: str) -> dict:
-    stripped = text.strip()
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", stripped, re.S)
-    if fenced:
-        stripped = fenced.group(1)
-    elif not stripped.startswith("{"):
-        start = stripped.find("{")
-        end = stripped.rfind("}")
-        if start >= 0 and end > start:
-            stripped = stripped[start : end + 1]
-    return json.loads(stripped)
+
 
 
 def is_ambiguous(prompt: str) -> bool:

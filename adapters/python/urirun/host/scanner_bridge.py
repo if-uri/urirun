@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
+import re
 import threading
 import time
 import unicodedata
@@ -897,3 +899,144 @@ def orientation_summary(crop: dict) -> dict:
         "rotated": bool(o.get("rotated")),
         "score": o.get("score"),
     }
+
+
+# --------------------------------------------------------------------------- #
+# Capture pipeline — pure helpers and state-touching best-finish utilities
+# --------------------------------------------------------------------------- #
+
+def decode_capture_image(raw_image: str) -> tuple[str, bytes, str, str]:
+    """Parse a ``data:image/*;base64`` payload into (mime, raw_bytes, sha256, file_ext)."""
+    match = re.match(r"^data:(image/[a-zA-Z0-9.+-]+);base64,(.+)$", raw_image, re.S)
+    if not match:
+        raise ValueError("image must be a data:image/*;base64 payload")
+    mime, encoded = match.group(1), match.group(2)
+    raw = base64.b64decode(encoded.encode("ascii"), validate=False)
+    digest = hashlib.sha256(raw).hexdigest()
+    ext = ".jpg" if mime in {"image/jpeg", "image/jpg"} else ".png" if mime == "image/png" else ".bin"
+    return mime, raw, digest, ext
+
+
+def capture_quality_ok(payload: dict, quality: dict, min_score: float) -> bool:
+    return bool(payload.get("force")) or (
+        float(quality.get("score") or 0.0) >= min_score and bool(quality.get("documentLike"))
+    )
+
+
+def capture_display_path(crop: dict, path: Path) -> Path:
+    return Path(crop["path"]) if crop.get("ok") and crop.get("path") else path
+
+
+def cleanup_duplicate_scan_files(paths: list) -> list[str]:
+    try:
+        staging = scanner_staging_dir()
+    except Exception:  # noqa: BLE001
+        return []
+    removed: list[str] = []
+    seen: set[str] = set()
+    for raw in paths:
+        if not raw:
+            continue
+        try:
+            target = Path(str(raw)).expanduser().resolve()
+        except Exception:  # noqa: BLE001
+            continue
+        key = str(target)
+        if key in seen:
+            continue
+        seen.add(key)
+        if staging not in target.parents:
+            continue
+        try:
+            target.unlink(missing_ok=True)
+            removed.append(str(target))
+        except Exception:  # noqa: BLE001
+            pass
+    return removed
+
+
+def resolve_best_candidate(series: dict) -> dict | None:
+    best = series.get("best")
+    if isinstance(best, dict):
+        return best
+    candidates = [item for item in series.get("candidates", []) if isinstance(item, dict)]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: float((item.get("quality") or {}).get("score") or 0.0))
+
+
+def best_quality_rejected(payload: dict, quality: dict) -> tuple[bool, float]:
+    min_score = float(payload.get("minScore") if payload.get("minScore") is not None else 45.0)
+    rejected = not payload.get("force") and (
+        float(quality.get("score") or 0.0) < min_score or not quality.get("documentLike")
+    )
+    return rejected, min_score
+
+
+def best_candidate_paths(best: dict) -> tuple[Path, Path]:
+    return (
+        Path(str(best.get("originalPath") or "")).expanduser().resolve(),
+        Path(str(best.get("displayPath") or "")).expanduser().resolve(),
+    )
+
+
+def best_crop_and_ocr(best: dict) -> tuple[dict, dict]:
+    crop = best.get("crop") if isinstance(best.get("crop"), dict) else {}
+    ocr = best.get("ocr") if isinstance(best.get("ocr"), dict) else {}
+    return crop, ocr
+
+
+def best_series_not_found(series_id: str) -> dict:
+    ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    with SCANNER_BEST_LOCK:
+        SCANNER_LIVE_STREAMS[series_id] = {
+            "seriesId": series_id,
+            "createdAt": ts,
+            "updatedAt": ts,
+            "status": "failed",
+            "count": 0,
+            "best": None,
+            "candidates": [],
+            "error": "scanner best series not found",
+            "document": {},
+            "artifact": None,
+        }
+    return {"ok": False, "error": "scanner best series not found", "seriesId": series_id}
+
+
+def store_best_finish(series: dict, series_id: str, best: dict, document: dict, registered: dict) -> None:
+    with SCANNER_BEST_LOCK:
+        series["best"] = best
+        series["document"] = document
+        series["artifact"] = registered["documentArtifact"] or registered["artifact"]
+        scanner_live_store_locked(
+            series_id,
+            series,
+            status="accepted" if document.get("ok") else "failed",
+            error=None if document.get("ok") else str(document.get("error") or "document archive failed"),
+            document=document,
+            artifact=registered["documentArtifact"] or registered["artifact"],
+        )
+
+
+def best_finish_store_failure(
+    series_id: str,
+    series: dict,
+    *,
+    status: str,
+    error: str,
+    best: dict | None = None,
+    project: str = "",
+    extra: dict | None = None,
+    preview_url: Callable[[str, str], str | None] | None = None,
+) -> dict:
+    with SCANNER_BEST_LOCK:
+        if best is not None:
+            series["best"] = best
+        scanner_live_store_locked(series_id, series, status=status, error=error)
+    result: dict = {"ok": False, "error": error, "seriesId": series_id}
+    if best is not None:
+        result["best"] = scanner_public_candidate_for_live(best, project, preview_url=preview_url) if preview_url else public_scanner_candidate(best)
+    if extra:
+        result.update(extra)
+    return result

@@ -482,8 +482,14 @@ def llm_flow(prompt: str, routes: list[dict], nodes: list[dict],
                 "Always add explicit validation steps (e.g., using 'ui/query/verify', 'cdp/page/query/ready', or evaluating page state) after actions to confirm success before proceeding. "
                 # Concrete-state grounding: when an 'environments' field is present it is the LIVE
                 # capability profile + foreground surface of each node — GROUND your steps on it:
-                "honour each node's 'bestSurface' and 'guidance', use the foreground page's REAL "
-                "on-screen labels (its language), and refuse UI steps where controllable is false."
+                "honour each node's 'bestSurface' and ALL items in its 'guidance' list (they are "
+                "hard environment rules, not suggestions — e.g. if guidance says TYPE via atspi/uinput "
+                "is NOT EXECUTABLE, NEVER emit a fill/type step via those surfaces). "
+                "Check 'actionMatrix' per node: if an action's value for a surface is 'not_executable' "
+                "or 'blocked', do NOT plan that action on that surface — use the surface where the same "
+                "action is 'executable' instead (e.g. type → cdp only). "
+                "Use the foreground page's REAL on-screen labels (its language), "
+                "and refuse UI steps where controllable is false."
             ),
         },
         {
@@ -818,6 +824,15 @@ def _kvm_targets(flow: dict) -> list[str]:
     return seen
 
 
+def suggest_recall(flow: dict, memory: TwinMemory) -> dict | None:
+    """Return the remembered known-good record for this flow's URI sequence, or None.
+
+    Callers use this to offer a "replay known-good" path: if the LLM would produce the
+    same step URIs, the remembered execution can be shown to the user or replayed without
+    an LLM round-trip. Returns None when no memory exists for this key (novel plan)."""
+    return memory.recall_flow(_flow_key(flow))
+
+
 def _flow_key(flow: dict) -> str:
     """Stable key for a flow: SHA-1 of its step-URI sequence (scheme+path, no payloads).
 
@@ -1041,40 +1056,78 @@ def _goal_passed(env_ok: bool, actual: Any, goal: dict) -> bool:
     return env_ok
 
 
+def _verify_log_fragment_check(spec: dict, execution: dict, executed: bool) -> tuple[bool | None, dict]:
+    """Check `expected_log_fragment`; returns (passed, entry) or (None, {}) when the spec is absent."""
+    fragment = spec.get("expected_log_fragment")
+    step_id = spec.get("read_back_step")
+    if not fragment or not step_id:
+        return None, {}
+    if not executed:
+        return True, {"check": "expected_log_fragment", "ok": True, "skipped": "dry-run"}
+    stdout = _flow_stdout((execution.get("results") or {}).get(step_id) or {})
+    passed = str(fragment) in stdout
+    return passed, {"check": "expected_log_fragment", "step": step_id, "ok": passed}
+
+
+def _verify_goal_check(spec: dict, executed: bool, dispatch) -> tuple[bool | None, dict]:
+    """Check the `goal` end-state spec; returns (passed, entry) or (None, {}) when not applicable."""
+    goal = spec.get("goal")
+    if not isinstance(goal, dict) or not goal.get("uri"):
+        return None, {}
+    if not executed:
+        return True, {"check": "goal", "ok": True, "skipped": "dry-run"}
+    if dispatch is None:
+        return True, {"check": "goal", "ok": True, "skipped": "no-dispatch"}
+    passed, detail = _run_goal_check(goal, dispatch)
+    return passed, {"check": "goal", "uri": goal["uri"], "ok": passed, **detail}
+
+
 def verify_flow_execution(document: dict, execution: dict, *, executed: bool, dispatch=None) -> dict | None:
     spec = document.get("verification")
     if not isinstance(spec, dict):
         return None
-    checks = []
+    checks: list[dict] = []
     ok = True
     if spec.get("require_ok", True):
         passed = bool(execution.get("ok"))
         checks.append({"check": "require_ok", "ok": passed})
         ok = ok and passed
-    fragment = spec.get("expected_log_fragment")
-    step_id = spec.get("read_back_step")
-    if fragment and step_id:
-        if not executed:
-            checks.append({"check": "expected_log_fragment", "ok": True, "skipped": "dry-run"})
-        else:
-            stdout = _flow_stdout((execution.get("results") or {}).get(step_id) or {})
-            passed = str(fragment) in stdout
-            checks.append({"check": "expected_log_fragment", "step": step_id, "ok": passed})
-            ok = ok and passed
+    frag_passed, frag_entry = _verify_log_fragment_check(spec, execution, executed)
+    if frag_entry:
+        checks.append(frag_entry)
+        if frag_passed is not None:
+            ok = ok and frag_passed
     # GOAL-VERIFY: did the flow reach its goal STATE, not just run green steps? A flow can pass
     # every step yet achieve nothing (a click that missed); a goal check on the end-state fails
     # the flow honestly even when all steps were ok.
-    goal = spec.get("goal")
-    if isinstance(goal, dict) and goal.get("uri"):
-        if not executed:
-            checks.append({"check": "goal", "ok": True, "skipped": "dry-run"})
-        elif dispatch is None:
-            checks.append({"check": "goal", "ok": True, "skipped": "no-dispatch"})
-        else:
-            passed, detail = _run_goal_check(goal, dispatch)
-            checks.append({"check": "goal", "uri": goal["uri"], "ok": passed, **detail})
-            ok = ok and passed
+    goal_passed, goal_entry = _verify_goal_check(spec, executed, dispatch)
+    if goal_entry:
+        checks.append(goal_entry)
+        if goal_passed is not None:
+            ok = ok and goal_passed
     return {"ok": ok, "checks": checks}
+
+
+def _apply_reversibility(
+    result: dict, execution: dict, ok: bool, execute: bool,
+    rollback_on_failure: bool, document: dict, mesh: dict,
+) -> dict:
+    """Attach the reversible-transitions ledger and, when eligible, run SAGA compensation.
+    Mutates and returns `result`."""
+    led = ledger_from_execution(execution)
+    if not led:
+        return result
+    result["reversible"] = {
+        "rollbackable": len(led),
+        "transitions": [{"forward": t.forward.uri, "inverse": t.inverse.uri,
+                         "args": t.inverse.args} for t in led],
+    }
+    # SAGA compensation: flow FAILED yet left mutations — unwind them LIFO so a failed run
+    # leaves no partial mess (opt-in: only when explicitly requested).
+    if not ok and execute and (rollback_on_failure or document.get("rollbackOnFailure")):
+        scan_uri = (document.get("verification") or {}).get("scan_uri")
+        result["compensation"] = rollback_flow(execution, mesh, scan_uri=scan_uri)
+    return result
 
 
 def run_flow_document(document: dict, mesh: dict, *, execute: bool, rollback_on_failure: bool = False) -> dict:
@@ -1091,23 +1144,7 @@ def run_flow_document(document: dict, mesh: dict, *, execute: bool, rollback_on_
         result["source"] = document.get("source")
     if verification is not None:
         result["verification"] = verification
-    # Reversibility: turn the run into a transition registry (the dormant reversible engine, now
-    # CONSUMED) — every successful step whose connector returned an `inverse` becomes a rollbackable
-    # edge. A flow result now carries HOW to undo itself, not just what it did.
-    led = ledger_from_execution(execution)
-    if led:
-        result["reversible"] = {
-            "rollbackable": len(led),
-            "transitions": [{"forward": t.forward.uri, "inverse": t.inverse.uri,
-                             "args": t.inverse.args} for t in led],
-        }
-        # SAGA compensation: the flow FAILED (a step aborted, or the GOAL wasn't reached) yet left
-        # mutations behind — unwind them over the registered inverses so a failed autonomous run
-        # leaves NO partial mess, instead of a half-applied world. Opt-in (it acts on the world).
-        if not ok and execute and (rollback_on_failure or document.get("rollbackOnFailure")):
-            scan_uri = (document.get("verification") or {}).get("scan_uri")
-            result["compensation"] = rollback_flow(execution, mesh, scan_uri=scan_uri)
-    return result
+    return _apply_reversibility(result, execution, ok, execute, rollback_on_failure, document, mesh)
 
 
 def _flow_transport(mesh: dict) -> CallableTransport:

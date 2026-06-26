@@ -114,6 +114,113 @@ def test_cdp_surface_CdpError_is_exception():
 # ── end surfaces.cdp contract ──────────────────────────────────────────────────────────────
 
 
+# ── lint_kernel_symbols ─────────────────────────────────────────────────────
+
+from urirun.connectors.connector_lint import lint_kernel_symbols
+import os as _os, tempfile as _tmpfile
+
+
+def _write_py(tmp: str, name: str, src: str) -> None:
+    with open(_os.path.join(tmp, name), "w") as f:
+        f.write(src)
+
+
+def test_lint_kernel_symbols_clean_connector_ok():
+    with _tmpfile.TemporaryDirectory() as d:
+        _write_py(d, "core.py", "def handler(): return 42\n")
+        result = lint_kernel_symbols(d)
+    assert result["ok"] is True
+    assert result["violations"] == []
+
+
+def test_lint_kernel_symbols_bad_direct_import_caught():
+    src = "from urirun.connectors.surfaces.cdp import _evaluate\n"
+    with _tmpfile.TemporaryDirectory() as d:
+        _write_py(d, "core.py", src)
+        result = lint_kernel_symbols(d)
+    assert not result["ok"]
+    assert any(v["symbol"] == "_evaluate" for v in result["violations"])
+
+
+def test_lint_kernel_symbols_bad_attribute_access_caught():
+    src = (
+        "import urirun.connectors.surfaces.cdp as cdp\n"
+        "def foo(): return cdp._evaluate('1+1')\n"
+    )
+    with _tmpfile.TemporaryDirectory() as d:
+        _write_py(d, "core.py", src)
+        result = lint_kernel_symbols(d)
+    assert not result["ok"]
+    assert any(v["symbol"] == "_evaluate" for v in result["violations"])
+
+
+def test_lint_kernel_symbols_good_attribute_access_passes():
+    src = (
+        "import urirun.connectors.surfaces.cdp as cdp\n"
+        "def foo(): return cdp.evaluate('1+1')\n"
+    )
+    with _tmpfile.TemporaryDirectory() as d:
+        _write_py(d, "core.py", src)
+        result = lint_kernel_symbols(d)
+    assert result["ok"] is True
+    assert result["violations"] == []
+
+
+def test_lint_kernel_symbols_backend_registry_checked():
+    src = "from urirun.connectors.backend_registry import _internal_fn\n"
+    with _tmpfile.TemporaryDirectory() as d:
+        _write_py(d, "core.py", src)
+        result = lint_kernel_symbols(d)
+    assert not result["ok"]
+    assert any(v["module"].endswith("backend_registry") for v in result["violations"])
+
+
+def test_lint_kernel_symbols_kvm_connector_is_clean():
+    kvm_dir = _os.path.join(_os.path.dirname(__file__), "..", "..", "..",
+                            "..", "urirun-connector-kvm")
+    if not _os.path.isdir(kvm_dir):
+        import pytest
+        pytest.skip("urirun-connector-kvm not found alongside urirun")
+    result = lint_kernel_symbols(kvm_dir)
+    violations = result["violations"]
+    assert not violations, (
+        f"urirun-connector-kvm uses {len(violations)} kernel symbol(s) absent from contract:\n"
+        + "\n".join(f"  {v['file']}:{v['line']} {v['module']}.{v['symbol']}" for v in violations)
+    )
+
+
+def test_lint_kernel_symbols_scanned_count_matches_files():
+    with _tmpfile.TemporaryDirectory() as d:
+        _write_py(d, "a.py", "x = 1\n")
+        _write_py(d, "b.py", "y = 2\n")
+        result = lint_kernel_symbols(d)
+    assert result["scanned"] == 2
+
+
+def test_fleet_kernel_symbols_all_connectors_clean():
+    """Fleet gate: no connector in ~/github/if-uri/urirun-connector-* may call a kernel symbol
+    absent from the contract. Skipped in CI where the fleet checkout isn't present."""
+    import glob
+    fleet_glob = _os.path.join(_os.path.expanduser("~"), "github", "if-uri", "urirun-connector-*")
+    dirs = sorted(glob.glob(fleet_glob))
+    if not dirs:
+        import pytest
+        pytest.skip("urirun-connector-* repos not found (fleet not checked out)")
+    all_violations: list[dict] = []
+    for pkg_dir in dirs:
+        r = lint_kernel_symbols(pkg_dir)
+        for v in r["violations"]:
+            all_violations.append({**v, "connector": _os.path.basename(pkg_dir)})
+    assert not all_violations, (
+        f"{len(all_violations)} kernel contract violation(s) across {len(dirs)} connectors:\n"
+        + "\n".join(
+            f"  {v['connector']}/{v['file']}:{v['line']} "
+            f"{v['module'].split('.')[-1]}.{v['symbol']}"
+            for v in all_violations
+        )
+    )
+
+
 def test_injected_platform_gates_a_connectors_backend():
     # a connector registers a wayland-only backend + a cross-platform fallback; the injected
     # platform resolver decides which one dispatch picks — the gating the kernel provides for free.

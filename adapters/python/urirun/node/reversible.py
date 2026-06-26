@@ -296,6 +296,67 @@ def plausibility(profile: dict, *, reversible: bool = True, irreversible: bool =
             "reason": "; ".join(reasons) or "controllable, reliable, known-good"}
 
 
+def _planner_facts(node: str, prof: dict, surface: dict | None) -> dict:
+    cs = prof.get("controlStrategies") or {}
+    am = prof.get("actionMatrix") or {}
+    facts = {"node": node, "bestSurface": prof.get("best"),
+             "controllable": prof.get("controllable"),
+             "controlStrategies": cs, "display": prof.get("display"),
+             "osLevelReliable": prof.get("osLevelReliable"), "actionMatrix": am}
+    if surface:
+        b = surface.get("browser") or {}
+        facts["foreground"] = {"kind": surface.get("kind"), "app": surface.get("app"),
+                               "url": b.get("url"), "title": b.get("title")}
+    return facts
+
+
+def _best_surface_hint(best: str | None) -> str | None:
+    if best == "cdp":
+        return "PREFER CDP DOM verbs (role + visible label); do NOT use OCR/coordinates."
+    if best in ("atspi", "vision"):
+        return (f"Only an os-level surface ('{best}') is live; prefer a coordinate-free path "
+                "and launch a CDP browser session for any web target.")
+    return None
+
+
+def _action_matrix_hints(am: dict) -> list[str]:
+    hints: list[str] = []
+    type_not_exe = [s for s in ("atspi", "uinput", "vision")
+                    if (am.get(s) or {}).get("type") == "not_executable"]
+    if type_not_exe:
+        joined = "/".join(type_not_exe)
+        hints.append(
+            f"TYPE/fill via {joined} is NOT EXECUTABLE on this platform "
+            "(Wayland compositor withholds keyboard focus from those surfaces for web inputs) — "
+            f"ONLY CDP-DOM fill can enter text into web inputs. NEVER emit fill/type steps via "
+            f"{joined}; use a CDP DOM verb instead."
+        )
+    screenshot_blocked = [s for s in ("uinput", "vision")
+                          if (am.get(s) or {}).get("screenshot") == "blocked"]
+    if screenshot_blocked and (am.get("cdp") or {}).get("screenshot") != "executable":
+        hints.append(
+            "OS-level screen capture is BLOCKED (Wayland portal denied) — use CDP screenshot "
+            "or request a GUI session for kvm://host/screen/query/capture."
+        )
+    return hints
+
+
+def _planner_surface_guidance(facts: dict) -> list[str]:
+    am = facts.get("actionMatrix") or {}
+    guidance: list[str] = []
+    hint = _best_surface_hint(facts.get("bestSurface"))
+    if hint:
+        guidance.append(hint)
+    if not facts["controllable"]:
+        guidance.append("This environment CANNOT drive a UI (no CDP/a11y/OCR+input) — do NOT emit UI "
+                        "steps; surface what is missing instead.")
+    guidance.extend(_action_matrix_hints(am))
+    if (facts.get("foreground") or {}).get("url"):
+        guidance.append("Use the ACTUAL on-screen labels of the foreground page (its real language) — "
+                        "do not translate them (no 'Opublikuj' when the UI says 'Post').")
+    return guidance
+
+
 def planner_context(node: str, profile: dict, surface: dict | None = None,
                     memory: "TwinMemory | None" = None) -> dict:
     """Concrete environment facts to inject into an LLM planner so it grounds on REALITY instead
@@ -304,32 +365,11 @@ def planner_context(node: str, profile: dict, surface: dict | None = None,
     env drifted from a known-good. Turns 'Post vs Opublikuj' / 'os-level vs CDP' guessing into
     facts + explicit guidance the planner must follow."""
     prof = profile or {}
-    cs = prof.get("controlStrategies") or {}
-    best = prof.get("best")
-    facts = {"node": node, "bestSurface": best, "controllable": prof.get("controllable"),
-             "controlStrategies": cs, "display": prof.get("display"),
-             "osLevelReliable": prof.get("osLevelReliable")}
-    if surface:
-        b = surface.get("browser") or {}
-        facts["foreground"] = {"kind": surface.get("kind"), "app": surface.get("app"),
-                               "url": b.get("url"), "title": b.get("title")}
-    guidance: list[str] = []
-    if best == "cdp":
-        guidance.append("PREFER CDP DOM verbs (role + visible label); do NOT use OCR/coordinates.")
-    elif best in ("atspi", "vision"):
-        guidance.append(f"Only an os-level surface ('{best}') is live; prefer a coordinate-free path "
-                        "and launch a CDP browser session for any web target.")
-    if not facts["controllable"]:
-        guidance.append("This environment CANNOT drive a UI (no CDP/a11y/OCR+input) — do NOT emit UI "
-                        "steps; surface what is missing instead.")
-    if (facts.get("foreground") or {}).get("url"):
-        guidance.append("Use the ACTUAL on-screen labels of the foreground page (its real language) — "
-                        "do not translate them (no 'Opublikuj' when the UI says 'Post').")
+    facts = _planner_facts(node, prof, surface)
+    guidance = _planner_surface_guidance(facts)
     if memory is not None and memory.drift(node, prof).get("drifted"):
         guidance.append("Environment DRIFTED from the known-good snapshot — re-measure before relying "
                         "on any cached element positions.")
-    # graduated confidence (distance from a known-good state) -> the planner adds verification
-    # for 'verify' and demands explicit user confirmation for irreversible / 'hitl' actions.
     confidence = plausibility(prof, memory=memory, node=node)
     if confidence["level"] != "auto":
         guidance.append(f"Action confidence is '{confidence['level']}' ({confidence['reason']}) — add a "

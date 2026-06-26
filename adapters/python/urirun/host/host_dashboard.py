@@ -148,6 +148,17 @@ from .scanner_bridge import (
     scanner_flow_result as _scanner_flow_result_impl,
     torch_enabled_from_prompt as _torch_enabled_from_prompt_impl,
     uri_event as _uri_event_impl,
+    best_candidate_paths as _best_candidate_paths,
+    best_crop_and_ocr as _best_crop_and_ocr,
+    best_finish_store_failure as _best_finish_store_failure_impl,
+    best_quality_rejected as _best_quality_rejected,
+    best_series_not_found as _best_series_not_found,
+    capture_display_path as _capture_display_path,
+    capture_quality_ok as _capture_quality_ok,
+    cleanup_duplicate_scan_files as _cleanup_duplicate_scan_files,
+    decode_capture_image as _decode_capture_image,
+    resolve_best_candidate as _resolve_best_candidate,
+    store_best_finish as _store_best_finish,
 )
 from .service_control import (
     chat_service_restart_argv as _chat_service_restart_argv_impl,
@@ -6143,91 +6154,6 @@ def _existing_document(index: dict, *, doc_id: str, source_sha256: str, text_sha
     return None
 
 
-def _cleanup_duplicate_scan_files(paths: list) -> list[str]:
-    """Delete the transient capture files (raw scan + crop) of a detected duplicate.
-
-    A re-scan of an already-archived document is identified by docid before any
-    PDF is written, but the raw image and its ``-receipt-crop.jpg`` were already
-    staged on disk. Leaving them there is what makes duplicates pile up in the
-    scans folder, so remove them here. Only files inside the scanner staging dir
-    are touched -- caller-supplied paths elsewhere (e.g. tests) are left alone.
-    Best-effort; never raises.
-    """
-    try:
-        staging = _scanner_staging_dir()
-    except Exception:  # noqa: BLE001
-        return []
-    removed: list[str] = []
-    seen: set[str] = set()
-    for raw in paths:
-        if not raw:
-            continue
-        try:
-            target = Path(str(raw)).expanduser().resolve()
-        except Exception:  # noqa: BLE001
-            continue
-        key = str(target)
-        if key in seen:
-            continue
-        seen.add(key)
-        if staging not in target.parents:
-            continue
-        try:
-            if target.is_file():
-                target.unlink()
-                removed.append(key)
-        except OSError:
-            continue
-    return removed
-
-
-def _draw_crop_box(draw: Any, canvas: Any, color: tuple, box: Any, scale: float,
-                   original_width: int, original_height: int) -> None:
-    """Draw the detected crop rectangle (4-pt box scaled to canvas), or a full-frame border."""
-    if box and len(box) == 4:
-        left, top, right, bottom = (float(value) for value in box)
-        scaled_box = (
-            int(max(0, min(original_width, left)) * scale),
-            int(max(0, min(original_height, top)) * scale),
-            int(max(0, min(original_width, right)) * scale),
-            int(max(0, min(original_height, bottom)) * scale),
-        )
-        for offset in range(4):
-            draw.rectangle(
-                (
-                    scaled_box[0] - offset,
-                    scaled_box[1] - offset,
-                    scaled_box[2] + offset,
-                    scaled_box[3] + offset,
-                ),
-                outline=color,
-            )
-    else:
-        draw.rectangle((3, 3, canvas.size[0] - 4, canvas.size[1] - 4), outline=color, width=4)
-
-
-def _draw_overlay_label(draw: Any, canvas: Any, crop: dict, quality: dict | None, ok: bool) -> None:
-    """Draw the crop status/score caption with a contrasting background box."""
-    from PIL import ImageFont
-
-    score = (quality or {}).get("score")
-    label_parts = [
-        "crop:ok" if ok else "crop:rejected",
-        str(crop.get("method") or crop.get("reason") or ""),
-        f"score={score}" if score is not None else "",
-    ]
-    label = " | ".join(part for part in label_parts if part)[:180]
-    font = ImageFont.load_default()
-    try:
-        text_box = draw.textbbox((0, 0), label, font=font)
-        text_width = text_box[2] - text_box[0]
-        text_height = text_box[3] - text_box[1]
-    except Exception:  # noqa: BLE001
-        text_width = min(canvas.size[0] - 16, max(80, len(label) * 6))
-        text_height = 12
-    draw.rectangle((6, 6, min(canvas.size[0] - 6, text_width + 18), text_height + 18), fill=(0, 0, 0))
-    draw.text((12, 10), label, fill=(255, 255, 255), font=font)
-
 
 def _scanner_crop_overlay(original_path: str | Path, crop: dict, quality: dict | None = None) -> dict:
     """Write a diagnostic image with the detected crop box drawn over the raw frame."""
@@ -7099,25 +7025,6 @@ def _register_scanner_result(
     )
 
 
-def _decode_capture_image(raw_image: str) -> tuple[str, bytes, str, str]:
-    """Parse a ``data:image/*;base64`` payload into (mime, raw_bytes, sha256, file_ext)."""
-    match = re.match(r"^data:(image/[a-zA-Z0-9.+-]+);base64,(.+)$", raw_image, re.S)
-    if not match:
-        raise ValueError("image must be a data:image/*;base64 payload")
-    mime, encoded = match.group(1), match.group(2)
-    raw = base64.b64decode(encoded.encode("ascii"), validate=False)
-    digest = hashlib.sha256(raw).hexdigest()
-    ext = ".jpg" if mime in {"image/jpeg", "image/jpg"} else ".png" if mime == "image/png" else ".bin"
-    return mime, raw, digest, ext
-
-
-def _capture_quality_ok(payload: dict, quality: dict, min_score: float) -> bool:
-    """A capture passes the document gate when forced, or scored >= min and document-like."""
-    return bool(payload.get("force")) or (
-        float(quality.get("score") or 0.0) >= min_score and bool(quality.get("documentLike"))
-    )
-
-
 def _capture_reject_result(*, uri: str, min_score: float, quality: dict, ocr: dict, crop: dict,
                            overlay: dict, detected_document: dict, paths: list) -> dict:
     """Clean up a low-confidence capture's staged files and build the rejection response."""
@@ -7181,11 +7088,6 @@ def _capture_candidate_result(project: str, payload: dict, *, uri: str, mime: st
         "quality": quality,
         "detectedDocument": detected_document,
     }
-
-
-def _capture_display_path(crop: dict, path: Path) -> Path:
-    """The cropped image when the auto-crop succeeded, else the original frame."""
-    return Path(crop["path"]) if crop.get("ok") and crop.get("path") else path
 
 
 def _capture_ocr_and_detect(path: Path, display_path: Path, payload: dict, archive: bool) -> tuple[dict, dict]:
@@ -7301,67 +7203,6 @@ def scanner_capture(project: str, db: str | None, payload: dict) -> dict:
     }
 
 
-def _best_series_not_found(series_id: str) -> dict:
-    """Record a 'series not found' live-stream entry and return its failure response."""
-    with _SCANNER_BEST_LOCK:
-        _SCANNER_LIVE_STREAMS[series_id] = {
-            "seriesId": series_id,
-            "createdAt": _utc_now(),
-            "updatedAt": _utc_now(),
-            "status": "failed",
-            "count": 0,
-            "best": None,
-            "candidates": [],
-            "error": "scanner best series not found",
-            "document": {},
-            "artifact": None,
-        }
-    return {"ok": False, "error": "scanner best series not found", "seriesId": series_id}
-
-
-def _resolve_best_candidate(series: dict) -> dict | None:
-    """The series' recorded best frame, or the highest-scoring candidate, or None."""
-    best = series.get("best")
-    if isinstance(best, dict):
-        return best
-    candidates = [item for item in series.get("candidates", []) if isinstance(item, dict)]
-    if not candidates:
-        return None
-    return max(candidates, key=lambda item: float((item.get("quality") or {}).get("score") or 0.0))
-
-
-def _best_quality_rejected(payload: dict, quality: dict) -> tuple[bool, float]:
-    """Return (rejected, min_score). rejected is True when below threshold and force is not set."""
-    min_score = float(payload.get("minScore") if payload.get("minScore") is not None else 45.0)
-    rejected = not payload.get("force") and (
-        float(quality.get("score") or 0.0) < min_score or not quality.get("documentLike")
-    )
-    return rejected, min_score
-
-
-def _best_candidate_paths(best: dict) -> tuple[Path, Path]:
-    return (
-        Path(str(best.get("originalPath") or "")).expanduser().resolve(),
-        Path(str(best.get("displayPath") or "")).expanduser().resolve(),
-    )
-
-
-def _best_finish_store_failure(series_id: str, series: dict, *, status: str, error: str,
-                               best: dict | None = None, project: str = "",
-                               extra: dict | None = None) -> dict:
-    """Record a rejected/failed best-finish in the live stream and build its response dict."""
-    with _SCANNER_BEST_LOCK:
-        if best is not None:
-            series["best"] = best
-        _scanner_live_store_locked(series_id, series, status=status, error=error)
-    result = {"ok": False, "error": error, "seriesId": series_id}
-    if best is not None:
-        result["best"] = _scanner_public_candidate_for_live(best, project)
-    if extra:
-        result.update(extra)
-    return result
-
-
 def _refresh_best_ocr(fallback_ocr: dict, original_path: Path, display_path: Path) -> dict:
     """Re-OCR the kept frame with the accurate full backend, falling back to the cheap read."""
     ocr_source = original_path if _truthy_env("URIRUN_SCANNER_OCR_FULLFRAME", "1") else display_path
@@ -7381,28 +7222,6 @@ def _ensure_best_overlay(best: dict, crop: dict, quality: dict, original_path: P
         best["overlay"] = overlay
         best["overlayPath"] = overlay_path
     return overlay, overlay_path
-
-
-def _store_best_finish(series: dict, series_id: str, best: dict, document: dict, registered: dict) -> None:
-    """Persist the accepted/failed best-finish outcome to the live stream under the lock."""
-    with _SCANNER_BEST_LOCK:
-        series["best"] = best
-        series["document"] = document
-        series["artifact"] = registered["documentArtifact"] or registered["artifact"]
-        _scanner_live_store_locked(
-            series_id,
-            series,
-            status="accepted" if document.get("ok") else "failed",
-            error=None if document.get("ok") else str(document.get("error") or "document archive failed"),
-            document=document,
-            artifact=registered["documentArtifact"] or registered["artifact"],
-        )
-
-
-def _best_crop_and_ocr(best: dict) -> tuple[dict, dict]:
-    crop = best.get("crop") if isinstance(best.get("crop"), dict) else {}
-    ocr = best.get("ocr") if isinstance(best.get("ocr"), dict) else {}
-    return crop, ocr
 
 
 def scanner_best_finish(project: str, db: str | None, payload: dict) -> dict:

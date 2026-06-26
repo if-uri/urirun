@@ -142,8 +142,58 @@ class DashboardApiRoutingTests(unittest.TestCase):
 
     def test_route_table_covers_expected_endpoints(self):
         for path in ("/api/summary", "/api/tasks", "/api/checks", "/api/logs",
-                     "/api/artifacts", "/api/chat/history", "/api/services/live", "/api/scanner/live"):
+                     "/api/artifacts", "/api/chat/history", "/api/services/live", "/api/scanner/live",
+                     "/api/twin/flows"):
             self.assertIn(path, host_dashboard._API_ROUTES)
+
+    def test_api_twin_flows_returns_ok_and_empty_list_when_no_flows(self, tmp_path=None):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as d:
+            os.environ["URIRUN_TWIN_MEMORY"] = os.path.join(d, "twin.json")
+            try:
+                status, payload = host_dashboard._api_twin_flows(".", None, None, {}, None)
+            finally:
+                del os.environ["URIRUN_TWIN_MEMORY"]
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["flows"], [])
+        self.assertEqual(payload["total"], 0)
+
+    def test_api_twin_flows_returns_stored_flows(self):
+        import tempfile, os
+        from urirun.node.twin_store import durable_memory
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "twin.json")
+            mem = durable_memory(path)
+            mem.remember_flow("k1", {"flowKey": "k1", "prompt": "test", "steps": [],
+                                     "timeline": [], "nodes": [], "ts": "2026-06-26T12:00:00Z", "ok": True})
+            os.environ["URIRUN_TWIN_MEMORY"] = path
+            try:
+                status, payload = host_dashboard._api_twin_flows(".", None, None, {}, None)
+            finally:
+                del os.environ["URIRUN_TWIN_MEMORY"]
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["total"], 1)
+        self.assertEqual(payload["flows"][0]["prompt"], "test")
+
+    def test_api_twin_flows_respects_limit(self):
+        import tempfile, os
+        from urirun.node.twin_store import durable_memory
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "twin.json")
+            mem = durable_memory(path)
+            for i in range(5):
+                mem.remember_flow(f"k{i}", {"flowKey": f"k{i}", "prompt": f"p{i}", "steps": [],
+                                             "timeline": [], "nodes": [],
+                                             "ts": f"2026-06-26T1{i}:00:00Z", "ok": True})
+            os.environ["URIRUN_TWIN_MEMORY"] = path
+            try:
+                status, payload = host_dashboard._api_twin_flows(
+                    ".", None, None, {"limit": ["2"]}, None)
+            finally:
+                del os.environ["URIRUN_TWIN_MEMORY"]
+        self.assertEqual(payload["total"], 5)
+        self.assertEqual(len(payload["flows"]), 2)
 
 
 if __name__ == "__main__":
