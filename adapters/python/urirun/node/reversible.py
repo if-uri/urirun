@@ -503,6 +503,38 @@ def ledger_from_execution(execution: dict) -> list[Transition]:
 # ── URI surface: twin://host/flow/command/rollback ────────────────────────────
 # Exposes rollback as an addressable URI capability so remote nodes and the bus
 # can trigger a rollback without importing flow.py.
+def _transition_inverse_uri(item) -> str | None:
+    """Extract the inverse URI from a Transition or (Transition, did) tuple, or return None."""
+    if isinstance(item, tuple) and item:
+        item = item[0]
+    return getattr(getattr(item, "inverse", None), "uri", None)
+
+
+def _normalize_stuck(result: dict) -> dict:
+    """Normalise Transition objects in 'stuck' and 'undone' to URI strings for JSON-safety.
+
+    ReversibleProcess stores Transition dataclasses; thin-driver and connector store plain
+    URI strings.  Normalising here makes all three paths emit the same shape."""
+    out = dict(result)
+    stuck = out.get("stuck")
+    if stuck is not None and not isinstance(stuck, str):
+        uri = _transition_inverse_uri(stuck)
+        if uri:
+            out["stuck"] = uri
+    undone = out.get("undone")
+    if isinstance(undone, list):
+        normalized = []
+        for item in undone:
+            if isinstance(item, str):
+                normalized.append(item)
+            else:
+                uri = _transition_inverse_uri(item)
+                if uri:
+                    normalized.append(uri)
+        out["undone"] = normalized
+    return out
+
+
 def _uri_rollback(payload: dict) -> dict:
     """Handler for twin://<node>/flow/command/rollback.
 
@@ -548,12 +580,12 @@ def _uri_rollback(payload: dict) -> dict:
             except Exception:  # noqa: BLE001
                 pass
         result = proc.rollback_flow(twin, ledger)
-        return {**urirun.ok(), **result}
+        return {**urirun.ok(), **_normalize_stuck(result)}
 
     execution = payload.get("execution") or {}
     from urirun.node.flow import rollback_flow  # noqa: PLC0415 - lazy to avoid circular import
     result = rollback_flow(execution, mesh, scan_uri=scan_uri)
-    return {**urirun.ok(), **result}
+    return {**urirun.ok(), **_normalize_stuck(result)}
 
 
 try:

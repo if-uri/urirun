@@ -1,4 +1,4 @@
-# urirun | 1868 func | 108f | 44124L | python | 2026-06-26
+# urirun | 1872 func | 110f | 44184L | python | 2026-06-26
 # generated in 0.00s
 
 HEALTH:
@@ -16,9 +16,9 @@ ALERTS[20]:
   !!! high_fan_out     _build_parser = 25 (limit:10)
   !!! high_fan_out     main = 25 (limit:10)
 
-MODULES[181] (top by size):
+MODULES[183] (top by size):
   M[adapters/python/urirun/host/html_templates.py] 4723L C:0 F:0 CC↑0 D:0 (python)
-  M[adapters/python/urirun/host/host_dashboard.py] 3723L C:0 F:139 CC↑14 D:0 (python)
+  M[adapters/python/urirun/host/host_dashboard.py] 3509L C:0 F:130 CC↑14 D:1 (python)
   M[adapters/python/urirun/runtime/v2.py] 2003L C:1 F:122 CC↑14 D:4 (python)
   M[adapters/python/urirun/node/flow.py] 1931L C:1 F:89 CC↑15 D:3 (python)
   M[adapters/python/urirun/host/document_sync.py] 1387L C:2 F:58 CC↑15 D:2 (python)
@@ -32,7 +32,7 @@ MODULES[181] (top by size):
   M[adapters/python/urirun/runtime/cli.py] 715L C:0 F:7 CC↑1 D:1 (python)
   M[adapters/python/urirun/connectors/connector_lint.py] 714L C:0 F:38 CC↑14 D:1 (python)
   M[adapters/python/urirun/runtime/_scan.py] 659L C:0 F:34 CC↑14 D:0 (python)
-  LANGS: python:120/json:13/shell:10/yaml:5/csharp:4/javascript:3/c:3/txt:3/ruby:2/typescript:2/go:2/php:2/java:2/rust:2/other:2/toml:2/yml:2/pm:1/perl:1
+  LANGS: python:122/json:13/shell:10/yaml:5/csharp:4/javascript:3/c:3/txt:3/ruby:2/typescript:2/go:2/php:2/java:2/rust:2/other:2/toml:2/yml:2/pm:1/perl:1
 
 HOTSPOTS[10]:
   ★ create_handler fan=63  // Orchestrates 63 calls
@@ -44,9 +44,9 @@ HOTSPOTS[10]:
 REFACTOR[15]:
   [1] H/H Split god module adapters/python/urirun/host/document_sync.py (1387L, 2 classes)
   [2] H/H Split god module adapters/python/urirun/node/flow.py (1931L, 1 classes)
-  [3] H/H Split god module adapters/python/urirun/node/reversible.py (565L, 9 classes)
+  [3] H/H Split god module adapters/python/urirun/node/reversible.py (597L, 9 classes)
   [4] H/H Split god module adapters/python/urirun/__init__.py (737L, 1 classes)
   [5] H/H Split god module adapters/python/urirun/connectors/connector_lint.py (714L, 0 classes)
 
 EVOLUTION:
-  2026-06-26 CC̄=4.8 crit=247 44124L // Automated analysis
+  2026-06-26 CC̄=4.8 crit=247 44184L // Automated analysis
