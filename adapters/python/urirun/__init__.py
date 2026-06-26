@@ -377,6 +377,35 @@ def validate_binding_document(doc) -> dict:
     return _validate_binding_document(doc)
 
 
+def make_dispatch(registry: dict, mode: str = "execute", fallback=None):
+    """Return a two-tier ``dispatch(uri, payload) → dict`` callable.
+
+    Tier 1 — mesh (v2_service.call): covers served nodes via *registry*.
+    Tier 2 — *fallback(uri, payload)*: called only when Tier 1 returns NOT_FOUND.
+    Pass ``None`` to skip Tier 2 (default: in-process connector discovery).
+
+    This is the canonical way to build a dispatch callable for flow execution,
+    twin connector handlers, and dashboard wiring — a single seam so routing
+    strategy can be swapped in tests without touching callers::
+
+        dispatch = urirun.make_dispatch(mesh_registry, mode="execute")
+        result = dispatch("kvm://laptop/ui/command/click", {"text": "Post"})
+    """
+    from urirun.runtime.v2_service import make_dispatch as _make_dispatch
+
+    return _make_dispatch(registry, mode, fallback=fallback)
+
+
+def normalize_dispatch_request(raw: dict, *, default_mode: str = "dry-run") -> dict:
+    """Coerce an incoming request body to canonical ``{uri, payload, mode}``.
+
+    Tolerates ``execute: bool`` alongside ``mode: str`` — the shapes different
+    transports have historically sent.  Use at transport boundaries (HTTP handler,
+    MCP tools/call, gRPC) before calling ``urirun.run`` or ``urirun.make_dispatch``."""
+    from urirun.runtime.dispatch_protocol import normalize_request as _norm
+    return _norm(raw, default_mode=default_mode)
+
+
 def run(
     uri: str,
     registry: dict,

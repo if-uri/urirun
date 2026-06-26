@@ -10,6 +10,7 @@ from urirun.node.flow import (
     _uri_matches_template,
     _uri_segments,
     first_url,
+    heuristic_flow,
     json_from_text,
     nl_key,
     requested_folder_path,
@@ -99,7 +100,7 @@ def test_flow_intents_llm_parses_response(monkeypatch):
 
 
 def test_flow_intents_default_when_no_llm(monkeypatch):
-    """Without LLM, _flow_intents returns all-False (no-op, not a silent process guess)."""
+    """Without LLM env var, _flow_intents returns all-False (no-op)."""
     monkeypatch.delenv("LLM_MODEL", raising=False)
     monkeypatch.delenv("URIRUN_LLM_MODEL", raising=False)
     for prompt in ("take a screenshot", "open browser", "check health"):
@@ -132,6 +133,31 @@ def test_flow_intents_uses_llm_result(monkeypatch):
     intents = _flow_intents("pokaz ekran")
     assert intents["screen"] is True
     assert intents["processes"] is False
+
+
+def test_flow_intents_use_llm_false_skips_llm(monkeypatch):
+    """use_llm=False returns all-False even when LLM_MODEL is set."""
+    monkeypatch.setenv("LLM_MODEL", "gpt-4o")
+    import urirun.host.task_planner as _tp
+    monkeypatch.setattr(_tp, "quiet_completion",
+                        lambda **kw: (_ for _ in ()).throw(AssertionError("LLM must not be called")))
+    intents = _flow_intents("pokaz procesy", use_llm=False)
+    assert not any(intents.values())
+
+
+def test_heuristic_flow_use_llm_false_always_empty(monkeypatch):
+    """heuristic_flow(..., use_llm=False) produces empty steps — LLM disabled means no intent guessing."""
+    monkeypatch.setenv("LLM_MODEL", "gpt-4o")
+    import urirun.host.task_planner as _tp
+    monkeypatch.setattr(_tp, "quiet_completion",
+                        lambda **kw: (_ for _ in ()).throw(AssertionError("LLM must not be called")))
+    nodes = [{"name": "pc1", "reachable": True}]
+    routes = [
+        {"uri": "env://pc1/runtime/query/health", "safe": True},
+        {"uri": "proc://pc1/process/query/list", "safe": True},
+    ]
+    flow = heuristic_flow("pokaz procesy na pc1", routes, nodes, use_llm=False)
+    assert flow["steps"] == [], f"expected no steps with use_llm=False, got: {flow['steps']}"
 
 
 # ─── _uri_segments ───────────────────────────────────────────────────────────

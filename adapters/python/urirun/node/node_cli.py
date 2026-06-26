@@ -681,12 +681,13 @@ def deploy_command(args: argparse.Namespace) -> int:
         identity = os.path.expanduser(identity)
 
     merge = bool(getattr(args, "merge", False))
+    explicit_replace = bool(getattr(args, "replace", False))
     result = deploy_to_node(url, bindings=bindings, registry=registry,
                             allow=args.allow or None, code=code or None, env=env or None,
                             name=args.name, token=token, identity=identity,
                             merge=merge,
                             persist=bool(getattr(args, "persist", False)))
-    if result.get("droppedRoutes") and not merge:
+    if result.get("droppedRoutes") and not merge and not explicit_replace:
         _warn_dropped_routes(result)
     reglib._emit_json(result, "-")
     return 0 if result.get("ok") else 1

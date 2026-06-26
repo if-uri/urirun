@@ -1,11 +1,11 @@
-# urirun | 183f 44432L | yaml:5,txt:3,shell:10,json:13,python:123,yml:2,javascript:3,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,c:1,cpp:1,csharp:4,ruby:2 | 2026-06-26
+# urirun | 205f 45778L | yaml:5,txt:3,shell:10,json:13,python:143,yml:2,javascript:3,java:2,go:2,typescript:2,perl:2,toml:3,rust:2,php:2,c:1,cpp:1,csharp:4,ruby:2,cfg:1 | 2026-06-26
 # generated in 0.03s
-# stats: 1880 func | 0 cls | 183 mod | CC̄=4.8 | critical:6 | cycles:0
+# stats: 1983 func | 0 cls | 205 mod | CC̄=4.8 | critical:8 | cycles:0
 # alerts[5]: fan-out create_handler=63; fan-out archive_scanned_document=43; fan-out write_document_pdf=32; fan-out _add_host_subparser=30; fan-out serve=30
 # hotspots[5]: create_handler fan=63; archive_scanned_document fan=43; write_document_pdf fan=32; _add_host_subparser fan=30; serve fan=30
 # evolution: CC̄ 4.8→4.8 (flat 0.0)
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[183]:
+M[205]:
   Makefile,140
   adapters/bash/example/hash-connector.sh,9
   adapters/bash/urirun.sh,17
@@ -34,7 +34,25 @@ M[183]:
   adapters/php/composer.json,7
   adapters/php/example/hash-connector.php,14
   adapters/python/pyproject.toml,70
-  adapters/python/urirun/__init__.py,737
+  adapters/python/urirun/__init__.py,766
+  adapters/python/urirun-0.4.166/pyproject.toml,0
+  adapters/python/urirun-0.4.166/setup.cfg,0
+  adapters/python/urirun-0.4.166/urirun/__init__.py,0
+  adapters/python/urirun-0.4.166/urirun/_runtime.py,0
+  adapters/python/urirun-0.4.166/urirun/connect_catalog.py,0
+  adapters/python/urirun-0.4.166/urirun/connector_sdk.py,0
+  adapters/python/urirun-0.4.166/urirun/domain_monitor.py,0
+  adapters/python/urirun-0.4.166/urirun/errors.py,0
+  adapters/python/urirun-0.4.166/urirun/exec.py,0
+  adapters/python/urirun-0.4.166/urirun/host_db.py,0
+  adapters/python/urirun-0.4.166/urirun/host_integrations.py,0
+  adapters/python/urirun-0.4.166/urirun/mesh.py,0
+  adapters/python/urirun-0.4.166/urirun/scheduler.py,0
+  adapters/python/urirun-0.4.166/urirun/task_planner.py,0
+  adapters/python/urirun-0.4.166/urirun/v1.py,0
+  adapters/python/urirun-0.4.166/urirun/v2.py,0
+  adapters/python/urirun-0.4.166/urirun/v2_grpc.py,0
+  adapters/python/urirun-0.4.166/urirun/v2_service.py,0
   adapters/python/urirun/_registry.py,8
   adapters/python/urirun/_runtime.py,8
   adapters/python/urirun/_scan.py,8
@@ -46,6 +64,7 @@ M[183]:
   adapters/python/urirun/connectors/__init__.py,1
   adapters/python/urirun/connectors/backend_registry.py,129
   adapters/python/urirun/connectors/connect_catalog.py,255
+  adapters/python/urirun/connectors/connector_contract.py,143
   adapters/python/urirun/connectors/connector_lint.py,714
   adapters/python/urirun/connectors/connector_scaffold.py,413
   adapters/python/urirun/connectors/connector_sdk.py,87
@@ -64,6 +83,7 @@ M[183]:
   adapters/python/urirun/host/android_node.py,162
   adapters/python/urirun/host/artifacts_admin.py,484
   adapters/python/urirun/host/capability.py,160
+  adapters/python/urirun/host/chat_orchestrator.py,864
   adapters/python/urirun/host/connector_admin.py,240
   adapters/python/urirun/host/contracts.py,119
   adapters/python/urirun/host/decision_loop.py,134
@@ -73,20 +93,22 @@ M[183]:
   adapters/python/urirun/host/document_sync.py,1412
   adapters/python/urirun/host/domain_monitor.py,487
   adapters/python/urirun/host/fs_transfer.py,364
-  adapters/python/urirun/host/host_dashboard.py,3266
+  adapters/python/urirun/host/host_dashboard.py,2947
   adapters/python/urirun/host/host_db.py,527
   adapters/python/urirun/host/host_integrations.py,356
-  adapters/python/urirun/host/html_templates.py,4745
+  adapters/python/urirun/host/html_templates.py,4904
   adapters/python/urirun/host/node_types.py,265
-  adapters/python/urirun/host/object_registry.py,1044
+  adapters/python/urirun/host/object_registry.py,1146
   adapters/python/urirun/host/planfile_adapter.py,281
   adapters/python/urirun/host/routing.py,80
-  adapters/python/urirun/host/scanner_bridge.py,1534
+  adapters/python/urirun/host/scanner_bridge.py,1543
   adapters/python/urirun/host/scanner_net.py,140
+  adapters/python/urirun/host/scanner_service.py,212
   adapters/python/urirun/host/scheduler.py,135
   adapters/python/urirun/host/service_control.py,462
   adapters/python/urirun/host/task_planner.py,366
-  adapters/python/urirun/host/twin_bridge.py,142
+  adapters/python/urirun/host/twin_bridge.py,223
+  adapters/python/urirun/host/urifix_bridge.py,45
   adapters/python/urirun/host/widgets.py,64
   adapters/python/urirun/host_dashboard.py,5
   adapters/python/urirun/host_db.py,5
@@ -100,17 +122,17 @@ M[183]:
   adapters/python/urirun/node/config.py,226
   adapters/python/urirun/node/diagnostics.py,550
   adapters/python/urirun/node/doctor.py,217
-  adapters/python/urirun/node/flow.py,2051
+  adapters/python/urirun/node/flow.py,2058
   adapters/python/urirun/node/formatting.py,80
   adapters/python/urirun/node/keyauth.py,173
   adapters/python/urirun/node/manage.py,443
   adapters/python/urirun/node/mesh.py,274
-  adapters/python/urirun/node/node_cli.py,896
+  adapters/python/urirun/node/node_cli.py,897
   adapters/python/urirun/node/paths.py,38
   adapters/python/urirun/node/recovery.py,372
   adapters/python/urirun/node/reversible.py,597
   adapters/python/urirun/node/routing.py,173
-  adapters/python/urirun/node/server.py,997
+  adapters/python/urirun/node/server.py,1010
   adapters/python/urirun/node/task_cli.py,344
   adapters/python/urirun/node/transport.py,540
   adapters/python/urirun/node/twin_store.py,117
@@ -190,13 +212,6 @@ M[183]:
   tree.sh,4
   v1/js/urirun-v1.js,343
 D:
-  adapters/python/urirun/host/twin_bridge.py:
-    e: flow_has_desktop_step,append_twin_widget,twin_plan_preview,twin_plan_summary,is_desktop_task_prompt
-    flow_has_desktop_step(flow)
-    append_twin_widget(execute;flow;attachments;prompt;selected_targets;timeline)
-    twin_plan_preview(prompt;node)
-    twin_plan_summary(att)
-    is_desktop_task_prompt(prompt)
   adapters/python/urirun/host/document_sync.py:
     e: DocumentSyncDeps,_SyncParams,document_archive_root,document_index_path,document_sync_default_dest_root,document_sync_default_node,archive_month,pdf_text,pdf_stream,document_files_exist,filename_part,canonical_document_filename,document_filename_with_id,artifact_schema_known,document_schema_fields,needs_screen_document_capture,truthy_env,document_sync_auto_retry_enabled,_urifix_auto_retry,_validated_sync_retry_payload,document_sync_retry_payload_from_urifix,document_sync_dest_from_prompt,boolish,document_archive_pdfs,document_sync_verification,_log_and_chat_report,_resolve_node_params,_parse_sync_params,_build_sync_params,_check_preflight,_upload_file,_read_back_file,sync_documents_to_node,scanned_id_log_path,load_document_index,save_document_index,prune_orphaned_documents,iter_scanned_id_log,append_scanned_id_log,existing_scanned_id,scanned_log_entry,scanned_entry_seen,scanned_seen_buckets,backfill_scanned_id_log,write_document_pdf,sidecar_text,unique_document_path,existing_document,existing_document_meta,is_blank_metadata,merge_metadata_fields,enrich_archived_record,file_sha256,docid_for_file,find_duplicate_document,metadata_completeness,_cleanup_scan_files_lazy,archive_redundant_duplicate,supersede_archived_document,archive_scanned_document,reconcile_document_index
     DocumentSyncDeps:
@@ -389,46 +404,72 @@ A step...
     _uri_preflight(payload)
     _uri_env_drift(payload)
     _uri_memory_remember(payload)
-  adapters/python/urirun/__init__.py:
-    e: Connector,parse_uri,build_invocation,dispatch,command,shell,handler,_example_payload,ok,fail,plan,tag,policy,resolve_secret,action_space,result_data,result_degraded,run_steps,tool_binding,connector_bindings,entry_point_bindings,entry_point_binding_document,entry_point_registry,error_bindings,compat_report,compile_registry,list_routes,validate_binding_document,run,connector,load_manifest,connector_emit,connector_cli,connector_main,_connector_cli_routes,_connector_run_command
-    Connector: __post_init__(0),uri(1),_meta(1),command(1),shell(1),cli(1),_add_route_arguments(2),_build_cli_parser(2),_dispatch_cli(3),handler(1),registry(1),bindings(0),_live_bindings(0),manifest(1),mcp_tools(0),a2a_card(0)  # Small convention helper for connector packages.
-
-Connector a...
-    parse_uri(uri)
-    build_invocation(descriptor)
-    dispatch(uri;registry;payload)
-    command(uri)
-    shell(uri)
-    handler(uri)
-    _example_payload(schema)
-    ok()
-    fail(error)
-    plan()
-    tag(result;kind)
-    policy(allow;deny;secret_allow;policy_file)
-    resolve_secret(value;secret_allow)
-    action_space(registry)
-    result_data(env)
-    result_degraded(env)
-    run_steps(steps;registry)
-    tool_binding(uri;argv;properties)
-    connector_bindings()
-    entry_point_bindings(group)
-    entry_point_binding_document(group;generated_at)
-    entry_point_registry(group;generated_at;on_conflict)
-    error_bindings(target)
-    compat_report()
-    compile_registry(doc;generated_at;on_conflict)
-    list_routes(registry;policy)
-    validate_binding_document(doc)
-    run(uri;registry;payload;mode;policy;confirm;executors)
-    connector(connector_id)
-    load_manifest(package;name)
-    connector_emit(payload)
-    connector_cli(prog)
-    connector_main()
-    _connector_cli_routes(sub;pairs)
-    _connector_run_command(conn;binding;args)
+  adapters/python/urirun/host/scanner_service.py:
+    e: phone_scanner_service_id,ensure_phone_scanner_service,restart_phone_scanner_service
+    phone_scanner_service_id(bind_host;port)
+    ensure_phone_scanner_service(project;db;config;node_urls;token;identity)
+    restart_phone_scanner_service(project;db;config;node_urls;token;identity;payload)
+  adapters/python/urirun/host/twin_bridge.py:
+    e: flow_has_desktop_step,_step_inverse,_is_infra_step,_inverse_from_results,_publish_step_event,append_twin_widget,twin_plan_preview,twin_plan_summary,is_desktop_task_prompt
+    flow_has_desktop_step(flow)
+    _step_inverse(step_uri)
+    _is_infra_step(step)
+    _inverse_from_results(results;step_id;step_uri)
+    _publish_step_event(step;node;connector_inverse)
+    append_twin_widget(execute;flow;attachments;prompt;selected_targets;timeline;results)
+    twin_plan_preview(prompt;node)
+    twin_plan_summary(att)
+    is_desktop_task_prompt(prompt)
+  adapters/python/urirun/node/node_cli.py:
+    e: _data_bindings,_data_init,_data_dataset_create,_data_datasets,_data_record_upsert,_data_records,_data_artifact_register,_data_artifacts,_data_check_add,_data_checks,_data_sql,data_command,monitor_command,_parse_api_json_args,_build_implicit_api,_handle_add_node_advanced,_handle_add_node,_host_delegated_command,fulfill_need,supply_command,ensure_command,_maybe_ensure_scheme,_run_streamed,run_command,_print_event,watch_command,_watch_loop,_host_cmd_config,_host_cmd_nodes,_host_cmd_routes,_host_cmd_agents,_host_cmd_doctor,_host_cmd_ask,_host_mesh_command,copy_id_command,copy_id_cli,_split_deploy_doc,_warn_dropped_routes,deploy_command,_maybe_load_dotenv,host_command,_probe_one_route,_render_probe_report,probe_command,node_list_command,node_stop_command,_resolve_registry_source,node_command
+    _data_bindings(args;host_db)
+    _data_init(args;host_db)
+    _data_dataset_create(args;host_db)
+    _data_datasets(args;host_db)
+    _data_record_upsert(args;host_db)
+    _data_records(args;host_db)
+    _data_artifact_register(args;host_db)
+    _data_artifacts(args;host_db)
+    _data_check_add(args;host_db)
+    _data_checks(args;host_db)
+    _data_sql(args;host_db)
+    data_command(args)
+    monitor_command(args)
+    _parse_api_json_args(args)
+    _build_implicit_api(args)
+    _handle_add_node_advanced(args)
+    _handle_add_node(args)
+    _host_delegated_command(args)
+    fulfill_need(client;need;roots)
+    supply_command(args)
+    ensure_command(args)
+    _maybe_ensure_scheme(client;uri;ensure;roots)
+    _run_streamed(client;uri;payload;args;timeout)
+    run_command(args)
+    _print_event(ev;as_json)
+    watch_command(args)
+    _watch_loop(url)
+    _host_cmd_config(args;config;mesh)
+    _host_cmd_nodes(args;config;mesh)
+    _host_cmd_routes(args;config;mesh)
+    _host_cmd_agents(args;config;mesh)
+    _host_cmd_doctor(args;config;mesh)
+    _host_cmd_ask(args;config;mesh)
+    _host_mesh_command(args;config;mesh)
+    copy_id_command(args)
+    copy_id_cli(argv)
+    _split_deploy_doc(path)
+    _warn_dropped_routes(result)
+    deploy_command(args)
+    _maybe_load_dotenv(path)
+    host_command(args)
+    _probe_one_route(url;route;etag0;execute;timeout)
+    _render_probe_report(report)
+    probe_command(args)
+    node_list_command(args)
+    node_stop_command(args)
+    _resolve_registry_source(registry_arg;node_registry)
+    node_command(args)
   adapters/python/urirun/host/routing.py:
     e: selected_nodes_from_targets,route_in_selected_targets,has_screen_capture_route,screen_document_capability_gap
     selected_nodes_from_targets(selected_nodes;selected_targets)
@@ -445,7 +486,7 @@ Connector a...
     merge_live_webpage_nodes(nodes)
     phone_web_nodes(payload)
   adapters/python/urirun/host/object_registry.py:
-    e: host_registry_routes,host_object,_uri_target,_route_core_fields,route_owner_route,dedupe_routes,_node_owner_dict,_node_own_routes,node_object,service_object,uri_objects,phone_scanner_contact,service_contacts,annotate_node_tokens,mirror_node_to_nodes_file,node_api_slug,node_api_secret_ref,store_node_api_secret,extract_raw_secret,extract_secret_ref,build_auth_extra_fields,normalize_node_api_auth,default_api_items,api_item_fields,normalize_api_item,normalize_node_apis,derive_node_capabilities,build_node_entry,persist_node_to_config,node_remove_from_mirror,node_kinds_path,node_kinds,set_node_kind,node_remove_kind,annotate_node_kinds,configured_node_api_parts,configured_node_api_lookup,configured_api_secret,apply_auth_header,configured_api_headers,join_api_url,configured_api_response_body,build_request_body,execute_http_request,resolve_http_method_and_url,connector_hint,connector_required_response,configured_api_call,apply_uri_overrides,resolve_node_api_identifiers,uri_action_catalog,_node_add_parse_payload,node_add,node_remove
+    e: host_registry_routes,host_object,_uri_target,_route_core_fields,route_owner_route,dedupe_routes,_node_owner_dict,_node_own_routes,node_object,service_object,uri_objects,phone_scanner_contact,service_contacts,annotate_node_tokens,mirror_node_to_nodes_file,node_api_slug,node_api_secret_ref,store_node_api_secret,extract_raw_secret,extract_secret_ref,build_auth_extra_fields,normalize_node_api_auth,default_api_items,api_item_fields,normalize_api_item,normalize_node_apis,derive_node_capabilities,build_node_entry,persist_node_to_config,node_remove_from_mirror,node_kinds_path,node_kinds,set_node_kind,node_remove_kind,annotate_node_kinds,configured_node_api_parts,configured_node_api_lookup,configured_api_secret,apply_auth_header,configured_api_headers,join_api_url,configured_api_response_body,build_request_body,execute_http_request,resolve_http_method_and_url,connector_hint,connector_required_response,configured_api_call,apply_uri_overrides,resolve_node_api_identifiers,uri_action_catalog,_node_add_parse_payload,node_add,node_remove,node_envelope_error,probe_node_token,node_set_token
     host_registry_routes(actions)
     host_object(project;routes)
     _uri_target(uri)
@@ -500,6 +541,9 @@ Connector a...
     _node_add_parse_payload(payload;normalize_node_type;node_type_tags)
     node_add(config;payload)
     node_remove(config;payload)
+    node_envelope_error(envelope)
+    probe_node_token(name)
+    node_set_token(config;payload)
   adapters/python/urirun/host/connector_admin.py:
     e: connector_pip_tail,refresh_connector_schemes,env_check_error,docker_install_target,run_docker_check,parse_bindings_output,connector_env_check,_connector_install_node,connector_install
     connector_pip_tail(source;spec)
@@ -565,6 +609,74 @@ Connector a...
     artifacts_delete(host_db;project;db;payload)
     artifacts_dedupe_rows(host_db;project;db;payload)
     artifacts_cleanup_orphan_sidecars(host_db;project;db;payload)
+  adapters/python/urirun/host/scanner_bridge.py:
+    e: ScannerBridgeDeps,scanner_live_store_locked,scanner_best_update,scanner_best_take,scanner_staging_dir,crop_overlay_attachment,register_document_artifact,scanner_result_content,public_scanner_candidate,scanner_public_candidate_for_live,scanner_live_state_from_streams,register_scanner_result,_add_log,scanner_session,uri_event,page_action_enqueue,page_action_poll,page_action_result,scanner_status_from_log,latest_scanner_page_status,scanner_artifact_doc_meta,is_scanner_artifact,scanner_artifact_item,scanner_service_live_views,scanner_flow_result,nl_text,is_phone_scanner_prompt,is_autonomous_scanner_prompt,is_camera_start_prompt,torch_enabled_from_prompt,bounded,frame_visual_metrics,crop_dimensions,crop_geometry_score,crop_quality_score,doctype_quality_score,metadata_quality_score,ocr_quality_score,visual_quality_score,document_frame_quality,orientation_summary,decode_capture_image,capture_quality_ok,capture_display_path,cleanup_duplicate_scan_files,resolve_best_candidate,best_quality_rejected,best_candidate_paths,best_crop_and_ocr,best_series_not_found,store_best_finish,best_finish_store_failure,capture_reject_result,capture_candidate_result,scanner_live_state,draw_crop_box,draw_overlay_label,scanner_crop_overlay,auto_crop_receipt,capture_ocr_and_detect,refresh_best_ocr,ensure_best_overlay,scanner_capture,scanner_best_finish,staging_keep_paths,prune_scanner_staging
+    ScannerBridgeDeps:
+    scanner_live_store_locked(series_id;series)
+    scanner_best_update(series_id;candidate)
+    scanner_best_take(series_id)
+    scanner_staging_dir()
+    crop_overlay_attachment(deps)
+    register_document_artifact(deps;db;project)
+    scanner_result_content(content_prefix;crop;document;ocr)
+    public_scanner_candidate(candidate)
+    scanner_public_candidate_for_live(candidate;project)
+    scanner_live_state_from_streams(streams;project)
+    register_scanner_result(deps;project;db)
+    _add_log(deps;db;stream;event;detail)
+    scanner_session(deps;db;payload)
+    uri_event(deps;db;query)
+    page_action_enqueue(deps;db)
+    page_action_poll(target;limit)
+    page_action_result(deps;db;payload)
+    scanner_status_from_log(item)
+    latest_scanner_page_status(logs)
+    scanner_artifact_doc_meta(artifact)
+    is_scanner_artifact(kind;uri;meta)
+    scanner_artifact_item(artifact;kind;uri;path;display_path;doc;project)
+    scanner_service_live_views(scanner;service;recent_artifacts;camera_status)
+    scanner_flow_result(service;autonomous_scan;camera_action_uri;camera_payload;torch_click_uri;torch_enabled;queued_camera;queued_torch;prompt;selected_nodes;selected_targets)
+    nl_text(text)
+    is_phone_scanner_prompt(prompt)
+    is_autonomous_scanner_prompt(prompt)
+    is_camera_start_prompt(prompt)
+    torch_enabled_from_prompt(prompt)
+    bounded(value;low;high)
+    frame_visual_metrics(path)
+    crop_dimensions(crop)
+    crop_geometry_score(crop;reasons)
+    crop_quality_score(crop;reasons)
+    doctype_quality_score(doc_type;reasons)
+    metadata_quality_score(metadata;reasons)
+    ocr_quality_score(ocr;chars;reasons)
+    visual_quality_score(visual;reasons)
+    document_frame_quality(crop;ocr;metadata;display_path)
+    orientation_summary(crop)
+    decode_capture_image(raw_image)
+    capture_quality_ok(payload;quality;min_score)
+    capture_display_path(crop;path)
+    cleanup_duplicate_scan_files(paths)
+    resolve_best_candidate(series)
+    best_quality_rejected(payload;quality)
+    best_candidate_paths(best)
+    best_crop_and_ocr(best)
+    best_series_not_found(series_id)
+    store_best_finish(series;series_id;best;document;registered)
+    best_finish_store_failure(series_id;series)
+    capture_reject_result()
+    capture_candidate_result(project;payload)
+    scanner_live_state(project;limit)
+    draw_crop_box(draw;canvas;color;box;scale;original_width;original_height)
+    draw_overlay_label(draw;canvas;crop;quality;ok)
+    scanner_crop_overlay(original_path;crop;quality)
+    auto_crop_receipt(path)
+    capture_ocr_and_detect(path;display_path;payload;archive)
+    refresh_best_ocr(fallback_ocr;original_path;display_path)
+    ensure_best_overlay(best;crop;quality;original_path)
+    scanner_capture(project;db;payload)
+    scanner_best_finish(project;db;payload)
+    staging_keep_paths()
+    prune_scanner_staging(staging_dir_fn)
   adapters/python/urirun/host/discovery.py:
     e: iter_node_alias_values,add_node_aliases,node_spec_aliases,alias_map_from_dict,alias_map_from_list,_node_map_from_value,node_alias_map_from_value,normalize_known_node_url,url_map_from_dict,url_map_from_list,node_url_map_from_value,node_dicts_from_url_map,node_alias_map_from_config_doc,node_alias_map_from_env,node_alias_map_from_node_urls,known_nodes_file_data,node_alias_map_from_known_nodes_file,known_nodes_file_urls,merge_known_nodes_into_config,host_config,node_alias_map_from_context,prompt_node_match,route_inputs_example,_classify_not_found,classify_route_run,_route_targets,_probe_route,_node_test_summary,node_test_routes
     iter_node_alias_values(value)
@@ -916,56 +1028,6 @@ Connector a...
     load_spec(path)
     bindings_from_spec(spec)
     from_spec_command(args)
-  adapters/python/urirun/node/node_cli.py:
-    e: _data_bindings,_data_init,_data_dataset_create,_data_datasets,_data_record_upsert,_data_records,_data_artifact_register,_data_artifacts,_data_check_add,_data_checks,_data_sql,data_command,monitor_command,_parse_api_json_args,_build_implicit_api,_handle_add_node_advanced,_handle_add_node,_host_delegated_command,fulfill_need,supply_command,ensure_command,_maybe_ensure_scheme,_run_streamed,run_command,_print_event,watch_command,_watch_loop,_host_cmd_config,_host_cmd_nodes,_host_cmd_routes,_host_cmd_agents,_host_cmd_doctor,_host_cmd_ask,_host_mesh_command,copy_id_command,copy_id_cli,_split_deploy_doc,_warn_dropped_routes,deploy_command,_maybe_load_dotenv,host_command,_probe_one_route,_render_probe_report,probe_command,node_list_command,node_stop_command,_resolve_registry_source,node_command
-    _data_bindings(args;host_db)
-    _data_init(args;host_db)
-    _data_dataset_create(args;host_db)
-    _data_datasets(args;host_db)
-    _data_record_upsert(args;host_db)
-    _data_records(args;host_db)
-    _data_artifact_register(args;host_db)
-    _data_artifacts(args;host_db)
-    _data_check_add(args;host_db)
-    _data_checks(args;host_db)
-    _data_sql(args;host_db)
-    data_command(args)
-    monitor_command(args)
-    _parse_api_json_args(args)
-    _build_implicit_api(args)
-    _handle_add_node_advanced(args)
-    _handle_add_node(args)
-    _host_delegated_command(args)
-    fulfill_need(client;need;roots)
-    supply_command(args)
-    ensure_command(args)
-    _maybe_ensure_scheme(client;uri;ensure;roots)
-    _run_streamed(client;uri;payload;args;timeout)
-    run_command(args)
-    _print_event(ev;as_json)
-    watch_command(args)
-    _watch_loop(url)
-    _host_cmd_config(args;config;mesh)
-    _host_cmd_nodes(args;config;mesh)
-    _host_cmd_routes(args;config;mesh)
-    _host_cmd_agents(args;config;mesh)
-    _host_cmd_doctor(args;config;mesh)
-    _host_cmd_ask(args;config;mesh)
-    _host_mesh_command(args;config;mesh)
-    copy_id_command(args)
-    copy_id_cli(argv)
-    _split_deploy_doc(path)
-    _warn_dropped_routes(result)
-    deploy_command(args)
-    _maybe_load_dotenv(path)
-    host_command(args)
-    _probe_one_route(url;route;etag0;execute;timeout)
-    _render_probe_report(report)
-    probe_command(args)
-    node_list_command(args)
-    node_stop_command(args)
-    _resolve_registry_source(registry_arg;node_registry)
-    node_command(args)
   adapters/python/urirun/node/routing.py:
     e: uri_is_denied,route_class,route_is_safe,routes_from_registry,registry_fingerprint,safe_route,route_target,binding_for_remote_route,registry_from_routes,target_nodes,route_targets_for_nodes
     uri_is_denied(uri)
@@ -1042,8 +1104,121 @@ Connector a...
     _configured_api_routes(name;node)
     discover_node(node;timeout)
     discover_mesh(config)
+  adapters/python/urirun-0.4.166/urirun/__init__.py:
+    e: Connector,parse_uri,build_invocation,dispatch,command,shell,handler,_example_payload,ok,fail,plan,tag,policy,resolve_secret,action_space,result_data,result_degraded,run_steps,tool_binding,connector_bindings,entry_point_bindings,entry_point_binding_document,entry_point_registry,error_bindings,compat_report,compile_registry,list_routes,validate_binding_document,make_dispatch,normalize_dispatch_request,run,connector,load_manifest,connector_emit,connector_cli,connector_main,_connector_cli_routes,_connector_run_command
+    Connector: __post_init__(0),uri(1),_meta(1),command(1),shell(1),cli(1),_add_route_arguments(2),_build_cli_parser(2),_dispatch_cli(3),handler(1),registry(1),bindings(0),_live_bindings(0),manifest(1),mcp_tools(0),a2a_card(0)  # Small convention helper for connector packages.
+
+Connector a...
+    parse_uri(uri)
+    build_invocation(descriptor)
+    dispatch(uri;registry;payload)
+    command(uri)
+    shell(uri)
+    handler(uri)
+    _example_payload(schema)
+    ok()
+    fail(error)
+    plan()
+    tag(result;kind)
+    policy(allow;deny;secret_allow;policy_file)
+    resolve_secret(value;secret_allow)
+    action_space(registry)
+    result_data(env)
+    result_degraded(env)
+    run_steps(steps;registry)
+    tool_binding(uri;argv;properties)
+    connector_bindings()
+    entry_point_bindings(group)
+    entry_point_binding_document(group;generated_at)
+    entry_point_registry(group;generated_at;on_conflict)
+    error_bindings(target)
+    compat_report()
+    compile_registry(doc;generated_at;on_conflict)
+    list_routes(registry;policy)
+    validate_binding_document(doc)
+    make_dispatch(registry;mode;fallback)
+    normalize_dispatch_request(raw)
+    run(uri;registry;payload;mode;policy;confirm;executors)
+    connector(connector_id)
+    load_manifest(package;name)
+    connector_emit(payload)
+    connector_cli(prog)
+    connector_main()
+    _connector_cli_routes(sub;pairs)
+    _connector_run_command(conn;binding;args)
+  adapters/python/urirun/__init__.py:
+    e: Connector,parse_uri,build_invocation,dispatch,command,shell,handler,_example_payload,ok,fail,plan,tag,policy,resolve_secret,action_space,result_data,result_degraded,run_steps,tool_binding,connector_bindings,entry_point_bindings,entry_point_binding_document,entry_point_registry,error_bindings,compat_report,compile_registry,list_routes,validate_binding_document,make_dispatch,normalize_dispatch_request,run,connector,load_manifest,connector_emit,connector_cli,connector_main,_connector_cli_routes,_connector_run_command
+    Connector: __post_init__(0),uri(1),_meta(1),command(1),shell(1),cli(1),_add_route_arguments(2),_build_cli_parser(2),_dispatch_cli(3),handler(1),registry(1),bindings(0),_live_bindings(0),manifest(1),mcp_tools(0),a2a_card(0)  # Small convention helper for connector packages.
+
+Connector a...
+    parse_uri(uri)
+    build_invocation(descriptor)
+    dispatch(uri;registry;payload)
+    command(uri)
+    shell(uri)
+    handler(uri)
+    _example_payload(schema)
+    ok()
+    fail(error)
+    plan()
+    tag(result;kind)
+    policy(allow;deny;secret_allow;policy_file)
+    resolve_secret(value;secret_allow)
+    action_space(registry)
+    result_data(env)
+    result_degraded(env)
+    run_steps(steps;registry)
+    tool_binding(uri;argv;properties)
+    connector_bindings()
+    entry_point_bindings(group)
+    entry_point_binding_document(group;generated_at)
+    entry_point_registry(group;generated_at;on_conflict)
+    error_bindings(target)
+    compat_report()
+    compile_registry(doc;generated_at;on_conflict)
+    list_routes(registry;policy)
+    validate_binding_document(doc)
+    make_dispatch(registry;mode;fallback)
+    normalize_dispatch_request(raw)
+    run(uri;registry;payload;mode;policy;confirm;executors)
+    connector(connector_id)
+    load_manifest(package;name)
+    connector_emit(payload)
+    connector_cli(prog)
+    connector_main()
+    _connector_cli_routes(sub;pairs)
+    _connector_run_command(conn;binding;args)
+  adapters/python/urirun/node/server.py:
+    e: EventHub,NodeContext,NodeHandler,send_json,read_raw,read_json,_pool_executors,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_registry_to_bindings,_deploy_registry,_reimport_pushed_code,_apply_deploy_surface,_apply_deploy_allow,apply_deploy,_parse_sse_query,_sse_initial_cursor,_sse_event_matches,_sse_frame,_warn_unauthenticated_node,_start_enroll_token_rotation,_announce_node_started,serve_node,_serve_opts_merged,_resolve_serve_opts,_node_serve
+    EventHub: __init__(1),publish(1),subscribe(0),unsubscribe(1),replay_since(1),current_id(0),count(0)  # In-memory pub/sub for a node's live event stream (SSE). Each...
+    NodeContext: __init__(0)  # Everything a NodeHandler needs to serve one node — the mutab...
+    NodeHandler(BaseHTTPRequestHandler): do_OPTIONS(0),_guarded(1),do_GET(0),do_POST(0),_health_payload(0),_routes_payload(0),_get(0),_get_errors(2),_post(0),_run_target(2),_publish_run(2),_validate_run_request(1),_dispatch_control_uri(3),_respond_async(4),_handle_run(0),_handle_adopt(2),_handle_need(2),_handle_run_control(1),_stream_events(0),_admin_ok(1),_run_ok(1),_handle_deploy(0),_handle_enroll(0),log_message(1)  # The node's HTTP surface. State/config live on `self.server.c...
+    send_json(handler;status;payload)
+    read_raw(handler)
+    read_json(handler)
+    _pool_executors(pools)
+    resolve_admin_token(explicit;config_token;generate)
+    _write_pushed_code(code;summary)
+    _apply_deploy_env(env;summary)
+    _registry_to_bindings(registry)
+    _deploy_registry(body;existing)
+    _reimport_pushed_code(pushed_mods;summary)
+    _apply_deploy_surface(state;body)
+    _apply_deploy_allow(state;body;summary)
+    apply_deploy(state;body)
+    _parse_sse_query(query)
+    _sse_initial_cursor(hub;params;headers)
+    _sse_event_matches(ev;schemes;runs)
+    _sse_frame(ev)
+    _warn_unauthenticated_node(name;host;port;execute;run_auth_enforced)
+    _start_enroll_token_rotation(ctx;public_url)
+    _announce_node_started(name;host;port;state;execute)
+    serve_node(name;registry;host;port;execute;public_url;allow_secrets;allow;pool;admin_token;key_auth;require_run_auth;manage;registry_path;config_path;kind;runtime;services)
+    _serve_opts_merged(args;node)
+    _resolve_serve_opts(args;node)
+    _node_serve(args;node;name;registry)
   adapters/python/urirun/host/host_dashboard.py:
-    e: _prune_scanner_staging,_archive_scanned_document,artifacts_delete,artifacts_dedupe_rows,artifacts_cleanup_orphan_sidecars,_json_response,_html_response,_docs_nodes_html,_asset_response,_service_view_from_query,_service_widget_html,_service_widget_svg,_js_sdk_response,_read_json,_file_response,_chat_message,_add_chat_message,chat_history,chat_delete_messages,_sync_document_metadata_hooks,_extract_document_metadata,_local_image_ocr,_utc_now,_node_alias_map_from_context,_node_url_from_config,node_test_routes,_ensure_node_uri_routes,_document_sync_deps,sync_documents_to_node,startup_phone_qr,ensure_phone_scanner_service,_latest_scanner_page_status,_recent_scanner_artifacts,service_live_views,_scanner_bridge_deps,uri_event,scanner_capture,scanner_best_finish,page_action_enqueue,_uri_action_lookup,_uri_mode,_service_restart_argv,restart_chat_service,_phone_scanner_service_id,restart_phone_scanner_service,_uri_simulated_result,_result_artifact_class,register_tagged_artifact,_run_inprocess_connector_uri,_svc_port,_svc_is_map,_svc_start_fn,_svc_restart_fn,_service_lifecycle_dispatch,_uri_invoke_route,_uri_invoke_page_action,_finalize_uri_result,_uri_invoke_fallback,uri_invoke,_first,_host_db,_mesh,_planfile_adapter,_host_config,_safe_tickets,_task_counts,_service_contacts,summary,_compact_chat_result,node_add,node_remove,configured_node_api_request,restart_android_node_service,_merge_live_webpage_nodes,phone_node_qr,_node_envelope_error,_probe_node_token,node_set_token,_try_urifix_repair,_is_document_sync_prompt,_document_sync_node_from_prompt,_chat_ask_phone_scanner,_sync_execute_initial,_sync_ok_and_status,_apply_urifix_recovery,_chat_ask_document_sync,_chat_ask_general_planner_failure,_general_path_complete,_chat_ask_general_capability_gap,_apply_run_credentials,_restore_run_credentials,_fetch_planner_environments_for_nodes,_chat_ask_general_check_offline,_chat_ask_general_build_result,_chat_ask_general,_add_chat_user_message,_chat_insert_twin_preview,chat_ask,task_action,task_create,_lan_qr_profile,connector_test,documents_reconcile,_api_summary,_api_objects,_api_node_types,_api_tasks,_api_checks,_api_logs,_api_artifacts,_api_chat_history,_api_services_live,_api_scanner_live,_api_nodes_or_routes,_api_twin_flows,_dashboard_api_response,_handle_events_sse,create_handler,_free_port_from_matching_processes,_is_dashboard_process,_free_port_from_old_dashboard,_free_port_from_old_scanner,_free_port_from_old_chat,_free_port_from_old_android_node,serve,command,default_host
+    e: _prune_scanner_staging,_archive_scanned_document,artifacts_delete,artifacts_dedupe_rows,artifacts_cleanup_orphan_sidecars,_json_response,_html_response,_docs_nodes_html,_asset_response,_service_view_from_query,_service_widget_html,_service_widget_svg,_js_sdk_response,_read_json,_file_response,_chat_message,_add_chat_message,chat_history,chat_delete_messages,_sync_document_metadata_hooks,_extract_document_metadata,_local_image_ocr,_utc_now,_node_alias_map_from_context,_node_url_from_config,node_test_routes,_ensure_node_uri_routes,_document_sync_deps,sync_documents_to_node,startup_phone_qr,ensure_phone_scanner_service,_latest_scanner_page_status,_recent_scanner_artifacts,service_live_views,_scanner_bridge_deps,uri_event,_register_scanner_result,scanner_capture,scanner_best_finish,page_action_enqueue,_uri_action_lookup,_uri_mode,_service_restart_argv,restart_chat_service,restart_phone_scanner_service,_uri_simulated_result,_result_artifact_class,register_tagged_artifact,_run_inprocess_connector_uri,_svc_port,_svc_is_map,_svc_start_fn,_svc_restart_fn,_service_lifecycle_dispatch,_uri_invoke_route,_uri_invoke_page_action,_finalize_uri_result,_uri_invoke_fallback,uri_invoke,_first,_host_db,_mesh,_planfile_adapter,_host_config,_safe_tickets,_task_counts,_service_contacts,summary,_compact_chat_result,node_add,node_remove,configured_node_api_request,restart_android_node_service,_merge_live_webpage_nodes,phone_node_qr,_node_envelope_error,_probe_node_token,node_set_token,_is_document_sync_prompt,_document_sync_node_from_prompt,_chat_ask_phone_scanner,_sync_execute_initial,_sync_ok_and_status,_apply_urifix_recovery,_chat_ask_document_sync,_chat_ask_general_planner_failure,_general_path_complete,_chat_ask_general_capability_gap,_apply_run_credentials,_restore_run_credentials,_fetch_planner_environments_for_nodes,_chat_ask_general_check_offline,_chat_ask_general_build_result,_chat_ask_general,_add_chat_user_message,_chat_insert_twin_preview,chat_ask,task_action,task_create,_lan_qr_profile,connector_test,documents_reconcile,_api_summary,_api_objects,_api_node_types,_api_tasks,_api_checks,_api_logs,_api_artifacts,_api_chat_history,_api_services_live,_api_scanner_live,_api_nodes_or_routes,_api_twin_flows,_api_twin_state,_dashboard_api_response,_handle_events_sse,create_handler,_free_port_from_matching_processes,_is_dashboard_process,_free_port_from_old_dashboard,_free_port_from_old_scanner,_free_port_from_old_chat,_free_port_from_old_android_node,serve,command,default_host
     _prune_scanner_staging()
     _archive_scanned_document()
     artifacts_delete(project;artifact_dir;payload;db)
@@ -1080,6 +1255,7 @@ Connector a...
     service_live_views(project;db;limit)
     _scanner_bridge_deps()
     uri_event(db;query)
+    _register_scanner_result(project;db)
     scanner_capture(project;db;payload)
     scanner_best_finish(project;db;payload)
     page_action_enqueue(db)
@@ -1087,7 +1263,6 @@ Connector a...
     _uri_mode(value)
     _service_restart_argv(payload)
     restart_chat_service(payload)
-    _phone_scanner_service_id(bind_host;port)
     restart_phone_scanner_service(project;db;config;node_urls;token;identity;payload)
     _uri_simulated_result(uri;mode;action_payload;action)
     _result_artifact_class(value)
@@ -1122,7 +1297,6 @@ Connector a...
     _node_envelope_error(envelope)
     _probe_node_token(name;config)
     node_set_token(config;payload)
-    _try_urifix_repair(prompt;request;result)
     _is_document_sync_prompt(prompt;selected_nodes;selected_targets;config;node_urls)
     _document_sync_node_from_prompt(prompt;selected_nodes;selected_targets;config;node_urls)
     _chat_ask_phone_scanner(project;db;config;node_urls;token;identity;prompt;execute;selected_nodes;selected_targets)
@@ -1159,6 +1333,7 @@ Connector a...
     _api_scanner_live(project;db;config;query;node_urls)
     _api_nodes_or_routes(path;config;node_urls)
     _api_twin_flows(project;db;config;query;node_urls)
+    _api_twin_state(project;db;config;query;node_urls)
     _dashboard_api_response(path;project;db;config;query;node_urls)
     _handle_events_sse(handler;parsed)
     create_handler(project;db;config;node_urls;token;identity)
@@ -1171,103 +1346,30 @@ Connector a...
     serve(project;db;config;host;port;node_urls;token;identity;tls_cert;tls_key;startup_qr;qr_url)
     command(args)
     default_host()
-  adapters/python/urirun/host/scanner_bridge.py:
-    e: ScannerBridgeDeps,scanner_live_store_locked,scanner_best_update,scanner_best_take,scanner_staging_dir,crop_overlay_attachment,register_document_artifact,scanner_result_content,public_scanner_candidate,scanner_public_candidate_for_live,scanner_live_state_from_streams,register_scanner_result,_add_log,scanner_session,uri_event,page_action_enqueue,page_action_poll,page_action_result,scanner_status_from_log,latest_scanner_page_status,scanner_artifact_doc_meta,is_scanner_artifact,scanner_artifact_item,scanner_service_live_views,scanner_flow_result,nl_text,is_phone_scanner_prompt,is_autonomous_scanner_prompt,is_camera_start_prompt,torch_enabled_from_prompt,bounded,frame_visual_metrics,crop_dimensions,crop_geometry_score,crop_quality_score,doctype_quality_score,metadata_quality_score,ocr_quality_score,visual_quality_score,document_frame_quality,orientation_summary,decode_capture_image,capture_quality_ok,capture_display_path,cleanup_duplicate_scan_files,resolve_best_candidate,best_quality_rejected,best_candidate_paths,best_crop_and_ocr,best_series_not_found,store_best_finish,best_finish_store_failure,capture_reject_result,capture_candidate_result,scanner_live_state,draw_crop_box,draw_overlay_label,scanner_crop_overlay,auto_crop_receipt,capture_ocr_and_detect,refresh_best_ocr,ensure_best_overlay,scanner_capture,scanner_best_finish,staging_keep_paths,prune_scanner_staging
-    ScannerBridgeDeps:
-    scanner_live_store_locked(series_id;series)
-    scanner_best_update(series_id;candidate)
-    scanner_best_take(series_id)
-    scanner_staging_dir()
-    crop_overlay_attachment(deps)
-    register_document_artifact(deps;db;project)
-    scanner_result_content(content_prefix;crop;document;ocr)
-    public_scanner_candidate(candidate)
-    scanner_public_candidate_for_live(candidate;project)
-    scanner_live_state_from_streams(streams;project)
-    register_scanner_result(deps;project;db)
-    _add_log(deps;db;stream;event;detail)
-    scanner_session(deps;db;payload)
-    uri_event(deps;db;query)
-    page_action_enqueue(deps;db)
-    page_action_poll(target;limit)
-    page_action_result(deps;db;payload)
-    scanner_status_from_log(item)
-    latest_scanner_page_status(logs)
-    scanner_artifact_doc_meta(artifact)
-    is_scanner_artifact(kind;uri;meta)
-    scanner_artifact_item(artifact;kind;uri;path;display_path;doc;project)
-    scanner_service_live_views(scanner;service;recent_artifacts;camera_status)
-    scanner_flow_result(service;autonomous_scan;camera_action_uri;camera_payload;torch_click_uri;torch_enabled;queued_camera;queued_torch;prompt;selected_nodes;selected_targets)
-    nl_text(text)
-    is_phone_scanner_prompt(prompt)
-    is_autonomous_scanner_prompt(prompt)
-    is_camera_start_prompt(prompt)
-    torch_enabled_from_prompt(prompt)
-    bounded(value;low;high)
-    frame_visual_metrics(path)
-    crop_dimensions(crop)
-    crop_geometry_score(crop;reasons)
-    crop_quality_score(crop;reasons)
-    doctype_quality_score(doc_type;reasons)
-    metadata_quality_score(metadata;reasons)
-    ocr_quality_score(ocr;chars;reasons)
-    visual_quality_score(visual;reasons)
-    document_frame_quality(crop;ocr;metadata;display_path)
-    orientation_summary(crop)
-    decode_capture_image(raw_image)
-    capture_quality_ok(payload;quality;min_score)
-    capture_display_path(crop;path)
-    cleanup_duplicate_scan_files(paths)
-    resolve_best_candidate(series)
-    best_quality_rejected(payload;quality)
-    best_candidate_paths(best)
-    best_crop_and_ocr(best)
-    best_series_not_found(series_id)
-    store_best_finish(series;series_id;best;document;registered)
-    best_finish_store_failure(series_id;series)
-    capture_reject_result()
-    capture_candidate_result(project;payload)
-    scanner_live_state(project;limit)
-    draw_crop_box(draw;canvas;color;box;scale;original_width;original_height)
-    draw_overlay_label(draw;canvas;crop;quality;ok)
-    scanner_crop_overlay(original_path;crop;quality)
-    auto_crop_receipt(path)
-    capture_ocr_and_detect(path;display_path;payload;archive)
-    refresh_best_ocr(fallback_ocr;original_path;display_path)
-    ensure_best_overlay(best;crop;quality;original_path)
-    scanner_capture(project;db;payload)
-    scanner_best_finish(project;db;payload)
-    staging_keep_paths()
-    prune_scanner_staging(staging_dir_fn)
-  adapters/python/urirun/node/server.py:
-    e: EventHub,NodeContext,NodeHandler,send_json,read_raw,read_json,_pool_executors,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_registry_to_bindings,_deploy_registry,_reimport_pushed_code,_apply_deploy_surface,_apply_deploy_allow,apply_deploy,_parse_sse_query,_sse_initial_cursor,_sse_event_matches,_sse_frame,_warn_unauthenticated_node,_start_enroll_token_rotation,_announce_node_started,serve_node,_serve_opts_merged,_resolve_serve_opts,_node_serve
-    EventHub: __init__(1),publish(1),subscribe(0),unsubscribe(1),replay_since(1),current_id(0),count(0)  # In-memory pub/sub for a node's live event stream (SSE). Each...
-    NodeContext: __init__(0)  # Everything a NodeHandler needs to serve one node — the mutab...
-    NodeHandler(BaseHTTPRequestHandler): do_OPTIONS(0),_guarded(1),do_GET(0),do_POST(0),_health_payload(0),_routes_payload(0),_get(0),_get_errors(2),_post(0),_run_target(2),_publish_run(2),_validate_run_request(1),_dispatch_control_uri(3),_respond_async(4),_handle_run(0),_handle_adopt(2),_handle_need(2),_handle_run_control(1),_stream_events(0),_admin_ok(1),_run_ok(1),_handle_deploy(0),_handle_enroll(0),log_message(1)  # The node's HTTP surface. State/config live on `self.server.c...
-    send_json(handler;status;payload)
-    read_raw(handler)
-    read_json(handler)
-    _pool_executors(pools)
-    resolve_admin_token(explicit;config_token;generate)
-    _write_pushed_code(code;summary)
-    _apply_deploy_env(env;summary)
-    _registry_to_bindings(registry)
-    _deploy_registry(body;existing)
-    _reimport_pushed_code(pushed_mods;summary)
-    _apply_deploy_surface(state;body)
-    _apply_deploy_allow(state;body;summary)
-    apply_deploy(state;body)
-    _parse_sse_query(query)
-    _sse_initial_cursor(hub;params;headers)
-    _sse_event_matches(ev;schemes;runs)
-    _sse_frame(ev)
-    _warn_unauthenticated_node(name;host;port;execute;run_auth_enforced)
-    _start_enroll_token_rotation(ctx;public_url)
-    _announce_node_started(name;host;port;state;execute)
-    serve_node(name;registry;host;port;execute;public_url;allow_secrets;allow;pool;admin_token;key_auth;require_run_auth;manage;registry_path;config_path;kind;runtime;services)
-    _serve_opts_merged(args;node)
-    _resolve_serve_opts(args;node)
-    _node_serve(args;node;name;registry)
+  adapters/python/urirun/host/chat_orchestrator.py:
+    e: ChatDeps,chat_message,compact_chat_result,_is_document_sync_prompt,_document_sync_node_from_prompt,_chat_ask_phone_scanner,_sync_execute_initial,_sync_ok_and_status,_apply_urifix_recovery,_chat_ask_document_sync,_chat_ask_general_planner_failure,_general_path_complete,_chat_ask_general_capability_gap,_apply_run_credentials,_restore_run_credentials,_fetch_planner_environments_for_nodes,_chat_ask_general_check_offline,_chat_ask_general_build_result,_chat_ask_general,_add_chat_user_message,_chat_insert_twin_preview,chat_ask
+    ChatDeps:
+    chat_message(role;content)
+    compact_chat_result(result;payload)
+    _is_document_sync_prompt(prompt;selected_nodes;selected_targets;config;node_urls;deps)
+    _document_sync_node_from_prompt(prompt;selected_nodes;selected_targets;config;node_urls;deps)
+    _chat_ask_phone_scanner(project;db;config;node_urls;token;identity;prompt;execute;selected_nodes;selected_targets;deps)
+    _sync_execute_initial(project;db;config;node_urls;token;identity;sync_payload;deps)
+    _sync_ok_and_status(sync_result;error;execute)
+    _apply_urifix_recovery(result;timeline)
+    _chat_ask_document_sync(project;db;config;payload;node_urls;token;identity;prompt;execute;no_llm;selected_nodes;selected_targets;deps)
+    _chat_ask_general_planner_failure(exc;db;prompt;execute;selected_nodes;selected_targets;deps)
+    _general_path_complete(result;db;prompt;execute;selected_nodes;selected_targets;generator;flow;attachments;deps)
+    _chat_ask_general_capability_gap(db;prompt;execute;selected_nodes;selected_targets;discovered;capability_gap;deps)
+    _apply_run_credentials(token;identity)
+    _restore_run_credentials(old_token;old_identity)
+    _fetch_planner_environments_for_nodes(mesh;selected_nodes;execute;registry;discovered)
+    _chat_ask_general_check_offline(selected_nodes;discovered;db;prompt;execute;selected_targets;deps)
+    _chat_ask_general_build_result(execution;flow;discovered;generator;selected_nodes;selected_targets;prompt;execute;payload;project;db;deps)
+    _chat_ask_general(project;db;config;payload;node_urls;token;identity;prompt;execute;no_llm;selected_nodes;selected_targets;deps)
+    _add_chat_user_message(db;prompt;config;node_urls)
+    _chat_insert_twin_preview(db;prompt;selected_nodes;selected_targets;deps)
+    chat_ask(project;db;config;payload;node_urls;token;identity;deps)
   scripts/lint_connectors.py:
     e: classify,lint_fleet,_flags,_print_fleet_report,_lint_exit_code,main
     classify(rep)
@@ -1436,6 +1538,9 @@ Connector a...
     plan_chat_request(prompt)
     ticket_payload(ticket;plan)
     create_tickets_from_plan(project;plan)
+  adapters/python/urirun/host/urifix_bridge.py:
+    e: try_urifix_repair
+    try_urifix_repair(prompt;request;result)
   adapters/python/urirun/connectors/openapi_import.py:
     e: _route_uri,_operation_schema,_operation_binding,import_openapi,load_spec,add_openapi_command
     _route_uri(scheme;target;method;path)
@@ -1650,6 +1755,10 @@ Connector a...
     _route_log(rc)
     _route_flow(rc)
     run_uri_route(ctx;execute)
+  adapters/python/urirun/host/dispatch.py:
+    e: inprocess_fallback,make_local_dispatch_uri
+    inprocess_fallback(uri;payload)
+    make_local_dispatch_uri(registry;run_mode;fallback)
   adapters/python/urirun/host/service_control.py:
     e: payload_truthy,service_restart_argv,schedule_restart_command,_resolve_chat_service_script,_append_chat_restart_options,chat_service_restart_argv,restart_chat_service,port_holder_pids,process_cmdline,_cmdline_contains,is_dashboard_process,is_scanner_process,is_chat_process,is_android_node_process,_signal_pids,free_port_from_matching_processes,_free_port_result,free_port_from_old_dashboard,canonical_service_uri,service_lifecycle_uris,service_lifecycle_aliases,service_status,stop_service_pids
     payload_truthy(value)
@@ -1692,10 +1801,6 @@ Connector a...
     backend(action;name)
     dispatch(action)
     registry_report()
-  adapters/python/urirun/host/dispatch.py:
-    e: inprocess_fallback,make_local_dispatch_uri
-    inprocess_fallback(uri;payload)
-    make_local_dispatch_uri(registry;run_mode;fallback)
   adapters/python/urirun/exec.py:
     e: _resolve,main
     _resolve(ref)
@@ -1737,6 +1842,10 @@ Connector a...
     _create_abs()
     _emit_clicks(ev;fd;button;clicks)
     abs_click(x;y;sw;sh)
+  adapters/python/urirun-0.4.166/urirun/exec.py:
+    e: _resolve,main
+    _resolve(ref)
+    main(argv)
   examples/matrix/verify.py:
     e: essential,main
     essential(doc)
@@ -1781,6 +1890,12 @@ Connector a...
     ready_ticket(project;ticket_id;note)
     run_dsl(project;command)
     loads_json(value;default)
+  adapters/python/urirun/runtime/v2_service.py:
+    e: service_base,_post,call,make_dispatch
+    service_base(target;uri)
+    _post(url;body;timeout)
+    call(uri;payload;registry;mode;timeout;validate)
+    make_dispatch(registry;mode;fallback)
   adapters/python/urirun/runtime/introspect.py:
     e: registry_introspect_bindings,run_registry_introspect,_introspect_binding,_introspect_list
     registry_introspect_bindings(target)
@@ -1799,6 +1914,19 @@ Connector a...
     call(uri;payload;registry;target;mode;timeout;validate)
     stream(uri;payload;target;mode;timeout)
     list_routes(target;timeout)
+    main(argv)
+  adapters/python/urirun/runtime/v2_mcp.py:
+    e: tool_name,unique_tool_name,_input_schema,to_mcp_tools,to_mcp_manifest,to_a2a_card,build_tool_index,call_tool,_handle_mcp_request,serve_mcp,main
+    tool_name(uri)
+    unique_tool_name(uri;used)
+    _input_schema(entry)
+    to_mcp_tools(registry)
+    to_mcp_manifest(registry)
+    to_a2a_card(registry;name;url;version)
+    build_tool_index(registry)
+    call_tool(name;arguments;registry;mode;policy;confirm)
+    _handle_mcp_request(request;registry;index;public_tools;respond;mode;policy)
+    serve_mcp(registry;policy;mode;instream;outstream)
     main(argv)
   adapters/python/urirun/runtime/discovery.py:
     e: _index_path,full_registry,_fingerprint,_scheme_of,_candidate_sort_key,build_index,load_index,registry_for_uri,_bindings_for_entry_point
@@ -1868,25 +1996,6 @@ Connector a...
     _write_artifact(raw)
     materialize_base64_artifacts(data)
     compact_result_artifacts(result;args)
-  adapters/python/urirun/runtime/v2_service.py:
-    e: service_base,_post,call,make_dispatch
-    service_base(target;uri)
-    _post(url;body;timeout)
-    call(uri;payload;registry;mode;timeout;validate)
-    make_dispatch(registry;mode;fallback)
-  adapters/python/urirun/runtime/v2_mcp.py:
-    e: tool_name,unique_tool_name,_input_schema,to_mcp_tools,to_mcp_manifest,to_a2a_card,build_tool_index,call_tool,_handle_mcp_request,serve_mcp,main
-    tool_name(uri)
-    unique_tool_name(uri;used)
-    _input_schema(entry)
-    to_mcp_tools(registry)
-    to_mcp_manifest(registry)
-    to_a2a_card(registry;name;url;version)
-    build_tool_index(registry)
-    call_tool(name;arguments;registry;mode;policy;confirm)
-    _handle_mcp_request(request;registry;index;public_tools;respond;mode;policy)
-    serve_mcp(registry;policy;mode;instream;outstream)
-    main(argv)
   examples/node-file-transfer/fs_transfer.py:
     e: _expand_path,_unique_path,read_b64,write_b64
     _expand_path(path)
@@ -2002,6 +2111,11 @@ Connector a...
     init_project(path)
     merge_into(out;bindings)
     main(argv)
+  adapters/python/urirun/host/html_templates.py:
+    e: docs_nodes_html,service_widget_html,service_widget_svg
+    docs_nodes_html(profiles)
+    service_widget_html(view)
+    service_widget_svg(view;summary;width;height)
   adapters/python/urirun/connectors/connector_smoke.py:
     e: _load,smoke,smoke_command
     _load(path)
@@ -2074,6 +2188,11 @@ Connector a...
     cron_line(command;time_of_day)
     preview()
     install_systemd_user(files;out_dir)
+  adapters/python/urirun/connectors/connector_contract.py:
+    e: ConnectorContractSuite
+    ConnectorContractSuite: compile(0),dispatch_dry(2),dispatch_execute(2),assert_ok(0),assert_reply_shape(0),test_bindings_validate(0),test_bindings_compile(0),test_bindings_serializable(0),test_dry_run_routes_return_valid_reply_shape(0),test_execute_cases(0),test_failed_dispatch_carries_error(0)  # pytest-compatible base class for connector contract tests.
+
+...
   adapters/ruby/urirun.rb:
     i: json
     e: Connector
@@ -2269,4 +2388,19 @@ Connector a...
   adapters/csharp/obj/Debug/net8.0/urirun-connector.AssemblyInfo.cs:
     i: System,System.Reflection
   adapters/ruby/example/hash_connector.rb:
-  adapters/python/urirun/host/html_templates.py:
+  adapters/python/urirun-0.4.166/setup.cfg:
+  adapters/python/urirun-0.4.166/pyproject.toml:
+  adapters/python/urirun-0.4.166/urirun/domain_monitor.py:
+  adapters/python/urirun-0.4.166/urirun/connect_catalog.py:
+  adapters/python/urirun-0.4.166/urirun/v2_service.py:
+  adapters/python/urirun-0.4.166/urirun/host_db.py:
+  adapters/python/urirun-0.4.166/urirun/task_planner.py:
+  adapters/python/urirun-0.4.166/urirun/v2.py:
+  adapters/python/urirun-0.4.166/urirun/errors.py:
+  adapters/python/urirun-0.4.166/urirun/host_integrations.py:
+  adapters/python/urirun-0.4.166/urirun/connector_sdk.py:
+  adapters/python/urirun-0.4.166/urirun/scheduler.py:
+  adapters/python/urirun-0.4.166/urirun/_runtime.py:
+  adapters/python/urirun-0.4.166/urirun/v1.py:
+  adapters/python/urirun-0.4.166/urirun/v2_grpc.py:
+  adapters/python/urirun-0.4.166/urirun/mesh.py:

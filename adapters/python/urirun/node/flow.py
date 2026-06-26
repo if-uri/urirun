@@ -457,13 +457,19 @@ def _flow_intents_llm(prompt: str) -> dict[str, bool] | None:
         return None
 
 
-def _flow_intents(prompt: str) -> dict[str, bool]:
-    """Classify the prompt into host intents via LLM.
+def _flow_intents(prompt: str, *, use_llm: bool = True) -> dict[str, bool]:
+    """Classify the prompt into host intents.
 
-    Returns LLM result when available.  When LLM is not configured or the
-    call fails, all intents are False (no-op — heuristic_flow emits no steps
-    rather than guessing).  When LLM IS available but classifies nothing,
-    defaults to processes=True so the call is not silent."""
+    With ``use_llm=True`` (default) attempts LLM classification.  Returns
+    LLM result when available; if LLM is not configured or fails, returns
+    all-False (no-op — heuristic_flow emits no steps rather than guessing).
+    When LLM IS available but classifies nothing, defaults to processes=True.
+
+    With ``use_llm=False`` skips LLM entirely and returns all-False —
+    callers that explicitly opt out of LLM get no heuristic steps rather
+    than a silent fallback guess."""
+    if not use_llm:
+        return {k: False for k in _INTENT_NAMES}
     intents = _flow_intents_llm(prompt)
     if intents is None:
         return {k: False for k in _INTENT_NAMES}
@@ -512,6 +518,7 @@ def _append_target_steps(steps: list[dict], route_uris: set, target: str, intent
             {"contains": "LinkedIn" if "linkedin" in url.lower() else ""},
             previous,
         )
+        previous = append_if_available(steps, route_uris, f"browser://{target}/page/query/screenshot", {}, previous)
     if intents["processes"]:
         previous = ensure_health(previous)
         previous = append_if_available(steps, route_uris, f"proc://{target}/process/query/list", {"limit": _PROCESS_LIST_LIMIT}, previous)
@@ -543,7 +550,7 @@ def _append_target_steps(steps: list[dict], route_uris: set, target: str, intent
     return previous
 
 
-def heuristic_flow(prompt: str, routes: list[dict], nodes: list[dict], selected_nodes: list[str] | None = None) -> dict:
+def heuristic_flow(prompt: str, routes: list[dict], nodes: list[dict], selected_nodes: list[str] | None = None, *, use_llm: bool = True) -> dict:
     selected = target_nodes(prompt, nodes, selected_nodes)
 
     def selected_route(route: dict) -> bool:
@@ -560,7 +567,7 @@ def heuristic_flow(prompt: str, routes: list[dict], nodes: list[dict], selected_
     route_uris = {route["uri"] for route in selected_routes}
     targets = route_targets_for_nodes(selected_routes, selected)
     lowered = nl_key(prompt)
-    intents = _flow_intents(prompt)
+    intents = _flow_intents(prompt, use_llm=use_llm)
     url = first_url(prompt) or ("https://www.linkedin.com/feed/" if "linkedin" in lowered else "https://example.com/")
     path = requested_folder_path(lowered)
     steps: list[dict] = []
@@ -981,7 +988,7 @@ def make_flow(prompt: str, mesh: dict, selected_nodes: list[str] | None = None, 
                 environments=environments,
             ), {"provider": "litellm", "fallback": False}
         except Exception as exc:  # noqa: BLE001 - host should still be usable without an LLM.
-            flow = heuristic_flow(prompt, routes, mesh["nodes"], selected_nodes)
+            flow = heuristic_flow(prompt, routes, mesh["nodes"], selected_nodes, use_llm=True)
             return normalize_flow_or_explain(
                 flow,
                 allowed,
@@ -990,7 +997,7 @@ def make_flow(prompt: str, mesh: dict, selected_nodes: list[str] | None = None, 
                 planner_reason=str(exc),
                 environments=environments,
             ), {"provider": "heuristic", "fallback": True, "reason": str(exc)}
-    flow = heuristic_flow(prompt, routes, mesh["nodes"], selected_nodes)
+    flow = heuristic_flow(prompt, routes, mesh["nodes"], selected_nodes, use_llm=False)
     return normalize_flow_or_explain(
         flow,
         allowed,

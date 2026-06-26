@@ -922,6 +922,9 @@ def decode_capture_image(raw_image: str) -> tuple[str, bytes, str, str]:
     return mime, raw, digest, ext
 
 
+_decode_capture_image = decode_capture_image
+
+
 def capture_quality_ok(payload: dict, quality: dict, min_score: float) -> bool:
     return bool(payload.get("force")) or (
         float(quality.get("score") or 0.0) >= min_score and bool(quality.get("documentLike"))
@@ -1280,6 +1283,7 @@ def scanner_capture(
     local_image_ocr_fn: "Callable[..., dict]",
     extract_document_metadata_fn: "Callable[..., dict]",
     truthy_env_fn: "Callable[[str, str], Any]",
+    auto_crop_receipt_fn: "Callable[..., dict] | None" = None,
 ) -> dict:
     prune_scanner_staging(_scanner_staging_dir)
     mode = str(payload.get("mode") or "").lower()
@@ -1291,7 +1295,8 @@ def scanner_capture(
     name = f"{_time.strftime('%Y%m%dT%H%M%SZ', _time.gmtime())}-phone-scan-{digest[:12]}{ext}"
     path = root / name
     path.write_bytes(raw)
-    crop = auto_crop_receipt(path)
+    _crop_fn = auto_crop_receipt_fn if auto_crop_receipt_fn is not None else auto_crop_receipt
+    crop = _crop_fn(path)
     display_path = capture_display_path(crop, path)
     ocr, detected_document = capture_ocr_and_detect(
         path, display_path, payload, archive,

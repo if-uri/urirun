@@ -118,6 +118,7 @@ def restart_phone_scanner_service(
     *,
     ensure_fn: "Callable[..., dict]",
     free_port_fn: "Callable[..., dict]",
+    external_status_fn: "Callable[..., dict] | None" = None,
 ) -> dict:
     payload = payload or {}
     force_port_kill = str(payload.get("forcePortKill") or payload.get("force") or "").strip().lower() in {"1", "true", "yes", "on"}
@@ -188,7 +189,8 @@ def restart_phone_scanner_service(
         )
         return {"ok": True, "manager": "port-replace", "restart": True, "replace": replaced, **started}
 
-    status = _phone_scanner_external_status(scanner_port)
+    _ext_status = external_status_fn if external_status_fn is not None else _phone_scanner_external_status
+    status = _ext_status(scanner_port)
     if not status.get("reachable"):
         started = ensure_fn(
             project,

@@ -124,14 +124,39 @@ def _refresh_install_caches() -> None:
         pass
 
 
+_CORE_PACKAGES = frozenset({"urirun", "urirun-core"})
+
+
+def _project_name_from_dir(path: str) -> str | None:
+    """Read the package name from pyproject.toml [project].name (best-effort, no deps)."""
+    toml_path = os.path.join(path, "pyproject.toml")
+    if not os.path.exists(toml_path):
+        return None
+    try:
+        import re as _re
+        text = open(toml_path, encoding="utf-8").read()
+        m = _re.search(r'^\s*name\s*=\s*["\']([^"\']+)["\']', text, _re.MULTILINE)
+        return m.group(1).lower().replace("_", "-") if m else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _project_root(path: str) -> str:
     """A local connector's installable root: the nearest ancestor (incl. itself) holding a
     pyproject.toml/setup.py/setup.cfg. Connectors that keep connector.manifest.json INSIDE the
     package dir yield a `source` that pip can't install (-e on a bare package dir); walk up so
-    `pip install -e` resolves to the project that actually declares the build."""
+    `pip install -e` resolves to the project that actually declares the build.
+
+    Raises ValueError if the resolved root belongs to the urirun core package."""
     cur = os.path.abspath(path)
     for _ in range(5):
         if any(os.path.exists(os.path.join(cur, f)) for f in ("pyproject.toml", "setup.py", "setup.cfg")):
+            name = _project_name_from_dir(cur)
+            if name in _CORE_PACKAGES:
+                raise ValueError(
+                    f"refusing to reinstall core package '{name}' at {cur} — "
+                    "connector source resolves to the urirun package root"
+                )
             return cur
         parent = os.path.dirname(cur)
         if parent == cur:
@@ -159,7 +184,10 @@ def connector_install(**payload: Any) -> dict:
         spec = s if s.startswith(("git+", "git@", "ssh://")) else f"git+{s}"
         res = _pip(["install", "--upgrade", spec])
     elif kind == "local":
-        path = _project_root(os.path.expanduser(s))
+        try:
+            path = _project_root(os.path.expanduser(s))
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "source": s, "sourceKind": kind}
         res = _pip(["install", "--upgrade", *(["-e"] if payload.get("editable") else []), path])
     else:
         res = _pip(["install", "--upgrade", f"urirun-connector-{s}"])

@@ -21,8 +21,46 @@ def flow_has_desktop_step(flow: dict) -> bool:
     return any(any(sc in str(s.get("uri", "")) for sc in _DESKTOP_SCHEMES) for s in flow.get("steps", []))
 
 
+def _step_inverse(step_uri: str) -> tuple[str | None, bool]:
+    """Return (inverse_uri_or_description, reversible) for a URI step.
+
+    Reversibility rules:
+    - Read-only / query steps: reversible, no inverse needed (no state change)
+    - Navigation: reversible via history_back
+    - Session lifecycle: reversible via close
+    - Input / click / fill / submit / send: irreversible (no undo)
+    - Unknown command: conservative → irreversible
+    """
+    u = step_uri or ""
+    # Read-only: no state change → trivially reversible, inverse not needed
+    if any(p in u for p in ("/query/", "/query/screenshot", "/screen/query/capture")):
+        return None, True
+    # Wait / ready checks — no state change
+    if any(p in u for p in ("/command/wait", "/query/ready", "/query/verify")):
+        return None, True
+    # CDP / browser session setup — reversible via close
+    if any(p in u for p in ("/session/command/ensure", "/session/command/launch")):
+        return "kvm://host/cdp/session/command/close", True
+    # Navigation — reversible via back
+    if any(p in u for p in ("/page/command/navigate", "/command/navigate")):
+        return "browser://cdp/page/command/back", True
+    # Page reload — reversible (page was already at that state)
+    if "/command/reload" in u:
+        return "browser://cdp/page/command/back", True
+    # Scroll — reversible
+    if "/command/scroll" in u:
+        return "kvm://host/input/command/scroll-inverse", True
+    # Input / interaction that changes visible page state — IRREVERSIBLE
+    if any(p in u for p in ("/command/click", "/command/fill", "/command/type",
+                             "/command/submit", "/command/send", "/command/press")):
+        return None, False
+    # Default: unknown command → conservative irreversible
+    if "/command/" in u:
+        return None, False
+    return None, True
+
+
 def _is_infra_step(step: dict) -> bool:
-    """Return True for infrastructure steps not shown in twin monitor."""
     step_id = step.get("id") or ""
     return (
         step.get("type") == "preflight"
@@ -32,12 +70,85 @@ def _is_infra_step(step: dict) -> bool:
     )
 
 
+def _inverse_from_results(results: dict, step_id: str, step_uri: str = "") -> str | None:
+    """Read the connector-returned inverse URI from execution results for a step.
+
+    Preferred over static _step_inverse() when available: the connector may encode the
+    actual captured state (previous URL, old field value) in inverse.args, making rollback
+    more precise. Falls back to static classification when connector returned no inverse.
+
+    Handles both ``inverse.uri`` (full URI) and ``inverse.path`` (rebased onto the forward
+    step's ``scheme://node`` — the form used by node-local handlers that don't know their
+    own address)."""
+    step_r = results.get(step_id)
+    if not isinstance(step_r, dict):
+        return None
+    res = step_r.get("result")
+    inv = None
+    if isinstance(res, dict):
+        val = res.get("value")
+        if isinstance(val, dict):
+            inv = val.get("inverse")
+        if inv is None:
+            inv = res.get("inverse")
+    if inv is None:
+        inv = step_r.get("inverse")
+    if not isinstance(inv, dict):
+        return None
+    if inv.get("uri"):
+        return str(inv["uri"])
+    if inv.get("path") and step_uri:
+        try:
+            scheme, rest = step_uri.split("://", 1)
+            node = rest.split("/")[0]
+            return f"{scheme}://{node}/{str(inv['path']).lstrip('/')}"
+        except Exception:  # noqa: BLE001
+            return None
+    return None
+
+
+def _publish_step_event(step: dict, node: str, connector_inverse: str | None = None) -> None:
+    import time  # noqa: PLC0415
+    step_uri = step.get("uri") or "?"
+    step_ok = step.get("ok", True)
+    if connector_inverse is not None:
+        inverse_str, reversible = connector_inverse, True
+    else:
+        inverse_str, reversible = _step_inverse(step_uri)
+    sig = f"s{int(time.time() * 1000)}"
+    surface = "cdp" if ("cdp" in step_uri or "browser" in step_uri) else "kvm"
+    _before: dict = {
+        "node": step.get("target") or node, "os": "linux", "surface": surface,
+        "fingerprint": sig, "stateSig": sig, "url": None, "monitors": [], "window": None,
+    }
+    narration = f"[{step.get('id', '?')}] {step_uri}"
+    if not reversible and step_ok:
+        narration += " ⚠ irreversible"
+    TWIN_EVENT_HUB.publish({
+        "uri": "twin://monitor/event",
+        "narration": narration,
+        "status": "applied" if step_ok else "blocked",
+        "transition": {
+            "before": _before,
+            "forward": step_uri,
+            "inverse": inverse_str,
+            "after": {**_before, "fingerprint": f"{sig}-done", "stateSig": f"{sig}-done"},
+            "reversible": reversible,
+        },
+    })
+
+
 def append_twin_widget(execute: bool, flow: dict, attachments: list,
-                       prompt: str, selected_targets: "list[str]", timeline: list) -> None:
-    """Append a twin-monitor widget when the flow touches a desktop node."""
+                       prompt: str, selected_targets: "list[str]", timeline: list,
+                       results: "dict | None" = None) -> None:
+    """Append a twin-monitor widget when the flow touches a desktop node.
+
+    ``results`` — the execution results dict keyed by step ID (same shape as
+    ``execute_flow`` returns). When provided, connector-returned inverse URIs take
+    priority over the static _step_inverse() classification, making the SSE event
+    and the rollback ledger converge on the same inverse URI."""
     if not flow_has_desktop_step(flow):
         return
-    import time  # noqa: PLC0415
     import urllib.parse  # noqa: PLC0415
     source = "live" if execute else "demo"
     qs = urllib.parse.urlencode({
@@ -50,37 +161,12 @@ def append_twin_widget(execute: bool, flow: dict, attachments: list,
     if not execute:
         return
     node = (selected_targets[0] if selected_targets else None) or "host"
+    _results = results or {}
     for step in timeline:
-        if _is_infra_step(step):
-            continue
-        sig_before = f"s{int(time.time() * 1000)}"
-        sig_after = f"{sig_before}-done"
-        step_uri = step.get("uri") or "?"
-        step_ok = step.get("ok", True)
-        # Minimal TwinState — real state capture requires kvm surface probe
-        _before: dict = {
-            "node": step.get("target") or node,
-            "os": "linux",
-            "surface": "cdp" if "cdp" in step_uri or "browser" in step_uri else "kvm",
-            "fingerprint": sig_before,
-            "stateSig": sig_before,
-            "url": None,
-            "monitors": [],
-            "window": None,
-        }
-        _after: dict = {**_before, "fingerprint": sig_after, "stateSig": sig_after}
-        TWIN_EVENT_HUB.publish({
-            "uri": "twin://monitor/event",
-            "narration": f"[{step.get('id', '?')}] {step_uri}",
-            "status": "applied" if step_ok else "blocked",
-            "transition": {
-                "before": _before,
-                "forward": step_uri,
-                "inverse": None,
-                "after": _after,
-                "reversible": False,
-            },
-        })
+        if not _is_infra_step(step):
+            conn_inv = _inverse_from_results(
+                _results, step.get("id") or "", step.get("uri") or "")
+            _publish_step_event(step, node, connector_inverse=conn_inv)
 
 
 def twin_plan_preview(prompt: str, node: str = "") -> "dict | None":

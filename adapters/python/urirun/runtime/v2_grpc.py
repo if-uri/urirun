@@ -64,14 +64,14 @@ def _route_list(registry: dict) -> dict:
 
 def serve(registry: dict, host: str = "0.0.0.0", port: int = DEFAULT_PORT, policy: dict | None = None,
           mode: str = "dry-run", max_workers: int = 8, block: bool = True):
+    from urirun.runtime.dispatch_protocol import dispatch as _dp_dispatch, normalize_request as _norm
+
     def do_run(request, _context):
-        return v2.run(request["uri"], registry, payload=request.get("payload"),
-                      mode=request.get("mode") or mode, policy=policy)
+        return _dp_dispatch(_norm(request, default_mode=mode), registry, policy=policy)
 
     def do_run_stream(request, _context):
         yield {"event": "start", "uri": request["uri"]}
-        yield {"event": "result", **v2.run(request["uri"], registry, payload=request.get("payload"),
-                                           mode=request.get("mode") or mode, policy=policy)}
+        yield {"event": "result", **_dp_dispatch(_norm(request, default_mode=mode), registry, policy=policy)}
 
     def do_list(_request, _context):
         return _route_list(registry)

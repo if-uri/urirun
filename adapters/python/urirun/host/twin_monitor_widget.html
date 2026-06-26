@@ -746,6 +746,8 @@
         let currentStep = -1;
         let eventSource = null;
         let rollbackMode = false;
+        let _twinPollTimer = null;
+        let _twinPollAbort = null;
 
         const slider = document.getElementById('timelineSlider');
         const timelinePos = document.getElementById('timelinePos');
@@ -858,40 +860,44 @@
 
         function startLive() {
             stopDemo();
-            demoHistory = [];
-            currentStep = -1;
+            stopLive();
             document.getElementById('liveIndicator').style.background = 'var(--amber-forward)';
             document.getElementById('liveIndicator').style.animation = 'pulse 2s infinite';
-            document.getElementById('sayLead').innerText = 'Łączenie ze strumieniem SSE (/events?scheme=twin)...';
-            
-            try {
-                eventSource = new EventSource('/events?scheme=twin');
-                eventSource.onmessage = (e) => {
-                    try {
-                        const ev = JSON.parse(e.data);
-                        demoHistory.push(ev);
-                        currentStep = demoHistory.length - 1;
-                        applyEvent(ev);
-                        updateSlider();
-                        updateUrlState();
-                        if (ev.flowCompleted) loadFlows();
-                    } catch (err) {
-                        console.error('Invalid twin frame:', e.data);
-                    }
-                };
-                eventSource.onerror = () => {
-                    document.getElementById('sayLead').innerText = 'Błąd SSE. Retrying...';
-                };
-            } catch (err) {
-                document.getElementById('sayLead').innerText = 'SSE nie powiodło się.';
+            document.getElementById('sayLead').innerText = 'Pobieranie stanu twin...';
+
+            let backoffMs = 2000;
+
+            async function poll() {
+                _twinPollAbort = new AbortController();
+                try {
+                    const res = await fetch('/api/twin/state?limit=20', {
+                        cache: 'no-store',
+                        signal: _twinPollAbort.signal,
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    backoffMs = 2000;
+                    if (data.flows) renderFlows(data.flows);
+                    document.getElementById('sayLead').innerText =
+                        `Zsynchronizowano ${new Date().toLocaleTimeString()} · ${data.total ?? 0} znanych przepływów`;
+                } catch (err) {
+                    if (err.name === 'AbortError') return;
+                    backoffMs = Math.min(backoffMs * 2, 30000);
+                    document.getElementById('sayLead').innerText =
+                        `Błąd połączenia (retry za ${Math.round(backoffMs / 1000)}s)`;
+                } finally {
+                    _twinPollAbort = null;
+                }
+                _twinPollTimer = setTimeout(poll, backoffMs);
             }
+
+            poll();
         }
 
         function stopLive() {
-            if (eventSource) {
-                eventSource.close();
-                eventSource = null;
-            }
+            if (_twinPollTimer) { clearTimeout(_twinPollTimer); _twinPollTimer = null; }
+            if (_twinPollAbort) { _twinPollAbort.abort(); _twinPollAbort = null; }
+            if (eventSource) { eventSource.close(); eventSource = null; }
         }
 
         slider.addEventListener('input', (e) => {
@@ -967,9 +973,9 @@
         }
 
         function loadFlows() {
-            fetch('/api/twin/flows?limit=20')
+            fetch('/api/twin/state?limit=20', {cache: 'no-store'})
                 .then(r => r.ok ? r.json() : null)
-                .then(d => { if (d) renderFlows(d.flows); })
+                .then(d => { if (d && d.flows) renderFlows(d.flows); })
                 .catch(() => { flowsCount.innerText = 'unavailable'; });
         }
 

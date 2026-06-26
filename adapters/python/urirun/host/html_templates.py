@@ -1352,13 +1352,22 @@ INDEX_HTML = r"""<!doctype html>
     const $ = (id) => document.getElementById(id);
 
     async function api(path, options = {}) {
-      const response = await fetch(path, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
-      });
-      const data = await response.json();
-      if (!response.ok || data.ok === false) throw new Error(data.error || response.statusText);
-      return data;
+      const { signal: callerSignal, timeoutMs = 15000, ...rest } = options;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      if (callerSignal) callerSignal.addEventListener('abort', () => ctrl.abort());
+      try {
+        const response = await fetch(path, {
+          headers: { 'Content-Type': 'application/json' },
+          signal: ctrl.signal,
+          ...rest,
+        });
+        const data = await response.json();
+        if (!response.ok || data.ok === false) throw new Error(data.error || response.statusText);
+        return data;
+      } finally {
+        clearTimeout(timer);
+      }
     }
 
     function text(value, fallback = '') {
@@ -3986,7 +3995,7 @@ INDEX_HTML = r"""<!doctype html>
     writeUrlState({ action: params.get('action') || 'load' }, { replace: true });
     renderChatHistory();
     setInterval(() => loadChatHistory().catch(() => {}), 4000);
-    setInterval(() => loadServiceViews().catch(() => {}), 1000);
+    setInterval(() => loadServiceViews().catch(() => {}), 2000);
     setInterval(() => loadArtifacts().catch(() => {}), 4000);
     loadServiceViews().catch(() => {});
     loadWidgetBundleViaUri().catch(() => {});
@@ -4796,13 +4805,17 @@ SCANNER_HTML = r"""<!doctype html>
       });
     }
 
+    let _pollPageActionsInflight = false;
     async function pollPageActions() {
+      if (_pollPageActionsInflight) return;
       if (!window.urirun || typeof window.urirun.invoke !== 'function') return;
+      _pollPageActionsInflight = true;
       let data = null;
       try {
         const response = await fetch('/api/page/actions/poll?target=scanner&limit=4', {cache: 'no-store'});
         data = await response.json();
       } catch (_) {
+        _pollPageActionsInflight = false;
         return;
       }
       const actions = data && Array.isArray(data.actions) ? data.actions : [];
@@ -4819,6 +4832,7 @@ SCANNER_HTML = r"""<!doctype html>
           await sendActionResult(action, null, err);
         }
       }
+      _pollPageActionsInflight = false;
     }
 
     function applyInitialScannerOptions() {

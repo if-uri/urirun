@@ -212,13 +212,24 @@ def _registry_to_bindings(registry: dict) -> dict:
     """Reconstruct a {uri: binding} map from a compiled registry's index so a deployed
     surface can be merged with the node's existing one and recompiled. Compiled
     registries don't round-trip through the bindings helpers (the schema lives under
-    ``routeEntry.config.inputSchema``), so rebuild each binding by hand."""
-    out: dict = {}
-    for entry in (registry.get("index") or {}).values():
-        route = dict(entry.get("routeEntry") or {})
-        config = route.pop("config", None) or {}   # carries argv / inputSchema / etc.
-        out[entry["uri"]] = {**route, **config, "uri": entry["uri"]}
-    return out
+    ``routeEntry.config.inputSchema``), so rebuild each binding by hand.
+
+    When the existing registry has no index (flat JSON loaded from disk without a
+    compile step), extract what we can from the ``bindings`` dict directly so the
+    merge doesn't silently drop all old routes."""
+    # Compiled path: index carries full entry incl. config/inputSchema
+    if registry.get("index"):
+        out: dict = {}
+        for entry in registry["index"].values():
+            route = dict(entry.get("routeEntry") or {})
+            config = route.pop("config", None) or {}
+            out[entry["uri"]] = {**route, **config, "uri": entry["uri"]}
+        return out
+    # Flat / uncompiled bindings doc: use bindings dict directly
+    raw_bindings = registry.get("bindings")
+    if isinstance(raw_bindings, dict):
+        return {uri: {**b, "uri": uri} for uri, b in raw_bindings.items()}
+    return {}
 
 
 def _deploy_registry(body: dict, existing: dict | None = None) -> dict:
@@ -236,11 +247,13 @@ def _deploy_registry(body: dict, existing: dict | None = None) -> dict:
         new = v2.compile_registry(doc)
     else:
         raise ValueError("deploy needs 'bindings' or 'registry'")
-    if body.get("merge") and existing and (existing.get("index") or existing.get("routes")):
-        # the dict spread already lets the new surface win on same-URI; compile with
-        # on_conflict="keep" (NOT "last", which mis-flags sibling ops under one route
-        # path, e.g. page/query/text + page/query/screenshot, as a conflict).
-        merged = {**_registry_to_bindings(existing), **_registry_to_bindings(new)}
+    if body.get("merge") and existing and (existing.get("index") or existing.get("routes")
+                                           or existing.get("bindings")):
+        # The dict spread lets the new surface win on same-URI; compile with on_conflict="keep"
+        # (NOT "last", which mis-flags sibling ops under one route path as a conflict).
+        existing_bindings = _registry_to_bindings(existing)
+        new_bindings = _registry_to_bindings(new)
+        merged = {**existing_bindings, **new_bindings}
         return v2.compile_registry({"version": v2.VERSION, "bindings": merged}, on_conflict="keep")
     return new
 

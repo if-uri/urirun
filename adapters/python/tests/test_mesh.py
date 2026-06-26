@@ -1397,6 +1397,19 @@ class MeshTests(unittest.TestCase):
 
         self.assertEqual([step["uri"] for step in flow["steps"]], ["env://laptop/runtime/query/health"])
 
+    def test_heuristic_flow_screen_intent_falls_back_to_cdp_screenshot(self):
+        """When screen:// and kvm-inspect are absent, heuristic falls back to browser/cdp screenshot."""
+        nodes = [{"name": "laptop", "reachable": True}]
+        routes = [
+            {"uri": "browser://cdp/page/query/screenshot", "node": "laptop", "safe": True},
+            {"uri": "browser://cdp/page/command/navigate", "node": "laptop", "safe": True},
+            {"uri": "env://laptop/runtime/query/health", "node": "laptop", "safe": True},
+        ]
+        with _with_intents(screen=True):
+            flow = mesh.heuristic_flow("zrob screenshot ekranu", routes, nodes)
+        uris = [step["uri"] for step in flow["steps"]]
+        self.assertIn("browser://cdp/page/query/screenshot", uris)
+
     def test_registry_from_remote_routes(self):
         registry = mesh.registry_from_routes([
             {
@@ -1580,6 +1593,30 @@ def test_deploy_registry_merge_handles_sibling_ops():
         "browser://h/page/query/text",
         "browser://h/page/query/screenshot",
     }
+
+
+def test_deploy_registry_merge_preserves_routes_from_flat_existing():
+    """Merge with a flat (bindings-only, no index) existing registry must NOT silently
+    drop old routes.  This is the production failure mode: node loaded from a JSON
+    registry file that wasn't compiled yet — _registry_to_bindings returned {} and the
+    merge wiped all old routes."""
+    import urirun
+    from urirun.node import mesh as nodemesh
+
+    # Flat/uncompiled registry — has "bindings" but no "index"
+    flat_existing = {"version": "urirun.bindings.v2",
+                     "bindings": {"cdp://h/page/query/text": {
+                         "kind": "query", "adapter": "argv-template",
+                         "argv": ["echo", "text"], "inputSchema": {"type": "object"}}}}
+    assert "index" not in flat_existing  # sanity check: this is the flat form
+
+    new_doc = {"version": "urirun.bindings.v2",
+               "bindings": urirun.tool_binding("portal://h/window/query/list", ["echo", "w"], {})}
+
+    merged = nodemesh._deploy_registry({"bindings": new_doc, "merge": True}, flat_existing)
+    uris = {r["uri"] for r in urirun.list_routes(merged)}
+    assert "cdp://h/page/query/text" in uris, "flat existing route was silently dropped"
+    assert "portal://h/window/query/list" in uris
 
 
 def test_registry_fingerprint_stable_and_changes():
