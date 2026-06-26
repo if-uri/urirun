@@ -11,6 +11,81 @@ from __future__ import annotations
 _INPROCESS_BINDINGS_GROUP = "urirun.bindings"
 
 
+def _flow_scheme_dispatch(uri: str, payload: dict | None = None) -> "dict | None":
+    """Handle flow://node/name/command/run and flow://node/name/query/get.
+
+    Makes episodic plans first-class URI artifacts: a stored flow/skill is addressable
+    by name in the same namespace as facts and actions.  Name resolution order:
+      1. skill_store[name] -> episode_id -> plan
+      2. episode_store[name] (content-addressed episode_id direct lookup)
+
+    Returns None when name is unknown (routes through to NOT_FOUND)."""
+    try:
+        # Parse: flow://node/name/verb/noun  ->  name, cmd = name, verb/noun
+        rest = uri.split("://", 1)[1]          # "node/name/command/run"
+        parts = rest.split("/")                # ["node", "name", "command", "run"]
+        if len(parts) < 4:
+            return None
+        name = parts[1]
+        cmd = "/".join(parts[2:])              # "command/run", "query/get"
+    except Exception:  # noqa: BLE001
+        return None
+
+    from urirun.node.twin_store import durable_memory  # noqa: PLC0415
+    mem = durable_memory()
+
+    skill = mem.skill_store.get(name) if hasattr(mem, "skill_store") else None
+    # Resolve steps: skill may carry them directly (promoted from session) or via episode_id
+    episode_id = (skill or {}).get("episode_id") or name
+    ep = mem.episode_store.get(episode_id) if hasattr(mem, "episode_store") else None
+    skill_steps = ((skill or {}).get("flow") or {}).get("steps") or []
+
+    if cmd in ("query/get", "query/plan"):
+        if ep is None and not skill_steps:
+            return None
+        if ep is not None:
+            plan = ep.get("plan") or {}
+            steps = plan.get("steps") or []
+            flow_key = plan.get("flow_key")
+        else:
+            steps = skill_steps
+            flow_key = None
+        return {"ok": True, "invokedUri": uri, "result": {
+            "episode_id": episode_id if ep else None,
+            "goal": (ep or {}).get("goal") or (skill or {}).get("name"),
+            "steps": steps,
+            "flow_key": flow_key,
+            "skill": name if skill else None,
+        }}
+
+    if cmd == "command/run":
+        if ep is None and not skill_steps:
+            return None
+        if ep is not None:
+            steps = (ep.get("plan") or {}).get("steps") or []
+        else:
+            steps = skill_steps
+        if not steps:
+            return {"ok": False, "invokedUri": uri,
+                    "error": f"flow {name!r} (episode {episode_id!r}) has no plan steps"}
+        try:
+            import urirun.v2_service as _svc  # noqa: PLC0415
+            from urirun.node.flow import execute_flow  # noqa: PLC0415
+            _execute = bool((payload or {}).get("execute", True))
+            _mode = "execute" if _execute else "dry-run"
+            def _dispatch(u, p=None, _m=_mode, _s=_svc):
+                r = _s.call(u, p or {}, {}, mode=_m)
+                return r if r is not None else {"ok": False, "error": {"category": "NOT_FOUND", "message": f"no route for {u}"}}
+            flow = {"steps": steps, "task": {"id": "recall", "source": "flow://",
+                                              "title": ep.get("goal") or name}}
+            result = execute_flow(flow, {}, {}, execute=_execute, dispatch_uri=_dispatch)
+            return {"ok": bool(result.get("ok")), "invokedUri": uri, "result": result}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "invokedUri": uri, "error": str(exc)}
+
+    return None  # unknown verb -> NOT_FOUND
+
+
 def inprocess_fallback(uri: str, payload: dict | None = None) -> dict | None:
     """Call an installed connector URI in-process via the urirun runtime.
 
@@ -18,7 +93,12 @@ def inprocess_fallback(uri: str, payload: dict | None = None) -> dict | None:
     correct "unsupported action" error), or a dict on success or handler failure.
 
     Tier 2a — entry-point discovery (installed packages with urirun.bindings group).
-    Tier 2b — DECORATED_BINDINGS (connector.handler() registrations without an entry point)."""
+    Tier 2b — DECORATED_BINDINGS (connector.handler() registrations without an entry point).
+    Tier 2c — flow:// scheme (dynamic plan-as-artifact dispatch, no static registry needed)."""
+    # Tier 2c: flow:// scheme — plan atoms as first-class URI artifacts
+    if uri.startswith("flow://"):
+        return _flow_scheme_dispatch(uri, payload)
+
     try:
         import urirun
         from urirun.runtime import discovery, v2 as _v2
@@ -56,7 +136,7 @@ def make_local_dispatch_uri(registry: dict, run_mode: str, fallback=None):
 
     Tier 1 — mesh via v2_service.call (served nodes in *registry*).
     Tier 2 — *fallback* or ``inprocess_fallback`` (installed connectors:
-    diag://, fix://, twin://, widget://, artifact://, …).
+    diag://, fix://, twin://, widget://, artifact://, ...).
 
     Accepts an optional *fallback* override so callers can inject test stubs."""
     from urirun import v2_service as _v2

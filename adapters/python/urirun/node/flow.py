@@ -691,6 +691,17 @@ def _plan_with_preflight(steps: list[dict], *, execute: bool) -> list[dict]:
              "payload": {"steps": steps}, "depends_on": [], "optional": True}, *steps]
 
 
+def _thin_remember_record(flow: dict, nodes: list[str]) -> dict:
+    """Flow record stored by the thin-plan remember step. Carries the prompt (the LLM task
+    title) + intent signature so /api/twin/state and the twin monitor show a real label, not
+    '(no prompt)'. (The richer orchestrator path already stores these; this is the thin path.)"""
+    from urirun.node.episode import intent_signature  # noqa: PLC0415
+    prompt = str((flow.get("task") or {}).get("title") or "")
+    return {"steps": flow.get("steps") or [], "prompt": prompt,
+            "intent_sig": intent_signature(prompt) if prompt else "",
+            "nodes": list(nodes)}
+
+
 def _build_thin_plan(steps: list[dict], flow: dict, *, execute: bool,
                      memory: "TwinMemory | None" = None,
                      routes: list[dict] | None = None) -> list[dict]:
@@ -726,7 +737,7 @@ def _build_thin_plan(steps: list[dict], flow: dict, *, execute: bool,
         "uri": _THIN_REMEMBER_URI,
         "payload": {"nodes": kvm_targets, "routes": routes_list,
                     "flow_key": flow_key,
-                    "record": {"steps": flow.get("steps") or []}},
+                    "record": _thin_remember_record(flow, kvm_targets)},
         "depends_on": [], "optional": True,
     }
     return drift_steps + plan + [remember_step]
@@ -1042,6 +1053,7 @@ def _uri_memory_remember(payload: dict) -> dict:
         except Exception:  # noqa: BLE001 - best-effort; a missing route is not fatal
             pass
     record = dict(payload.get("record") or {})
+    record.setdefault("ts", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     remembered = False
     degraded = bool(record.get("degraded"))
     if flow_key:

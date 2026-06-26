@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from urirun.node.mesh import EventHub
+from urirun.node.event_schema import _step_inverse  # moved down; re-exported (host→node, breaks the node→host cycle)
 
 TWIN_EVENT_HUB = EventHub(buffer=100)
 
@@ -21,43 +22,6 @@ def flow_has_desktop_step(flow: dict) -> bool:
     return any(any(sc in str(s.get("uri", "")) for sc in _DESKTOP_SCHEMES) for s in flow.get("steps", []))
 
 
-def _step_inverse(step_uri: str) -> tuple[str | None, bool]:
-    """Return (inverse_uri_or_description, reversible) for a URI step.
-
-    Reversibility rules:
-    - Read-only / query steps: reversible, no inverse needed (no state change)
-    - Navigation: reversible via history_back
-    - Session lifecycle: reversible via close
-    - Input / click / fill / submit / send: irreversible (no undo)
-    - Unknown command: conservative → irreversible
-    """
-    u = step_uri or ""
-    # Read-only: no state change → trivially reversible, inverse not needed
-    if any(p in u for p in ("/query/", "/query/screenshot", "/screen/query/capture")):
-        return None, True
-    # Wait / ready checks — no state change
-    if any(p in u for p in ("/command/wait", "/query/ready", "/query/verify")):
-        return None, True
-    # CDP / browser session setup — reversible via close
-    if any(p in u for p in ("/session/command/ensure", "/session/command/launch")):
-        return "kvm://host/cdp/session/command/close", True
-    # Navigation — reversible via back
-    if any(p in u for p in ("/page/command/navigate", "/command/navigate")):
-        return "browser://cdp/page/command/back", True
-    # Page reload — reversible (page was already at that state)
-    if "/command/reload" in u:
-        return "browser://cdp/page/command/back", True
-    # Scroll — reversible
-    if "/command/scroll" in u:
-        return "kvm://host/input/command/scroll-inverse", True
-    # Input / interaction that changes visible page state — IRREVERSIBLE
-    if any(p in u for p in ("/command/click", "/command/fill", "/command/type",
-                             "/command/submit", "/command/send", "/command/press")):
-        return None, False
-    # Default: unknown command → conservative irreversible
-    if "/command/" in u:
-        return None, False
-    return None, True
 
 
 def _is_infra_step(step: dict) -> bool:

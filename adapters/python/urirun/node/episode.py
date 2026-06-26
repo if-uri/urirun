@@ -17,7 +17,7 @@
 #   environment_fingerprint()  — reversible.py
 #   _flow_key()                — flow.py
 #   register_artifact()        — host_db.py
-#   _step_inverse()            — twin_bridge.py
+#   _step_inverse()            — event_schema.py
 from __future__ import annotations
 
 import hashlib

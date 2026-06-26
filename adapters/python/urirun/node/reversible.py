@@ -362,6 +362,23 @@ class TwinMemory:
         return sorted(self.skill_store.values(), key=lambda r: str(r.get("ts") or ""), reverse=True)
 
     # ── session recorder: trace-first authoring (append steps → export/promote) ──────────
+    def session_start(self, session_id: str, goal: str = "", node: str = "host",
+                      experience_id: str = "") -> dict:
+        """Initialise a session record (idempotent — safe to call again on an existing session).
+
+        Returns the current session record so callers can inspect what was already captured."""
+        rec = dict(self.session_store.get(session_id) or {})
+        if not rec.get("ts"):
+            import time  # noqa: PLC0415
+            rec["ts"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        rec.setdefault("goal", goal)
+        rec.setdefault("node", node)
+        rec.setdefault("experience_id", experience_id)
+        rec.setdefault("steps", [])
+        rec.setdefault("status", "recording")
+        self.session_store[session_id] = rec
+        return dict(rec)
+
     def session_append(self, session_id: str, step: dict) -> list[dict]:
         """Append one step to a recorded session and return the accumulated step list. The session
         is the trace-first dual of plan-first authoring: capture what actually ran, then export it
@@ -373,9 +390,24 @@ class TwinMemory:
         self.session_store[session_id] = rec
         return steps
 
+    def session_commit(self, session_id: str) -> dict:
+        """Mark a session as committed (no more appends). Returns the final session record."""
+        rec = dict(self.session_store.get(session_id) or {})
+        if not rec:
+            return {"ok": False, "error": f"session {session_id!r} not found"}
+        rec["status"] = "committed"
+        import time  # noqa: PLC0415
+        rec["committed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        self.session_store[session_id] = rec
+        return dict(rec)
+
     def session_steps(self, session_id: str) -> list[dict]:
         """The steps recorded for a session, in order."""
         return list((self.session_store.get(session_id) or {}).get("steps") or [])
+
+    def session_get(self, session_id: str) -> "dict | None":
+        """Full session record, or None when unknown."""
+        return self.session_store.get(session_id)
 
 
 def plausibility(profile: dict, *, reversible: bool = True, irreversible: bool = False,

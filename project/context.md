@@ -5,17 +5,17 @@
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 137, json: 13, shell: 10, yaml: 5, csharp: 4
+- **Languages**: python: 138, json: 13, shell: 10, yaml: 5, csharp: 4
 - **Analysis Mode**: static
-- **Total Functions**: 1786
+- **Total Functions**: 1810
 - **Total Classes**: 57
-- **Modules**: 197
-- **Entry Points**: 642
+- **Modules**: 198
+- **Entry Points**: 662
 
 ## Architecture by Module
 
 ### adapters.python.urirun.runtime.v2
-- **Functions**: 118
+- **Functions**: 119
 - **Classes**: 2
 - **File**: `v2.py`
 
@@ -37,6 +37,11 @@
 - **Classes**: 1
 - **File**: `__init__.py`
 
+### adapters.python.urirun.node.reversible
+- **Functions**: 50
+- **Classes**: 9
+- **File**: `reversible.py`
+
 ### adapters.python.urirun.node.node_cli
 - **Functions**: 48
 - **File**: `node_cli.py`
@@ -45,17 +50,12 @@
 - **Functions**: 46
 - **File**: `object_registry.py`
 
-### adapters.python.urirun.node.reversible
-- **Functions**: 45
-- **Classes**: 9
-- **File**: `reversible.py`
-
 ### adapters.python.urirun.runtime._registry
 - **Functions**: 43
 - **File**: `_registry.py`
 
 ### adapters.python.urirun.node.flow
-- **Functions**: 40
+- **Functions**: 41
 - **File**: `flow.py`
 
 ### adapters.python.urirun.connectors.connector_lint
@@ -141,11 +141,11 @@ then through DECORATED_BINDINGS (connector.handler() registrations not
 > Install a URI connector on the host or a node from a chosen source.
 - **Calls**: None.strip, target.startswith, None.lower, None.strip, adapters.python.urirun.host.connector_admin.connector_pip_tail, isinstance, adapters.python.urirun.host.connector_admin._connector_install_node, subprocess.run
 
-### adapters.python.urirun.node.server.NodeHandler._handle_deploy
-- **Calls**: adapters.python.urirun.node.server.read_raw, body.get, print, adapters.python.urirun.node.server.send_json, adapters.python.urirun.node.server.send_json, self._admin_ok, adapters.python.urirun.node.server.send_json, json.loads
-
 ### adapters.python.urirun.host.chat_orchestrator.chat_ask
 - **Calls**: None.strip, list, list, adapters.python.urirun.host.routing.selected_nodes_from_targets, bool, bool, adapters.python.urirun.host.chat_orchestrator._add_chat_user_message, is_phone_scanner_prompt
+
+### adapters.python.urirun.node.server.NodeHandler._handle_deploy
+- **Calls**: adapters.python.urirun.node.server.read_raw, body.get, print, adapters.python.urirun.node.server.send_json, adapters.python.urirun.node.server.send_json, self._admin_ok, adapters.python.urirun.node.server.send_json, json.loads
 
 ### adapters.python.urirun.node.reversible._uri_rollback
 > Handler for twin://<node>/flow/command/rollback.
@@ -153,6 +153,13 @@ then through DECORATED_BINDINGS (connector.handler() registrations not
 Two calling conventions accepted:
   1. {ledger: [{uri, inverse, args, before, after}], mesh?, scan_u
 - **Calls**: payload.get, adapters.python.urirun.node.reversible.ReversibleProcess.rollback_flow, payload.get, payload.get, payload.get, ReversibleProcess, proc.rollback_flow, payload.get
+
+### adapters.python.urirun.host.dispatch.inprocess_fallback
+> Call an installed connector URI in-process via the urirun runtime.
+
+Returns None when no connector owns the route (so the caller can raise the
+correct
+- **Calls**: uri.startswith, adapters.python.urirun.host.dispatch._flow_scheme_dispatch, discovery.registry_for_uri, urirun.run, _u.result_data, bool, None.get, urirun.compile_registry
 
 ### adapters.python.urirun.Connector._build_cli_parser
 > Build the connector argparse parser (one subcommand per route).
@@ -172,13 +179,6 @@ line
 
 ### adapters.python.urirun.node.server.NodeHandler._handle_run
 - **Calls**: adapters.python.urirun.node.server.read_raw, self._validate_run_request, str, self._dispatch_control_uri, self._run_target, _normalize_request, progress.RunControl, adapters.python.urirun.node.server.send_json
-
-### adapters.python.urirun.host.dispatch.inprocess_fallback
-> Call an installed connector URI in-process via the urirun runtime.
-
-Returns None when no connector owns the route (so the caller can raise the
-correct
-- **Calls**: discovery.registry_for_uri, urirun.run, _u.result_data, bool, None.get, urirun.compile_registry, urirun.run, env.get
 
 ### adapters.python.urirun.node.client.NodeClient.resolve_refs
 > Chain steps: replace "$ref:<i>.<field.path>" with an earlier step's output.
@@ -211,6 +211,14 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 ### adapters.python.urirun.node.server.NodeHandler._handle_enroll
 - **Calls**: adapters.python.urirun.node.server.read_raw, keyauth.verify_request, keyauth.token_matches, print, adapters.python.urirun.node.server.send_json, adapters.python.urirun.node.server.send_json, keyauth.available, adapters.python.urirun.node.server.send_json
 
+### adapters.python.urirun.node.flow._uri_memory_remember
+> Handler for twin://host/memory/command/remember.
+
+Payload: {nodes: [str], routes?: [{…}], flow_key?: str,
+          record: {steps: […], …}}
+Returns: 
+- **Calls**: adapters.python.urirun.node.routing.registry_from_routes, str, adapters.python.urirun.node.reversible.durable_memory, dict, record.setdefault, bool, urirun.ok, payload.get
+
 ### adapters.python.urirun.node.manage.connector_install
 > Install a connector from ANY source into the node's venv:
 - a catalog id ("browser-control") → urirun-connector-<id> (PyPI, then if-uri GitHub),
@@ -219,9 +227,6 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 
 ### examples.matrix.verify.main
 - **Calls**: contracts.get, sorted, None.removesuffix, adapters.python.urirun.validate_binding_document, examples.matrix.verify.essential, contracts.items, json.load, print
-
-### adapters.python.urirun.host.domain_monitor._route_flow
-- **Calls**: str, adapters.python.urirun.host.domain_monitor.check_domain, adapters.python.urirun.host.domain_monitor.run_daily, rc.payload.get, rc.payload.get, adapters.python.urirun.host.domain_monitor.expected_records, adapters.python.urirun.host.domain_monitor._db, adapters.python.urirun.host.domain_monitor._project
 
 ## Process Flows
 
@@ -263,17 +268,17 @@ connector_install [adapters.python.urirun.host.connector_admin]
   └─> connector_pip_tail
 ```
 
-### Flow 7: _handle_deploy
+### Flow 7: chat_ask
+```
+chat_ask [adapters.python.urirun.host.chat_orchestrator]
+  └─ →> selected_nodes_from_targets
+```
+
+### Flow 8: _handle_deploy
 ```
 _handle_deploy [adapters.python.urirun.node.server.NodeHandler]
   └─ →> read_raw
   └─ →> send_json
-```
-
-### Flow 8: chat_ask
-```
-chat_ask [adapters.python.urirun.host.chat_orchestrator]
-  └─ →> selected_nodes_from_targets
 ```
 
 ### Flow 9: _uri_rollback
@@ -282,9 +287,11 @@ _uri_rollback [adapters.python.urirun.node.reversible]
   └─ →> rollback_flow
 ```
 
-### Flow 10: _build_cli_parser
+### Flow 10: inprocess_fallback
 ```
-_build_cli_parser [adapters.python.urirun.Connector]
+inprocess_fallback [adapters.python.urirun.host.dispatch]
+  └─> _flow_scheme_dispatch
+      └─ →> durable_memory
 ```
 
 ## Key Classes
@@ -301,18 +308,18 @@ so this is a normal
 - **Key Methods**: adapters.python.urirun.node.server.NodeHandler.ctx, adapters.python.urirun.node.server.NodeHandler.do_OPTIONS, adapters.python.urirun.node.server.NodeHandler._guarded, adapters.python.urirun.node.server.NodeHandler.do_GET, adapters.python.urirun.node.server.NodeHandler.do_POST, adapters.python.urirun.node.server.NodeHandler._health_payload, adapters.python.urirun.node.server.NodeHandler._routes_payload, adapters.python.urirun.node.server.NodeHandler._get, adapters.python.urirun.node.server.NodeHandler._get_errors, adapters.python.urirun.node.server.NodeHandler._post
 - **Inherits**: BaseHTTPRequestHandler
 
+### adapters.python.urirun.node.reversible.TwinMemory
+> Remembers the KNOWN-GOOD environment fingerprint per node (snapshot-on-success), so a later
+run dete
+- **Methods**: 18
+- **Key Methods**: adapters.python.urirun.node.reversible.TwinMemory.remember, adapters.python.urirun.node.reversible.TwinMemory.known_good, adapters.python.urirun.node.reversible.TwinMemory.drift, adapters.python.urirun.node.reversible.TwinMemory.remember_flow, adapters.python.urirun.node.reversible.TwinMemory.recall_flow, adapters.python.urirun.node.reversible.TwinMemory.known_good_flows, adapters.python.urirun.node.reversible.TwinMemory.degraded_flows, adapters.python.urirun.node.reversible.TwinMemory.remember_episode, adapters.python.urirun.node.reversible.TwinMemory.known_good_episodes, adapters.python.urirun.node.reversible.TwinMemory.recall_episode
+
 ### adapters.python.urirun.Connector
 > Small convention helper for connector packages.
 
 Connector authors can declare the package once and 
 - **Methods**: 16
 - **Key Methods**: adapters.python.urirun.Connector.__post_init__, adapters.python.urirun.Connector.uri, adapters.python.urirun.Connector._meta, adapters.python.urirun.Connector.command, adapters.python.urirun.Connector.shell, adapters.python.urirun.Connector.cli, adapters.python.urirun.Connector._add_route_arguments, adapters.python.urirun.Connector._build_cli_parser, adapters.python.urirun.Connector._dispatch_cli, adapters.python.urirun.Connector.handler
-
-### adapters.python.urirun.node.reversible.TwinMemory
-> Remembers the KNOWN-GOOD environment fingerprint per node (snapshot-on-success), so a later
-run dete
-- **Methods**: 13
-- **Key Methods**: adapters.python.urirun.node.reversible.TwinMemory.remember, adapters.python.urirun.node.reversible.TwinMemory.known_good, adapters.python.urirun.node.reversible.TwinMemory.drift, adapters.python.urirun.node.reversible.TwinMemory.remember_flow, adapters.python.urirun.node.reversible.TwinMemory.recall_flow, adapters.python.urirun.node.reversible.TwinMemory.known_good_flows, adapters.python.urirun.node.reversible.TwinMemory.degraded_flows, adapters.python.urirun.node.reversible.TwinMemory.remember_episode, adapters.python.urirun.node.reversible.TwinMemory.known_good_episodes, adapters.python.urirun.node.reversible.TwinMemory.recall_episode
 
 ### adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite
 > pytest-compatible base class for connector contract tests.
@@ -441,12 +448,6 @@ Key functions that process and transform data:
 Returns (name, raw_url, kind, meta, ta
 - **Output to**: None.strip, None.strip, payload.get, payload.get, payload.get
 
-### adapters.python.urirun.host.dispatch.inprocess_fallback
-> Call an installed connector URI in-process via the urirun runtime.
-
-Returns None when no connector o
-- **Output to**: discovery.registry_for_uri, urirun.run, _u.result_data, bool, None.get
-
 ### adapters.python.urirun.host.connector_admin.parse_bindings_output
 > Parse the ``BINDINGS:<count>:<names>`` smoke marker into (count, names).
 - **Output to**: None.splitlines, line.startswith, line.split, int, None.split
@@ -498,6 +499,10 @@ verify/new/smoke/from-spe
 ### adapters.python.urirun.runtime.cli._add_host_data_subparser
 > `host data` tree (SQLite context: bindings/init/dataset-create/datasets/record-upsert/records).
 - **Output to**: host_sub.add_parser, host_data.add_subparsers, argparse.ArgumentParser, data_common.add_argument, data_sub.add_parser
+
+### adapters.python.urirun.runtime.cli._add_host_monitor_subparser
+> `host monitor` tree (HTTP/DNS/domain monitoring: bindings/http/dns/domain/daily).
+- **Output to**: host_sub.add_parser, host_monitor.add_subparsers, argparse.ArgumentParser, monitor_common.add_argument, monitor_common.add_argument
 
 ## Behavioral Patterns
 
@@ -595,10 +600,10 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.host.connector_admin.connector_install` - 29 calls
 - `adapters.python.urirun.host.chat_orchestrator.chat_ask` - 29 calls
 - `adapters.python.urirun.runtime.adopt_pack.adopt` - 28 calls
+- `adapters.python.urirun.host.dispatch.inprocess_fallback` - 28 calls
 - `adapters.python.urirun.runtime.errors.info` - 27 calls
 - `adapters.python.urirun.runtime._runtime.run` - 27 calls
 - `adapters.python.urirun.connectors.connector_lint.verify_connector` - 27 calls
-- `adapters.python.urirun.host.dispatch.inprocess_fallback` - 26 calls
 - `adapters.python.urirun.host.discovery.node_alias_map_from_env` - 26 calls
 - `adapters.python.urirun.node.client.NodeClient.resolve_refs` - 26 calls
 - `adapters.python.urirun.runtime.codegen.proto_from_registry` - 25 calls

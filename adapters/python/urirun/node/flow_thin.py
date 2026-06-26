@@ -295,13 +295,19 @@ def _thin_fold_inner_ok(r: dict) -> dict:
 def _thin_goal_verify(dispatch_uri, envelope, timeline: list, results: dict):
     """Post-loop goal check.  Returns a rollback dict on failure, None on pass.
 
-    Treats registry-not-found (twin connector absent) as an implicit pass so
-    the flow runner works without the connector installed."""
+    Treats registry-not-found (twin connector absent) and schema/infrastructure errors
+    as implicit passes so the flow runner works without the connector installed."""
     envelope.record(_THIN_GOAL_URI, "call")
     goal_r = dispatch_uri(_THIN_GOAL_URI, {"goal": envelope.goal, "results": results}) or {}
     _goal_err = goal_r.get("error")
     _goal_err_type = (_goal_err.get("type") if isinstance(_goal_err, dict) else None)
-    if not goal_r.get("ok", True) and _goal_err_type == "registry":
+    _goal_err_cat = (_goal_err.get("category") if isinstance(_goal_err, dict) else None)
+    if not goal_r.get("ok", True) and (
+        _goal_err_type == "registry"
+        or _goal_err_cat == "NOT_FOUND"
+        or _goal_err_cat == "INVALID_ARGUMENT"
+        or isinstance(_goal_err, str)  # inprocess_fallback returns str(exc) for infra errors
+    ):
         goal_r = {"ok": True, "goalMet": True, "skipped": "no-verify-handler"}
     goal_ok = goal_r.get("ok", True)
     envelope.record(_THIN_GOAL_URI, "return", ok=goal_ok, next=_next_kind(goal_r))

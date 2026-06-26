@@ -10,8 +10,10 @@
 #   session:// — a trace-first RECORDER. Append the steps that actually ran, then export them to a
 #                flow document or promote them to a skill. The dual of plan-first authoring.
 #
-# Registered in-process (mirrors urirun.node.flow's twin connector). Both ride the existing
-# durable_memory namespaces (_skills / _sessions) — no new store.
+# Handler params are NAMED (the connector convention maps payload keys -> kwargs + a schema), and
+# both ride the existing durable_memory namespaces (_skills / _sessions) — no new store. Exposed as
+# urirun.bindings entry points (skill_bindings / session_bindings) so skill:// / session:// resolve
+# like any connector.
 from __future__ import annotations
 
 import time
@@ -26,15 +28,12 @@ def _memory():
     return durable_memory()
 
 
-def _episode_for(memory, payload: dict) -> dict | None:
+def _episode_for(memory, episode_id: str, intent: str, node: str) -> dict | None:
     """Resolve the episode to promote: by explicit ``episode_id``, else the latest ok-status
     episode matching ``intent`` × the node's known-good env fingerprint (the recall key)."""
-    eid = payload.get("episode_id") or payload.get("episodeId")
-    if eid:
-        ep = memory.episode_store.get(eid)
+    if episode_id:
+        ep = memory.episode_store.get(episode_id)
         return ep if isinstance(ep, dict) else None
-    intent = payload.get("intent") or payload.get("prompt")
-    node = payload.get("node")
     if intent and node:
         from urirun.node.episode import intent_signature  # noqa: PLC0415
         env_fp = (memory.known_good(node) or {}).get("fingerprint") or ""
@@ -43,16 +42,17 @@ def _episode_for(memory, payload: dict) -> dict | None:
     return None
 
 
-def _uri_skill_promote(payload: dict) -> dict:
+def _uri_skill_promote(name: str = "", episode_id: str = "", intent: str = "",
+                       node: str = "", prompt: str = "") -> dict:
     """Handler for skill://<node>/skill/command/promote.
 
-    Payload: {name, episode_id? | (intent + node)}. Names a known-good episode's plan as a
-    reusable skill. Returns {ok, name, skill} or an error when no matching episode exists."""
-    name = str(payload.get("name") or "").strip()
+    Names a known-good episode's plan as a reusable skill — by ``episode_id`` or ``intent``+``node``.
+    Returns {ok, name, skill} or an error when no matching episode exists."""
+    name = str(name or "").strip()
     if not name:
         return {"ok": False, "error": "skill name required"}
     memory = _memory()
-    ep = _episode_for(memory, payload)
+    ep = _episode_for(memory, str(episode_id or ""), str(intent or prompt or ""), str(node or ""))
     if not ep:
         return {"ok": False, "error": "no matching known-good episode to promote"}
     steps = (ep.get("plan") or {}).get("steps") or []
@@ -70,9 +70,9 @@ def _uri_skill_promote(payload: dict) -> dict:
     return {"ok": True, "name": name, "skill": record}
 
 
-def _uri_skill_recall(payload: dict) -> dict:
-    """Handler for skill://<node>/skill/query/recall.  Payload: {name} -> {ok, found, skill}."""
-    name = str(payload.get("name") or "").strip()
+def _uri_skill_recall(name: str = "") -> dict:
+    """Handler for skill://<node>/skill/query/recall. Returns {ok, found, skill?, flow?}."""
+    name = str(name or "").strip()
     if not name:
         return {"ok": False, "error": "skill name required"}
     rec = _memory().recall_skill(name)
@@ -81,45 +81,109 @@ def _uri_skill_recall(payload: dict) -> dict:
     return {"ok": True, "found": True, "name": name, "skill": rec, "flow": rec.get("flow")}
 
 
-def _uri_skill_list(payload: dict) -> dict:
-    """Handler for skill://<node>/skill/query/list.  Returns {ok, skills: [{name, ts, episode_id}]}."""
-    skills = _memory().skills()
+def _uri_skill_list() -> dict:
+    """Handler for skill://<node>/skill/query/list. Returns {ok, skills: [{name, ts, episode_id}]}."""
     summary = [{"name": s.get("name"), "ts": s.get("ts"), "episode_id": s.get("episode_id")}
-               for s in skills if isinstance(s, dict)]
+               for s in _memory().skills() if isinstance(s, dict)]
     return {"ok": True, "skills": summary, "total": len(summary)}
 
 
-def _uri_session_append(payload: dict) -> dict:
-    """Handler for session://<node>/session/command/append.
+def _uri_session_start(session: str = "", goal: str = "", node: str = "host",
+                       experience_id: str = "", session_id: str = "") -> dict:
+    """Handler for session://<node>/session/command/start.
 
-    Payload: {session, step}. Records one step into a session trace. Returns {ok, session, steps}."""
-    sid = str(payload.get("session") or payload.get("session_id") or "").strip()
-    step = payload.get("step")
+    Initialise a recorder session. Idempotent — safe to call again on an existing session.
+    Returns {ok, session, status} so the caller can inspect what was already captured."""
+    sid = str(session or session_id or "").strip()
+    if not sid:
+        return {"ok": False, "error": "session id required"}
+    rec = _memory().session_start(sid, goal=str(goal or ""), node=str(node or "host"),
+                                  experience_id=str(experience_id or ""))
+    return {"ok": True, "session": sid, "goal": rec.get("goal"), "status": rec.get("status"),
+            "steps": len(rec.get("steps") or [])}
+
+
+def _uri_session_commit(session: str = "", session_id: str = "") -> dict:
+    """Handler for session://<node>/session/command/commit.
+
+    Seal the session (no more appends). Returns the final step count and status."""
+    sid = str(session or session_id or "").strip()
+    if not sid:
+        return {"ok": False, "error": "session id required"}
+    rec = _memory().session_commit(sid)
+    if not rec.get("ok", True):
+        return {"ok": False, "error": rec.get("error", "session not found")}
+    return {"ok": True, "session": sid, "status": rec.get("status"),
+            "steps": len(rec.get("steps") or []), "committed_at": rec.get("committed_at")}
+
+
+def _uri_session_events(session: str = "", session_id: str = "") -> dict:
+    """Handler for session://<node>/session/query/events.
+
+    Return the full ordered step list for a session — the raw execution trace."""
+    sid = str(session or session_id or "").strip()
+    if not sid:
+        return {"ok": False, "error": "session id required"}
+    mem = _memory()
+    rec = mem.session_get(sid)
+    if rec is None:
+        return {"ok": True, "found": False, "session": sid, "steps": []}
+    steps = mem.session_steps(sid)
+    return {"ok": True, "found": True, "session": sid, "steps": steps,
+            "total": len(steps), "status": rec.get("status"), "goal": rec.get("goal")}
+
+
+def _uri_session_replay(session: str = "", session_id: str = "", execute: bool = False) -> dict:
+    """Handler for session://<node>/session/command/replay.
+
+    Materialise the session as a flow and dispatch it through the thin-driver.
+    ``execute=False`` (default) is a dry-run so replay is safe to call for inspection.
+    The dispatched flow is the RECORDED step sequence — no re-planning."""
+    sid = str(session or session_id or "").strip()
+    if not sid:
+        return {"ok": False, "error": "session id required"}
+    mem = _memory()
+    steps = mem.session_steps(sid)
+    if not steps:
+        return {"ok": False, "error": f"session {sid!r} has no steps to replay"}
+    try:
+        import urirun.v2_service as _svc  # noqa: PLC0415
+        from urirun.node.flow import execute_flow  # noqa: PLC0415
+        mode = "execute" if execute else "dry-run"
+        def dispatch(u, p=None, _m=mode, _s=_svc):
+            r = _s.call(u, p or {}, {}, mode=_m)
+            return r if r is not None else {"ok": False, "error": {"category": "NOT_FOUND", "message": f"no route for {u}"}}
+        flow = {"steps": steps, "task": {"id": sid, "source": "session://", "title": sid}}
+        result = execute_flow(flow, {}, {}, execute=execute, dispatch_uri=dispatch)
+        return {"ok": bool(result.get("ok")), "session": sid, "steps": len(steps),
+                "executed": execute, "result": result}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+
+
+def _uri_session_append(session: str = "", step: dict | None = None, session_id: str = "") -> dict:
+    """Handler for session://<node>/session/command/append. Records one step into a session trace."""
+    sid = str(session or session_id or "").strip()
     if not sid or not isinstance(step, dict) or not step:
         return {"ok": False, "error": "session id and a non-empty step required"}
     steps = _memory().session_append(sid, step)
     return {"ok": True, "session": sid, "steps": len(steps)}
 
 
-def _uri_session_export(payload: dict) -> dict:
-    """Handler for session://<node>/session/query/export-flow.
-
-    Payload: {session, title?}. Materializes the recorded session as a flow document."""
-    sid = str(payload.get("session") or payload.get("session_id") or "").strip()
+def _uri_session_export(session: str = "", title: str = "", session_id: str = "") -> dict:
+    """Handler for session://<node>/session/query/export-flow. Materializes the session as a flow."""
+    sid = str(session or session_id or "").strip()
     if not sid:
         return {"ok": False, "error": "session id required"}
     steps = _memory().session_steps(sid)
-    flow = {"steps": steps,
-            "task": {"id": sid, "source": "session", "title": payload.get("title") or sid}}
+    flow = {"steps": steps, "task": {"id": sid, "source": "session", "title": str(title or sid)}}
     return {"ok": True, "session": sid, "flow": flow, "steps": len(steps)}
 
 
-def _uri_session_promote(payload: dict) -> dict:
-    """Handler for session://<node>/session/command/promote-to-skill.
-
-    Payload: {session, name}. Names a recorded session's steps as a reusable skill."""
-    sid = str(payload.get("session") or payload.get("session_id") or "").strip()
-    name = str(payload.get("name") or "").strip()
+def _uri_session_promote(session: str = "", name: str = "", session_id: str = "") -> dict:
+    """Handler for session://<node>/session/command/promote-to-skill. Names a session as a skill."""
+    sid = str(session or session_id or "").strip()
+    name = str(name or "").strip()
     if not sid or not name:
         return {"ok": False, "error": "session id and skill name required"}
     memory = _memory()
@@ -149,8 +213,16 @@ def _build_connectors():
         skill.handler("skill/query/list",
                       meta={"label": "List promoted skills"})(_uri_skill_list)
         session = urirun.connector("session", scheme="session")
+        session.handler("session/command/start",
+                        meta={"label": "Initialise a trace-first session recorder"})(_uri_session_start)
         session.handler("session/command/append",
                         meta={"label": "Append a step to a trace-first session recorder"})(_uri_session_append)
+        session.handler("session/command/commit",
+                        meta={"label": "Seal a session (no more appends)"})(_uri_session_commit)
+        session.handler("session/query/events",
+                        meta={"label": "Return the ordered step trace for a session"})(_uri_session_events)
+        session.handler("session/command/replay",
+                        meta={"label": "Replay a recorded session as a flow (dry-run by default)"})(_uri_session_replay)
         session.handler("session/query/export-flow",
                         meta={"label": "Export a recorded session as a flow document"})(_uri_session_export)
         session.handler("session/command/promote-to-skill",

@@ -55,6 +55,7 @@ project_file('adapters/python/tests/test_exec.py', 147, 'python').
 project_file('adapters/python/tests/test_flow.py', 365, 'python').
 project_file('adapters/python/tests/test_flow_reversible.py', 118, 'python').
 project_file('adapters/python/tests/test_flow_rollup.py', 220, 'python').
+project_file('adapters/python/tests/test_flow_scheme.py', 183, 'python').
 project_file('adapters/python/tests/test_flow_twin.py', 512, 'python').
 project_file('adapters/python/tests/test_formatting.py', 130, 'python').
 project_file('adapters/python/tests/test_fs_transfer.py', 105, 'python').
@@ -91,7 +92,7 @@ project_file('adapters/python/tests/test_resolver.py', 101, 'python').
 project_file('adapters/python/tests/test_reversible.py', 587, 'python').
 project_file('adapters/python/tests/test_routing.py', 158, 'python').
 project_file('adapters/python/tests/test_runtime.py', 173, 'python').
-project_file('adapters/python/tests/test_runtime_extractable.py', 77, 'python').
+project_file('adapters/python/tests/test_runtime_extractable.py', 69, 'python').
 project_file('adapters/python/tests/test_scan.py', 90, 'python').
 project_file('adapters/python/tests/test_scanner_bridge.py', 158, 'python').
 project_file('adapters/python/tests/test_scanner_extractable.py', 62, 'python').
@@ -101,6 +102,8 @@ project_file('adapters/python/tests/test_secrets.py', 168, 'python').
 project_file('adapters/python/tests/test_server.py', 177, 'python').
 project_file('adapters/python/tests/test_service_control.py', 80, 'python').
 project_file('adapters/python/tests/test_service_lifecycle.py', 235, 'python').
+project_file('adapters/python/tests/test_session_skill.py', 219, 'python').
+project_file('adapters/python/tests/test_skill_session.py', 105, 'python').
 project_file('adapters/python/tests/test_task_planner.py', 138, 'python').
 project_file('adapters/python/tests/test_transport.py', 139, 'python').
 project_file('adapters/python/tests/test_tree.py', 28, 'python').
@@ -156,7 +159,7 @@ project_file('adapters/python/urirun/host/dashboard_api.py', 289, 'python').
 project_file('adapters/python/urirun/host/dashboard_http.py', 105, 'python').
 project_file('adapters/python/urirun/host/decision_loop.py', 135, 'python').
 project_file('adapters/python/urirun/host/discovery.py', 363, 'python').
-project_file('adapters/python/urirun/host/dispatch.py', 67, 'python').
+project_file('adapters/python/urirun/host/dispatch.py', 147, 'python').
 project_file('adapters/python/urirun/host/document_metadata.py', 27, 'python').
 project_file('adapters/python/urirun/host/document_sync.py', 7, 'python').
 project_file('adapters/python/urirun/host/domain_monitor.py', 501, 'python').
@@ -176,7 +179,7 @@ project_file('adapters/python/urirun/host/scanner_service.py', 7, 'python').
 project_file('adapters/python/urirun/host/scheduler.py', 136, 'python').
 project_file('adapters/python/urirun/host/service_control.py', 463, 'python').
 project_file('adapters/python/urirun/host/task_planner.py', 356, 'python').
-project_file('adapters/python/urirun/host/twin_bridge.py', 450, 'python').
+project_file('adapters/python/urirun/host/twin_bridge.py', 414, 'python').
 project_file('adapters/python/urirun/host/urifix_bridge.py', 46, 'python').
 project_file('adapters/python/urirun/host/widgets.py', 65, 'python').
 project_file('adapters/python/urirun/host_dashboard.py', 6, 'python').
@@ -192,10 +195,11 @@ project_file('adapters/python/urirun/node/config.py', 227, 'python').
 project_file('adapters/python/urirun/node/diagnostics.py', 551, 'python').
 project_file('adapters/python/urirun/node/doctor.py', 218, 'python').
 project_file('adapters/python/urirun/node/episode.py', 225, 'python').
-project_file('adapters/python/urirun/node/event_schema.py', 93, 'python').
-project_file('adapters/python/urirun/node/flow.py', 1069, 'python').
+project_file('adapters/python/urirun/node/event_schema.py', 126, 'python').
+project_file('adapters/python/urirun/node/flow.py', 1081, 'python').
 project_file('adapters/python/urirun/node/flow_planner.py', 696, 'python').
-project_file('adapters/python/urirun/node/flow_thin.py', 483, 'python').
+project_file('adapters/python/urirun/node/flow_thin.py', 489, 'python').
+project_file('adapters/python/urirun/node/flow_uri.py', 91, 'python').
 project_file('adapters/python/urirun/node/flow_verify.py', 112, 'python').
 project_file('adapters/python/urirun/node/formatting.py', 81, 'python').
 project_file('adapters/python/urirun/node/keyauth.py', 183, 'python').
@@ -204,10 +208,10 @@ project_file('adapters/python/urirun/node/mesh.py', 309, 'python').
 project_file('adapters/python/urirun/node/node_cli.py', 900, 'python').
 project_file('adapters/python/urirun/node/paths.py', 39, 'python').
 project_file('adapters/python/urirun/node/recovery.py', 373, 'python').
-project_file('adapters/python/urirun/node/reversible.py', 718, 'python').
+project_file('adapters/python/urirun/node/reversible.py', 750, 'python').
 project_file('adapters/python/urirun/node/routing.py', 174, 'python').
 project_file('adapters/python/urirun/node/server.py', 997, 'python').
-project_file('adapters/python/urirun/node/skill.py', 164, 'python').
+project_file('adapters/python/urirun/node/skill.py', 251, 'python').
 project_file('adapters/python/urirun/node/task_cli.py', 347, 'python').
 project_file('adapters/python/urirun/node/transport.py', 541, 'python').
 project_file('adapters/python/urirun/node/twin_store.py', 130, 'python').
@@ -644,6 +648,7 @@ python_function('adapters/python/tests/test_flow_rollup.py', 'test_failed_flow_w
 python_function('adapters/python/tests/test_flow_rollup.py', 'test_execute_flow_green_when_every_action_succeeds', 1, 2, 3).
 python_function('adapters/python/tests/test_flow_rollup.py', 'test_llm_flow_injects_environment_facts_into_planner', 1, 8, 6).
 python_function('adapters/python/tests/test_flow_rollup.py', 'test_fetch_planner_environments_builds_context', 1, 5, 5).
+python_function('adapters/python/tests/test_flow_scheme.py', '_ok_episode', 3, 1, 0).
 python_function('adapters/python/tests/test_flow_twin.py', '_mesh', 0, 1, 0).
 python_function('adapters/python/tests/test_flow_twin.py', '_profile', 4, 2, 0).
 python_function('adapters/python/tests/test_flow_twin.py', '_flow', 0, 1, 0).
@@ -1145,6 +1150,7 @@ python_function('adapters/python/tests/test_service_lifecycle.py', 'test_dispatc
 python_function('adapters/python/tests/test_service_lifecycle.py', 'test_dispatch_restart_calls_restart_fn', 0, 4, 3).
 python_function('adapters/python/tests/test_service_lifecycle.py', 'test_dispatch_start_when_not_running_calls_start_fn', 0, 3, 3).
 python_function('adapters/python/tests/test_service_lifecycle.py', 'test_dispatch_all_four_verbs_for_every_service', 0, 5, 3).
+python_function('adapters/python/tests/test_session_skill.py', '_ensure_handlers', 0, 1, 1).
 python_function('adapters/python/tests/test_task_planner.py', 'test_normalize_text_lowercases', 0, 2, 1).
 python_function('adapters/python/tests/test_task_planner.py', 'test_normalize_text_strips_diacritics', 0, 3, 1).
 python_function('adapters/python/tests/test_task_planner.py', 'test_normalize_text_collapses_whitespace', 0, 2, 1).
@@ -1600,7 +1606,8 @@ python_function('adapters/python/urirun/host/discovery.py', '_route_targets', 2,
 python_function('adapters/python/urirun/host/discovery.py', '_probe_route', 4, 3, 5).
 python_function('adapters/python/urirun/host/discovery.py', '_node_test_summary', 4, 5, 2).
 python_function('adapters/python/urirun/host/discovery.py', 'node_test_routes', 1, 13, 10).
-python_function('adapters/python/urirun/host/dispatch.py', 'inprocess_fallback', 2, 16, 11).
+python_function('adapters/python/urirun/host/dispatch.py', '_flow_scheme_dispatch', 2, 32, 10).
+python_function('adapters/python/urirun/host/dispatch.py', 'inprocess_fallback', 2, 17, 13).
 python_function('adapters/python/urirun/host/dispatch.py', 'make_local_dispatch_uri', 3, 2, 1).
 python_function('adapters/python/urirun/host/domain_monitor.py', 'now_id', 0, 1, 2).
 python_function('adapters/python/urirun/host/domain_monitor.py', '_list', 1, 6, 5).
@@ -1921,7 +1928,6 @@ python_function('adapters/python/urirun/host/task_planner.py', 'plan_chat_reques
 python_function('adapters/python/urirun/host/task_planner.py', 'ticket_payload', 2, 3, 2).
 python_function('adapters/python/urirun/host/task_planner.py', 'create_tickets_from_plan', 2, 4, 4).
 python_function('adapters/python/urirun/host/twin_bridge.py', 'flow_has_desktop_step', 1, 3, 3).
-python_function('adapters/python/urirun/host/twin_bridge.py', '_step_inverse', 1, 15, 1).
 python_function('adapters/python/urirun/host/twin_bridge.py', '_is_infra_step', 1, 5, 2).
 python_function('adapters/python/urirun/host/twin_bridge.py', '_step_info_from_results', 2, 8, 4).
 python_function('adapters/python/urirun/host/twin_bridge.py', '_inverse_from_results', 3, 11, 5).
@@ -2012,6 +2018,7 @@ python_function('adapters/python/urirun/node/episode.py', '_reality_from_dict', 
 python_function('adapters/python/urirun/node/episode.py', '_plan_from_dict', 1, 4, 2).
 python_function('adapters/python/urirun/node/episode.py', '_outcome_from_dict', 1, 4, 2).
 python_function('adapters/python/urirun/node/episode.py', 'make_episode', 0, 14, 7).
+python_function('adapters/python/urirun/node/event_schema.py', '_step_inverse', 1, 15, 1).
 python_function('adapters/python/urirun/node/event_schema.py', 'step_category', 1, 3, 1).
 python_function('adapters/python/urirun/node/flow.py', '_flow_format', 2, 3, 2).
 python_function('adapters/python/urirun/node/flow.py', 'flow_document', 1, 3, 2).
@@ -2041,7 +2048,8 @@ python_function('adapters/python/urirun/node/flow.py', '_restore_service_map', 1
 python_function('adapters/python/urirun/node/flow.py', '_orchestrate_steps', 14, 12, 13).
 python_function('adapters/python/urirun/node/flow.py', '_make_memory_dispatch', 4, 1, 15).
 python_function('adapters/python/urirun/node/flow.py', '_plan_with_preflight', 1, 5, 3).
-python_function('adapters/python/urirun/node/flow.py', '_build_thin_plan', 2, 12, 7).
+python_function('adapters/python/urirun/node/flow.py', '_thin_remember_record', 2, 5, 4).
+python_function('adapters/python/urirun/node/flow.py', '_build_thin_plan', 2, 11, 8).
 python_function('adapters/python/urirun/node/flow.py', 'execute_flow', 4, 12, 9).
 python_function('adapters/python/urirun/node/flow.py', '_apply_reversibility', 8, 11, 6).
 python_function('adapters/python/urirun/node/flow.py', 'run_flow_document', 2, 9, 10).
@@ -2052,7 +2060,7 @@ python_function('adapters/python/urirun/node/flow.py', 'rollback_flow', 2, 6, 9)
 python_function('adapters/python/urirun/node/flow.py', '_uri_goal_verify', 1, 8, 5).
 python_function('adapters/python/urirun/node/flow.py', '_uri_preflight', 1, 5, 6).
 python_function('adapters/python/urirun/node/flow.py', '_uri_env_drift', 1, 10, 9).
-python_function('adapters/python/urirun/node/flow.py', '_uri_memory_remember', 1, 13, 11).
+python_function('adapters/python/urirun/node/flow.py', '_uri_memory_remember', 1, 13, 14).
 python_function('adapters/python/urirun/node/flow_planner.py', 'first_url', 1, 2, 2).
 python_function('adapters/python/urirun/node/flow_planner.py', 'nl_key', 1, 1, 6).
 python_function('adapters/python/urirun/node/flow_planner.py', 'append_if_available', 5, 5, 5).
@@ -2096,11 +2104,18 @@ python_function('adapters/python/urirun/node/flow_thin.py', '_thin_handle_non_co
 python_function('adapters/python/urirun/node/flow_thin.py', '_thin_update_ledger', 3, 7, 5).
 python_function('adapters/python/urirun/node/flow_thin.py', '_thin_step_entry', 3, 10, 4).
 python_function('adapters/python/urirun/node/flow_thin.py', '_thin_fold_inner_ok', 1, 4, 3).
-python_function('adapters/python/urirun/node/flow_thin.py', '_thin_goal_verify', 4, 6, 6).
+python_function('adapters/python/urirun/node/flow_thin.py', '_thin_goal_verify', 4, 11, 6).
 python_function('adapters/python/urirun/node/flow_thin.py', '_results_degraded', 1, 9, 4).
 python_function('adapters/python/urirun/node/flow_thin.py', '_capture_proofs_from_results', 1, 16, 4).
 python_function('adapters/python/urirun/node/flow_thin.py', '_enrich_remember_with_degraded', 3, 8, 6).
 python_function('adapters/python/urirun/node/flow_thin.py', '_thin_driver', 5, 17, 17).
+python_function('adapters/python/urirun/node/flow_uri.py', '_memory', 0, 1, 1).
+python_function('adapters/python/urirun/node/flow_uri.py', '_named_flow', 1, 3, 4).
+python_function('adapters/python/urirun/node/flow_uri.py', '_uri_flow_get', 1, 4, 3).
+python_function('adapters/python/urirun/node/flow_uri.py', '_uri_flow_run', 6, 11, 8).
+python_function('adapters/python/urirun/node/flow_uri.py', '_build_connector', 0, 2, 2).
+python_function('adapters/python/urirun/node/flow_uri.py', 'flow_bindings', 0, 2, 1).
+python_function('adapters/python/urirun/node/flow_uri.py', 'register', 0, 1, 0).
 python_function('adapters/python/urirun/node/flow_verify.py', '_flow_stdout', 1, 6, 2).
 python_function('adapters/python/urirun/node/flow_verify.py', '_run_goal_check', 2, 6, 8).
 python_function('adapters/python/urirun/node/flow_verify.py', '_dig_value', 2, 5, 4).
@@ -2293,14 +2308,21 @@ python_function('adapters/python/urirun/node/server.py', '_resolve_serve_opts', 
 python_function('adapters/python/urirun/node/server.py', '_node_serve', 4, 3, 6).
 python_function('adapters/python/urirun/node/skill.py', '_now', 0, 1, 2).
 python_function('adapters/python/urirun/node/skill.py', '_memory', 0, 1, 1).
-python_function('adapters/python/urirun/node/skill.py', '_episode_for', 2, 10, 5).
-python_function('adapters/python/urirun/node/skill.py', '_uri_skill_promote', 1, 8, 7).
+python_function('adapters/python/urirun/node/skill.py', '_episode_for', 4, 8, 5).
+python_function('adapters/python/urirun/node/skill.py', '_uri_skill_promote', 5, 12, 7).
 python_function('adapters/python/urirun/node/skill.py', '_uri_skill_recall', 1, 4, 5).
-python_function('adapters/python/urirun/node/skill.py', '_uri_skill_list', 1, 3, 5).
-python_function('adapters/python/urirun/node/skill.py', '_uri_session_append', 1, 6, 7).
-python_function('adapters/python/urirun/node/skill.py', '_uri_session_export', 1, 5, 6).
-python_function('adapters/python/urirun/node/skill.py', '_uri_session_promote', 1, 7, 7).
-python_function('adapters/python/urirun/node/skill.py', 'register', 0, 2, 2).
+python_function('adapters/python/urirun/node/skill.py', '_uri_skill_list', 0, 3, 5).
+python_function('adapters/python/urirun/node/skill.py', '_uri_session_start', 5, 8, 6).
+python_function('adapters/python/urirun/node/skill.py', '_uri_session_commit', 2, 6, 6).
+python_function('adapters/python/urirun/node/skill.py', '_uri_session_events', 2, 5, 7).
+python_function('adapters/python/urirun/node/skill.py', '_uri_session_replay', 3, 7, 9).
+python_function('adapters/python/urirun/node/skill.py', '_uri_session_append', 3, 6, 6).
+python_function('adapters/python/urirun/node/skill.py', '_uri_session_export', 3, 5, 5).
+python_function('adapters/python/urirun/node/skill.py', '_uri_session_promote', 3, 7, 6).
+python_function('adapters/python/urirun/node/skill.py', '_build_connectors', 0, 2, 2).
+python_function('adapters/python/urirun/node/skill.py', 'skill_bindings', 0, 2, 1).
+python_function('adapters/python/urirun/node/skill.py', 'session_bindings', 0, 2, 1).
+python_function('adapters/python/urirun/node/skill.py', 'register', 0, 2, 0).
 python_function('adapters/python/urirun/node/task_cli.py', '_task_prompt', 1, 7, 2).
 python_function('adapters/python/urirun/node/task_cli.py', '_ticket_payload', 1, 7, 4).
 python_function('adapters/python/urirun/node/task_cli.py', '_host_local_registry', 1, 4, 7).
@@ -3341,6 +3363,28 @@ python_method('TestAppendTwinWidgetEpisodeFields', '_collect_events', 1, 3, 2).
 python_method('TestAppendTwinWidgetEpisodeFields', 'test_flow_completed_carries_episode_id', 0, 3, 6).
 python_method('TestAppendTwinWidgetEpisodeFields', 'test_step_events_carry_episode_id', 0, 4, 5).
 python_method('TestAppendTwinWidgetEpisodeFields', 'test_backwards_compatible_no_episode_fields', 0, 3, 6).
+python_class('adapters/python/tests/test_flow_scheme.py', 'TestFlowSchemeDispatch').
+python_method('TestFlowSchemeDispatch', 'setUp', 0, 1, 3).
+python_method('TestFlowSchemeDispatch', 'tearDown', 0, 2, 2).
+python_method('TestFlowSchemeDispatch', '_mem', 0, 1, 1).
+python_method('TestFlowSchemeDispatch', 'test_query_get_returns_plan_by_episode_id', 0, 3, 9).
+python_method('TestFlowSchemeDispatch', 'test_query_get_returns_none_for_unknown_name', 0, 1, 2).
+python_method('TestFlowSchemeDispatch', 'test_query_get_via_skill_name', 0, 2, 8).
+python_method('TestFlowSchemeDispatch', 'test_command_run_dispatches_steps', 0, 1, 10).
+python_method('TestFlowSchemeDispatch', 'test_command_run_unknown_name_returns_none', 0, 1, 2).
+python_method('TestFlowSchemeDispatch', 'test_unknown_verb_returns_none', 0, 1, 5).
+python_method('TestFlowSchemeDispatch', 'test_short_uri_returns_none', 0, 1, 2).
+python_method('TestFlowSchemeDispatch', 'test_inprocess_fallback_routes_flow_scheme', 0, 1, 7).
+python_class('adapters/python/tests/test_flow_scheme.py', 'TestRecallDriftGuard').
+python_method('TestRecallDriftGuard', 'setUp', 0, 1, 3).
+python_method('TestRecallDriftGuard', 'tearDown', 0, 2, 2).
+python_method('TestRecallDriftGuard', '_recall', 0, 1, 1).
+python_method('TestRecallDriftGuard', '_mem', 0, 1, 1).
+python_method('TestRecallDriftGuard', '_ep', 2, 1, 1).
+python_method('TestRecallDriftGuard', 'test_recall_skips_drift_check_when_flag_set', 0, 1, 7).
+python_method('TestRecallDriftGuard', 'test_recall_suppresses_episode_when_drift_detected', 0, 1, 8).
+python_method('TestRecallDriftGuard', 'test_recall_returns_episode_when_no_drift', 0, 1, 7).
+python_method('TestRecallDriftGuard', 'test_flow_store_fallback_has_no_drift_guard', 0, 1, 8).
 python_class('adapters/python/tests/test_host_dashboard.py', 'HostDashboardTests').
 python_method('HostDashboardTests', 'test_dashboard_html_summary_and_task_action', 0, 1, 22).
 python_method('HostDashboardTests', 'test_documents_reconcile_http_route', 0, 2, 19).
@@ -3638,6 +3682,38 @@ python_method('NormalizeStuckTests', 'test_uri_rollback_emits_string_stuck_on_fa
 python_class('adapters/python/tests/test_scheduler.py', 'SchedulerTests').
 python_method('SchedulerTests', 'test_systemd_preview_and_install', 0, 1, 9).
 python_method('SchedulerTests', 'test_cli_schedule_cron_preview', 0, 1, 9).
+python_class('adapters/python/tests/test_session_skill.py', 'TestSessionRecorder').
+python_method('TestSessionRecorder', 'setUp', 0, 1, 4).
+python_method('TestSessionRecorder', 'tearDown', 0, 2, 2).
+python_method('TestSessionRecorder', 'test_start_creates_session', 0, 2, 4).
+python_method('TestSessionRecorder', 'test_start_is_idempotent', 0, 2, 3).
+python_method('TestSessionRecorder', 'test_append_then_events', 0, 4, 5).
+python_method('TestSessionRecorder', 'test_events_unknown_session_returns_not_found', 0, 2, 4).
+python_method('TestSessionRecorder', 'test_commit_seals_session', 0, 2, 4).
+python_method('TestSessionRecorder', 'test_export_flow_materialises_steps', 0, 5, 4).
+python_method('TestSessionRecorder', 'test_replay_dryruns_recorded_steps', 0, 2, 6).
+python_method('TestSessionRecorder', 'test_replay_empty_session_fails', 0, 2, 3).
+python_method('TestSessionRecorder', 'test_promote_then_recall_skill', 0, 4, 5).
+python_method('TestSessionRecorder', 'test_promote_then_flow_scheme_get', 0, 3, 7).
+python_method('TestSessionRecorder', 'test_skill_list_shows_promoted_skill', 0, 4, 3).
+python_class('adapters/python/tests/test_session_skill.py', 'TestSkillFromEpisode').
+python_method('TestSkillFromEpisode', 'setUp', 0, 1, 4).
+python_method('TestSkillFromEpisode', 'tearDown', 0, 2, 2).
+python_method('TestSkillFromEpisode', '_mem', 0, 1, 1).
+python_method('TestSkillFromEpisode', 'test_promote_from_episode_id', 0, 4, 6).
+python_method('TestSkillFromEpisode', 'test_promote_fails_without_episode', 0, 2, 3).
+python_class('adapters/python/tests/test_skill_session.py', 'SkillStoreTests').
+python_method('SkillStoreTests', 'test_remember_recall_and_list_skill', 0, 2, 6).
+python_method('SkillStoreTests', 'test_session_append_accumulates_in_order', 0, 3, 4).
+python_class('adapters/python/tests/test_skill_session.py', 'SkillSessionURITests').
+python_method('SkillSessionURITests', 'setUp', 0, 1, 6).
+python_method('SkillSessionURITests', '_seed_episode', 1, 1, 7).
+python_method('SkillSessionURITests', 'test_promote_episode_to_skill_then_recall', 0, 1, 5).
+python_method('SkillSessionURITests', 'test_promote_requires_name_and_a_matching_episode', 0, 1, 3).
+python_method('SkillSessionURITests', 'test_recall_missing_skill_is_found_false', 0, 1, 2).
+python_method('SkillSessionURITests', 'test_session_record_export_and_promote', 0, 2, 6).
+python_method('SkillSessionURITests', 'test_session_append_rejects_empty_step', 0, 1, 2).
+python_method('SkillSessionURITests', 'test_connectors_register_and_expose_bindings', 0, 1, 5).
 python_class('adapters/python/tests/test_twin_store.py', 'TwinStoreTests').
 python_method('TwinStoreTests', 'setUp', 0, 1, 2).
 python_method('TwinStoreTests', 'test_known_good_survives_a_restart', 0, 1, 10).
@@ -3802,8 +3878,11 @@ python_method('TwinMemory', 'recall_proof', 1, 1, 1).
 python_method('TwinMemory', 'remember_skill', 2, 2, 0).
 python_method('TwinMemory', 'recall_skill', 1, 1, 1).
 python_method('TwinMemory', 'skills', 0, 2, 4).
+python_method('TwinMemory', 'session_start', 4, 3, 5).
 python_method('TwinMemory', 'session_append', 2, 3, 4).
+python_method('TwinMemory', 'session_commit', 1, 3, 4).
 python_method('TwinMemory', 'session_steps', 1, 3, 2).
+python_method('TwinMemory', 'session_get', 1, 1, 1).
 python_class('adapters/python/urirun/node/server.py', 'EventHub').
 python_method('EventHub', '__init__', 1, 1, 3).
 python_method('EventHub', 'publish', 1, 3, 4).

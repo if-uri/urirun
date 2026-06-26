@@ -71,6 +71,40 @@ class FlowCompletedEvent(TypedDict):
 
 # ────────────────────────────────────── category derivation ──── #
 
+def _step_inverse(step_uri: str) -> tuple[str | None, bool]:
+    """Return (inverse_uri_or_description, reversible) for a URI step.
+
+    Reversibility rules:
+    - Read-only / query steps: reversible, no inverse needed (no state change)
+    - Navigation: reversible via history_back
+    - Session lifecycle: reversible via close
+    - Input / click / fill / submit / send: irreversible (no undo)
+    - Unknown command: conservative → irreversible
+
+    Lives here (the node-level event contract) so both the contract (step_category) and the
+    host StepEvent builder (twin_bridge) derive reversibility from ONE place, without
+    twin_bridge living above event_schema (which formed a node→host cycle)."""
+    u = step_uri or ""
+    if any(p in u for p in ("/query/", "/query/screenshot", "/screen/query/capture")):
+        return None, True
+    if any(p in u for p in ("/command/wait", "/query/ready", "/query/verify")):
+        return None, True
+    if any(p in u for p in ("/session/command/ensure", "/session/command/launch")):
+        return "kvm://host/cdp/session/command/close", True
+    if any(p in u for p in ("/page/command/navigate", "/command/navigate")):
+        return "browser://cdp/page/command/back", True
+    if "/command/reload" in u:
+        return "browser://cdp/page/command/back", True
+    if "/command/scroll" in u:
+        return "kvm://host/input/command/scroll-inverse", True
+    if any(p in u for p in ("/command/click", "/command/fill", "/command/type",
+                             "/command/submit", "/command/send", "/command/press")):
+        return None, False
+    if "/command/" in u:
+        return None, False
+    return None, True
+
+
 def step_category(step_uri: str) -> str:
     """Derive the step category from its URI — one place, no re-derivation in subscribers.
 
@@ -83,7 +117,6 @@ def step_category(step_uri: str) -> str:
     reversible=True + inverse uri → reversible
     reversible=False              → irreversible
     """
-    from urirun.host.twin_bridge import _step_inverse  # noqa: PLC0415
     inverse, reversible = _step_inverse(step_uri)
     if not reversible:
         return "irreversible"

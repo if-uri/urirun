@@ -16,33 +16,33 @@ HUBS[20]:
     CC=13  in:1  out:31  total:32
   adapters.python.urirun.host.host_dashboard._handle_events_sse
     CC=13  in:1  out:28  total:29
+  adapters.python.urirun.host.connector_admin._connector_install_node
+    CC=12  in:1  out:28  total:29
   adapters.python.urirun.host.connector_admin.connector_install
     CC=13  in:0  out:29  total:29
   scripts.transport_swap_proof.main
     CC=5  in:0  out:29  total:29
-  adapters.python.urirun.host.connector_admin._connector_install_node
-    CC=12  in:1  out:28  total:29
-  adapters.python.urirun.host.host_dashboard._handle_post
-    CC=13  in:1  out:27  total:28
   adapters.python.urirun.host.dashboard_http._read_json
     CC=3  in:23  out:5  total:28
+  adapters.python.urirun.host.host_dashboard._handle_post
+    CC=13  in:1  out:27  total:28
   adapters.python.urirun.host.host_db._run_query_route
     CC=7  in:1  out:26  total:27
   adapters.python.urirun.connectors.connector_lint.lint_connector
     CC=9  in:3  out:24  total:27
   adapters.python.urirun.host.object_registry.probe_node_token
     CC=14  in:1  out:24  total:25
-  adapters.python.urirun.testing.smoke
-    CC=9  in:1  out:23  total:24
   adapters.python.urirun.host.node_api.configured_api_headers
     CC=13  in:1  out:23  total:24
   adapters.python.urirun.host.host_dashboard._recent_scanner_artifacts
     CC=14  in:1  out:23  total:24
+  adapters.python.urirun.testing.smoke
+    CC=9  in:1  out:23  total:24
   adapters.python.urirun.host.host_dashboard.serve
     CC=6  in:1  out:22  total:23
   adapters.python.urirun.host.host_dashboard.uri_invoke
     CC=12  in:2  out:21  total:23
-  adapters.python.urirun.host.host_db.search_records
+  adapters.python.urirun.host.dashboard_api.chat_history
     CC=6  in:1  out:21  total:22
 
 MODULES:
