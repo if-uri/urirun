@@ -388,7 +388,9 @@ _PAGE_ACTION_QUEUES = _SCANNER_PAGE_ACTION_QUEUES
 _is_phone_scanner_prompt = _is_phone_scanner_prompt_impl  # noqa: F401
 _torch_enabled_from_prompt = _torch_enabled_from_prompt_impl  # noqa: F401
 page_action_poll = _page_action_poll_impl  # noqa: F401
-_prune_scanner_staging = _prune_scanner_staging_impl  # noqa: F401
+def _prune_scanner_staging(*, min_interval: float = 60.0) -> int:
+    """Wrapper: injects _scanner_staging_dir for monkeypatch-friendly calls."""
+    return _prune_scanner_staging_impl(_scanner_staging_dir, min_interval=min_interval)
 _LAST_STAGING_PRUNE: float = 0.0
 
 
@@ -1858,13 +1860,7 @@ def restart_phone_scanner_service(
             "url": _phone_scanner_url(scanner_port),
         }
 
-    replaced = _free_port_from_matching_processes(
-        scanner_port,
-        force=force_port_kill,
-        emit=False,
-        is_target=_is_scanner_process_impl,
-        event_prefix="urirun.service_scanner",
-    )
+    replaced = _free_port_from_old_scanner(scanner_port, force=force_port_kill)
     if replaced.get("holders"):
         if not replaced.get("ok") or replaced.get("remaining"):
             return {
@@ -3801,11 +3797,6 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
         db, prompt, config, node_urls, execute=execute, no_llm=no_llm,
         requested_nodes=requested_nodes, requested_targets=requested_targets,
         selected_nodes=selected_nodes, selected_targets=selected_targets,
-    )
-    _dispatch = dict(
-        project=project, db=db, config=config, payload=payload, prompt=prompt,
-        selected_nodes=selected_nodes, selected_targets=selected_targets,
-        execute=execute, no_llm=no_llm, node_urls=node_urls, token=token, identity=identity,
     )
     if _is_phone_scanner_prompt_impl(prompt):
         return _chat_ask_phone_scanner(project, db, config, node_urls, token, identity, prompt, execute, selected_nodes, selected_targets)
