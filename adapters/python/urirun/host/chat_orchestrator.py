@@ -556,6 +556,57 @@ def _register_step_artifacts(result: dict, db: str | None, host_db) -> int:
     return registered
 
 
+def _emit_general_chat_message(
+    db: str | None,
+    prompt: str,
+    execute: bool,
+    selected_nodes: list[str],
+    selected_targets: list[str],
+    generator: dict,
+    flow: dict,
+    result: dict,
+    attachments: list,
+    content: str,
+    steps_all_ok: bool,
+    deps: "ChatDeps",
+) -> None:
+    """Add the chat message and best-effort audit log for a completed general path."""
+    if attachments:
+        content += f", {len(attachments)} attachment(s)"
+    deps.add_chat_message_fn(db, chat_message(
+        "system",
+        content,
+        detail={
+            "prompt": prompt,
+            "execute": execute,
+            "ok": steps_all_ok,
+            "degraded": result.get("degraded", False),
+            "degradedReason": result.get("degradedReason"),
+            "selectedTargets": selected_targets,
+            "generator": generator,
+            "flow": flow,
+            "timeline": result.get("timeline") or [],
+            "results": result.get("results") or {},
+            "error": result.get("error"),
+            "recovery": result.get("recovery") or [],
+        },
+        attachments=attachments,
+    ))
+    try:
+        deps.host_db_fn().add_log(db, "chat", "ask", {
+            "prompt": prompt,
+            "execute": execute,
+            "ok": steps_all_ok,
+            "selectedNodes": selected_nodes,
+            "selectedTargets": selected_targets,
+            "generator": generator,
+            "timeline": result.get("timeline") or [],
+            "recovery": result.get("recovery") or [],
+        })
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _general_path_complete(
     result: dict,
     db: str | None,
@@ -566,7 +617,7 @@ def _general_path_complete(
     generator: dict,
     flow: dict,
     attachments: list,
-    deps: ChatDeps,
+    deps: "ChatDeps",
 ) -> None:
     """Emit the chat message and DB log for the completed general mesh path."""
     timeline = result.get("timeline") or []
@@ -591,40 +642,8 @@ def _general_path_complete(
                         next_intent=_ep_ids.get("next_intent", ""))
     if execute:
         _register_step_artifacts(result, db, deps.host_db_fn())
-    if attachments:
-        content += f", {len(attachments)} attachment(s)"
-    deps.add_chat_message_fn(db, chat_message(
-        "system",
-        content,
-        detail={
-            "prompt": prompt,
-            "execute": execute,
-            "ok": steps_all_ok,
-            "degraded": result.get("degraded", False),
-            "degradedReason": result.get("degradedReason"),
-            "selectedTargets": selected_targets,
-            "generator": generator,
-            "flow": flow,
-            "timeline": timeline,
-            "results": result.get("results") or {},
-            "error": result.get("error"),
-            "recovery": result.get("recovery") or [],
-        },
-        attachments=attachments,
-    ))
-    try:
-        deps.host_db_fn().add_log(db, "chat", "ask", {
-            "prompt": prompt,
-            "execute": execute,
-            "ok": steps_all_ok,
-            "selectedNodes": selected_nodes,
-            "selectedTargets": selected_targets,
-            "generator": generator,
-            "timeline": result.get("timeline") or [],
-            "recovery": result.get("recovery") or [],
-        })
-    except Exception:  # noqa: BLE001
-        pass
+    _emit_general_chat_message(db, prompt, execute, selected_nodes, selected_targets,
+                               generator, flow, result, attachments, content, steps_all_ok, deps)
 
 
 def _chat_ask_general_capability_gap(
