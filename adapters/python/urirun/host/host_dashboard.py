@@ -101,6 +101,22 @@ from .object_registry import (
     host_registry_routes as _host_registry_routes_impl,
     service_contacts as _service_contacts_impl,
     uri_objects as _uri_objects_impl,
+    mirror_node_to_nodes_file as _mirror_node_to_nodes_file,
+    node_api_slug as _node_api_slug,
+    node_api_secret_ref as _node_api_secret_ref,
+    store_node_api_secret as _store_node_api_secret,
+    extract_raw_secret as _extract_raw_secret,
+    extract_secret_ref as _extract_secret_ref,
+    build_auth_extra_fields as _build_auth_extra_fields,
+    normalize_node_api_auth as _normalize_node_api_auth,
+    default_api_items as _default_api_items,
+    api_item_fields as _api_item_fields,
+    normalize_api_item as _normalize_api_item,
+    normalize_node_apis as _normalize_node_apis,
+    derive_node_capabilities as _derive_node_capabilities,
+    build_node_entry as _build_node_entry,
+    persist_node_to_config as _persist_node_to_config,
+    node_remove_from_mirror as _node_remove_from_mirror,
 )
 from .scanner_bridge import (
     PAGE_ACTION_LOCK as _SCANNER_PAGE_ACTION_LOCK,
@@ -8120,222 +8136,6 @@ def _compact_chat_result(result: dict, payload: dict) -> dict:
 
 
 
-def _mirror_node_to_nodes_file(name: str, url: str) -> None:
-    """Best-effort mirror to ~/.urirun/nodes.json so urifix can auto-repair node_url."""
-    try:
-        nodes_path = os.environ.get("URIRUN_NODES_FILE") or os.path.expanduser("~/.urirun/nodes.json")
-        known: dict = {}
-        if os.path.exists(nodes_path):
-            with open(nodes_path, encoding="utf-8") as fh:
-                loaded = json.load(fh)
-            if isinstance(loaded, dict):
-                inner = loaded.get("nodes")
-                known = inner if isinstance(inner, dict) else loaded
-        known[name] = url
-        os.makedirs(os.path.dirname(nodes_path) or ".", exist_ok=True)
-        with open(nodes_path, "w", encoding="utf-8") as fh:
-            json.dump(known, fh, indent=2)
-    except Exception:  # noqa: BLE001
-        pass
-
-
-def _node_api_slug(value: Any, fallback: str) -> str:
-    raw = str(value or "").strip().lower()
-    slug = re.sub(r"[^a-z0-9_-]+", "-", raw).strip("-")
-    return slug or fallback
-
-
-def _node_api_secret_ref(name: str, api_id: str) -> str:
-    account = f"{_node_api_slug(name, 'node')}/{_node_api_slug(api_id, 'api')}"
-    return f"secret://keyring/urirun-node-api/{account}#credential"
-
-
-def _store_node_api_secret(name: str, api_id: str, secret: str) -> tuple[str | None, str | None]:
-    if not secret:
-        return None, None
-    try:
-        import keyring
-        account = f"{_node_api_slug(name, 'node')}/{_node_api_slug(api_id, 'api')}"
-        keyring.set_password("urirun-node-api", account, secret)
-        return _node_api_secret_ref(name, api_id), None
-    except Exception as exc:  # noqa: BLE001
-        return None, f"could not store API credential securely (keyring): {exc}"
-
-
-def _extract_raw_secret(auth_data: dict, api: dict) -> str | None:
-    """Pull a plaintext credential from auth_data or the api dict (first non-empty value wins)."""
-    return (
-        auth_data.get("token")
-        or auth_data.get("apiKey")
-        or auth_data.get("password")
-        or auth_data.get("secret")
-        or api.get("token")
-        or api.get("apiKey")
-        or api.get("password")
-        or api.get("secret")
-    )
-
-
-def _extract_secret_ref(auth_data: dict, api: dict) -> str | None:
-    """Pull an existing secret reference from auth_data or the api dict."""
-    return (
-        auth_data.get("secretRef")
-        or auth_data.get("ref")
-        or auth_data.get("credentialRef")
-        or api.get("secretRef")
-        or api.get("credentialRef")
-    )
-
-
-def _build_auth_extra_fields(auth_data: dict, api: dict) -> dict:
-    """Collect optional auth metadata fields from auth_data (preferred) or api fallback."""
-    extra: dict = {}
-    for key in ("username", "header", "headerName", "queryParam", "scheme", "tokenUrl", "clientIdRef"):
-        value = auth_data.get(key) if key in auth_data else api.get(key)
-        if value not in (None, ""):
-            extra[key] = str(value)
-    return extra
-
-
-def _normalize_node_api_auth(name: str, api_id: str, api: dict, auth: Any) -> tuple[dict, str | None]:
-    auth_data = auth if isinstance(auth, dict) else {}
-    raw_secret = _extract_raw_secret(auth_data, api)
-    secret_ref = _extract_secret_ref(auth_data, api)
-    auth_type = str(
-        auth_data.get("type")
-        or api.get("authType")
-        or ("bearer" if raw_secret else ("ref" if secret_ref else "none"))
-    ).strip().lower()
-    if raw_secret:
-        secret_ref, error = _store_node_api_secret(name, api_id, str(raw_secret))
-        if error:
-            return {}, error
-    if auth_type in {"", "none", "no", "false"} and not secret_ref:
-        return {}, None
-    out: dict = {"type": auth_type or "ref"}
-    if secret_ref:
-        out["secretRef"] = str(secret_ref)
-    out.update(_build_auth_extra_fields(auth_data, api))
-    return out, None
-
-
-def _default_api_items(url: str, kind: str, payload: dict) -> list[dict]:
-    """Build a single synthetic default API entry for device/api nodes with no explicit apis."""
-    return [{
-        "id": "default",
-        "label": "default API",
-        "url": url,
-        "kind": payload.get("protocol") or payload.get("apiKind") or ("web" if kind == "device" else "http"),
-        "auth": payload.get("auth") if isinstance(payload.get("auth"), dict) else {},
-    }]
-
-
-def _api_item_fields(item: dict, url: str, index: int) -> tuple[str, str, str]:
-    """Resolve one raw API entry's (id, url, kind) across its accepted key aliases."""
-    api_id = _node_api_slug(item.get("id") or item.get("name") or item.get("role"), f"api-{index}")
-    api_url = str(item.get("url") or item.get("endpoint") or item.get("baseUrl") or url).strip()
-    api_kind = str(item.get("kind") or item.get("protocol") or item.get("transport") or "http").strip().lower()
-    return api_id, api_url, api_kind
-
-
-def _normalize_api_item(name: str, url: str, index: int, item: dict,
-                        fallback_auth: Any) -> tuple[dict | None, str | None]:
-    """Normalise one raw API dict entry; returns (api_dict, error) — api_dict is None to skip."""
-    api_id, api_url, api_kind = _api_item_fields(item, url, index)
-    if not api_url:
-        return None, None
-    api: dict = {"id": api_id, "kind": api_kind, "url": api_url}
-    for key in ("label", "role", "openapi", "basePath", "mount", "description"):
-        if item.get(key) not in (None, ""):
-            api[key] = item[key]
-    auth, error = _normalize_node_api_auth(name, api_id, item, item.get("auth") or fallback_auth)
-    if error:
-        return None, error
-    if auth:
-        api["auth"] = auth
-    return api, None
-
-
-def _normalize_node_apis(name: str, url: str, kind: str | None, payload: dict) -> tuple[list[dict], str | None]:
-    raw = payload.get("apis") or payload.get("interfaces") or payload.get("api")
-    if isinstance(raw, dict):
-        raw_items: list = [raw]
-    elif isinstance(raw, list):
-        raw_items = raw
-    else:
-        raw_items = []
-    if not raw_items and kind in {"api", "device"}:
-        raw_items = _default_api_items(url, kind, payload)
-    apis: list[dict] = []
-    fallback_auth = payload.get("auth")
-    for index, item in enumerate(raw_items, 1):
-        if not isinstance(item, dict):
-            continue
-        api, error = _normalize_api_item(name, url, index, item, fallback_auth)
-        if error:
-            return [], error
-        if api is not None:
-            apis.append(api)
-    return apis, None
-
-
-def _derive_node_capabilities(payload: dict, apis: list[dict]) -> list[str]:
-    raw = payload.get("capabilities")
-    caps = [str(item).strip() for item in raw] if isinstance(raw, list) else []
-    for api in apis:
-        api_kind = str(api.get("kind") or "").lower()
-        role = str(api.get("role") or "").lower()
-        if api_kind in {"rtsp", "rtmp", "rtmps", "hls", "onvif"} or role == "camera":
-            caps.append("camera")
-        if api_kind in {"smb", "nfs", "nas", "sftp"}:
-            caps.append("files")
-        if api_kind in {"ssh", "sftp"}:
-            caps.append("shell")
-        if api_kind in {"http", "https", "rest", "openapi", "web", "panel"}:
-            caps.append("api")
-    return sorted({cap for cap in caps if cap})
-
-
-def _build_node_entry(name: str, url: str, kind: str | None,
-                      apis: list[dict] | None = None, capabilities: list[str] | None = None) -> dict:
-    node: dict = {"name": name, "url": url, "kind": kind or None}
-    if kind:
-        profile = _node_type_profile_impl(kind)
-        node.update({
-            "kind": kind,
-            "type": kind,
-            "nodeType": kind,
-            "typeLabel": profile.get("label") or kind,
-            "transport": profile.get("transport") or "",
-            "runtime": profile.get("runtime") or "",
-            "integrationLevel": profile.get("integrationLevel") or "",
-        })
-    if apis:
-        node["apis"] = apis
-    if capabilities:
-        node["capabilities"] = capabilities
-    return node
-
-
-def _persist_node_to_config(node_config: Any, config: str | None, name: str, url: str, *,
-                            tags: list | None, apis: list | None,
-                            capabilities: list | None, meta: dict | None) -> tuple[dict | None, str | None]:
-    """Call node_config.add_node and return (updated_dict, error_str)."""
-    try:
-        updated = node_config.add_node(
-            config,
-            name,
-            url,
-            tags=tags,
-            apis=apis or None,
-            capabilities=capabilities or None,
-            meta=meta,
-        )
-        return updated, None
-    except Exception as exc:  # noqa: BLE001 - report a persist failure, don't 500 the dashboard
-        return None, f"could not persist node: {exc}"
-
-
 def node_add(config: str | None, payload: dict) -> dict:
     """Persist a node (name + URL) to the host config so the host resolves it for real runs, and
     mirror it to ~/.urirun/nodes.json so urifix can auto-repair node_url. Reuses the canonical
@@ -8620,26 +8420,6 @@ def configured_node_api_request(config: str | None, node_urls: list[str] | None,
     if scheme in {"media", "camera", "ssh", "fs"}:
         return _connector_required_response(scheme, node_name, safe_api)
     return _configured_api_call(node, api, payload)
-
-
-def _node_remove_from_mirror(name: str) -> bool:
-    """Remove a node from the nodes.json urifix mirror; True if it was present (best-effort)."""
-    try:
-        nodes_path = os.environ.get("URIRUN_NODES_FILE") or os.path.expanduser("~/.urirun/nodes.json")
-        if not os.path.exists(nodes_path):
-            return False
-        with open(nodes_path, encoding="utf-8") as fh:
-            loaded = json.load(fh)
-        inner = loaded.get("nodes") if isinstance(loaded, dict) else None
-        target = inner if isinstance(inner, dict) else (loaded if isinstance(loaded, dict) else {})
-        if name not in target:
-            return False
-        target.pop(name, None)
-        with open(nodes_path, "w", encoding="utf-8") as fh:
-            json.dump(loaded, fh, indent=2)
-        return True
-    except Exception:  # noqa: BLE001 - mirror cleanup is best-effort
-        return False
 
 
 def _node_remove_kind(name: str) -> None:
