@@ -218,29 +218,47 @@ _STATIC_CATEGORY_ACTIONS: dict[str, dict] = {
 }
 
 
-def recovery_actions(error: dict, *, step: dict | None = None, routes: list[dict] | None = None) -> list[dict]:
-    step = step or {}
-    routes = routes or []
-    category = str(error.get("category") or "")
-    message = str(error.get("message") or "").casefold()
-    uri = str(step.get("uri") or "")
-    scheme = uri.split("://", 1)[0] if "://" in uri else ""
+def _is_llm_model_error(message: str) -> bool:
+    return "urirun_llm_model" in message or "llm_model" in message
 
-    if "urirun_llm_model" in message or "llm_model" in message:
+
+def _is_cdp_deadline(category: str, uri: str) -> bool:
+    return category == "DEADLINE_EXCEEDED" and _is_cdp_page_level_query(uri)
+
+
+def _uri_scheme(uri: str) -> str:
+    return uri.split("://", 1)[0] if "://" in uri else ""
+
+
+def _dispatch_recovery(category: str, message: str, uri: str, step: dict, routes: list, error: dict) -> list[dict]:
+    if _is_llm_model_error(message):
         return _llm_model_actions()
     if category in {"UNAVAILABLE", "DEADLINE_EXCEEDED"}:
         # A CDP page-level query that times out is the launch/probe split's signature
         # failure: ``ensure`` fired the launch (launching:true, port not yet bound) and
         # the page query raced ahead. The generic "retry the step" re-opens a WS to the
         # same unbound port; the right first action is the idempotent session-ready poll.
-        if category == "DEADLINE_EXCEEDED" and _is_cdp_page_level_query(uri):
+        if _is_cdp_deadline(category, uri):
             return _cdp_page_ready_actions(step, step_target(step))
         return _transient_actions(step_target(step))
     if category in _STATIC_CATEGORY_ACTIONS:
         return [dict(_STATIC_CATEGORY_ACTIONS[category])]
     if category == "NOT_FOUND":
-        return _not_found_actions(message, error, scheme)
+        return _not_found_actions(message, error, _uri_scheme(uri))
     return _fallback_actions(step, routes)
+
+
+def recovery_actions(error: dict, *, step: dict | None = None, routes: list[dict] | None = None) -> list[dict]:
+    step = step or {}
+    routes = routes or []
+    return _dispatch_recovery(
+        category=str(error.get("category") or ""),
+        message=str(error.get("message") or "").casefold(),
+        uri=str(step.get("uri") or ""),
+        step=step,
+        routes=routes,
+        error=error,
+    )
 
 
 def failure_signature(error: dict) -> str:
@@ -279,6 +297,24 @@ def recovery_plan(error: dict, *, step: dict | None = None, routes: list[dict] |
     return plan
 
 
+def _apply_one_remediation(action: dict, call, result_data_fn) -> dict:
+    aid, uri = action["id"], action["uri"]
+    if action.get("kind") not in AUTO_REMEDIATION_KINDS:
+        # belt-and-suspenders: a payload/auth/diagnostic action must never auto-fire even
+        # if a rule marked it automatic — those need a human, not an unattended retry loop.
+        return {"id": aid, "uri": uri, "ok": False,
+                "skipped": f"kind {action.get('kind')!r} not auto-applicable (needs a human)"}
+    if action.get("feasible") is False:
+        return {"id": aid, "uri": uri, "ok": False, "skipped": "infeasible"}
+    try:
+        env = call(uri)
+        value = result_data_fn(env) if isinstance(env, dict) else None
+        value_ok = not isinstance(value, dict) or value.get("ok", True)
+        return {"id": aid, "uri": uri, "ok": bool(env.get("ok") and value_ok)}
+    except Exception as exc:  # noqa: BLE001 - a failed fix must not crash the flow
+        return {"id": aid, "uri": uri, "ok": False, "error": str(exc)}
+
+
 def apply_auto_remediation(diagnosis: dict, registry: dict, *, dispatch=None) -> list[dict]:
     """Execute the ``automatic: True`` remediation URIs of a diagnosis (idempotent
     provisioning / preconditions like cdp/session/ensure, cdp/page/ready, registry adopt).
@@ -292,23 +328,7 @@ def apply_auto_remediation(diagnosis: dict, registry: dict, *, dispatch=None) ->
     for action in diagnosis.get("remediation") or []:
         if not action.get("automatic") or not action.get("uri"):
             continue
-        if action.get("kind") not in AUTO_REMEDIATION_KINDS:
-            # belt-and-suspenders: a payload/auth/diagnostic action must never auto-fire even
-            # if a rule marked it automatic — those need a human, not an unattended retry loop.
-            applied.append({"id": action["id"], "uri": action["uri"], "ok": False,
-                            "skipped": f"kind {action.get('kind')!r} not auto-applicable (needs a human)"})
-            continue
-        if action.get("feasible") is False:        # environment can't support this fix — skip it
-            applied.append({"id": action["id"], "uri": action["uri"], "ok": False, "skipped": "infeasible"})
-            continue
-        try:
-            env = call(action["uri"])
-            value = result_data(env) if isinstance(env, dict) else None
-            value_ok = not isinstance(value, dict) or value.get("ok", True)
-            applied.append({"id": action["id"], "uri": action["uri"],
-                            "ok": bool(env.get("ok") and value_ok)})
-        except Exception as exc:  # noqa: BLE001 - a failed fix must not crash the flow
-            applied.append({"id": action["id"], "uri": action["uri"], "ok": False, "error": str(exc)})
+        applied.append(_apply_one_remediation(action, call, result_data))
     return applied
 
 

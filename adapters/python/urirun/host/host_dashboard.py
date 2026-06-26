@@ -619,25 +619,39 @@ def _latest_scanner_page_status(db: str | None) -> dict:
     return _latest_scanner_page_status_impl(logs)
 
 
+def _artifact_meta_dict(artifact: dict) -> dict:
+    m = artifact.get("meta")
+    return m if isinstance(m, dict) else {}
+
+
+def _artifact_display_path(meta: dict, path: str) -> str:
+    return str(meta.get("displayImage") or meta.get("displayPath") or path)
+
+
+def _artifact_any_file_exists(path: str, display_path: str) -> bool:
+    return _artifact_file_exists(path) or _artifact_file_exists(display_path)
+
+
 def _recent_scanner_artifacts(db: str | None, project: str, limit: int = 6) -> list[dict]:
     try:
         artifacts = _host_db().list_artifacts(db, limit=80)
     except Exception:  # noqa: BLE001
         return []
     out: list[dict] = []
+    cap = max(1, int(limit))
     for artifact in artifacts:
         kind = str(artifact.get("kind") or "")
         uri = str(artifact.get("uri") or "")
-        meta = artifact.get("meta") if isinstance(artifact.get("meta"), dict) else {}
+        meta = _artifact_meta_dict(artifact)
         if not _is_scanner_artifact_impl(kind, uri, meta):
             continue
         path = str(artifact.get("path") or "")
-        display_path = str(meta.get("displayImage") or meta.get("displayPath") or path)
-        if not _artifact_file_exists(path) and not _artifact_file_exists(display_path):
+        display_path = _artifact_display_path(meta, path)
+        if not _artifact_any_file_exists(path, display_path):
             continue
         doc = _scanner_artifact_doc_meta_impl(artifact)
         out.append(_scanner_artifact_item_impl(artifact, kind, uri, path, display_path, doc, project, preview_url=_preview_url))
-        if len(out) >= max(1, int(limit or 6)):
+        if len(out) >= cap:
             break
     return out
 
@@ -864,6 +878,24 @@ def register_tagged_artifact(db: str | None, *, uri: str, result: Any, meta: dic
         return None
 
 
+def _inprocess_result_value(env: dict, urirun_mod) -> object:
+    try:
+        return urirun_mod.result_data(env)
+    except Exception:  # noqa: BLE001
+        result = env.get("result")
+        return result.get("value") if isinstance(result, dict) else None
+
+
+def _inprocess_response(env: dict, uri: str, value: object, db: str | None) -> dict:
+    registered = register_tagged_artifact(db, uri=uri, result=value) if db else None
+    ok = bool(env.get("ok"))
+    result_val = value if value is not None else env.get("result")
+    err_msg = (env.get("error") or {}).get("message") if not ok else None
+    return {"ok": ok, "invokedUri": uri, "result": result_val,
+            "artifactClass": _result_artifact_class(value),
+            "registeredArtifact": registered, "error": err_msg}
+
+
 def _run_inprocess_connector_uri(uri: str, action_payload: dict, db: str | None = None) -> dict | None:
     """Execute an installed in-process connector URI (widget://, artifact://, …) through the
     urirun runtime and return its unwrapped handler value. Returns None when no connector owns
@@ -883,20 +915,11 @@ def _run_inprocess_connector_uri(uri: str, action_payload: dict, db: str | None 
         return {"ok": False, "invokedUri": uri, "error": str(exc)}
     if not env.get("ok") and (env.get("error") or {}).get("category") == "NOT_FOUND":
         return None  # no connector owns this route → let the caller raise the legacy error
-    try:
-        value = urirun.result_data(env)
-    except Exception:  # noqa: BLE001
-        value = (env.get("result") or {}).get("value") if isinstance(env.get("result"), dict) else None
     # Route by the tag contract: a frozen artifact with a path gets cataloged under its
     # declared kind; a live widget never does. No-op for today's in-process traffic
     # (widget://, artifact:// registry/schema queries are untagged), correct for any
     # connector that returns a frozen file artifact over this path.
-    registered = register_tagged_artifact(db, uri=uri, result=value) if db else None
-    return {"ok": bool(env.get("ok")), "invokedUri": uri,
-            "result": value if value is not None else env.get("result"),
-            "artifactClass": _result_artifact_class(value),
-            "registeredArtifact": registered,
-            "error": (env.get("error") or {}).get("message") if not env.get("ok") else None}
+    return _inprocess_response(env, uri, _inprocess_result_value(env, urirun), db)
 
 
 from .dispatch import make_local_dispatch_uri as _make_local_dispatch_uri
@@ -1053,6 +1076,19 @@ def _uri_invoke_fallback(effective_uri: str, uri: str, *, config: str | None,
     raise ValueError(f"unsupported URI action: {uri}")
 
 
+def _uri_action_payload(payload: dict) -> dict:
+    p = payload.get("payload")
+    return p if isinstance(p, dict) else {}
+
+
+def _uri_effective(action: dict | None, uri: str) -> str:
+    return str(action.get("uri") if action else uri)
+
+
+def _uri_mode_from_payload(payload: dict, action_payload: dict) -> str:
+    return _uri_mode(payload.get("mode") or payload.get("runMode") or action_payload.get("mode"))
+
+
 def uri_invoke(
     project: str,
     db: str | None,
@@ -1064,12 +1100,12 @@ def uri_invoke(
     identity: str | None = None,
 ) -> dict:
     uri = str(payload.get("uri") or "").strip()
-    action_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
-    mode = _uri_mode(payload.get("mode") or payload.get("runMode") or action_payload.get("mode"))
+    action_payload = _uri_action_payload(payload)
+    mode = _uri_mode_from_payload(payload, action_payload)
     if not uri:
         raise ValueError("uri is required")
     action = _uri_action_lookup(uri)
-    effective_uri = str(action.get("uri") if action else uri)
+    effective_uri = _uri_effective(action, uri)
 
     if uri in {"scanner://host/actions/query/list", "dashboard://host/actions/query/list"}:
         return {"ok": True, "mode": mode, "actions": _uri_action_catalog(), "invokedUri": uri}
@@ -1205,22 +1241,29 @@ def node_remove(config: str | None, payload: dict) -> dict:
     return _node_remove_impl(config, payload, forget_webpage=_node_forget_webpage)
 
 
+def _safe_api(api: dict) -> dict:
+    return {k: v for k, v in api.items() if k != "auth"}
+
+
+def _configured_api_status_response(node_name: str, api: dict) -> dict:
+    auth = api.get("auth") or {}
+    return {"ok": True, "node": node_name, "api": _safe_api(api), "authConfigured": bool(auth.get("secretRef"))}
+
+
 def configured_node_api_request(config: str | None, node_urls: list[str] | None, payload: dict,
                                 *, uri: str | None = None, status_only: bool = False) -> dict:
     payload = payload if isinstance(payload, dict) else {}
     scheme, node_name, api_id, uri_status_only = _resolve_node_api_identifiers(payload, uri)
-    status_only = status_only or uri_status_only
     if not node_name:
         return {"ok": False, "error": "node is required"}
     _hc = _host_config(config, node_urls)
     node, api, error = _configured_node_api_lookup_impl(_hc, node_name=node_name, api_id=api_id)
     if error or node is None or api is None:
         return {"ok": False, "error": error or "configured API not found"}
-    safe_api = {k: v for k, v in api.items() if k != "auth"}
-    if status_only:
-        return {"ok": True, "node": node_name, "api": safe_api, "authConfigured": bool((api.get("auth") or {}).get("secretRef"))}
+    if status_only or uri_status_only:
+        return _configured_api_status_response(node_name, api)
     if scheme in {"media", "camera", "ssh", "fs"}:
-        return _connector_required_response(scheme, node_name, safe_api)
+        return _connector_required_response(scheme, node_name, _safe_api(api))
     return _configured_api_call(node, api, payload)
 
 
@@ -1353,11 +1396,35 @@ def documents_reconcile(project: str, db: str | None, payload: dict | None = Non
     return result
 
 
-def _handle_events_sse(handler, parsed):
+def _sse_parse_filters(params: dict) -> tuple[set, set]:
+    schemes = {s for s in params.get("scheme", "").split(",") if s}
+    runs = {r for r in params.get("run", "").split(",") if r}
+    return schemes, runs
+
+
+def _sse_replay_history(wfile, hub, last_id: str, schemes: set, runs: set) -> None:
+    for ev in hub.replay_since(last_id):
+        if _sse_event_matches(ev, schemes, runs):
+            wfile.write(_sse_frame(ev))
+
+
+def _sse_drive_stream(wfile, q, schemes: set, runs: set) -> None:
     import queue
+    while True:
+        try:
+            ev = q.get(timeout=15)
+        except queue.Empty:
+            wfile.write(b": keep-alive\n\n")
+            wfile.flush()
+            continue
+        if _sse_event_matches(ev, schemes, runs):
+            wfile.write(_sse_frame(ev))
+            wfile.flush()
+
+
+def _handle_events_sse(handler, parsed):
     params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
-    schemes = {s for s in (params.get("scheme", "").split(",")) if s}
-    runs = {r for r in (params.get("run", "").split(",")) if r}
+    schemes, runs = _sse_parse_filters(params)
     last_id = _sse_initial_cursor(TWIN_EVENT_HUB, params, handler.headers)
     try:
         handler.send_response(200)
@@ -1367,24 +1434,13 @@ def _handle_events_sse(handler, parsed):
         handler.send_header("Access-Control-Allow-Origin", "*")
         handler.end_headers()
         handler.wfile.write(b": connected\n\n")
-        for ev in TWIN_EVENT_HUB.replay_since(last_id):
-            if _sse_event_matches(ev, schemes, runs):
-                handler.wfile.write(_sse_frame(ev))
+        _sse_replay_history(handler.wfile, TWIN_EVENT_HUB, last_id, schemes, runs)
         handler.wfile.flush()
     except (BrokenPipeError, ConnectionResetError, OSError):
         return
     q = TWIN_EVENT_HUB.subscribe()
     try:
-        while True:
-            try:
-                ev = q.get(timeout=15)
-            except queue.Empty:
-                handler.wfile.write(b": keep-alive\n\n")
-                handler.wfile.flush()
-                continue
-            if _sse_event_matches(ev, schemes, runs):
-                handler.wfile.write(_sse_frame(ev))
-                handler.wfile.flush()
+        _sse_drive_stream(handler.wfile, q, schemes, runs)
     except (BrokenPipeError, ConnectionResetError, OSError):
         pass
     finally:

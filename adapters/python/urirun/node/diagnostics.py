@@ -429,6 +429,14 @@ def _build(rule: _Rule, step: dict | None) -> dict:
             "autoApplicable": [a["id"] for a in actions if a.get("automatic")]}
 
 
+def _decode_error_ctx(error: dict, step: dict | None) -> tuple[str, str, str, str]:
+    message = str((error or {}).get("message") or "").casefold()
+    category = str((error or {}).get("category") or "")
+    uri = str((step or {}).get("uri") or "")
+    scheme = uri.split("://", 1)[0] if "://" in uri else ""
+    return message, category, uri, scheme
+
+
 def diagnose(error: dict, *, step: dict | None = None, routes: list[dict] | None = None,
              environment: dict | None = None, surface: dict | None = None) -> dict | None:
     """Match an error against the playbook → a structured diagnosis, or None if no rule fits.
@@ -439,10 +447,7 @@ def diagnose(error: dict, *, step: dict | None = None, routes: list[dict] | None
     (node ``surface/query/current``) lets a login/authwall page UPGRADE a generic "target not
     located" to the real cause — ``not-logged-in`` — so the self-heal recommends an auth re-launch
     (human-gated) instead of futilely ensuring CDP and retrying against a login wall."""
-    message = str((error or {}).get("message") or "").casefold()
-    category = str((error or {}).get("category") or "")
-    uri = str((step or {}).get("uri") or "")
-    scheme = uri.split("://", 1)[0] if "://" in uri else ""
+    message, category, uri, scheme = _decode_error_ctx(error, step)
     login = _is_login_surface(surface)
 
     matched = _match_rule(message, category, scheme)
@@ -503,15 +508,24 @@ def _os_level_unreliable(env: dict) -> bool:
     return reliable is None and bool(env.get("wayland")) and env.get("best") in (None, "atspi", "vision")
 
 
+def _rem_has_ui_failure(rem: list) -> bool:
+    return any(s in str(a.get("uri") or "") for a in rem for s in ("/ui/", "/cdp/", "/input/"))
+
+
+def _rem_already_cdp(rem: list) -> bool:
+    return any(
+        str(a.get("id") or "").startswith("ensure-cdp")
+        or ("/cdp/" in str(a.get("uri") or "") and a.get("automatic"))
+        for a in rem
+    )
+
+
 def _maybe_escalate_surface(diagnosis: dict, env: dict, cdp_feasible: bool) -> None:
     """The three-sessions lesson as a recovery INPUT: on an unreliable Wayland os-level surface,
     a UI/input failure that has no CDP fix yet gets the WHOLE surface escalated to coordinate-free
     DOM control instead of retrying mis-mapped pixels."""
     rem = diagnosis.get("remediation") or []
-    ui_failure = any(s in str(a.get("uri") or "") for a in rem for s in ("/ui/", "/cdp/", "/input/"))
-    already_cdp = any(str(a.get("id") or "").startswith("ensure-cdp")
-                      or ("/cdp/" in str(a.get("uri") or "") and a.get("automatic")) for a in rem)
-    if ui_failure and cdp_feasible and not already_cdp and _os_level_unreliable(env):
+    if _rem_has_ui_failure(rem) and cdp_feasible and not _rem_already_cdp(rem) and _os_level_unreliable(env):
         rem.insert(0, {"id": "escalate-surface-cdp", "kind": "provision", "automatic": True,
                        "feasible": True, "uri": f"kvm://{_target_of(rem)}/cdp/session/command/ensure",
                        "label": "OS-level pixel input is unreliable on this Wayland surface — escalate to "
