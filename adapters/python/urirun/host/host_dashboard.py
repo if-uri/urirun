@@ -124,9 +124,20 @@ from .scanner_bridge import (
     register_scanner_result as _register_scanner_result_impl,
     scanner_artifact_item as _scanner_artifact_item_impl,
     scanner_artifact_doc_meta as _scanner_artifact_doc_meta_impl,
+    bounded as _bounded,
+    crop_dimensions as _crop_dimensions,
+    crop_geometry_score as _crop_geometry_score,
+    crop_quality_score as _crop_quality_score,
+    doctype_quality_score as _doctype_quality_score,
+    document_frame_quality as _document_frame_quality,
+    frame_visual_metrics as _frame_visual_metrics,
+    metadata_quality_score as _metadata_quality_score,
+    ocr_quality_score as _ocr_quality_score,
+    orientation_summary as _orientation_summary,
     scanner_best_take as _scanner_best_take,
     scanner_best_update as _scanner_best_update,
     scanner_staging_dir as _scanner_staging_dir,
+    visual_quality_score as _visual_quality_score,
     scanner_live_state_from_streams as _scanner_live_state_from_streams_impl,
     scanner_live_store_locked as _scanner_live_store_locked,
     scanner_public_candidate_for_live as _scanner_public_candidate_for_live_impl,
@@ -6959,151 +6970,6 @@ def _auto_crop_receipt(path: Path) -> dict:
     return detect_document_crop(path, output_path=path.with_name(f"{path.stem}-receipt-crop.jpg"))
 
 
-def _bounded(value: float, low: float = 0.0, high: float = 1.0) -> float:
-    return max(low, min(high, value))
-
-
-def _frame_visual_metrics(path: str | Path) -> dict:
-    try:
-        from PIL import Image, ImageOps
-
-        with Image.open(Path(path).expanduser().resolve()) as opened:
-            image = ImageOps.exif_transpose(opened).convert("L")
-            scale = min(1.0, 420 / max(image.size))
-            if scale < 1.0:
-                image = image.resize((max(1, int(image.size[0] * scale)), max(1, int(image.size[1] * scale))))
-            width, height = image.size
-            pixels = list(image.tobytes())
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc), "sharpness": 0.0, "contrast": 0.0, "brightness": 0.0}
-    if not pixels:
-        return {"ok": False, "error": "empty image", "sharpness": 0.0, "contrast": 0.0, "brightness": 0.0}
-    mean = sum(pixels) / len(pixels)
-    variance = sum((value - mean) ** 2 for value in pixels) / len(pixels)
-    contrast = variance ** 0.5
-    diffs = []
-    stride = max(1, width // 160)
-    for y in range(0, height - 1, stride):
-        row = y * width
-        next_row = (y + 1) * width
-        for x in range(0, width - 1, stride):
-            idx = row + x
-            diffs.append(abs(pixels[idx] - pixels[idx + 1]))
-            diffs.append(abs(pixels[idx] - pixels[next_row + x]))
-    sharpness = sum(diffs) / max(1, len(diffs))
-    brightness_score = _bounded(1.0 - abs(mean - 190.0) / 190.0)
-    return {
-        "ok": True,
-        "width": width,
-        "height": height,
-        "brightness": round(mean, 3),
-        "brightnessScore": round(brightness_score, 4),
-        "contrast": round(contrast, 3),
-        "contrastScore": round(_bounded(contrast / 72.0), 4),
-        "sharpness": round(sharpness, 3),
-        "sharpnessScore": round(_bounded(sharpness / 18.0), 4),
-    }
-
-
-def _crop_dimensions(crop: dict) -> tuple[int, int]:
-    return (
-        int(crop.get("width") or crop.get("cropWidth") or 0),
-        int(crop.get("height") or crop.get("cropHeight") or 0),
-    )
-
-
-def _crop_geometry_score(crop: dict, reasons: list[str]) -> float:
-    score = 0.0
-    width, height = _crop_dimensions(crop)
-    if min(width, height) >= 220 and max(width, height) >= 420:
-        score += 12.0
-        reasons.append("size")
-    orientation = crop.get("orientation") if isinstance(crop.get("orientation"), dict) else {}
-    if orientation.get("enabled") and int(orientation.get("height") or height) >= int(orientation.get("width") or width):
-        score += 5.0
-        reasons.append("portrait")
-    return score
-
-
-def _crop_quality_score(crop: dict, reasons: list[str]) -> float:
-    if not crop.get("ok"):
-        if crop.get("partialEdge"):
-            reasons.append("partial-edge")
-        elif crop.get("reason"):
-            reasons.append("crop-rejected")
-        return -20.0
-    score = 42.0
-    reasons.append("crop")
-    bbox_area = float(crop.get("bboxArea") or 0.0)
-    if bbox_area:
-        score += 18.0 * _bounded(1.0 - abs(bbox_area - 0.42) / 0.42)
-    score += _crop_geometry_score(crop, reasons)
-    return score
-
-
-def _doctype_quality_score(doc_type: str, reasons: list[str]) -> float:
-    if doc_type in {"paragon", "faktura"}:
-        reasons.append(doc_type)
-        return 32.0
-    if doc_type in {"rachunek", "potwierdzenie"}:
-        reasons.append(doc_type)
-        return 20.0
-    if doc_type != "dokument":
-        return 10.0
-    return 0.0
-
-
-def _metadata_quality_score(metadata: dict, reasons: list[str]) -> float:
-    score = 0.0
-    if metadata.get("date"):
-        score += 8.0
-        reasons.append("date")
-    if metadata.get("amount"):
-        score += 10.0
-        reasons.append("amount")
-    return score
-
-
-def _ocr_quality_score(ocr: dict, chars: int, reasons: list[str]) -> float:
-    if ocr.get("ok") and chars:
-        reasons.append("ocr")
-        return min(36.0, chars / 4.0)
-    return 0.0
-
-
-def _visual_quality_score(visual: dict, reasons: list[str]) -> float:
-    if not visual.get("ok"):
-        return 0.0
-    reasons.append("visual")
-    return (
-        18.0 * float(visual.get("sharpnessScore") or 0.0)
-        + 10.0 * float(visual.get("contrastScore") or 0.0)
-        + 7.0 * float(visual.get("brightnessScore") or 0.0)
-    )
-
-
-def _document_frame_quality(crop: dict, ocr: dict, metadata: dict, display_path: str | Path) -> dict:
-    visual = _frame_visual_metrics(display_path)
-    reasons: list[str] = []
-    doc_type = str(metadata.get("type") or "dokument")
-    chars = int(ocr.get("chars") or len(str(ocr.get("text") or "")))
-    score = (
-        _crop_quality_score(crop, reasons)
-        + _doctype_quality_score(doc_type, reasons)
-        + _metadata_quality_score(metadata, reasons)
-        + _ocr_quality_score(ocr, chars, reasons)
-        + _visual_quality_score(visual, reasons)
-    )
-    document_like = bool(crop.get("ok") and (doc_type in {"paragon", "faktura", "rachunek", "potwierdzenie"} or chars >= 36))
-    return {
-        "score": round(max(0.0, score), 3),
-        "documentLike": document_like,
-        "reasons": reasons,
-        "cropReason": str(crop.get("reason") or ""),
-        "visual": visual,
-    }
-
-
 def _scanner_public_candidate_for_live(candidate: dict | None, project: str) -> dict | None:
     return _scanner_public_candidate_for_live_impl(candidate, project, preview_url=_preview_url)
 
@@ -7231,22 +7097,6 @@ def _register_scanner_result(
         document=document,
         content_prefix=content_prefix,
     )
-
-
-def _orientation_summary(crop: dict) -> dict:
-    """Compact orientation facts for the capture response / UI: which signal decided the
-    rotation (``paddle-doc-orientation`` | ``osd`` | ``geometry``) and the applied PIL angle
-    (0 = the scan was already upright)."""
-    o = crop.get("orientation") if isinstance(crop, dict) and isinstance(crop.get("orientation"), dict) else {}
-    source = o.get("source")
-    if not source and o.get("enabled"):
-        source = "osd" if (o.get("osd") or {}).get("appliedAngle") is not None else "geometry"
-    return {
-        "source": source,
-        "angle": int(o.get("angle") or 0),
-        "rotated": bool(o.get("rotated")),
-        "score": o.get("score"),
-    }
 
 
 def _decode_capture_image(raw_image: str) -> tuple[str, bytes, str, str]:
@@ -10383,14 +10233,28 @@ def _chat_ask_general(
                                              use_llm=not no_llm, environments=environments)
         except Exception as exc:  # noqa: BLE001 - return a recovery contract instead of a raw API failure.
             return _chat_ask_general_planner_failure(exc, db, prompt, execute, selected_nodes, selected_targets)
+        if twin_memory is not None:
+            from urirun.node.flow import suggest_recall as _suggest_recall  # noqa: PLC0415
+            _recall = _suggest_recall(flow, twin_memory)
+        else:
+            _recall = None
         execution = mesh.execute_flow(flow, discovered, registry, execute=execute, memory=twin_memory)
     finally:
         _restore_run_credentials(old_token, old_identity)
-    return _chat_ask_general_build_result(
+    result = _chat_ask_general_build_result(
         execution, flow, discovered, generator,
         selected_nodes, selected_targets,
         prompt, execute, payload, project, db,
     )
+    if _recall is not None:
+        result["knownGoodRecall"] = {
+            "flowKey": _recall.get("flowKey"),
+            "ts": _recall.get("ts"),
+            "prompt": _recall.get("prompt"),
+            "stepCount": len(_recall.get("steps") or []),
+            "nodes": _recall.get("nodes") or [],
+        }
+    return result
 
 
 def _chat_phone_scanner_response(project: str, db: str | None, config: str | None, payload: dict, *, prompt: str,
