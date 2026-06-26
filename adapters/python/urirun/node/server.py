@@ -110,23 +110,9 @@ def read_json(handler: BaseHTTPRequestHandler) -> dict:
     return json.loads(read_raw(handler).decode("utf-8") or "{}")
 
 
-def _pool_executors(pools):
-    """Swap the argv-template executor for a warm-worker dispatch, keeping v2.run's
-    validate -> policy gate -> execute flow intact (only execution changes)."""
-    from urirun.runtime.v2 import EXECUTORS
-
-    def run_pooled(ctx, policy, execute):
-        adapter = ctx["routeEntry"].get("adapter")
-        result = pools.run_route(ctx["routeEntry"], ctx.get("payload") or {})
-        if result is None:                                   # not poolable -> original spawn
-            return EXECUTORS[adapter](ctx, policy, execute)
-        inner = result.get("result", result)
-        return {"type": "pooled", "pooled": True, "adapter": adapter,
-                "exitCode": 0 if result.get("ok") else 1, "value": inner,
-                "stdout": json.dumps(inner) if isinstance(inner, (dict, list)) else str(inner), "stderr": ""}
-
-    return {**EXECUTORS, "argv-template": run_pooled, "command": run_pooled,
-            "local-function-subprocess": run_pooled}
+# _pool_executors moved DOWN to runtime.worker (pure-runtime logic, next to ConnectorPools);
+# re-exported here so urirun.node.server._pool_executors (and node.mesh's re-export of it) keep working.
+from urirun.runtime.worker import _pool_executors  # noqa: E402,F401 - re-export shim
 
 
 def resolve_admin_token(explicit: str | None, config_token: str | None, generate: bool) -> str | None:

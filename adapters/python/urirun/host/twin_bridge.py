@@ -198,6 +198,27 @@ def _publish_step_event(
     })
 
 
+def _episode_proofs(timeline: list, env_fingerprint: str) -> list[dict]:
+    """Build EpisodeProof dicts for each reversible step in the timeline.
+
+    Only steps that carry `reversible: True` and an `inverse` dict are included —
+    these are confirmed positive proofs (verdict=True). Query-only steps are skipped."""
+    from urirun.node.episode import intent_signature, proof_key  # noqa: PLC0415
+    proofs = []
+    for step in timeline or []:
+        if step.get("reversible") and step.get("inverse"):
+            uri = step.get("uri") or ""
+            sig = intent_signature(uri)
+            proofs.append({
+                "proof_key": proof_key(uri, sig, env_fingerprint),
+                "uri": uri,
+                "scenario_sig": sig,
+                "env_fingerprint": env_fingerprint,
+                "verdict": True,
+            })
+    return proofs
+
+
 def _episode_artifacts(results: dict) -> list[dict]:
     """Pull artifact atoms ({uri, sha256, kind, path}) out of execution results, if any.
 
@@ -244,10 +265,11 @@ def capture_episode(*, execute: bool, flow: dict, prompt: str, selected_targets:
     node = (selected_targets[0] if selected_targets else None) or "host"
     mem = durable_memory()
     kg = mem.known_good(node) or {}
+    env_fp = kg.get("fingerprint") or ""
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     ep = make_episode(
         experience_id=experience_id, goal=prompt, ts=ts,
-        env_fingerprint=kg.get("fingerprint") or "", env_snapshot=kg.get("snapshot") or {},
+        env_fingerprint=env_fp, env_snapshot=None,  # fingerprint is sufficient; skip full snapshot
         flow=flow, flow_key=_flow_key(flow),
         execution={"timeline": timeline, "results": results},
         artifacts=_episode_artifacts(results),
@@ -257,8 +279,14 @@ def capture_episode(*, execute: bool, flow: dict, prompt: str, selected_targets:
     intent_sig = intent_signature(prompt)
     ep_dict = ep.to_dict()
     ep_dict["intent_sig"] = intent_sig          # recall_episode reads this top-level key
+    ep_dict["proofs"] = _episode_proofs(timeline, env_fp)  # fill from reversible steps
+    # Pure-query flows (health checks / observations) reuse a stable slot so they don't
+    # pile up indefinitely — same intent + same env → same key → overwrites prior entry.
+    steps = (flow or {}).get("steps") or []
+    if steps and all("/query/" in str(s.get("uri") or "") for s in steps):
+        ep_dict["episode_id"] = f"obs-{intent_sig[:12]}-{env_fp[:8] or 'noenv'}"
     mem.remember_episode(ep_dict)
-    return {"episode_id": ep.episode_id, "experience_id": experience_id,
+    return {"episode_id": ep_dict["episode_id"], "experience_id": experience_id,
             "intent_sig": intent_sig, "outcome_status": status,
             "next_intent": ep.outcome.next_intent}
 

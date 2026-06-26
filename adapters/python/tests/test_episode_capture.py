@@ -44,7 +44,8 @@ class TestCaptureEpisode(unittest.TestCase):
             status="ok", next_intent={"uri": "kvm://host/next"},
         )
         self.assertIsNotNone(ids)
-        self.assertTrue(ids["episode_id"].startswith("ep-"))
+        # Pure-query flows get a stable dedup key ("obs-"); command flows keep "ep-".
+        self.assertTrue(ids["episode_id"].startswith(("ep-", "obs-")))
         self.assertTrue(ids["intent_sig"].startswith("intent-"))
         self.assertEqual(ids["next_intent"], "kvm://host/next")
 

@@ -532,7 +532,7 @@ def _general_path_complete(
 ) -> None:
     """Emit the chat message and DB log for the completed general mesh path."""
     timeline = result.get("timeline") or []
-    status = "ok" if result.get("ok") else "failed"
+    status = ("degraded" if result.get("degraded") else "ok") if result.get("ok") else "failed"
     content = f"{status}: {len(timeline)} URI step(s)"
     if result.get("recovery"):
         content += f", {len(result.get('recovery') or [])} recovery action(s)"
@@ -557,6 +557,8 @@ def _general_path_complete(
             "prompt": prompt,
             "execute": execute,
             "ok": result.get("ok"),
+            "degraded": result.get("degraded", False),
+            "degradedReason": result.get("degradedReason"),
             "selectedTargets": selected_targets,
             "generator": generator,
             "flow": flow,

@@ -260,6 +260,29 @@ class ConnectorPools:
             self._handler_pool = None
 
 
+def _pool_executors(pools):
+    """Swap the argv-template executor for a warm-worker dispatch, keeping v2.run's
+    validate -> policy gate -> execute flow intact (only execution changes).
+
+    Pure runtime logic — operates only on ``ConnectorPools`` (this module) and the v2
+    ``EXECUTORS`` map; lives here, next to the pool it wraps, so the kernel never has to
+    reach up into ``node.mesh``/``node.server`` for it (re-exported from both for callers)."""
+    from urirun.runtime.v2 import EXECUTORS  # lazy: avoids worker<->v2 import-time cycle
+
+    def run_pooled(ctx, policy, execute):
+        adapter = ctx["routeEntry"].get("adapter")
+        result = pools.run_route(ctx["routeEntry"], ctx.get("payload") or {})
+        if result is None:                                   # not poolable -> original spawn
+            return EXECUTORS[adapter](ctx, policy, execute)
+        inner = result.get("result", result)
+        return {"type": "pooled", "pooled": True, "adapter": adapter,
+                "exitCode": 0 if result.get("ok") else 1, "value": inner,
+                "stdout": json.dumps(inner) if isinstance(inner, (dict, list)) else str(inner), "stderr": ""}
+
+    return {**EXECUTORS, "argv-template": run_pooled, "command": run_pooled,
+            "local-function-subprocess": run_pooled}
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--handler":
         raise SystemExit(_handler_worker_main())

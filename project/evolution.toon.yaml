@@ -1,7 +1,7 @@
-# code2llm/evolution | 1923 func | 114f | 2026-06-26
+# code2llm/evolution | 1739 func | 110f | 2026-06-26
 # generated in 0.01s
 
-NEXT[7] (ranked by impact):
+NEXT[6] (ranked by impact):
   [1] !! SPLIT           adapters/python/urirun/host/html_templates.py
       WHY: 4907L, 0 classes, max CC=6
       EFFORT: ~4h  IMPACT: 29442
@@ -11,22 +11,18 @@ NEXT[7] (ranked by impact):
       EFFORT: ~4h  IMPACT: 28042
 
   [3] !! SPLIT           adapters/python/urirun/host/host_dashboard.py
-      WHY: 1886L, 0 classes, max CC=14
-      EFFORT: ~4h  IMPACT: 26404
+      WHY: 1822L, 0 classes, max CC=14
+      EFFORT: ~4h  IMPACT: 25508
 
-  [4] !  SPLIT-FUNC      archive_scanned_document  CC=15  fan=43
-      WHY: CC=15 exceeds 15
-      EFFORT: ~1h  IMPACT: 645
-
-  [5] !  SPLIT-FUNC      restart_phone_scanner_service  CC=15  fan=24
-      WHY: CC=15 exceeds 15
-      EFFORT: ~1h  IMPACT: 360
-
-  [6] !  SPLIT-FUNC      _thin_driver  CC=16  fan=18
+  [4] !  SPLIT-FUNC      run  CC=16  fan=18
       WHY: CC=16 exceeds 15
       EFFORT: ~1h  IMPACT: 288
 
-  [7] !  SPLIT-FUNC      deploy_command  CC=15  fan=16
+  [5] !  SPLIT-FUNC      _thin_driver  CC=16  fan=18
+      WHY: CC=16 exceeds 15
+      EFFORT: ~1h  IMPACT: 288
+
+  [6] !  SPLIT-FUNC      deploy_command  CC=15  fan=16
       WHY: CC=15 exceeds 15
       EFFORT: ~1h  IMPACT: 240
 
@@ -34,13 +30,13 @@ NEXT[7] (ranked by impact):
 RISKS[3]:
   ⚠ Splitting adapters/python/urirun/host/html_templates.py may break 3 import paths
   ⚠ Splitting adapters/python/urirun/runtime/v2.py may break 122 import paths
-  ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 83 import paths
+  ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 85 import paths
 
 METRICS-TARGET:
-  CC̄:          4.8 → ≤3.4
+  CC̄:          4.6 → ≤3.2
   max-CC:      16 → ≤8
-  god-modules: 27 → 0
-  high-CC(≥15): 10 → ≤5
+  god-modules: 24 → 0
+  high-CC(≥15): 9 → ≤4
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
@@ -68,4 +64,4 @@ PATTERNS (language parser shared logic):
     - Standardized FunctionInfo/ClassInfo models
 
 HISTORY:
-  prev CC̄=4.8 → now CC̄=4.8
+  prev CC̄=4.6 → now CC̄=4.6

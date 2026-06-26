@@ -5,37 +5,19 @@
 
 from __future__ import annotations
 
-import base64
-import html
 import hashlib
-import io
 import json
-import mimetypes
 import os
-import urllib.error
-import urllib.request
-import re
 import socket
 import ssl
-import subprocess
-import textwrap
-import threading
 import time
-import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urirun.node.mesh import EventHub, _sse_initial_cursor, _sse_event_matches, _sse_frame
-from .twin_bridge import (
-    TWIN_EVENT_HUB,
-    flow_has_desktop_step as _flow_has_desktop_step,
-    append_twin_widget as _append_twin_widget,
-    twin_plan_preview as _twin_plan_preview,
-    twin_plan_summary as _twin_plan_summary,
-    is_desktop_task_prompt as _is_desktop_task_prompt,
-    _DESKTOP_TASK_KEYWORDS,
-)
-from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlparse, urlsplit, urlunsplit
+from .twin_bridge import TWIN_EVENT_HUB
+from .dashboard_http import _json_response, _html_response, _asset_response, _js_sdk_response, _read_json, _file_response
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .document_sync import (
     DOCUMENT_SYNC_URI as _DOCUMENT_SYNC_URI,
@@ -365,41 +347,8 @@ def artifacts_cleanup_orphan_sidecars(project, artifact_dir, payload, db=None):
     return _artifacts_cleanup_orphan_sidecars_impl(_host_db(), project, db, payload)
 
 
-def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> None:
-    body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
-    handler.send_response(status)
-    handler.send_header("Content-Type", "application/json; charset=utf-8")
-    handler.send_header("Cache-Control", "no-store")
-    handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
-    handler.send_header("Content-Length", str(len(body)))
-    handler.end_headers()
-    handler.wfile.write(body)
-
-
-def _html_response(handler: BaseHTTPRequestHandler, html: str = INDEX_HTML) -> None:
-    body = html.encode("utf-8")
-    handler.send_response(200)
-    handler.send_header("Content-Type", "text/html; charset=utf-8")
-    handler.send_header("Cache-Control", "no-store")
-    handler.send_header("Content-Length", str(len(body)))
-    handler.end_headers()
-    handler.wfile.write(body)
-
-
 def _docs_nodes_html() -> str:
     return _docs_nodes_html_impl(_node_type_profiles_impl())
-
-
-def _asset_response(handler: BaseHTTPRequestHandler, body: bytes, content_type: str) -> None:
-    handler.send_response(200)
-    handler.send_header("Content-Type", content_type)
-    handler.send_header("Cache-Control", "no-store")
-    handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Content-Length", str(len(body)))
-    handler.end_headers()
-    handler.wfile.write(body)
 
 
 def _service_view_from_query(project: str, query: dict[str, list[str]]) -> dict:
@@ -419,61 +368,6 @@ def _service_widget_svg(project: str, query: dict[str, list[str]]) -> str:
     width = max(320, min(1200, int(_first(query, "width", "720") or 720)))
     height = max(120, min(600, int(_first(query, "height", "180") or 180)))
     return _service_widget_svg_impl(view, summary, width=width, height=height)
-
-
-def _js_sdk_response(handler: BaseHTTPRequestHandler, project: str) -> None:
-    configured = os.environ.get("URIRUN_JS_SDK")
-    roots = []
-    if configured:
-        roots.append(Path(configured).expanduser())
-    project_path = Path(project).expanduser().resolve()
-    roots.extend([
-        project_path.parent / "js-urirun-com" / "urirun.js",
-        project_path.parent / "js-urirun-com" / "src" / "urirun.js",
-        Path("/home/tom/github/if-uri/js-urirun-com/urirun.js"),
-        Path("/home/tom/github/if-uri/js-urirun-com/src/urirun.js"),
-    ])
-    for source in roots:
-        try:
-            resolved = source.expanduser().resolve()
-            if resolved.is_file():
-                _asset_response(handler, resolved.read_bytes(), "application/javascript; charset=utf-8")
-                return
-        except Exception:  # noqa: BLE001
-            continue
-    _json_response(handler, 404, {"ok": False, "error": "urirun JS SDK not found"})
-
-
-def _read_json(handler: BaseHTTPRequestHandler) -> dict:
-    length = int(handler.headers.get("Content-Length", "0"))
-    if length <= 0:
-        return {}
-    return json.loads(handler.rfile.read(length).decode("utf-8") or "{}")
-
-
-def _file_response(handler: BaseHTTPRequestHandler, path: str, project: str) -> None:
-    import tempfile  # noqa: PLC0415
-    source = Path(path).expanduser().resolve()
-    allowed_roots = [
-        Path(project).expanduser().resolve(),
-        Path("~/.urirun").expanduser().resolve(),
-        Path(os.environ.get("URIRUN_ARTIFACT_DIR", "~/.urirun/artifacts")).expanduser().resolve(),
-    ]
-    in_temp = source.parent == Path(tempfile.gettempdir()) and source.name.startswith("urirun-")
-    if not in_temp and not any(source == root or source.is_relative_to(root) for root in allowed_roots):
-        _json_response(handler, 403, {"ok": False, "error": "file is outside dashboard preview roots"})
-        return
-    if not source.is_file():
-        _json_response(handler, 404, {"ok": False, "error": "file not found"})
-        return
-    mime = mimetypes.guess_type(str(source))[0] or "application/octet-stream"
-    body = source.read_bytes()
-    handler.send_response(200)
-    handler.send_header("Content-Type", mime)
-    handler.send_header("Cache-Control", "no-store")
-    handler.send_header("Content-Length", str(len(body)))
-    handler.end_headers()
-    handler.wfile.write(body)
 
 
 def _chat_message(role: str, content: str, *, detail: dict | None = None, attachments: list[dict] | None = None) -> dict:

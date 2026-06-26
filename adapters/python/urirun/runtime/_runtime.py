@@ -429,7 +429,16 @@ def run(
 
     try:
         envelope["result"] = executor(ctx, policy)
-        envelope["ok"] = envelope["result"].get("exitCode", 0) == 0
+        exit_code = envelope["result"].get("exitCode", 0)
+        envelope["ok"] = exit_code == 0
+        if not envelope["ok"] and "error" not in envelope:
+            stderr = (envelope["result"].get("stderr") or "").strip()
+            envelope["error"] = {
+                "type": "subprocess",
+                "category": "ACTION_FAILED",
+                "message": stderr or f"subprocess exited with code {exit_code}",
+                "exitCode": exit_code,
+            }
     except (PolicyError, subprocess.TimeoutExpired, OSError, ValueError) as err:
         envelope["ok"] = False
         envelope["error"] = {"type": type(err).__name__, "message": str(err)}

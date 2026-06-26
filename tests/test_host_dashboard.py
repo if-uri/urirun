@@ -12,6 +12,14 @@ from PIL import Image
 from urirun.host import host_dashboard
 from urirun.host import chat_orchestrator as _chat_orch
 from urirun.host import dashboard_api as _dash_api
+try:
+    from urirun.host import node_api as _node_api
+except ImportError:
+    _node_api = None  # type: ignore[assignment]
+try:
+    from urirun.host import service_control as _service_control
+except ImportError:
+    _service_control = None  # type: ignore[assignment]
 
 
 @pytest.fixture(autouse=True)
@@ -597,7 +605,8 @@ def test_configured_api_request_uses_keyring_secret_and_redacts_config(monkeypat
     monkeypatch.setenv("URIRUN_NODES_FILE", str(tmp_path / "nodes.json"))
     monkeypatch.setenv("URIRUN_NODE_KINDS_FILE", str(tmp_path / "node-kinds.json"))
     monkeypatch.setitem(sys.modules, "keyring", FakeKeyring)
-    monkeypatch.setattr(host_dashboard.urllib.request, "urlopen", fake_urlopen)
+    _urlopen_target = _node_api.urllib.request if _node_api is not None else host_dashboard.urllib.request
+    monkeypatch.setattr(_urlopen_target, "urlopen", fake_urlopen)
 
     host_dashboard.node_add(str(config), {
         "name": "crm-api",
@@ -675,7 +684,8 @@ def test_uri_invoke_direct_api_route_calls_configured_api(monkeypatch, tmp_path)
         }],
     }))
     monkeypatch.setitem(sys.modules, "keyring", FakeKeyring)
-    monkeypatch.setattr(host_dashboard.urllib.request, "urlopen", fake_urlopen)
+    _urlopen_target = _node_api.urllib.request if _node_api is not None else host_dashboard.urllib.request
+    monkeypatch.setattr(_urlopen_target, "urlopen", fake_urlopen)
 
     result = host_dashboard.uri_invoke(".", ":memory:", str(config), {
         "uri": "api://crm-api/main/command/request",
@@ -706,7 +716,8 @@ def test_uri_invoke_direct_device_status_does_not_call_network(monkeypatch, tmp_
     def fail_urlopen(*_args, **_kwargs):
         raise AssertionError("status query should not perform an HTTP request")
 
-    monkeypatch.setattr(host_dashboard.urllib.request, "urlopen", fail_urlopen)
+    _urlopen_target = _node_api.urllib.request if _node_api is not None else host_dashboard.urllib.request
+    monkeypatch.setattr(_urlopen_target, "urlopen", fail_urlopen)
 
     result = host_dashboard.uri_invoke(".", ":memory:", str(config), {
         "uri": "device://rpi-camera/panel/query/status",
@@ -1664,10 +1675,18 @@ def test_service_live_views_includes_scanner_status_without_stream(monkeypatch, 
 
 def test_service_contacts_marks_external_phone_scanner_running(monkeypatch):
     monkeypatch.setenv("URIRUN_PHONE_SCANNER_PORT", "8196")
-    # status resolves via scanner_net._phone_scanner_external_status -> scanner_net._lan_host
-    # / _probe_scanner_url; patch them where they are called, not the host_dashboard re-exports.
-    monkeypatch.setattr("urirun.host.scanner_net._lan_host", lambda: "192.168.188.212")
-    monkeypatch.setattr("urirun.host.scanner_net._probe_scanner_url", lambda url, timeout=0.35: url.startswith("https://192.168.188.212:8196/"))
+    # scanner_net.py re-exports from urirun_connector_scanner.scanner_net — patch both
+    # the re-export shim and the connector's own namespace (where the function is defined).
+    _fake_lan = lambda: "192.168.188.212"
+    _fake_probe = lambda url, timeout=0.35: url.startswith("https://192.168.188.212:8196/")
+    monkeypatch.setattr("urirun.host.scanner_net._lan_host", _fake_lan)
+    monkeypatch.setattr("urirun.host.scanner_net._probe_scanner_url", _fake_probe)
+    try:
+        import urirun_connector_scanner.scanner_net as _csn
+        monkeypatch.setattr(_csn, "_lan_host", _fake_lan)
+        monkeypatch.setattr(_csn, "_probe_scanner_url", _fake_probe)
+    except (ImportError, AttributeError):
+        pass
     with host_dashboard._SERVICE_LOCK:
         host_dashboard._SERVICE_SERVERS.clear()
         host_dashboard._SERVICE_THREADS.clear()
@@ -1728,9 +1747,14 @@ def test_service_widget_html_and_svg_render_live_view(tmp_path):
 def test_startup_phone_qr_adds_chat_message(monkeypatch, tmp_path):
     fake_db = FakeHostDb()
     monkeypatch.setattr(host_dashboard, "_host_db", lambda: fake_db)
-    # _public_base_url (scanner_net) resolves 0.0.0.0 -> LAN IP via scanner_net._lan_host;
-    # patch it there (where it is actually called), not the host_dashboard re-export.
-    monkeypatch.setattr("urirun.host.scanner_net._lan_host", lambda: "192.168.1.10")
+    # scanner_net.py re-exports from urirun_connector_scanner.scanner_net — patch both.
+    _fake_lan = lambda: "192.168.1.10"
+    monkeypatch.setattr("urirun.host.scanner_net._lan_host", _fake_lan)
+    try:
+        import urirun_connector_scanner.scanner_net as _csn
+        monkeypatch.setattr(_csn, "_lan_host", _fake_lan)
+    except (ImportError, AttributeError):
+        pass
     monkeypatch.setattr(host_dashboard, "_write_qr_png", lambda url, path: path.write_bytes(b"png"))
     monkeypatch.setenv("URIRUN_DASHBOARD_QR_DIR", str(tmp_path))
 
@@ -1859,7 +1883,8 @@ def test_uri_invoke_chat_restart_schedules_port_replace_without_supervisor(monke
     class _P:
         pass
 
-    monkeypatch.setattr(host_dashboard.subprocess, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _P())
+    _subprocess_target = _service_control.subprocess if _service_control is not None else host_dashboard.subprocess
+    monkeypatch.setattr(_subprocess_target, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _P())
 
     result = host_dashboard.uri_invoke(".", ":memory:", None, {
         "uri": "service://host/chat/command/restart",
@@ -1883,7 +1908,8 @@ def test_uri_invoke_chat_restart_schedules_systemd(monkeypatch):
     class _P:
         pass
 
-    monkeypatch.setattr(host_dashboard.subprocess, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _P())
+    _subprocess_target = _service_control.subprocess if _service_control is not None else host_dashboard.subprocess
+    monkeypatch.setattr(_subprocess_target, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _P())
 
     result = host_dashboard.uri_invoke(".", ":memory:", None, {
         "uri": "service://host/chat/command/restart",
@@ -1966,7 +1992,8 @@ def test_uri_invoke_phone_scanner_restart_schedules_systemd(monkeypatch):
     class _P:
         pass
 
-    monkeypatch.setattr(host_dashboard.subprocess, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _P())
+    _subprocess_target = _service_control.subprocess if _service_control is not None else host_dashboard.subprocess
+    monkeypatch.setattr(_subprocess_target, "Popen", lambda argv, **kwargs: calls.append((argv, kwargs)) or _P())
 
     result = host_dashboard.uri_invoke(".", ":memory:", None, {
         "uri": "service://host/phone-scanner/command/restart",
@@ -3365,7 +3392,9 @@ def test_extract_metadata_llm_overrides_regex_and_keeps_blanks(monkeypatch):
     assert base["metaSource"] == "regex"
 
     # Now stub the LLM extractor: it fills contractor/amount/date, leaves type blank.
-    monkeypatch.setattr(host_dashboard, "_llm_extract_metadata", lambda ocr_text, captured_at=None, **kwargs: {
+    # Patch both host_dashboard (for _sync_document_metadata_hooks) and the connector module
+    # where _extract_document_metadata actually calls it (document_metadata re-exports from there).
+    _fake_llm = lambda ocr_text, captured_at=None, **kwargs: {
         "type": "",  # blank -> regex type kept
         "contractor": "CYFRONIKA Sp. z o.o.",
         "amount": "54.61",
@@ -3374,7 +3403,13 @@ def test_extract_metadata_llm_overrides_regex_and_keeps_blanks(monkeypatch):
         "nip": "6790163448",
         "number": "F62995",
         "model": "test/model",
-    })
+    }
+    monkeypatch.setattr(host_dashboard, "_llm_extract_metadata", _fake_llm)
+    try:
+        import urirun_connector_scanner.document_metadata as _conn_dm
+        monkeypatch.setattr(_conn_dm, "_llm_extract_metadata", _fake_llm)
+    except (ImportError, AttributeError):
+        pass  # connector absent in some envs; host_dashboard path still exercised
     meta = host_dashboard._extract_document_metadata(text, captured_at="2026-06-24T10:00:00Z")
     assert meta["metaSource"] == "llm"
     assert meta["contractor"] == "CYFRONIKA Sp. z o.o."   # overridden
@@ -3458,7 +3493,8 @@ def test_port_holder_pids_parses_ss_output(monkeypatch):
     class _R:
         stdout = sample
 
-    monkeypatch.setattr(host_dashboard.subprocess, "run", lambda *a, **k: _R())
+    _subprocess_target = _service_control.subprocess if _service_control is not None else host_dashboard.subprocess
+    monkeypatch.setattr(_subprocess_target, "run", lambda *a, **k: _R())
     assert host_dashboard._port_holder_pids(8194) == [4242]   # only the :8194 holder
     assert host_dashboard._port_holder_pids(8788) == [99]
     assert host_dashboard._port_holder_pids(9999) == []       # nothing on that port

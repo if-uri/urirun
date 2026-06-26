@@ -265,6 +265,11 @@ def _thin_step_entry(sid: str, uri: str, r: dict) -> dict:
     for _k in ("type", "action", "drift"):
         if r.get(_k) is not None:
             entry[_k] = r[_k]
+    inv = _extract_inverse(r)
+    inv_uri = _resolve_inverse_uri(uri, inv) if inv else None
+    entry["reversible"] = bool(inv_uri)
+    if inv_uri:
+        entry["inverse"] = {"uri": inv_uri, "args": (inv or {}).get("args") or {}}
     return entry
 
 
@@ -412,5 +417,7 @@ def _thin_driver(
     rb = _thin_goal_verify(dispatch_uri, envelope, timeline, results)
     if rb is not None:
         return rb
+    _deg, _deg_reason = _results_degraded(results)
     return {"ok": True, "timeline": timeline, "results": results,
-            "next": {"kind": "done"}, "envelope": dataclasses.asdict(envelope)}
+            "next": {"kind": "done"}, "envelope": dataclasses.asdict(envelope),
+            "degraded": _deg, "degradedReason": _deg_reason}
