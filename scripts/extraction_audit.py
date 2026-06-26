@@ -100,6 +100,18 @@ PRESETS: dict[str, dict] = {
         "allow_outward": ("urirun.runtime.", "urirun.connectors.", "urirun.node."),
         "allow_exact": ("urirun",),
     },
+    "H": {
+        "name": "pure node substrate",
+        # node_cli and task_cli are CLI integration entry-points that intentionally wire
+        # into host.*; they belong in the host layer and are excluded from this preset.
+        # Preset F covers the full node.* namespace (including CLIs, deliberately RED).
+        # Preset H proves the node substrate itself is liftable without CLIs.
+        "package": set(),
+        "package_prefixes": ("urirun.node.",),
+        "exclude_exact": {"urirun.node.node_cli", "urirun.node.task_cli"},
+        "allow_outward": ("urirun.runtime.", "urirun.connectors."),
+        "allow_exact": ("urirun",),
+    },
 }
 
 
@@ -203,6 +215,7 @@ def resolve_package(modules: set[str], spec: dict) -> set[str]:
     pkg = set(spec.get("package") or set())
     for prefix in spec.get("package_prefixes") or ():
         pkg |= {m for m in modules if m.startswith(prefix)}
+    pkg -= set(spec.get("exclude_exact") or set())
     return pkg
 
 
@@ -232,12 +245,18 @@ def classify(edges: list[Edge], package: set[str], allow: tuple[str, ...],
 def audit(root: Path, spec: dict) -> Report:
     mods = discover_modules(root)
     known = set(mods)
-    package = resolve_package(known, spec)
-    missing = (spec.get("package") or set()) - known
+    # Excluded modules are removed from `known` so that edges targeting them are treated
+    # as external (neither blocking outward nor inward shims).
+    excluded = set(spec.get("exclude_exact") or set())
+    known -= excluded
+    package = resolve_package(set(mods), spec)
+    missing = (spec.get("package") or set()) - set(mods)
     if missing:
         print(f"WARNING: configured package modules not found: {sorted(missing)}", file=sys.stderr)
     edges: list[Edge] = []
     for mod, path in mods.items():
+        if mod in excluded:
+            continue
         edges.extend(edges_in_file(path, mod, known))
     return classify(edges, package, tuple(spec.get("allow_outward") or ()), known,
                     tuple(spec.get("allow_exact") or ()))

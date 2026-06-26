@@ -230,6 +230,41 @@ def _thin_handle_non_continue(kind: str, r: dict, step: dict, sid: str, uri: str
         if kind2 not in ("continue", "done"):
             return False, _thin_rollback(dispatch_uri, envelope, timeline, results, "failed")
         return False, None
+    if kind == "acquire":
+        # Connector signals: "I need a precondition before I can proceed."
+        # Call ready://<node>/ready/command/ensure; if satisfied → retry; else → block.
+        acquire = r.get("acquire") or {}
+        precondition = acquire.get("precondition") or ""
+        node = route_target(uri) or "host"
+        ensure_uri = f"ready://{node}/ready/command/ensure"
+        er = dispatch_uri(ensure_uri, {"precondition": precondition})
+        if er.get("ok") and (er.get("satisfied") or er.get("acquired")):
+            # Precondition now met — retry the original step once.
+            envelope.retries_used += 1
+            envelope.remediations_used += 1
+            r2 = dispatch_uri(uri, payload)
+            kind2 = _next_kind(r2)
+            envelope.record(uri, "return", ok=r2.get("ok", True), next=kind2, retry=True)
+            timeline.append({"id": f"{sid}:retry", "uri": uri,
+                              "ok": r2.get("ok", True), "target": node,
+                              "precondition": precondition})
+            results[sid] = r2
+            if kind2 not in ("continue", "done"):
+                return False, _thin_rollback(dispatch_uri, envelope, timeline, results, "failed")
+            return False, None
+        # Precondition NOT satisfiable automatically — surface one-tap acquire item.
+        blocked = er.get("acquire") or acquire
+        err = r.get("error") if isinstance(r.get("error"), dict) else None
+        entry: dict = {"id": f"{sid}:blocked", "uri": uri, "ok": False,
+                       "target": node, "blocked": blocked}
+        if err:
+            entry["error"] = err
+        timeline.append(entry)
+        out: dict = {"ok": False, "timeline": timeline, "results": results,
+                     "blocked": blocked, "next": {"kind": "acquire"}}
+        if err:
+            out["error"] = err
+        return False, out
     if kind == "rollback":
         err = r.get("error") if isinstance(r.get("error"), dict) else None
         # explicit=True when step intentionally returned next.kind="rollback"; False when
@@ -401,6 +436,22 @@ def _enrich_remember_with_degraded(payload: dict, results: dict,
     return out
 
 
+def _check_step_deps(sid: str, uri: str, step: dict, results: dict, timeline: list) -> dict | None:
+    """Return an early-exit dict when a required dependency is missing, else None."""
+    missing = [d for d in (step.get("depends_on") or []) if d not in results]
+    if not missing:
+        return None
+    err = {"category": "FAILED_PRECONDITION", "message": f"{sid} missing dependencies: {missing}"}
+    entry = {"id": sid, "uri": uri, "ok": False, "error": err,
+             "target": route_target(uri),
+             "recovery": {"recoverable": True, "category": "FAILED_PRECONDITION",
+                          "actions": [{"id": "prepare-precondition", "kind": "precondition",
+                                       "automatic": False, "label": "Prepare the missing dependency."}]}}
+    timeline.append(entry)
+    return {"ok": False, "timeline": timeline, "results": results, "error": err,
+            "recovery": [{"stepId": sid, "uri": uri, "error": err, "plan": entry["recovery"]}]}
+
+
 def _thin_driver(
     steps: list[dict],
     envelope: FlowEnvelope,
@@ -434,20 +485,9 @@ def _thin_driver(
         envelope.position = i
         uri = step["uri"]
         sid = step.get("id") or uri
-        missing = [d for d in (step.get("depends_on") or []) if d not in results]
-        if missing:
-            err = {"category": "FAILED_PRECONDITION",
-                   "message": f"{sid} missing dependencies: {missing}"}
-            entry = {"id": sid, "uri": uri, "ok": False, "error": err,
-                     "target": route_target(uri),
-                     "recovery": {"recoverable": True, "category": "FAILED_PRECONDITION",
-                                  "actions": [{"id": "prepare-precondition", "kind": "precondition",
-                                               "automatic": False,
-                                               "label": "Prepare the missing dependency."}]}}
-            timeline.append(entry)
-            return {"ok": False, "timeline": timeline, "results": results, "error": err,
-                    "recovery": [{"stepId": sid, "uri": uri, "error": err,
-                                  "plan": entry["recovery"]}]}
+        dep_fail = _check_step_deps(sid, uri, step, results, timeline)
+        if dep_fail is not None:
+            return dep_fail
         payload = resolve_step_payload(step.get("payload") or {}, results)
         if "/memory/command/remember" in uri:
             # The remember step runs last; stamp it with the run's degraded outcome and

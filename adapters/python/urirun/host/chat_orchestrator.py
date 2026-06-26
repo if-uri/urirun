@@ -518,6 +518,12 @@ def _chat_ask_general_planner_failure(
     return result
 
 
+def _timeline_steps_all_ok(timeline: list, fallback: bool) -> bool:
+    """True when every non-recovery timeline step reported ok (or timeline is empty → fallback)."""
+    steps = [t for t in timeline if t.get("type") != "recovery"]
+    return all(t.get("ok", True) for t in steps) if steps else fallback
+
+
 def _register_step_artifacts(result: dict, db: str | None, host_db) -> int:
     """Catalog frozen-artifact step results so a mesh-routed capture gets a durable artifact
     address, not just a transient chat attachment.
@@ -566,8 +572,7 @@ def _general_path_complete(
     timeline = result.get("timeline") or []
     # Derive ok from user-facing timeline steps (not from execution.ok which includes
     # post-loop goal-verify/rollback that may fail even when every step succeeded).
-    _exec_steps = [t for t in timeline if t.get("type") != "recovery"]
-    steps_all_ok = all(t.get("ok", True) for t in _exec_steps) if _exec_steps else bool(result.get("ok"))
+    steps_all_ok = _timeline_steps_all_ok(timeline, bool(result.get("ok")))
     status = ("degraded" if result.get("degraded") else "ok") if steps_all_ok else "failed"
     content = f"{status}: {len(timeline)} URI step(s)"
     if result.get("recovery"):
@@ -770,6 +775,29 @@ def _chat_ask_general_build_result(
     return result
 
 
+def _try_recall_gate(twin_memory, selected_nodes: list, prompt: str) -> tuple:
+    """Check the episode recall gate; return (flow, generator) or (None, None) on miss."""
+    if twin_memory is None or not selected_nodes:
+        return None, None
+    from urirun.host.dispatch import inprocess_fallback as _iproc  # noqa: PLC0415
+    _node = selected_nodes[0]
+    _env_fp = (twin_memory.known_good(_node) or {}).get("fingerprint") or ""
+    _recalled = _iproc("twin://host/flow/query/recall",
+                       {"prompt": prompt, "env_fp": _env_fp, "node": _node})
+    if not (isinstance(_recalled, dict) and _recalled.get("ok") and _recalled.get("found")):
+        return None, None
+    _rec_steps = _recalled.get("steps") or []
+    if not _rec_steps:
+        return None, None
+    flow = {"steps": _rec_steps,
+            "task": {"id": "recall", "source": _recalled.get("source", "recall"), "title": prompt}}
+    generator = {"provider": "recall", "fallback": False, "cached": True,
+                 "episodeId": _recalled.get("episode_id"),
+                 "flowKey": _recalled.get("flow_key"),
+                 "source": _recalled.get("source")}
+    return flow, generator
+
+
 def _chat_ask_general(
     project: str,
     db: str | None,
@@ -810,24 +838,7 @@ def _chat_ask_general(
             # handler: episode_id direct → intent×env (episode_store) → intent-only (flow_store).
             # The flow_store fallback fires even when env_fp is empty — new install, offline node —
             # closing the loop that the episode gate alone left open.
-            flow = None
-            generator = None
-            if twin_memory is not None and selected_nodes:
-                from urirun.host.dispatch import inprocess_fallback as _iproc  # noqa: PLC0415
-                _node = selected_nodes[0]
-                _env_fp = (twin_memory.known_good(_node) or {}).get("fingerprint") or ""
-                _recalled = _iproc("twin://host/flow/query/recall",
-                                   {"prompt": prompt, "env_fp": _env_fp, "node": _node})
-                if isinstance(_recalled, dict) and _recalled.get("ok") and _recalled.get("found"):
-                    _rec_steps = _recalled.get("steps") or []
-                    if _rec_steps:
-                        flow = {"steps": _rec_steps,
-                                "task": {"id": "recall", "source": _recalled.get("source", "recall"),
-                                         "title": prompt}}
-                        generator = {"provider": "recall", "fallback": False, "cached": True,
-                                     "episodeId": _recalled.get("episode_id"),
-                                     "flowKey": _recalled.get("flow_key"),
-                                     "source": _recalled.get("source")}
+            flow, generator = _try_recall_gate(twin_memory, selected_nodes, prompt)
             if flow is None:
                 flow, generator = mesh.make_flow(prompt, discovered, selected_nodes=selected_nodes,
                                                  use_llm=not no_llm, environments=environments)

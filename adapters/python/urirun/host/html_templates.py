@@ -3329,6 +3329,15 @@ INDEX_HTML = r"""<!doctype html>
       const detail = message.detail || {};
       const timeline = detail.timeline || [];
       const lines = timeline.map((step) => `${step.ok ? 'ok' : 'fail'} · ${step.target || ''} · ${step.uri}`).join('\n');
+      // Reconcile a stale summary at READ time (no stored mutation): an old "failed: N URI step(s)"
+      // written before the status-aggregation fix, where every timeline step actually succeeded,
+      // is relabelled "ok:". Genuinely-failed/degraded summaries are left untouched.
+      const _reconciledContent = (() => {
+        const c = String(message.content || '');
+        if (/^failed:\s*\d+ URI step/i.test(c) && timeline.length && timeline.every((st) => st && st.ok !== false))
+          return c.replace(/^failed:/i, 'ok:');
+        return c;
+      })();
       const attachments = messageAttachments(message);
       const role = message.role || 'system';
       const selected = message.id && state.selectedChatMessageIds.has(message.id) ? 'checked' : '';
@@ -3348,7 +3357,7 @@ INDEX_HTML = r"""<!doctype html>
             ${deleteButton}
           </span>
         </div>
-        <div>${esc(message.content || '')}</div>
+        <div>${esc(_reconciledContent)}</div>
         ${lines ? `<pre>${esc(lines)}</pre>` : ''}
         ${attachments.length ? `<div class="attachments">${attachments.map(renderAttachment).join('')}</div>` : ''}
         ${Object.keys(detail).length ? `<details><summary>URI / JSON</summary><pre>${esc(JSON.stringify(detail, null, 2))}</pre></details>` : ''}

@@ -11,6 +11,50 @@ from __future__ import annotations
 _INPROCESS_BINDINGS_GROUP = "urirun.bindings"
 
 
+def _flow_scheme_query(name: str, ep, skill, skill_steps: list, episode_id: str, uri: str) -> "dict | None":
+    """Resolve flow://…/query/get or /query/plan — return the stored plan or None if unknown."""
+    if ep is None and not skill_steps:
+        return None
+    if ep is not None:
+        plan = ep.get("plan") or {}
+        steps = plan.get("steps") or []
+        flow_key = plan.get("flow_key")
+    else:
+        steps = skill_steps
+        flow_key = None
+    return {"ok": True, "invokedUri": uri, "result": {
+        "episode_id": episode_id if ep else None,
+        "goal": (ep or {}).get("goal") or (skill or {}).get("name"),
+        "steps": steps,
+        "flow_key": flow_key,
+        "skill": name if skill else None,
+    }}
+
+
+def _flow_scheme_run(name: str, ep, skill_steps: list, episode_id: str, uri: str, payload) -> "dict | None":
+    """Execute a stored flow via flow://…/command/run."""
+    if ep is None and not skill_steps:
+        return None
+    steps = (ep.get("plan") or {}).get("steps") or [] if ep is not None else skill_steps
+    if not steps:
+        return {"ok": False, "invokedUri": uri,
+                "error": f"flow {name!r} (episode {episode_id!r}) has no plan steps"}
+    try:
+        import urirun.v2_service as _svc  # noqa: PLC0415
+        from urirun.node.flow import execute_flow  # noqa: PLC0415
+        _execute = bool((payload or {}).get("execute", True))
+        _mode = "execute" if _execute else "dry-run"
+        def _dispatch(u, p=None, _m=_mode, _s=_svc):
+            r = _s.call(u, p or {}, {}, mode=_m)
+            return r if r is not None else {"ok": False, "error": {"category": "NOT_FOUND", "message": f"no route for {u}"}}
+        flow = {"steps": steps, "task": {"id": "recall", "source": "flow://",
+                                          "title": (ep or {}).get("goal") or name}}
+        result = execute_flow(flow, {}, {}, execute=_execute, dispatch_uri=_dispatch)
+        return {"ok": bool(result.get("ok")), "invokedUri": uri, "result": result}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "invokedUri": uri, "error": str(exc)}
+
+
 def _flow_scheme_dispatch(uri: str, payload: dict | None = None) -> "dict | None":
     """Handle flow://node/name/command/run and flow://node/name/query/get.
 
@@ -41,48 +85,9 @@ def _flow_scheme_dispatch(uri: str, payload: dict | None = None) -> "dict | None
     skill_steps = ((skill or {}).get("flow") or {}).get("steps") or []
 
     if cmd in ("query/get", "query/plan"):
-        if ep is None and not skill_steps:
-            return None
-        if ep is not None:
-            plan = ep.get("plan") or {}
-            steps = plan.get("steps") or []
-            flow_key = plan.get("flow_key")
-        else:
-            steps = skill_steps
-            flow_key = None
-        return {"ok": True, "invokedUri": uri, "result": {
-            "episode_id": episode_id if ep else None,
-            "goal": (ep or {}).get("goal") or (skill or {}).get("name"),
-            "steps": steps,
-            "flow_key": flow_key,
-            "skill": name if skill else None,
-        }}
-
+        return _flow_scheme_query(name, ep, skill, skill_steps, episode_id, uri)
     if cmd == "command/run":
-        if ep is None and not skill_steps:
-            return None
-        if ep is not None:
-            steps = (ep.get("plan") or {}).get("steps") or []
-        else:
-            steps = skill_steps
-        if not steps:
-            return {"ok": False, "invokedUri": uri,
-                    "error": f"flow {name!r} (episode {episode_id!r}) has no plan steps"}
-        try:
-            import urirun.v2_service as _svc  # noqa: PLC0415
-            from urirun.node.flow import execute_flow  # noqa: PLC0415
-            _execute = bool((payload or {}).get("execute", True))
-            _mode = "execute" if _execute else "dry-run"
-            def _dispatch(u, p=None, _m=_mode, _s=_svc):
-                r = _s.call(u, p or {}, {}, mode=_m)
-                return r if r is not None else {"ok": False, "error": {"category": "NOT_FOUND", "message": f"no route for {u}"}}
-            flow = {"steps": steps, "task": {"id": "recall", "source": "flow://",
-                                              "title": ep.get("goal") or name}}
-            result = execute_flow(flow, {}, {}, execute=_execute, dispatch_uri=_dispatch)
-            return {"ok": bool(result.get("ok")), "invokedUri": uri, "result": result}
-        except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "invokedUri": uri, "error": str(exc)}
-
+        return _flow_scheme_run(name, ep, skill_steps, episode_id, uri, payload)
     return None  # unknown verb -> NOT_FOUND
 
 

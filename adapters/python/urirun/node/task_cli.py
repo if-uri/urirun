@@ -12,7 +12,7 @@ import argparse
 import json
 from pathlib import Path
 
-from urirun import _registry as reglib, v2, v2_service
+from urirun.runtime import _registry as reglib, v2, v2_service
 from urirun.node._util import _parse_json_option
 from urirun.node.config import host_config_for_args
 from urirun.node.flow import execute_flow, make_flow
@@ -164,7 +164,7 @@ def _task_plan(args, pa) -> int:
 
 
 def _task_bindings(args, pa) -> int:
-    from urirun import v2
+    from urirun.runtime import v2
 
     from urirun.host import host_integrations as _hi  # noqa: PLC0415 — lazy host dep
     doc = _hi.planfile_task_bindings(target=args.target, project=args.project)

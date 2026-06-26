@@ -15,7 +15,8 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from urirun import result_data, v2_service
+from urirun import result_data
+from urirun.runtime import v2_service
 from urirun.node._util import json_write, now_id, slug
 from urirun.node.diagnostics import diagnose, fit_to_environment
 from urirun.node.flow_thin import (  # noqa: F401
@@ -514,43 +515,6 @@ def _step_fail_envelope(step: dict, exc: BaseException, routes: list, timeline: 
     recoveries.append({"stepId": step["id"], "uri": step["uri"], "error": entry["error"], "plan": entry["recovery"]})
     return {"ok": False, "timeline": timeline, "results": results, "error": entry["error"], "recovery": recoveries}
 
-
-def _abort_envelope(step: dict, step_timeline: list, step_recoveries: list, timeline: list,
-                    results: dict, recoveries: list, registry: dict, rollback_on_failure: bool,
-                    execute: bool, dispatch_uri=None) -> dict:
-    """Build the failure envelope for an aborted step and, when reversible mutations were already
-    made, ROLL THEM BACK so the give-up leaves a clean state (catch->diagnose->heal->rollback).
-
-    When dispatch_uri is set the rollback goes through twin://host/flow/command/rollback-ledger
-    (observable, switchable). Otherwise uses the direct in-process path."""
-    err = next((e["error"] for e in reversed(step_timeline) if "error" in e),
-               step_recoveries[-1]["error"] if step_recoveries else {"message": "step failed"})
-    out = {"ok": False, "timeline": timeline, "results": results, "error": err, "recovery": recoveries}
-    if rollback_on_failure and execute:
-        if dispatch_uri is not None:
-            # URI path: build a minimal ledger from inverses the steps returned, then
-            # dispatch to twin://host/flow/command/rollback-ledger (same data model as
-            # FlowEnvelope.ledger used by _thin_driver).
-            ledger_items = [
-                {"uri": str(t.forward.uri), "inverse": str(t.inverse.uri),
-                 "args": t.inverse.args or {}}
-                for t in ledger_from_execution({"timeline": timeline, "results": results})
-            ]
-            if ledger_items:
-                rb = dispatch_uri("twin://host/flow/command/rollback-ledger",
-                                  {"ledger": ledger_items}) or {}
-                timeline.append({"id": "flow:rollback", "uri": step["uri"], "type": "recovery",
-                                 "action": "rollback", "ok": bool(rb.get("ok")),
-                                 "undone": len(rb.get("undone") or [])})
-                out["rollback"] = rb
-        else:
-            rb = _rollback_partial(timeline, results, registry)
-            if rb is not None:
-                timeline.append({"id": "flow:rollback", "uri": step["uri"], "type": "recovery",
-                                 "action": "rollback", "ok": bool(rb.get("ok")),
-                                 "undone": len(rb.get("undone") or [])})
-                out["rollback"] = rb
-    return out
 
 
 def _set_service_map(mesh: dict) -> str | None:

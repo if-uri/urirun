@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-from urirun import _registry as reglib, errors as uri_errors, v2, v2_mcp
+from urirun.runtime import _registry as reglib, errors as uri_errors, v2, v2_mcp
 from urirun.runtime.dispatch_protocol import normalize_request as _normalize_request
 from urirun.node import keyauth
 from urirun.node.paths import deploy_dir, node_token_path

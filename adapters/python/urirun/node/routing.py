@@ -7,7 +7,7 @@
 # depends only on the registry/v2 libs. Re-exported from mesh for callers.
 from __future__ import annotations
 
-from urirun import _registry as reglib, v2
+from urirun.runtime import _registry as reglib, v2
 
 # Arbitrary-command verbs are never auto-classified safe: a route that runs whatever
 # string it's given (terminal run, shell exec) must not be offered to planners or merged

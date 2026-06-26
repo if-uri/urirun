@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from urirun import _registry as reglib, v2, v2_service
+from urirun.runtime import _registry as reglib, v2, v2_service
 from urirun.node import keyauth
 from urirun.node._artifacts import compact_result_artifacts
 from urirun.node._util import _parse_json_option, json_load

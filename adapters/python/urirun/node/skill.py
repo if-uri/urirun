@@ -147,7 +147,7 @@ def _uri_session_replay(session: str = "", session_id: str = "", execute: bool =
     if not steps:
         return {"ok": False, "error": f"session {sid!r} has no steps to replay"}
     try:
-        import urirun.v2_service as _svc  # noqa: PLC0415
+        import urirun.runtime.v2_service as _svc  # noqa: PLC0415
         from urirun.node.flow import execute_flow  # noqa: PLC0415
         mode = "execute" if execute else "dry-run"
         def dispatch(u, p=None, _m=mode, _s=_svc):

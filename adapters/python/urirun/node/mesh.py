@@ -38,7 +38,7 @@ from urirun.runtime import progress
 emit = progress.emit
 
 
-from urirun import _registry as reglib, errors as uri_errors, v2, v2_mcp  # noqa: F401 (re-exported)
+from urirun.runtime import _registry as reglib, errors as uri_errors, v2, v2_mcp  # noqa: F401 (re-exported)
 from urirun.node import keyauth  # noqa: F401
 
 # Host/node config I/O moved to urirun.node.config; re-exported for callers
