@@ -388,6 +388,8 @@ _PAGE_ACTION_QUEUES = _SCANNER_PAGE_ACTION_QUEUES
 _is_phone_scanner_prompt = _is_phone_scanner_prompt_impl  # noqa: F401
 _torch_enabled_from_prompt = _torch_enabled_from_prompt_impl  # noqa: F401
 page_action_poll = _page_action_poll_impl  # noqa: F401
+_prune_scanner_staging = _prune_scanner_staging_impl  # noqa: F401
+_LAST_STAGING_PRUNE: float = 0.0
 
 
 def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> None:
@@ -910,6 +912,10 @@ def _docid_for_file(path: str | Path, ocr_text: str) -> dict:
     if docid_log:
         result["docidLog"] = docid_log[:240]
     return result
+
+
+_MERGE_METADATA_FIELDS = ("type", "date", "contractor", "amount", "currency")
+_BLANK_METADATA_MARKERS = {"", "kwota-nieznana", "nieznana", "unknown", "n/a", "-", "kontrahent-nieznany"}
 
 
 def _is_blank_metadata(value: Any) -> bool:
@@ -1463,6 +1469,11 @@ def _scanner_bridge_deps() -> ScannerBridgeDeps:
         add_chat_message=_add_chat_message,
         add_log=lambda db, stream, event, detail: _host_db().add_log(db, stream, event, detail),
     )
+
+
+def uri_event(db: str | None, query: dict) -> dict:
+    """Thin wrapper: injects _scanner_bridge_deps() for tests that patch _host_db."""
+    return _uri_event_impl(_scanner_bridge_deps(), db, query)
 
 
 def _register_scanner_result(
@@ -3721,38 +3732,6 @@ def _chat_ask_general(
     return result
 
 
-def _chat_phone_scanner_response(project: str, db: str | None, config: str | None, payload: dict, *, prompt: str,
-        selected_nodes: list, selected_targets: list, execute: bool, no_llm: bool,
-        node_urls: list[str] | None, token: str | None, identity: str | None) -> dict:
-    """Handle a phone-scanner chat prompt: start the service, queue camera/torch page
-    actions, and return the chat result. (Extracted from chat_ask.)"""
-    return _chat_ask_phone_scanner(
-        project, db, config, node_urls, token, identity, prompt, execute, selected_nodes, selected_targets,
-    )
-
-
-def _chat_document_sync_response(project: str, db: str | None, config: str | None, payload: dict, *, prompt: str,
-        selected_nodes: list, selected_targets: list, execute: bool, no_llm: bool,
-        node_urls: list[str] | None, token: str | None, identity: str | None) -> dict:
-    """Handle a document-sync chat prompt: run sync-to-node with urifix recovery/retry and
-    a decision-loop record. (Extracted from chat_ask.)"""
-    return _chat_ask_document_sync(
-        project, db, config, payload, node_urls, token, identity,
-        prompt, execute, no_llm, selected_nodes, selected_targets,
-    )
-
-
-def _chat_generic_response(project: str, db: str | None, config: str | None, payload: dict, *, prompt: str,
-        selected_nodes: list, selected_targets: list, execute: bool, no_llm: bool,
-        node_urls: list[str] | None, token: str | None, identity: str | None) -> dict:
-    """Handle a generic chat prompt: discover the mesh, plan a flow, execute it, and return
-    the compacted result. (Extracted from chat_ask.)"""
-    return _chat_ask_general(
-        project, db, config, payload, node_urls, token, identity,
-        prompt, execute, no_llm, selected_nodes, selected_targets,
-    )
-
-
 def _add_chat_user_message(db: str | None, prompt: str, config: str | None, node_urls: list[str] | None,
                            *, execute: bool, no_llm: bool, requested_nodes: list, requested_targets: list,
                            selected_nodes: list, selected_targets: list) -> None:
@@ -3829,11 +3808,11 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
         execute=execute, no_llm=no_llm, node_urls=node_urls, token=token, identity=identity,
     )
     if _is_phone_scanner_prompt_impl(prompt):
-        return _chat_phone_scanner_response(**_dispatch)
+        return _chat_ask_phone_scanner(project, db, config, node_urls, token, identity, prompt, execute, selected_nodes, selected_targets)
     if _is_document_sync_prompt(prompt, selected_nodes, selected_targets, config, node_urls):
-        return _chat_document_sync_response(**_dispatch)
+        return _chat_ask_document_sync(project, db, config, payload, node_urls, token, identity, prompt, execute, no_llm, selected_nodes, selected_targets)
     _chat_insert_twin_preview(db, prompt, selected_nodes, selected_targets)
-    return _chat_generic_response(**_dispatch)
+    return _chat_ask_general(project, db, config, payload, node_urls, token, identity, prompt, execute, no_llm, selected_nodes, selected_targets)
 
 
 def task_action(project: str, ticket_id: str, action: str, payload: dict) -> dict:
@@ -4665,6 +4644,45 @@ def _free_port_from_old_dashboard(port: int) -> None:
         sleep_fn=time.sleep,
         time_fn=time.time,
         emit_fn=print,
+    )
+
+
+# Patchable aliases for process-type is_target functions used by tests
+_is_scanner_process = _is_scanner_process_impl
+_is_chat_process = _is_chat_process_impl
+_is_android_node_process = _is_android_node_process_impl
+
+
+def _free_port_from_old_scanner(port: int, *, force: bool = False, emit: bool = False) -> dict:
+    """Free a scanner-owned port before rebinding it."""
+    return _free_port_from_matching_processes(
+        port,
+        force=force,
+        emit=emit,
+        is_target=_is_scanner_process,
+        event_prefix="urirun.service_scanner",
+    )
+
+
+def _free_port_from_old_chat(port: int, *, force: bool = False, emit: bool = False) -> dict:
+    """Free a chat-dashboard-owned port before rebinding it."""
+    return _free_port_from_matching_processes(
+        port,
+        force=force,
+        emit=emit,
+        is_target=_is_chat_process,
+        event_prefix="urirun.service_chat",
+    )
+
+
+def _free_port_from_old_android_node(port: int, *, force: bool = False, emit: bool = False) -> dict:
+    """Free an android-node-owned port before rebinding it."""
+    return _free_port_from_matching_processes(
+        port,
+        force=force,
+        emit=emit,
+        is_target=_is_android_node_process,
+        event_prefix="urirun.service_android_node",
     )
 
 
