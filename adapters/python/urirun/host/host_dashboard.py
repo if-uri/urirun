@@ -2957,6 +2957,9 @@ INDEX_HTML = r"""<!doctype html>
     }
 
     function renderAttachment(att) {
+      if (att.kind === 'twin-plan') {
+        return renderTwinPlanCard(att);
+      }
       if (att.kind === 'twin-monitor') {
         const url = att.uri || '/twin';
         return `<div class="attachment attachment-widget" style="width: 100%;"><iframe src="${esc(url)}" title="Digital Twin Monitor" style="width:100%;height:450px;border:1px solid var(--border-color);border-radius:4px;" loading="lazy"></iframe></div>`;
@@ -5171,10 +5174,6 @@ def _preview_url(path: str, project: str) -> str | None:
     return None
 
 
-def _is_image_path(path: str) -> bool:
-    return Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-
-
 def _public_artifact(artifact: dict, project: str) -> dict:
     path = str(artifact.get("path") or "")
     visual_path = _artifact_visual_path(artifact)
@@ -5272,7 +5271,7 @@ def _collect_attachments(value: Any, project: str, *, limit: int = 24) -> list[d
             return
         seen.add(path)
         item = {
-            "kind": "image" if _is_image_path(path) else kind,
+            "kind": "image" if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif"} else kind,
             "path": path,
             "uri": uri,
             "meta": meta or {},
@@ -5424,10 +5423,6 @@ def _local_image_ocr(path: str, backend: str | None = None) -> dict:
 
 
 
-
-
-def _add_node_aliases(out: dict[str, str], name: str, aliases: Any = None) -> None:
-    _add_node_aliases_impl(out, name, aliases)
 
 
 def _node_alias_map_from_context(config: str | None, node_urls: list[str] | None = None) -> dict[str, str]:
@@ -9111,6 +9106,75 @@ def _append_twin_widget(execute: bool, flow: dict, attachments: list,
         })
 
 
+_DESKTOP_TASK_KEYWORDS = frozenset({
+    "linkedin", "github", "twitter", "facebook", "instagram", "reddit", "notion",
+    "otwórz przeglądarkę", "open browser", "navigate to", "go to",
+    "opublikuj", "publish", "post on", "kliknij", "click on",
+    "wypełnij formularz", "fill form", "fill the",
+    "screenshot", "zrzut ekranu", "scrape", "scraping",
+    "wpisz w", "type into", "wyszukaj na", "search on",
+    "uruchom aplikację", "launch app", "otwórz aplikację",
+})
+
+
+def _is_desktop_task_prompt(prompt: str) -> bool:
+    """True when a chat prompt targets a desktop/browser action that twin can ground."""
+    low = prompt.lower()
+    return any(kw in low for kw in _DESKTOP_TASK_KEYWORDS)
+
+
+def _twin_plan_preview(prompt: str, node: str = "") -> dict | None:
+    """Call twin://host/plan/command/from-prompt in-process and return a twin-plan attachment.
+
+    Soft dependency: returns None gracefully when urirun-connector-twin is not installed
+    or the probe fails.  Never raises — twin preview is always additive, never blocking."""
+    try:
+        from urirun_connector_twin.core import plan_from_prompt_route  # type: ignore  # noqa: PLC0415
+        result = plan_from_prompt_route(
+            prompt=prompt,
+            node=node,
+            include_mock=True,
+            probe_browser=True,
+        )
+    except Exception:  # noqa: BLE001
+        return None
+    if not isinstance(result, dict) or not result.get("ok"):
+        return None
+    return {
+        "kind": "twin-plan",
+        "prompt": prompt,
+        "taskType": result.get("taskType"),
+        "domain": result.get("domain"),
+        "needsAuth": result.get("needsAuth"),
+        "plan": result.get("plan") or {},
+        "environment": result.get("environment") or {},
+        "mock": result.get("mock"),
+        "path": "Digital Twin Plan",
+    }
+
+
+def _twin_plan_summary(att: dict) -> str:
+    """One-line chat bubble text for a twin-plan attachment."""
+    plan = att.get("plan") or {}
+    domain = att.get("domain") or ""
+    task_type = att.get("taskType") or "task"
+    total = plan.get("totalSteps", 0)
+    feasible = plan.get("feasibleSteps", 0)
+    infeasible = plan.get("infeasibleSteps", 0)
+    sel = (plan.get("browserSelection") or {})
+    sel_mode = sel.get("mode") or ""
+    if infeasible:
+        sel_note = f", {infeasible} krok{'i' if infeasible > 1 else ''} nieosiągalne"
+    elif sel_mode == "needs-login":
+        sel_note = " — wymagane logowanie (human-gated)"
+    elif sel_mode == "no-chrome":
+        sel_note = " — brak Chrome z CDP"
+    else:
+        sel_note = ""
+    domain_note = f" [{domain}]" if domain else ""
+    return f"Digital Twin Plan{domain_note}: {task_type}, {total} kroków ({feasible} osiągalnych{sel_note})"
+
+
 def _general_path_complete(
     result: dict,
     db: str | None,
@@ -9460,6 +9524,17 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
         return _chat_phone_scanner_response(**_dispatch)
     if _is_document_sync_prompt(prompt, selected_nodes, selected_targets, config, node_urls):
         return _chat_document_sync_response(**_dispatch)
+    # Digital Twin plan preview: grounding card before the generic LLM flow
+    if _is_desktop_task_prompt(prompt):
+        node = (selected_nodes or [""])[0]
+        twin_att = _twin_plan_preview(prompt, node=node)
+        if twin_att:
+            _add_chat_message(db, _chat_message(
+                "system",
+                _twin_plan_summary(twin_att),
+                detail={"twinPlan": twin_att, "selectedTargets": selected_targets},
+                attachments=[twin_att],
+            ))
     return _chat_generic_response(**_dispatch)
 
 
