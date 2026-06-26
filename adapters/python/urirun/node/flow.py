@@ -344,28 +344,41 @@ def _attempt_self_heal(
     return heal_entry, healed_ok
 
 
+def _cdp_needs_provision(prof: dict) -> bool:
+    """True when CDP is feasible on the node but not yet reachable — needs ensure."""
+    if not prof:
+        return False
+    cdp = prof.get("cdp") or {}
+    return not cdp.get("reachable") and bool(cdp.get("feasible") or prof.get("cdpFeasible"))
+
+
+def _provision_cdp_surface(target: str, registry: dict) -> dict:
+    """Call cdp/session/command/ensure for target; return a preflight timeline entry."""
+    uri = f"kvm://{target}/cdp/session/command/ensure"
+    try:
+        env = v2_service.call(uri, {}, registry, mode="execute")
+        ok = bool(env.get("ok"))
+    except Exception:  # noqa: BLE001 - a failed preflight must not abort the flow
+        ok = False
+    return {"id": f"preflight:cdp:{target}", "uri": uri, "target": target,
+            "ok": ok, "type": "preflight", "action": "provision-surface"}
+
+
 def _preflight(flow: dict, registry: dict) -> list[dict]:
     """Provision the surfaces a flow KNOWS up-front it will need, BEFORE running — proactive,
     not reactive. A flow with ``cdp/page/*`` steps needs a live CDP session; if CDP is feasible
     but not reachable on that node, bring it up once now so the first ``cdp/page`` step doesn't
     fail-then-self-heal. Idempotent (``ensure`` reuses an existing session)."""
+    steps = flow.get("steps") or []
+    cdp_targets = sorted({route_target(str(s.get("uri") or ""))
+                          for s in steps if "/cdp/page/" in str(s.get("uri") or "")})
     entries: list[dict] = []
-    cdp_targets = sorted({route_target(str(s.get("uri") or "")) for s in flow.get("steps") or []
-                          if "/cdp/page/" in str(s.get("uri") or "")})
     for target in cdp_targets:
         if not target:
             continue
-        prof = _fetch_env_profile({"uri": f"kvm://{target}/_"}, registry)
-        cdp = (prof or {}).get("cdp") or {}
-        if prof and not cdp.get("reachable") and (cdp.get("feasible") or prof.get("cdpFeasible")):
-            uri = f"kvm://{target}/cdp/session/command/ensure"
-            try:
-                env = v2_service.call(uri, {}, registry, mode="execute")
-                ok = bool(env.get("ok"))
-            except Exception:  # noqa: BLE001 - a failed preflight must not abort the flow; the
-                ok = False     # reactive self-heal stays as the backstop.
-            entries.append({"id": f"preflight:cdp:{target}", "uri": uri, "target": target,
-                            "ok": ok, "type": "preflight", "action": "provision-surface"})
+        prof = _fetch_env_profile({"uri": f"kvm://{target}/_"}, registry) or {}
+        if _cdp_needs_provision(prof):
+            entries.append(_provision_cdp_surface(target, registry))
     return entries
 
 

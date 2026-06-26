@@ -304,33 +304,43 @@ def _step_is_infeasible(uri: str, infeasible_constraints: list[dict]) -> dict | 
 
 # ── Flow normalization ────────────────────────────────────────────────────────
 
-def _normalize_flow_step(step: dict, index: int, allowed_uris: set[str], used: set[str],
-                         routes: list[dict] | None = None,
-                         infeasible_constraints: list[dict] | None = None) -> dict:
-    """Validate and canonicalize one flow step; `used` tracks taken ids to keep them unique."""
-    uri = str(step.get("uri", ""))
-    if not _uri_is_available(uri, allowed_uris):
-        raise ValueError(f"URI is not available: {uri}")
+def _validate_step_payload(uri: str, payload: dict, routes: "list[dict] | None") -> None:
+    """Raise ValueError when routes include an inputSchema that payload doesn't satisfy."""
+    if not routes:
+        return
+    route = next((r for r in routes if r.get("uri") == uri), None)
+    if not (route and route.get("inputSchema")):
+        return
+    import jsonschema  # noqa: PLC0415
+    try:
+        jsonschema.validate(instance=payload, schema=route["inputSchema"])
+    except jsonschema.ValidationError as e:
+        raise ValueError(f"Payload validation failed for {uri}: {e.message}")
 
-    if infeasible_constraints:
-        c = _step_is_infeasible(uri, infeasible_constraints)
-        if c is not None:
-            raise ValueError(_infeasibility_error(uri, c))
 
-    payload = step.get("payload") if isinstance(step.get("payload"), dict) else {}
-    if routes:
-        route = next((r for r in routes if r.get("uri") == uri), None)
-        if route and route.get("inputSchema"):
-            import jsonschema
-            try:
-                jsonschema.validate(instance=payload, schema=route["inputSchema"])
-            except jsonschema.ValidationError as e:
-                raise ValueError(f"Payload validation failed for {uri}: {e.message}")
-
+def _unique_step_id(step: dict, index: int, used: set) -> str:
+    """Return a slug step id that is unique within `used`, then register it."""
     step_id = slug(str(step.get("id") or f"step_{index}"))
     if step_id in used:
         step_id = f"{step_id}_{index}"
     used.add(step_id)
+    return step_id
+
+
+def _normalize_flow_step(step: dict, index: int, allowed_uris: set[str], used: set[str],
+                         routes: "list[dict] | None" = None,
+                         infeasible_constraints: "list[dict] | None" = None) -> dict:
+    """Validate and canonicalize one flow step; `used` tracks taken ids to keep them unique."""
+    uri = str(step.get("uri", ""))
+    if not _uri_is_available(uri, allowed_uris):
+        raise ValueError(f"URI is not available: {uri}")
+    if infeasible_constraints:
+        c = _step_is_infeasible(uri, infeasible_constraints)
+        if c is not None:
+            raise ValueError(_infeasibility_error(uri, c))
+    payload = step.get("payload") if isinstance(step.get("payload"), dict) else {}
+    _validate_step_payload(uri, payload, routes)
+    step_id = _unique_step_id(step, index, used)
     deps = [slug(str(dep)) for dep in step.get("depends_on", []) if isinstance(dep, str)]
     return {"id": step_id, "uri": uri, "payload": payload, "depends_on": deps}
 

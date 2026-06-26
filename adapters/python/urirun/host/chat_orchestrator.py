@@ -524,6 +524,20 @@ def _timeline_steps_all_ok(timeline: list, fallback: bool) -> bool:
     return all(t.get("ok", True) for t in steps) if steps else fallback
 
 
+def _resolve_artifact_value(sr: dict) -> "dict | None":
+    """Unwrap a step result to its artifact-tagged value dict, or None if not an artifact.
+
+    Handles two shapes: mesh steps wrap value inside result.value; inprocess_fallback
+    unwraps result.value into result directly (or leaves it on the top-level dict)."""
+    res = sr.get("result")
+    val = res.get("value") if isinstance(res, dict) else None
+    if not isinstance(val, dict):
+        val = res if isinstance(res, dict) else sr
+    if isinstance(val, dict) and val.get("live") is False and val.get("kind"):
+        return val
+    return None
+
+
 def _register_step_artifacts(result: dict, db: str | None, host_db) -> int:
     """Catalog frozen-artifact step results so a mesh-routed capture gets a durable artifact
     address, not just a transient chat attachment.
@@ -538,12 +552,8 @@ def _register_step_artifacts(result: dict, db: str | None, host_db) -> int:
     for sid, sr in results.items():
         if not isinstance(sr, dict):
             continue
-        res = sr.get("result")
-        val = res.get("value") if isinstance(res, dict) else None
-        if not isinstance(val, dict):
-            # inprocess_fallback unwraps result.value into result directly
-            val = res if isinstance(res, dict) else sr
-        if not (isinstance(val, dict) and val.get("live") is False and val.get("kind")):
+        val = _resolve_artifact_value(sr)
+        if val is None:
             continue
         path = str(val.get("path") or "")
         if not path or not os.path.isfile(os.path.expanduser(path)):

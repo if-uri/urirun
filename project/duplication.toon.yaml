@@ -1,23 +1,23 @@
-# redup/duplication | 19 groups | 130f 37634L | 2026-06-26
+# redup/duplication | 13 groups | 130f 28700L | 2026-06-26
 
 SUMMARY:
   files_scanned: 130
-  total_lines:   37634
-  dup_groups:    19
-  dup_fragments: 44
-  saved_lines:   148
-  scan_ms:       1072
+  total_lines:   28700
+  dup_groups:    13
+  dup_fragments: 31
+  saved_lines:   109
+  scan_ms:       802
 
 HOTSPOTS[7] (files with most duplication):
-  runtime/v2.py  dup=41L  groups=4  frags=8  (0.1%)
   __init__.py  dup=38L  groups=1  frags=3  (0.1%)
   host/host_dashboard.py  dup=34L  groups=2  frags=4  (0.1%)
   host/dashboard_api.py  dup=25L  groups=2  frags=5  (0.1%)
   host/service_control.py  dup=20L  groups=1  frags=2  (0.1%)
   host/planfile_adapter.py  dup=10L  groups=2  frags=3  (0.0%)
   node/skill.py  dup=9L  groups=2  frags=3  (0.0%)
+  host/chat_orchestrator.py  dup=7L  groups=1  frags=1  (0.0%)
 
-DUPLICATES[19] (ranked by impact):
+DUPLICATES[13] (ranked by impact):
   [a58866334f01e99a] ! STRU  command  L=16 N=3 saved=32 sim=1.00
       __init__.py:47-62  (command)
       __init__.py:65-69  (shell)
@@ -26,10 +26,6 @@ DUPLICATES[19] (ranked by impact):
       host/host_dashboard.py:1717-1725  (_free_port_from_old_scanner)
       host/host_dashboard.py:1728-1736  (_free_port_from_old_chat)
       host/host_dashboard.py:1739-1747  (_free_port_from_old_android_node)
-  [6ccf406336e4a89d]   STRU  _cmd_add_openapi  L=6 N=3 saved=12 sim=1.00
-      runtime/v2.py:1535-1540  (_cmd_add_openapi)
-      runtime/v2.py:1856-1861  (_cmd_host)
-      runtime/v2.py:1864-1869  (_cmd_node)
   [19899f9cfc86ca65]   STRU  is_scanner_process  L=10 N=2 saved=10 sim=1.00
       host/service_control.py:213-222  (is_scanner_process)
       host/service_control.py:236-245  (is_android_node_process)
@@ -44,28 +40,13 @@ DUPLICATES[19] (ranked by impact):
   [b6b2d4461c71c62d]   STRU  chat_message  L=7 N=2 saved=7 sim=1.00
       host/chat_orchestrator.py:48-54  (chat_message)
       host/host_dashboard.py:373-379  (_chat_message)
-  [cd4f380513131bd1]   STRU  register_ticket_creator  L=7 N=2 saved=7 sim=1.00
-      runtime/errors.py:385-391  (register_ticket_creator)
-      runtime/v2_service.py:41-44  (register_signer)
-  [57d15d2f345b5771]   STRU  register_executor  L=7 N=2 saved=7 sim=1.00
-      runtime/v2.py:637-643  (register_executor)
-      runtime/v2.py:757-759  (register_cli_command)
   [b7534632e49155f1]   STRU  _host_db  L=3 N=3 saved=6 sim=1.00
       host/dashboard_api.py:29-31  (_host_db)
       host/dashboard_api.py:34-36  (_mesh)
       host/dashboard_api.py:39-41  (_planfile_adapter)
-  [3fed59bde8ae1620]   EXAC  replace  L=5 N=2 saved=5 sim=1.00
-      runtime/v1.py:68-72  (replace)
-      runtime/v2.py:507-511  (replace)
-  [ecb3319de9bb32de]   EXAC  close  L=4 N=2 saved=4 sim=1.00
-      runtime/worker.py:156-159  (close)
-      runtime/worker.py:187-190  (close)
   [6fb5c445bd927117]   STRU  _register_ticket_creator  L=4 N=2 saved=4 sim=1.00
       host/planfile_adapter.py:284-287  (_register_ticket_creator)
       node/keyauth.py:176-179  (_register_signer)
-  [e819c3a558e3729d]   STRU  _cmd_gen  L=4 N=2 saved=4 sim=1.00
-      runtime/v2.py:1543-1546  (_cmd_gen)
-      runtime/v2.py:1776-1779  (_cmd_agent)
   [70d19cd66cfd404f]   EXAC  _memory  L=3 N=2 saved=3 sim=1.00
       node/flow_uri.py:17-19  (_memory)
       node/skill.py:26-28  (_memory)
@@ -82,85 +63,61 @@ DUPLICATES[19] (ranked by impact):
       node/doctor.py:74-76  (_api_id)
       node/transport.py:407-409  (_configured_api_id)
 
-REFACTOR[19] (ranked by priority):
+REFACTOR[13] (ranked by priority):
   [1] ○ extract_function   → utils/command.py
       WHY: 3 occurrences of 16-line block across 1 files — saves 32 lines
       FILES: __init__.py
   [2] ○ extract_function   → host/utils/_free_port_from_old_scanner.py
       WHY: 3 occurrences of 9-line block across 1 files — saves 18 lines
       FILES: host/host_dashboard.py
-  [3] ○ extract_function   → runtime/utils/_cmd_add_openapi.py
-      WHY: 3 occurrences of 6-line block across 1 files — saves 12 lines
-      FILES: runtime/v2.py
-  [4] ○ extract_function   → host/utils/is_scanner_process.py
+  [3] ○ extract_function   → host/utils/is_scanner_process.py
       WHY: 2 occurrences of 10-line block across 1 files — saves 10 lines
       FILES: host/service_control.py
-  [5] ○ extract_function   → node/utils/flow_bindings.py
+  [4] ○ extract_function   → node/utils/flow_bindings.py
       WHY: 4 occurrences of 3-line block across 3 files — saves 9 lines
       FILES: node/flow_uri.py, node/preconditions.py, node/skill.py
-  [6] ○ extract_function   → host/utils/_api_checks.py
+  [5] ○ extract_function   → host/utils/_api_checks.py
       WHY: 2 occurrences of 8-line block across 1 files — saves 8 lines
       FILES: host/dashboard_api.py
-  [7] ○ extract_function   → host/utils/chat_message.py
+  [6] ○ extract_function   → host/utils/chat_message.py
       WHY: 2 occurrences of 7-line block across 2 files — saves 7 lines
       FILES: host/chat_orchestrator.py, host/host_dashboard.py
-  [8] ○ extract_function   → runtime/utils/register_ticket_creator.py
-      WHY: 2 occurrences of 7-line block across 2 files — saves 7 lines
-      FILES: runtime/errors.py, runtime/v2_service.py
-  [9] ○ extract_function   → runtime/utils/register_executor.py
-      WHY: 2 occurrences of 7-line block across 1 files — saves 7 lines
-      FILES: runtime/v2.py
-  [10] ○ extract_function   → host/utils/_host_db.py
+  [7] ○ extract_function   → host/utils/_host_db.py
       WHY: 3 occurrences of 3-line block across 1 files — saves 6 lines
       FILES: host/dashboard_api.py
-  [11] ○ extract_function   → runtime/utils/replace.py
-      WHY: 2 occurrences of 5-line block across 2 files — saves 5 lines
-      FILES: runtime/v1.py, runtime/v2.py
-  [12] ○ extract_function   → runtime/utils/close.py
-      WHY: 2 occurrences of 4-line block across 1 files — saves 4 lines
-      FILES: runtime/worker.py
-  [13] ○ extract_function   → utils/_register_ticket_creator.py
+  [8] ○ extract_function   → utils/_register_ticket_creator.py
       WHY: 2 occurrences of 4-line block across 2 files — saves 4 lines
       FILES: host/planfile_adapter.py, node/keyauth.py
-  [14] ○ extract_function   → runtime/utils/_cmd_gen.py
-      WHY: 2 occurrences of 4-line block across 1 files — saves 4 lines
-      FILES: runtime/v2.py
-  [15] ○ extract_function   → node/utils/_memory.py
+  [9] ○ extract_function   → node/utils/_memory.py
       WHY: 2 occurrences of 3-line block across 2 files — saves 3 lines
       FILES: node/flow_uri.py, node/skill.py
-  [16] ○ extract_function   → host/utils/_data_artifact_register.py
+  [10] ○ extract_function   → host/utils/_data_artifact_register.py
       WHY: 2 occurrences of 3-line block across 1 files — saves 3 lines
       FILES: host/node_cli.py
-  [17] ○ extract_function   → host/utils/start_ticket.py
+  [11] ○ extract_function   → host/utils/start_ticket.py
       WHY: 2 occurrences of 3-line block across 1 files — saves 3 lines
       FILES: host/planfile_adapter.py
-  [18] ○ extract_function   → node/utils/save_host_config.py
+  [12] ○ extract_function   → node/utils/save_host_config.py
       WHY: 2 occurrences of 3-line block across 1 files — saves 3 lines
       FILES: node/config.py
-  [19] ○ extract_function   → node/utils/_api_id.py
+  [13] ○ extract_function   → node/utils/_api_id.py
       WHY: 2 occurrences of 3-line block across 2 files — saves 3 lines
       FILES: node/doctor.py, node/transport.py
 
-QUICK_WINS[10] (low risk, high savings — do first):
+QUICK_WINS[7] (low risk, high savings — do first):
   [1] extract_function   saved=32L  → utils/command.py
       FILES: __init__.py
   [2] extract_function   saved=18L  → host/utils/_free_port_from_old_scanner.py
       FILES: host_dashboard.py
-  [3] extract_function   saved=12L  → runtime/utils/_cmd_add_openapi.py
-      FILES: v2.py
-  [4] extract_function   saved=10L  → host/utils/is_scanner_process.py
+  [3] extract_function   saved=10L  → host/utils/is_scanner_process.py
       FILES: service_control.py
-  [5] extract_function   saved=9L  → node/utils/flow_bindings.py
+  [4] extract_function   saved=9L  → node/utils/flow_bindings.py
       FILES: flow_uri.py, preconditions.py, skill.py
-  [6] extract_function   saved=8L  → host/utils/_api_checks.py
+  [5] extract_function   saved=8L  → host/utils/_api_checks.py
       FILES: dashboard_api.py
-  [7] extract_function   saved=7L  → host/utils/chat_message.py
+  [6] extract_function   saved=7L  → host/utils/chat_message.py
       FILES: chat_orchestrator.py, host_dashboard.py
-  [8] extract_function   saved=7L  → runtime/utils/register_ticket_creator.py
-      FILES: errors.py, v2_service.py
-  [9] extract_function   saved=7L  → runtime/utils/register_executor.py
-      FILES: v2.py
-  [10] extract_function   saved=6L  → host/utils/_host_db.py
+  [7] extract_function   saved=6L  → host/utils/_host_db.py
       FILES: dashboard_api.py
 
 DEPENDENCY_RISK[1] (duplicates spanning multiple packages):
@@ -168,19 +125,19 @@ DEPENDENCY_RISK[1] (duplicates spanning multiple packages):
       host/planfile_adapter.py
       node/keyauth.py
 
-EFFORT_ESTIMATE (total ≈ 5.1h):
+EFFORT_ESTIMATE (total ≈ 3.8h):
   medium command                             saved=32L  ~64min
   medium _free_port_from_old_scanner         saved=18L  ~36min
-  easy   _cmd_add_openapi                    saved=12L  ~24min
   easy   is_scanner_process                  saved=10L  ~20min
   easy   flow_bindings                       saved=9L  ~18min
   easy   _api_checks                         saved=8L  ~16min
   easy   chat_message                        saved=7L  ~14min
-  easy   register_ticket_creator             saved=7L  ~14min
-  easy   register_executor                   saved=7L  ~14min
   easy   _host_db                            saved=6L  ~12min
-  ... +9 more (~72min)
+  easy   _register_ticket_creator            saved=4L  ~16min
+  easy   _memory                             saved=3L  ~6min
+  easy   _data_artifact_register             saved=3L  ~6min
+  ... +3 more (~18min)
 
 METRICS-TARGET:
-  dup_groups:  19 → 0
-  saved_lines: 148 lines recoverable
+  dup_groups:  13 → 0
+  saved_lines: 109 lines recoverable

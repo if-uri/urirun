@@ -38,6 +38,48 @@
 > - Bezpieczeństwo: decyzja `safe` scentralizowana w `node/routing.route_is_safe`
 >   (jedno źródło prawdy) — fundament pod deny-by-default.
 
+> **STATUS EKSTRAKCJI (2026-06-26) — narzędzie audytu + PIERWSZA wydzielona paczka.**
+> Dodano `scripts/extraction_audit.py` — statyczny (AST) audyt granicy pakietu: dla kandydata
+> klasyfikuje każdą krawędź importu jako **OUTWARD** (blokująca — pakiet importuje warstwę
+> wyżej), **CYCLE** (dwukierunkowa) albo **INWARD** (powierzchnia shimu = symbole do re-eksportu).
+> Zielony = 0 OUTWARD + 0 CYCLE. Presety: `A`=scanner, `B`=runtime/kernel (allow_outward=∅),
+> `C`=domain_monitor, `D`=cdp, `E`=connectors-toolkit, `F`=node, `G`=flow. Ma green self-test
+> (`--selftest`). **Reguła szwu** (cała architektura w jednej decyzji): dla pary A→B —
+> *capability którą A konsumuje → URI*, *kontrakt/typ → import*, *middleware owijające dispatch →
+> kompozycja w kernelu*. Wpięte w CI: `tests/test_{scanner,runtime,connector}_extractable.py` +
+> krok „Extraction boundary gate" w `.github/workflows/ci.yml` — fizyczny strażnik przed
+> pełzaniem rdzenia (runtime = ratchet znanych krawędzi; reszta = green-gate).
+>
+> **Zmierzony stan (audyt, nie deklaracja):**
+> - **GREEN / podnoszą się dziś:** connectors-toolkit (14 modułów: backend_registry, resolver,
+>   cdp, uinput, scaffold, sdk… — tylko kernel + stdlib), cdp, domain_monitor (po odwróceniu
+>   sprzężenia planfile przez wstrzykiwany `set_ticket_creator`), scanner.
+> - **node:** **0 cykli** — oba zbite ruchem „przenieś źle ulokowany helper w dół": cykl
+>   `flow_planner↔task_planner` przez `quiet_completion`→`node._util`; cykl
+>   `event_schema↔twin_bridge` przez `_step_inverse`→`node.event_schema` (twin_bridge trzyma
+>   re-eksport w dół). Zostaje ~33 OUTWARD = ~20 kanonizacji shimów runtime (`from urirun import
+>   v2` → `from urirun.runtime import v2`) + ~13 sprzężeń CLI (`node_cli`/`task_cli`→host; CLI to
+>   composition root → należą do warstwy host).
+> - **runtime (kernel):** ratchet — 11 znanych krawędzi OUTWARD (3 top-level: `cli→node.config`,
+>   `v2→urirun`, `v2_service→node.keyauth`; 11 to leniwe sięgnięcia do opcjonalnych warstw) + 2 cykle.
+>
+> **Pierwsza fizyczna ekstrakcja: `urirun-cdp`** (dowód wzorca move+shim, end-to-end).
+> cdp = najczystszy cel (preset D GREEN, **czysty stdlib, 0 zależności od urirun**, promień
+> rażenia = 2 pliki testów; kvm używa WŁASNEGO `urirun_connector_kvm.cdp`, nie rdzeniowego).
+> Wzorzec do powtórzenia przy każdej kolejnej GREEN-paczce:
+> 1. Nowa paczka `if-uri/urirun-cdp/` (src-layout, `src/urirun_cdp/cdp.py` = przeniesione źródło,
+>    `pyproject.toml` z `dependencies=[]`), editable-install.
+> 2. **Shim** w starej lokalizacji: `urirun/.../connectors/surfaces/cdp.py` →
+>    `from urirun_cdp import cdp` + `sys.modules[__name__] = _moved` (wzorzec repo, jak
+>    `urirun/host_db.py`) — stara ścieżka importu działa bez zmian u wszystkich konsumentów.
+> 3. **Testy własne modułu** przenoszą się do `urirun-cdp/tests/` (uruchamiane w CI tej paczki).
+> 4. **Test kontraktowy** w core (`test_kernel_adoption`) osłonięty
+>    `pytestmark = pytest.mark.skipif(cdp is None)` + `try/except ImportError` — urirun-only CI
+>    pomija go łagodnie (sibling-repo nie jest checkout'owany), jak pakiety connectorów.
+> Zweryfikowane: 20 testów (15 kontrakt + 5 cdp), pełny pakiet urirun 1499 passed. UWAGA: rdzeń
+> jest aktywnie współedytowany — shim cdp.py bywa cofany przez drugi tor; bez commitu/koordynacji
+> dryfuje do dwóch kopii (nic się nie psuje, ale rozjeżdża).
+
 Cel (historyczny): odchudzic `urirun` do malego runtime/contract core i wyniesc
 integracje oraz aplikacje hosta do osobnych paczek. Obecny stan miesza trzy
 warstwy:

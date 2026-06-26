@@ -221,6 +221,36 @@ frames on such a node:
 
 `kvm://.../input/...` additionally needs `ydotool`/`xdotool`/`wtype` on the node.
 
+### GNOME-Wayland capture: the `mutter` ScreenCast backend (2026-06-26)
+
+On a **locked-down GNOME-Wayland** host none of the above work, even from inside the session:
+the screenshot **portal denies non-interactive capture** for an unsandboxed app *even after the
+permission is granted* (`org.freedesktop.portal.Screenshot` → response code 2; proven below the
+connector). `org.gnome.Shell.Screenshot` is "not allowed" (GNOME 43+), `grim` needs a wlroots
+compositor (GNOME isn't), `gnome-screenshot` is interactive-only, `scrot` is X11. So the whole
+chain is blocked for headless capture.
+
+The fix is a capture backend that **bypasses the portal entirely** — the path
+`gnome-remote-desktop` uses, with no per-call consent: **`org.gnome.Mutter.ScreenCast` →
+PipeWire → GStreamer**. Added as `_cap_mutter` in `urirun_connector_kvm/backends.py`
+(`@backend("capture", "mutter", priority=98, platforms=("linux-wayland",))`, above `portal`=95):
+
+```
+Mutter.ScreenCast.CreateSession → RecordMonitor(primary connector from
+DisplayConfig.GetCurrentState) → Start → PipeWireStreamAdded(node)
+→ gst: pipewiresrc path=N num-buffers=1 ! videoconvert ! pngenc snapshot=true ! filesink
+```
+
+It runs via a system python carrying `dbus`+`gi`+`gstreamer` (found by `_mutter_python`; the node
+venv usually lacks them), produces a real full-resolution PNG headless, and **falls through
+(`BackendError`) on non-GNOME** (no Mutter bus) so `portal`/`grim` still take over there. Needs
+`gstreamer1.0` + the `pipewiresrc` element on the host (`gst-inspect-1.0 pipewiresrc`).
+
+Captured files: a *relative* `output` is anchored under `~/.urirun/artifacts/screenshots/`
+(whitelisted by the dashboard preview server `_file_response`), so the screenshot is both
+previewable in chat AND **persistent** (survives `/tmp` cleanup), with a per-capture pid prefix
+to keep distinct runs distinct.
+
 ## Recommended deploy flow
 
 For a fresh or reinstalled node:

@@ -669,27 +669,42 @@ def _warn_dropped_routes(result: dict) -> None:
     )
 
 
+def _resolve_deploy_identity(args: argparse.Namespace, token: "str | None") -> "str | None":
+    """Expand identity path only when no token is provided (ssh-key auth path)."""
+    identity = getattr(args, "identity", None)
+    if identity and not token:
+        return os.path.expanduser(identity)
+    return identity
+
+
+def _build_deploy_kwargs(args: argparse.Namespace) -> dict:
+    """Extract and normalize all deploy-command arguments into a kwargs dict."""
+    bindings, registry = _split_deploy_doc(args.bindings)
+    code = {os.path.basename(p): Path(p).read_text(encoding="utf-8") for p in (args.code or [])}
+    env_pairs = dict(pair.partition("=")[::2] for pair in (args.env or []))
+    token = args.token or os.environ.get("URIRUN_NODE_TOKEN")
+    return {
+        "bindings": bindings,
+        "registry": registry,
+        "allow": args.allow or None,
+        "code": code or None,
+        "env": env_pairs or None,
+        "name": args.name,
+        "token": token,
+        "identity": _resolve_deploy_identity(args, token),
+        "merge": bool(getattr(args, "merge", False)),
+        "persist": bool(getattr(args, "persist", False)),
+    }
+
+
 def deploy_command(args: argparse.Namespace) -> int:
     """`urirun host deploy <node> --bindings F [--allow G] [--code F] [--env K=V]`."""
     config = host_config_for_args(args)
     url = node_url(config, args.node)
-
-    bindings, registry = _split_deploy_doc(args.bindings)
-    code = {os.path.basename(p): Path(p).read_text(encoding="utf-8") for p in (args.code or [])}
-    env = dict(pair.partition("=")[::2] for pair in (args.env or []))
-    token = args.token or os.environ.get("URIRUN_NODE_TOKEN")
-    identity = getattr(args, "identity", None)
-    if identity and not token:
-        identity = os.path.expanduser(identity)
-
-    merge = bool(getattr(args, "merge", False))
+    kwargs = _build_deploy_kwargs(args)
     explicit_replace = bool(getattr(args, "replace", False))
-    result = deploy_to_node(url, bindings=bindings, registry=registry,
-                            allow=args.allow or None, code=code or None, env=env or None,
-                            name=args.name, token=token, identity=identity,
-                            merge=merge,
-                            persist=bool(getattr(args, "persist", False)))
-    if result.get("droppedRoutes") and not merge and not explicit_replace:
+    result = deploy_to_node(url, **kwargs)
+    if result.get("droppedRoutes") and not kwargs["merge"] and not explicit_replace:
         _warn_dropped_routes(result)
     reglib._emit_json(result, "-")
     return 0 if result.get("ok") else 1

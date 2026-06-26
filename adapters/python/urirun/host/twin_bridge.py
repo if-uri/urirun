@@ -5,21 +5,17 @@ from urirun.node.event_schema import _step_inverse  # moved down; re-exported (h
 
 TWIN_EVENT_HUB = EventHub(buffer=100)
 
-_DESKTOP_SCHEMES = ("kvm://", "twin://", "browser://")
-
-_DESKTOP_TASK_KEYWORDS = frozenset({
-    "linkedin", "github", "twitter", "facebook", "instagram", "reddit", "notion",
-    "otwórz przeglądarkę", "open browser", "navigate to", "go to",
-    "opublikuj", "publish", "post on", "kliknij", "click on",
-    "wypełnij formularz", "fill form", "fill the",
-    "screenshot", "zrzut ekranu", "scrape", "scraping",
-    "wpisz w", "type into", "wyszukaj na", "search on",
-    "uruchom aplikację", "launch app", "otwórz aplikację",
-})
+# A flow "touches a desktop surface" when a step drives a screen / input / browser surface. That
+# signal lives in the route's ACTION segment, NOT the scheme — so it is connector-agnostic: any
+# connector (kvm / android / browser / a future one) that exposes these routes is recognized
+# without editing a per-scheme allowlist here. New surface verbs are added by connectors exposing
+# the routes, not by patching the host.
+_SURFACE_ACTIONS = ("/screen/", "/display/", "/input/", "/cdp/", "/page/",
+                    "/browser/", "/window/", "/mouse/", "/keyboard/")
 
 
 def flow_has_desktop_step(flow: dict) -> bool:
-    return any(any(sc in str(s.get("uri", "")) for sc in _DESKTOP_SCHEMES) for s in flow.get("steps", []))
+    return any(any(a in str(s.get("uri", "")) for a in _SURFACE_ACTIONS) for s in flow.get("steps", []))
 
 
 
@@ -201,6 +197,14 @@ def _episode_proofs(timeline: list, env_fingerprint: str) -> list[dict]:
     return proofs
 
 
+def _unwrap_result_candidate(r) -> dict:
+    """Return the inner value dict from a step result, falling back to r itself."""
+    if isinstance(r, dict):
+        val = r.get("value")
+        return val if isinstance(val, dict) else r
+    return {}
+
+
 def _episode_artifacts(results: dict) -> list[dict]:
     """Pull artifact atoms ({uri, sha256, kind, path}) out of execution results, if any.
 
@@ -208,7 +212,7 @@ def _episode_artifacts(results: dict) -> list[dict]:
     Episode references artifacts by content-address without re-hashing anything."""
     arts: list[dict] = []
     for r in (results or {}).values():
-        cand = r.get("value") if isinstance(r, dict) and isinstance(r.get("value"), dict) else (r if isinstance(r, dict) else {})
+        cand = _unwrap_result_candidate(r)
         sha = cand.get("sha256") or cand.get("file_sha256") or ""
         path = cand.get("path") or cand.get("artifactPath") or ""
         if sha or (path and cand.get("kind")):
@@ -222,6 +226,13 @@ def _coerce_next_intent(ni) -> str:
     if isinstance(ni, dict):
         return str(ni.get("uri") or ni.get("id") or "")
     return str(ni or "")
+
+
+def _obs_episode_id(intent_sig: str, env_fp: str, steps: list) -> "str | None":
+    """Return a stable obs-slot episode ID when every step is a query (read-only flow)."""
+    if steps and all("/query/" in str(s.get("uri") or "") for s in steps):
+        return f"obs-{intent_sig[:12]}-{env_fp[:8] or 'noenv'}"
+    return None
 
 
 def capture_episode(*, execute: bool, flow: dict, prompt: str, selected_targets: list,
@@ -246,12 +257,11 @@ def capture_episode(*, execute: bool, flow: dict, prompt: str, selected_targets:
     from urirun.node.twin_store import durable_memory  # noqa: PLC0415
     node = (selected_targets[0] if selected_targets else None) or "host"
     mem = durable_memory()
-    kg = mem.known_good(node) or {}
-    env_fp = kg.get("fingerprint") or ""
+    env_fp = (mem.known_good(node) or {}).get("fingerprint") or ""
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     ep = make_episode(
         experience_id=experience_id, goal=prompt, ts=ts,
-        env_fingerprint=env_fp, env_snapshot=None,  # fingerprint is sufficient; skip full snapshot
+        env_fingerprint=env_fp, env_snapshot=None,
         flow=flow, flow_key=_flow_key(flow),
         execution={"timeline": timeline, "results": results},
         artifacts=_episode_artifacts(results),
@@ -260,17 +270,40 @@ def capture_episode(*, execute: bool, flow: dict, prompt: str, selected_targets:
     )
     intent_sig = intent_signature(prompt)
     ep_dict = ep.to_dict()
-    ep_dict["intent_sig"] = intent_sig          # recall_episode reads this top-level key
-    ep_dict["proofs"] = _episode_proofs(timeline, env_fp)  # fill from reversible steps
-    # Pure-query flows (health checks / observations) reuse a stable slot so they don't
-    # pile up indefinitely — same intent + same env → same key → overwrites prior entry.
-    steps = (flow or {}).get("steps") or []
-    if steps and all("/query/" in str(s.get("uri") or "") for s in steps):
-        ep_dict["episode_id"] = f"obs-{intent_sig[:12]}-{env_fp[:8] or 'noenv'}"
+    ep_dict["intent_sig"] = intent_sig
+    ep_dict["proofs"] = _episode_proofs(timeline, env_fp)
+    obs_id = _obs_episode_id(intent_sig, env_fp, (flow or {}).get("steps") or [])
+    if obs_id:
+        ep_dict["episode_id"] = obs_id
     mem.remember_episode(ep_dict)
     return {"episode_id": ep_dict["episode_id"], "experience_id": experience_id,
             "intent_sig": intent_sig, "outcome_status": status,
             "next_intent": ep.outcome.next_intent}
+
+
+def _node_env_fingerprint(node: str) -> str:
+    """Look up the node's known-good env fingerprint; return "" on any failure."""
+    try:
+        from urirun.node.twin_store import durable_memory as _dm  # noqa: PLC0415
+        return (_dm().known_good(node) or {}).get("fingerprint") or ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _publish_timeline_events(timeline: list, node: str, results: dict,
+                              episode_id: str, experience_id: str,
+                              intent_sig: str, env_fp: str) -> None:
+    """Fire a StepEvent for every non-infra step in timeline."""
+    for step in timeline:
+        if not _is_infra_step(step):
+            step_id = step.get("id") or ""
+            conn_inv = _inverse_from_results(results, step_id, step.get("uri") or "")
+            deg, deg_reason = _step_info_from_results(results, step_id)
+            _publish_step_event(step, node, connector_inverse=conn_inv,
+                                degraded=deg, degraded_reason=deg_reason,
+                                episode_id=episode_id, experience_id=experience_id,
+                                intent_sig=intent_sig, env_fingerprint=env_fp,
+                                url=_url_from_results(results, step_id))
 
 
 def append_twin_widget(execute: bool, flow: dict, attachments: list,
@@ -302,24 +335,9 @@ def append_twin_widget(execute: bool, flow: dict, attachments: list,
     if not execute:
         return
     node = (selected_targets[0] if selected_targets else None) or "host"
-    _results = results or {}
-    # The node's known-good env fingerprint is the live FINGERPRINT for the NOW/NEXT header —
-    # real (env-…), not the synthetic per-step sig that left the panel showing "--".
-    try:
-        from urirun.node.twin_store import durable_memory as _dm  # noqa: PLC0415
-        env_fp = (_dm().known_good(node) or {}).get("fingerprint") or ""
-    except Exception:  # noqa: BLE001 - a missing store must not break the widget
-        env_fp = ""
-    for step in timeline:
-        if not _is_infra_step(step):
-            step_id = step.get("id") or ""
-            conn_inv = _inverse_from_results(_results, step_id, step.get("uri") or "")
-            deg, deg_reason = _step_info_from_results(_results, step_id)
-            _publish_step_event(step, node, connector_inverse=conn_inv,
-                                degraded=deg, degraded_reason=deg_reason,
-                                episode_id=episode_id, experience_id=experience_id,
-                                intent_sig=intent_sig, env_fingerprint=env_fp,
-                                url=_url_from_results(_results, step_id))
+    env_fp = _node_env_fingerprint(node)
+    _publish_timeline_events(timeline, node, results or {}, episode_id, experience_id,
+                             intent_sig, env_fp)
     TWIN_EVENT_HUB.publish({
         "flowCompleted": True,
         "prompt": prompt,
@@ -379,8 +397,19 @@ def twin_plan_summary(att: dict) -> str:
 
 
 def is_desktop_task_prompt(prompt: str) -> bool:
-    """True when a chat prompt targets a desktop/browser action that twin can ground."""
-    return any(kw in prompt.lower() for kw in _DESKTOP_TASK_KEYWORDS)
+    """True when a chat prompt targets a desktop/browser action the twin can ground.
+
+    Delegates to the twin connector's NL classifier (``prompt_plan.derive_task_target``): the
+    connector OWNS the verbs/keywords/task-types (screenshot, social-post, web-search, browser-*),
+    so a new groundable intent is added THERE, not duplicated in this host module. A recognized
+    task-type (``!= "unknown"``) means the connector can actually build a plan — exactly the
+    condition under which a twin-plan preview is worth showing. The twin connector is also what
+    renders that preview, so when it is absent the honest answer is False (nothing could ground it)."""
+    try:
+        from urirun_connector_twin.prompt_plan import derive_task_target  # noqa: PLC0415
+        return str(derive_task_target(prompt).get("taskType") or "unknown") != "unknown"
+    except Exception:  # noqa: BLE001 - twin connector optional; without it there is no preview anyway
+        return False
 
 
 def _nodes_from_store(store) -> dict:

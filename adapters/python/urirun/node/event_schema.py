@@ -71,7 +71,21 @@ class FlowCompletedEvent(TypedDict):
 
 # ────────────────────────────────────── category derivation ──── #
 
-def _step_inverse(step_uri: str) -> tuple[str | None, bool]:
+_STEP_INVERSE_TABLE: "list[tuple[tuple[str, ...], str | None, bool]]" = [
+    # (uri fragments to match, inverse_uri, reversible)
+    (("/query/", "/screen/query/capture"),                    None,                                          True),
+    (("/command/wait", "/query/ready", "/query/verify"),      None,                                          True),
+    (("/session/command/ensure", "/session/command/launch"),  "kvm://host/cdp/session/command/close",        True),
+    (("/page/command/navigate", "/command/navigate"),         "browser://cdp/page/command/back",             True),
+    (("/command/reload",),                                    "browser://cdp/page/command/back",             True),
+    (("/command/scroll",),                                    "kvm://host/input/command/scroll-inverse",     True),
+    (("/command/click", "/command/fill", "/command/type",
+      "/command/submit", "/command/send", "/command/press"),  None,                                          False),
+    (("/command/",),                                          None,                                          False),
+]
+
+
+def _step_inverse(step_uri: str) -> "tuple[str | None, bool]":
     """Return (inverse_uri_or_description, reversible) for a URI step.
 
     Reversibility rules:
@@ -85,23 +99,9 @@ def _step_inverse(step_uri: str) -> tuple[str | None, bool]:
     host StepEvent builder (twin_bridge) derive reversibility from ONE place, without
     twin_bridge living above event_schema (which formed a node→host cycle)."""
     u = step_uri or ""
-    if any(p in u for p in ("/query/", "/query/screenshot", "/screen/query/capture")):
-        return None, True
-    if any(p in u for p in ("/command/wait", "/query/ready", "/query/verify")):
-        return None, True
-    if any(p in u for p in ("/session/command/ensure", "/session/command/launch")):
-        return "kvm://host/cdp/session/command/close", True
-    if any(p in u for p in ("/page/command/navigate", "/command/navigate")):
-        return "browser://cdp/page/command/back", True
-    if "/command/reload" in u:
-        return "browser://cdp/page/command/back", True
-    if "/command/scroll" in u:
-        return "kvm://host/input/command/scroll-inverse", True
-    if any(p in u for p in ("/command/click", "/command/fill", "/command/type",
-                             "/command/submit", "/command/send", "/command/press")):
-        return None, False
-    if "/command/" in u:
-        return None, False
+    for fragments, inverse, reversible in _STEP_INVERSE_TABLE:
+        if any(p in u for p in fragments):
+            return inverse, reversible
     return None, True
 
 

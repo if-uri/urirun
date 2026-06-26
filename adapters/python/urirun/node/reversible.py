@@ -687,6 +687,44 @@ def _normalize_stuck(result: dict) -> dict:
     return out
 
 
+def _build_ledger_transitions(raw_ledger: list) -> "list[Transition]":
+    """Convert raw dicts from a FlowEnvelope ledger into Transition objects."""
+    return [
+        Transition(
+            before=entry.get("before", ""),
+            forward=Action(str(entry.get("uri", "")), {}),
+            inverse=Action(str(entry["inverse"]), entry.get("args") or {}),
+            after=entry.get("after", ""),
+        )
+        for entry in raw_ledger
+        if isinstance(entry.get("inverse"), str) and entry.get("inverse")
+    ]
+
+
+def _rollback_from_ledger(raw_ledger: list, mesh: dict, scan_uri: "str | None") -> dict:
+    """FlowEnvelope path: roll back a pre-built ledger via ReversibleProcess."""
+    import urirun  # noqa: PLC0415
+    if not raw_ledger:
+        return urirun.ok(undone=[], note="ledger carried no reversible transitions")
+    ledger = _build_ledger_transitions(raw_ledger)
+    if not ledger:
+        return urirun.ok(undone=[], note="ledger carried no resolvable inverse URIs")
+    from urirun.node.flow import _flow_transport  # noqa: PLC0415
+    try:
+        transport = _flow_transport(mesh)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"cannot build transport from mesh: {exc}", "undone": []}
+    proc = ReversibleProcess(transport)
+    twin: "Twin | None" = None
+    if scan_uri:
+        try:
+            twin = Twin.scan(transport, scan_uri)
+        except Exception:  # noqa: BLE001
+            pass
+    result = proc.rollback_flow(twin, ledger)
+    return {**urirun.ok(), **_normalize_stuck(result)}
+
+
 def _uri_rollback(payload: dict) -> dict:
     """Handler for twin://<node>/flow/command/rollback.
 
@@ -703,37 +741,8 @@ def _uri_rollback(payload: dict) -> dict:
     raw_ledger = payload.get("ledger")
     mesh = payload.get("mesh") or {}
     scan_uri = payload.get("scan_uri") or payload.get("scanUri") or None
-
     if raw_ledger is not None:
-        if not raw_ledger:
-            return urirun.ok(undone=[], note="ledger carried no reversible transitions")
-        ledger = [
-            Transition(
-                before=entry.get("before", ""),
-                forward=Action(str(entry.get("uri", "")), {}),
-                inverse=Action(str(entry["inverse"]), entry.get("args") or {}),
-                after=entry.get("after", ""),
-            )
-            for entry in raw_ledger
-            if isinstance(entry.get("inverse"), str) and entry.get("inverse")
-        ]
-        if not ledger:
-            return urirun.ok(undone=[], note="ledger carried no resolvable inverse URIs")
-        from urirun.node.flow import _flow_transport  # noqa: PLC0415 - lazy, avoids circular
-        try:
-            transport = _flow_transport(mesh)
-        except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "error": f"cannot build transport from mesh: {exc}", "undone": []}
-        proc = ReversibleProcess(transport)
-        twin: "Twin | None" = None
-        if scan_uri:
-            try:
-                twin = Twin.scan(transport, scan_uri)
-            except Exception:  # noqa: BLE001
-                pass
-        result = proc.rollback_flow(twin, ledger)
-        return {**urirun.ok(), **_normalize_stuck(result)}
-
+        return _rollback_from_ledger(raw_ledger, mesh, scan_uri)
     execution = payload.get("execution") or {}
     from urirun.node.flow import rollback_flow  # noqa: PLC0415 - lazy to avoid circular import
     result = rollback_flow(execution, mesh, scan_uri=scan_uri)

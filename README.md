@@ -162,6 +162,12 @@ urirun connectors install planfile --execute  # actually run pip
 urirun connectors check path/to/connector.manifest.json  # CI guard: package vs hub
 urirun connectors sync-manifest path/to/connector         # write routes/uriSchemes from the code
 urirun connectors sync-manifest path/to/connector --check # CI gate: fail if the manifest drifted
+urirun connectors index                     # list every installed connector (entry-point group)
+urirun connectors resolve kvm               # resolve a scheme → installed connector package
+urirun connectors lint path/to/connector    # lint a connector against style/schema rules
+urirun connectors verify path/to/connector  # verify routes + handler signatures
+urirun connectors doctor                    # load every installed connector, report health
+urirun connectors from-spec connector.toml  # emit bindings from a declarative TOML/JSON spec
 ```
 
 Connectors are polyglot — the runtime only needs a v2 bindings document and an
@@ -306,91 +312,268 @@ the node HTTP surface is
 `/services` and `/enroll`; URI routes are the source of truth, while MCP/A2A are projections.
 Use dry-run first, then execute explicitly.
 
+### Node — uruchomienie serwera na maszynie (np. laptop Lenovo w sieci LAN)
+
+Poniższy przepis pokazuje krok po kroku jak wystawić node na laptopie Lenovo
+pod adresem `192.168.188.201` w sieci lokalnej i połączyć go z hostem.
+
+**Na laptopie Lenovo** (`192.168.188.201`):
+
 ```bash
-# on the host machine
-urirun host init --name operator
-urirun host add-node desktop http://desktop.local:8765
-urirun host add-node laptop  http://laptop.local:8765
-
-urirun host nodes
-urirun host routes
-urirun host agents
-
-# dry-run by default
-urirun host ask "pokaż procesy i logi na wszystkich komputerach"
-
-# execute after review
-URIRUN_LLM_MODEL=openrouter/qwen/qwen3-coder-next \
-urirun host ask "otwórz https://example.com na wszystkich komputerach" --execute
-
-# save the generated URI flow, then run it later
-urirun host ask "sprawdz procesy na lenovo" \
-  --config ~/.urirun/mesh.json \
-  --no-llm \
-  --flow-out .urirun/flows/lenovo-process-check.yaml
-
-urirun host flow run .urirun/flows/lenovo-process-check.yaml \
-  --config ~/.urirun/mesh.json \
+# 1. Zainicjuj konfigurację (tworzy .urirun/node.json)
+urirun node init \
+  --name lenovo \
+  --host 0.0.0.0 \
+  --port 8765 \
+  --registry .urirun/registry.merged.json \
   --execute
-```
 
-`urirun node` is the machine side. A node serves a local registry over HTTP:
-`/routes`, `/mcp/tools`, `/a2a/card`, `/run`, `/events`, `/deploy`, `/enroll`
-and `/health`.
+# 2. Sprawdź wygenerowaną konfigurację
+urirun node config
 
-```bash
-# on each node machine
-urirun node init --name desktop --registry .urirun/registry.merged.json --port 8765
+# 3. Sprawdź dostępne trasy URI
 urirun node routes
-urirun node serve --execute
+
+# 4. Uruchom node (--execute = tryb wykonywania; bez tego: tylko dry-run)
+#    --key-auth: rejestracja kluczem SSH zamiast tokena (bezpieczniejsze)
+#    --require-run-auth: każde /run wymaga podpisu (zalecane w sieci LAN)
+#    --manage: eksponuje node:// URI do zdalnego pip-install connectorów
+#    --pool: warm workers, krótszy czas odpowiedzi dla connectorów argv
+
+urirun node serve \
+  --execute \
+  --host 0.0.0.0 \
+  --port 8765 \
+  --key-auth \
+  --require-run-auth \
+  --manage \
+  --allow 'kvm://**' \
+  --allow 'env://**' \
+  --allow 'screen://**' \
+  --allow 'browser://**'
 ```
 
-Execution remains explicit: `host ask` is dry-run unless `--execute` is passed,
-and `node serve` executes only when started with `--execute` or configured with
-`execute: true`.
-
-On startup the node prints, on **stdout**, a two-line human banner followed by the
-machine `urirun.node.started` JSON event:
+Przy starcie node wypisuje na stdout dwie linie + JSON event:
 
 ```text
-[urirun] urirun 0.4.x · node 'laptop' · http://laptop.local:8765         ← line 1: version
-TOKEN: 6FA5LJ  (≤7 chars · valid 10 min, then rotates — new TOKEN here)  ← line 2: enrollment PIN
-{"event":"urirun.node.started", …, "version":"0.4.x"}
+[urirun] urirun 0.4.x · node 'lenovo' · http://0.0.0.0:8765
+TOKEN: 6FA5LJ  (≤7 znaków · ważny 10 min, potem obraca się automatycznie)
+{"event":"urirun.node.started", "name":"lenovo", "port":8765, …}
 ```
 
-With `--key-auth`, line 2 is a short **enrollment PIN** (≤7 console-safe chars) that
-gates `uri-copy-id`. It is **valid for 10 minutes**, then the node auto-rotates it and
-prints a fresh `TOKEN:` line to stdout — a leaked PIN cannot enroll a key forever. The
-PIN only authorizes key enrollment; it is **not** the 32-char `--admin-token` (that one
-is persisted at `~/.urirun-node/admin-token` and used for `/deploy`/`--token`). Without
-`--key-auth`, line 2 instead says how to read the admin token.
+`TOKEN` to jednorazowy PIN do enrollmentu klucza SSH — ważny 10 minut,
+potem node generuje nowy i wypisuje kolejną linię `TOKEN:`.
 
-For a remotely managed node, enroll the host key once (quoting the PIN shown on the
-node console), deploy additive route surfaces with `--merge`, and verify the result
-before dispatching work:
+**Na hoscie** (maszyna operatora):
 
 ```bash
-# TOKEN = the ≤7-char enrollment PIN currently printed on the node's console (rotates every 10 min)
-uri-copy-id http://laptop.local:8765 -i ~/.ssh/id_ed25519 --enroll-token TOKEN
+# 5. Zarejestruj klucz SSH na nodzie (TOKEN = PIN z konsoli Lenovo, rotuje co 10 min)
+urirun host copy-id http://192.168.188.201:8765 \
+  --identity ~/.ssh/id_ed25519 \
+  --enroll-token TOKEN
 
-urirun host deploy laptop \
-  --bindings bindings.json \
-  --code handler.py \
-  --allow 'app://**' --allow 'screen://**' --allow 'kvm://**' --allow 'browser://**' \
+# 6. Dodaj Lenovo do konfiguracji mesh
+urirun host init --name operator            # jednorazowo, tworzy ~/.urirun/mesh.json
+urirun host add-node lenovo http://192.168.188.201:8765 --kind pc
+
+# 7. Sprawdź że node odpowiada
+urirun host probe lenovo
+urirun host nodes
+urirun host routes                          # wszystkie trasy ze wszystkich nodów
+
+# 8. Wdróż connector KVM (zdalnie, przez sieć, bez SSH)
+urirun host deploy lenovo \
+  --bindings .urirun/kvm-bindings.json \
+  --code kvm_handler.py \
+  --allow 'kvm://**' --allow 'screen://**' \
   --merge \
+  --persist \
   --identity ~/.ssh/id_ed25519
 
-urirun host probe laptop
+# 9. Oglądaj live eventy z Lenovo
+urirun host watch lenovo --follow --identity ~/.ssh/id_ed25519
+
+# 10. Uruchom URI na Lenovo
+urirun host run lenovo env://lenovo/runtime/query/health
+urirun host run lenovo env://lenovo/runtime/query/health \
+  --identity ~/.ssh/id_ed25519 \
+  --stream
+
+# 11. Zapytaj LLM → plan URI → wykonaj na Lenovo
+urirun host ask "sprawdź procesy na lenovo" \
+  --node lenovo \
+  --config ~/.urirun/mesh.json
+
+urirun host ask "zrób zrzut ekranu na lenovo" \
+  --node lenovo \
+  --execute \
+  --config ~/.urirun/mesh.json
+
+# Bez LLM (heurystyka), z zapisem przepływu
+urirun host ask "sprawdz procesy na lenovo" \
+  --no-llm \
+  --flow-out .urirun/flows/lenovo-health.yaml
+
+urirun host flow run .urirun/flows/lenovo-health.yaml --execute
+
+# 12. Transient routing — bez edytowania mesh.json (eksperymenty)
+urirun host routes --node-url lenovo=http://192.168.188.201:8765
+urirun host probe --node-url lenovo=http://192.168.188.201:8765 lenovo
+urirun host run --node-url lenovo=http://192.168.188.201:8765 \
+  lenovo env://lenovo/runtime/query/health
+
+# 13. Diagnoza połączeń, tokenów i connectorów na wszystkich nodach
+urirun host doctor
+
+# 14. Zainstaluj connector automatycznie gdy node zgłosi brak schematu
+urirun host ensure lenovo kvm \
+  --identity ~/.ssh/id_ed25519
+
+# lub nasłuchuj na need:// eventy i dostarczaj connectory na żądanie
+# --once: zaspokój jedno zapotrzebowanie i wyjdź (bez --once: pętla ciągła)
+urirun host supply lenovo \
+  --identity ~/.ssh/id_ed25519
+
+urirun host supply lenovo \
+  --identity ~/.ssh/id_ed25519 \
+  --once
 ```
 
-When the node is not in the saved mesh config, use transient routing instead of
-editing config during experiments:
+Jeśli node nie jest w mesh.json, wszystkie komendy `host` przyjmują
+`--node-url NAME=http://IP:PORT` zamiast nazwy — bez edytowania konfiguracji:
 
 ```bash
-urirun host routes --node-url lenovo=http://192.168.188.201:8766 --json
-urirun host run --node-url lenovo=http://192.168.188.201:8766 \
-  lenovo screen://laptop/portal/query/capture --payload '{}'
+urirun host run --node-url lenovo=http://192.168.188.201:8765 \
+  lenovo screen://lenovo/portal/query/capture --payload '{}'
 ```
+
+### Host — dashboard i chat
+
+```bash
+# Uruchom lokalny dashboard operatora (chat, nody, zadania, artefakty)
+urirun host dashboard serve \
+  --project . \
+  --db ~/.urirun/host.db \
+  --config ~/.urirun/mesh.json \
+  --host 0.0.0.0 \
+  --port 8194
+
+# Dashboard dostępny: http://localhost:8194/
+
+# Dostęp z sieci LAN (np. z telefonu) — musi być host 0.0.0.0
+# Na telefonie skanuj QR lub otwórz http://192.168.188.1:8194/
+
+# Ze startup QR dla skanera telefonu
+urirun host dashboard serve \
+  --project . \
+  --config ~/.urirun/mesh.json \
+  --host 0.0.0.0 \
+  --port 8194 \
+  --startup-qr
+
+# HTTPS (wymagane przez aparat na telefonie)
+urirun host dashboard serve \
+  --host 0.0.0.0 \
+  --port 8194 \
+  --tls-cert ~/.urirun/certs/dashboard.crt \
+  --tls-key  ~/.urirun/certs/dashboard.key \
+  --startup-qr
+
+# Dashboard z transient nodem (bez edytowania mesh.json)
+urirun host dashboard serve \
+  --node-url lenovo=http://192.168.188.201:8765 \
+  --port 8194
+
+# Wypisz URL dashboardu
+urirun host dashboard url --host 0.0.0.0 --port 8194
+```
+
+### Node — pozostałe komendy
+
+```bash
+# Lista aktywnych nodów na tej maszynie (probe /health)
+urirun node list
+urirun node list --host 0.0.0.0 --ports 8760-8800 --json
+
+# Zatrzymaj node
+urirun node stop --port 8765
+urirun node stop --all
+
+# Zatrzymaj i wznów z nową konfiguracją
+urirun node stop --port 8765
+urirun node serve --execute --port 8765 --key-auth
+```
+
+### Pełna lista komend `urirun host`
+
+| Komenda | Opis |
+|---------|------|
+| `urirun host init` | Utwórz mesh.json |
+| `urirun host add-node NAME URL` | Dodaj/zaktualizuj node w mesh.json |
+| `urirun host config` | Wypisz mesh.json |
+| `urirun host nodes` | Lista nodów i liczba agentów |
+| `urirun host routes` | Trasy URI ze wszystkich nodów |
+| `urirun host agents` | A2A karty, MCP narzędzia i procesy URI |
+| `urirun host probe NODE` | Snapshot powierzchni node'a, test tras |
+| `urirun host watch NODE` | Stream live eventów (SSE) z node'a |
+| `urirun host run NODE URI` | Uruchom URI na nodzie |
+| `urirun host deploy NODE` | Wdróż bindings + kod na node (bez SSH) |
+| `urirun host copy-id NODE` | Zarejestruj klucz SSH na nodzie |
+| `urirun host ensure NODE SCHEME` | Zainstaluj connector jeśli brakuje schematu |
+| `urirun host supply NODE` | Nasłuchuj need:// i dostarczaj connectory (`--once`: jedno zdarzenie i wyjdź) |
+| `urirun host ask PROMPT` | NL → plan URI → wykonaj na nodach |
+| `urirun host flow run FILE` | Uruchom zapisany przepływ YAML/JSON |
+| `urirun host doctor` | Diagnoza połączeń, auth i connectorów |
+| `urirun host dashboard serve` | Dashboard operatora (chat, nody, zadania) |
+| `urirun host task ...` | Zarządzanie zadaniami planfile |
+| `urirun host data ...` | Kontekst SQLite (datasety, rekordy, artefakty) |
+| `urirun host monitor ...` | Monitoring HTTP/DNS domen |
+
+### Pełna lista komend `urirun node`
+
+| Komenda | Opis |
+|---------|------|
+| `urirun node init` | Utwórz .urirun/node.json |
+| `urirun node config` | Wypisz konfigurację |
+| `urirun node routes` | Lista tras URI w rejestrze |
+| `urirun node list` | Lista aktywnych nodów na tej maszynie |
+| `urirun node serve` | Uruchom node HTTP (dry-run bez `--execute`) |
+| `urirun node stop` | Zatrzymaj node(y) na tej maszynie |
+
+**Opcje `urirun node serve`:**
+
+| Opcja | Domyślnie | Opis |
+|-------|-----------|------|
+| `--host` | `127.0.0.1` | Interfejs nasłuchu (`0.0.0.0` = wszystkie) |
+| `--port` | `8765` | Port HTTP |
+| `--execute` | wyłączone | Tryb wykonywania (bez: dry-run) |
+| `--key-auth` | wyłączone | Auth kluczem SSH zamiast tokena |
+| `--admin-token TOKEN` | wyłączone | Token do `/deploy` i zdalnego zarządzania |
+| `--generate-token` | wyłączone | Wygeneruj i zapisz token do `~/.urirun-node/admin-token` |
+| `--require-run-auth` | wyłączone | Wymagaj auth na każde `/run` (zalecane w sieci LAN) |
+| `--manage` | wyłączone | Eksponuj `node://` URI do zdalnego pip-install |
+| `--pool` | wyłączone | Warm workers, szybszy start connectorów argv |
+| `--allow GLOB` | (brak) | Trasy dozwolone do wykonania (powtarzalne) |
+| `--allow-secrets` | wyłączone | Pozwól na `secret://` resolution z `/run` |
+| `--public-url URL` | (brak) | Publiczny URL dla eventów i enrollment |
+| `--registry FILE` | z config | Plik rejestru do załadowania |
+
+**Opcje `urirun host dashboard serve`:**
+
+| Opcja | Domyślnie | Opis |
+|-------|-----------|------|
+| `--project DIR` | `.` | Katalog z `.planfile/` |
+| `--db FILE` | `~/.urirun/host.db` | Baza SQLite |
+| `--config FILE` | `.urirun/mesh.json` | Konfiguracja mesh |
+| `--host` | `127.0.0.1` | Interfejs (`0.0.0.0` = sieć LAN) |
+| `--port` | `8194` | Port HTTP |
+| `--tls-cert FILE` | (brak) | Cert HTTPS (wymagany przez aparat telefonu) |
+| `--tls-key FILE` | (brak) | Klucz HTTPS |
+| `--startup-qr` | wyłączone | Wypisz QR skanera telefonu przy starcie |
+| `--qr-url URL` | (auto) | URL kodowany w QR (domyślnie `/scanner`) |
+| `--identity FILE` | (brak) | Klucz SSH do podpisywania wywołań do nodów |
+| `--token TOKEN` | (brak) | Token do nodów z `--require-run-auth` |
+| `--node-url NAME=URL` | (brak) | Transient node bez edytowania mesh.json |
 
 ## Planfile-backed host tasks
 
