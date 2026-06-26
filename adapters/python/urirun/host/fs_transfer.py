@@ -317,3 +317,49 @@ def remote_read_error(run: dict, value: Any, *, expected_sha: str, remote_sha: s
     return "remote read failed without a result"
 
 
+
+
+def node_client(url: str, *, token: str | None = None, identity: str | None = None):
+    from urirun.node.client import NodeClient
+
+    return NodeClient(url, token=token, identity=identity)
+
+
+
+
+def node_token_for(node: str, fallback: str | None = None) -> str | None:
+    """Resolve a node's management token (X-Urirun-Token) from the keyring — set by the user via
+    the dashboard Nodes view (service 'urirun-node-token', account = node name) — falling back to
+    the host-wide token. Read-only on the secret store; the value is never logged or echoed."""
+    name = (node or "").strip()
+    if name:
+        try:
+            import keyring
+            value = keyring.get_password("urirun-node-token", name)
+            if value:
+                return value
+        except Exception:  # noqa: BLE001 - no keyring / no backend -> host-wide fallback
+            pass
+    return fallback
+
+
+
+
+def run_node_uri(
+    node_url: str,
+    uri: str,
+    payload: dict,
+    *,
+    token: str | None = None,
+    identity: str | None = None,
+    timeout: float = 120.0,
+) -> dict:
+    client = node_client(node_url, token=token, identity=identity)
+    envelope = client.run(uri, payload, timeout=timeout)
+    value = client.value(envelope)
+    value_ok = not isinstance(value, dict) or value.get("ok", True)
+    return {
+        "ok": bool(envelope.get("ok") and value_ok),
+        "envelope": envelope,
+        "value": value,
+    }

@@ -110,6 +110,9 @@ from .fs_transfer import (
     envelope_error_message as _envelope_error_message,
     remote_write_error as _remote_write_error,
     remote_read_error as _remote_read_error,
+    node_client as _node_client,
+    node_token_for as _node_token_for,
+    run_node_uri as _run_node_uri,
 )
 from .node_types import (
     annotate_node_types as _annotate_node_types_impl,
@@ -777,48 +780,6 @@ def _node_url_from_config(config: str | None, node_urls: list[str] | None, node:
         return str(_mesh().node_url(_host_config(config, node_urls), node)).rstrip("/")
     except (Exception, SystemExit):  # mesh.node_url exits for unknown nodes.
         return None
-
-
-def _node_client(url: str, *, token: str | None = None, identity: str | None = None):
-    from urirun.node.client import NodeClient
-
-    return NodeClient(url, token=token, identity=identity)
-
-
-def _node_token_for(node: str, fallback: str | None = None) -> str | None:
-    """Resolve a node's management token (X-Urirun-Token) from the keyring — set by the user via
-    the dashboard Nodes view (service 'urirun-node-token', account = node name) — falling back to
-    the host-wide token. Read-only on the secret store; the value is never logged or echoed."""
-    name = (node or "").strip()
-    if name:
-        try:
-            import keyring
-            value = keyring.get_password("urirun-node-token", name)
-            if value:
-                return value
-        except Exception:  # noqa: BLE001 - no keyring / no backend -> host-wide fallback
-            pass
-    return fallback
-
-
-def _run_node_uri(
-    node_url: str,
-    uri: str,
-    payload: dict,
-    *,
-    token: str | None = None,
-    identity: str | None = None,
-    timeout: float = 120.0,
-) -> dict:
-    client = _node_client(node_url, token=token, identity=identity)
-    envelope = client.run(uri, payload, timeout=timeout)
-    value = client.value(envelope)
-    value_ok = not isinstance(value, dict) or value.get("ok", True)
-    return {
-        "ok": bool(envelope.get("ok") and value_ok),
-        "envelope": envelope,
-        "value": value,
-    }
 
 
 def node_test_routes(project: str, db: str | None, config: str | None, payload: dict, *,
@@ -1567,11 +1528,6 @@ def _scanner_bridge_deps() -> ScannerBridgeDeps:
         add_chat_message=_add_chat_message,
         add_log=lambda db, stream, event, detail: _host_db().add_log(db, stream, event, detail),
     )
-
-
-def uri_event(db: str | None, query: dict) -> dict:
-    """Thin wrapper: injects _scanner_bridge_deps() for tests that patch _host_db."""
-    return _uri_event_impl(_scanner_bridge_deps(), db, query)
 
 
 def _register_scanner_result(
