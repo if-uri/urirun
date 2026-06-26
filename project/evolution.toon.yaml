@@ -1,30 +1,34 @@
-# code2llm/evolution | 1829 func | 99f | 2026-06-26
+# code2llm/evolution | 1834 func | 99f | 2026-06-26
 # generated in 0.01s
 
-NEXT[3] (ranked by impact):
+NEXT[4] (ranked by impact):
   [1] !! SPLIT           adapters/python/urirun/host/host_dashboard.py
-      WHY: 4552L, 0 classes, max CC=14
-      EFFORT: ~4h  IMPACT: 63728
+      WHY: 4163L, 0 classes, max CC=14
+      EFFORT: ~4h  IMPACT: 58282
 
   [2] !! SPLIT           adapters/python/urirun/runtime/v2.py
       WHY: 2003L, 1 classes, max CC=14
       EFFORT: ~4h  IMPACT: 28042
 
-  [3] !! SPLIT           adapters/python/urirun/host/html_templates.py
+  [3] !  SPLIT-FUNC      _thin_driver  CC=16  fan=15
+      WHY: CC=16 exceeds 15
+      EFFORT: ~1h  IMPACT: 240
+
+  [4] !! SPLIT           adapters/python/urirun/host/html_templates.py
       WHY: 4723L, 0 classes, max CC=0
       EFFORT: ~4h  IMPACT: 0
 
 
 RISKS[3]:
   ⚠ Splitting adapters/python/urirun/host/html_templates.py may break 0 import paths
-  ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 155 import paths
+  ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 150 import paths
   ⚠ Splitting adapters/python/urirun/runtime/v2.py may break 122 import paths
 
 METRICS-TARGET:
   CC̄:          4.8 → ≤3.4
-  max-CC:      15 → ≤7
+  max-CC:      16 → ≤8
   god-modules: 24 → 0
-  high-CC(≥15): 3 → ≤1
+  high-CC(≥15): 4 → ≤2
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):

@@ -69,7 +69,7 @@ class FakeMesh:
     def registry_from_routes(self, routes):
         return {"routes": routes}
 
-    def execute_flow(self, flow, mesh, registry, execute=False, memory=None):
+    def execute_flow(self, flow, mesh, registry, execute=False, memory=None, dispatch_uri=None, envelope=None):
         self.executed = execute
         return {
             "ok": True,

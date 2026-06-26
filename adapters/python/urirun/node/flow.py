@@ -196,6 +196,23 @@ def _thin_update_ledger(envelope: "FlowEnvelope", uri: str, r: dict) -> None:
                               inverse_args=inv.get("args") or {})
 
 
+def _thin_goal_verify(dispatch_uri, envelope, timeline: list, results: dict):
+    """Post-loop goal check.  Returns a rollback dict on failure, None on pass.
+
+    Treats registry-not-found (twin connector absent) as an implicit pass so
+    the flow runner works without the connector installed."""
+    envelope.record(_THIN_GOAL_URI, "call")
+    goal_r = dispatch_uri(_THIN_GOAL_URI, {"goal": envelope.goal, "results": results}) or {}
+    _goal_err_type = (goal_r.get("error") or {}).get("type")
+    if not goal_r.get("ok", True) and _goal_err_type == "registry":
+        goal_r = {"ok": True, "goalMet": True, "skipped": "no-verify-handler"}
+    goal_ok = goal_r.get("ok", True)
+    envelope.record(_THIN_GOAL_URI, "return", ok=goal_ok, next=_next_kind(goal_r))
+    if not goal_ok:
+        return _thin_rollback(dispatch_uri, envelope, timeline, results, "goal-failed")
+    return None
+
+
 def _thin_driver(
     steps: list[dict],
     envelope: FlowEnvelope,
@@ -241,6 +258,9 @@ def _thin_driver(
         entry: dict = {"id": sid, "uri": uri, "ok": r.get("ok", True), "target": route_target(uri)}
         if not r.get("ok"):
             entry["error"] = r.get("error")
+        for _k in ("type", "action", "drift"):  # pass-through metadata from step result
+            if r.get(_k) is not None:
+                entry[_k] = r[_k]
         timeline.append(entry)
         results[sid] = r
 
@@ -1425,23 +1445,101 @@ def _orchestrate_steps(flow: dict, registry: dict, execute: bool, recover: bool,
     return result
 
 
-def _plan_with_preflight(steps: list[dict], *, execute: bool) -> list[dict]:
-    """Prepend a twin://host/flow/command/preflight step when the plan has CDP steps.
+def _make_memory_dispatch(base_dispatch, memory: TwinMemory, flow: dict, registry: dict):
+    """Wrap dispatch_uri to handle Twin memory operations in-process.
 
-    This makes preflight a first-class step — observable in the timeline and
-    replaceable per-node — instead of a hard-coded side-effect in the driver."""
+    Intercepts two URI patterns:
+    - ``*/env/query/drift``: capture known-good (sticky first-run) then check for drift.
+      Returns ``{ok, drifted, known, reason, next: {kind: continue}}`` — informational,
+      never blocks the flow.
+    - ``*/memory/command/remember``: update known-good per-node and save the flow record.
+      Called at the end of a successful flow.
+
+    Everything else passes through to base_dispatch unchanged."""
+    flow_key = _flow_key(flow)
+
+    def _live_profile(node: str) -> dict:
+        # Use _fetch_env_profile for consistency with the orchestrator path and
+        # testability (tests that patch _fetch_env_profile work unchanged).
+        prof = _fetch_env_profile({"uri": f"kvm://{node}/_"}, registry)
+        return prof if isinstance(prof, dict) else {}
+
+    def dispatch(uri: str, payload: dict) -> dict:
+        if "/env/query/drift" in uri:
+            node = payload.get("node") or route_target(uri) or "host"
+            profile = _live_profile(node)
+            if not profile:
+                return {"ok": True, "known": False, "drifted": False,
+                        "skipped": "no-profile", "next": {"kind": "continue"}}
+            if memory.known_good(node) is None:
+                memory.remember(node, profile)  # sticky first-run baseline
+            dr = memory.drift(node, profile)
+            result = {"ok": True, **dr, "next": {"kind": "continue"}}
+            if dr.get("drifted") or not dr.get("known"):
+                result["type"] = "twin-drift"
+                result["action"] = "environment-drift"
+                result["drift"] = dr
+            return result
+
+        if "/memory/command/remember" in uri:
+            nodes = payload.get("nodes") or []
+            for node in nodes:
+                profile = _live_profile(node)
+                if profile:
+                    memory.remember(node, profile)
+            record = dict(payload.get("record") or {})
+            record["flowKey"] = flow_key
+            memory.remember_flow(flow_key, record)
+            return {"ok": True, "remembered": True, "flowKey": flow_key}
+
+        return base_dispatch(uri, payload)
+
+    return dispatch
+
+
+_THIN_DRIFT_SUFFIX = "/env/query/drift"
+_THIN_REMEMBER_URI = "twin://host/memory/command/remember"
+
+
+def _plan_with_preflight(steps: list[dict], *, execute: bool) -> list[dict]:
+    """Prepend a twin://host/flow/command/preflight step when the plan has CDP steps."""
     if not execute:
         return steps
     has_cdp = any("/cdp/page/" in str(s.get("uri") or "") for s in steps)
     if not has_cdp:
         return steps
-    preflight_step = {
-        "id": "preflight",
-        "uri": _THIN_PREFLIGHT_URI,
-        "payload": {"steps": steps},
+    return [{"id": "preflight", "uri": _THIN_PREFLIGHT_URI,
+             "payload": {"steps": steps}, "depends_on": []}, *steps]
+
+
+def _build_thin_plan(steps: list[dict], flow: dict, *, execute: bool,
+                     memory: TwinMemory | None = None) -> list[dict]:
+    """Build the complete step plan for _thin_driver.
+
+    Order: preflight (CDP) → drift checks (memory) → original steps → remember (memory).
+    Each augmentation is skipped when not applicable: no CDP → no preflight,
+    no memory → no drift/remember, dry-run → original steps only."""
+    plan = _plan_with_preflight(steps, execute=execute)
+    if not execute or memory is None:
+        return plan
+    kvm_targets = sorted({route_target(str(s.get("uri") or ""))
+                          for s in steps if str(s.get("uri") or "").startswith("kvm://")})
+    kvm_targets = [t for t in kvm_targets if t]
+    if not kvm_targets:
+        return plan
+    drift_steps = [
+        {"id": f"twin:drift:{t}", "uri": f"twin://{t}{_THIN_DRIFT_SUFFIX}",
+         "payload": {"node": t}, "depends_on": []}
+        for t in kvm_targets
+    ]
+    remember_step = {
+        "id": "memory:remember",
+        "uri": _THIN_REMEMBER_URI,
+        "payload": {"nodes": kvm_targets,
+                    "record": {"steps": flow.get("steps") or []}},
         "depends_on": [],
     }
-    return [preflight_step, *steps]
+    return drift_steps + plan + [remember_step]
 
 
 def execute_flow(flow: dict, mesh: dict, registry: dict, execute: bool, *, recover: bool = True,
@@ -1463,18 +1561,19 @@ def execute_flow(flow: dict, mesh: dict, registry: dict, execute: bool, *, recov
     if envelope is not None and dispatch_uri is not None:
         old_map = _set_service_map(mesh)
         try:
-            steps = _plan_with_preflight(flow.get("steps") or [], execute=execute)
-            result = _thin_driver(steps, envelope, dispatch_uri,
-                                  registry=registry, execute=execute,
-                                  max_retries=max_retries,
-                                  max_remediations=max_remediations,
-                                  max_wall_clock=max_wall_clock)
+            _dispatch = (
+                _make_memory_dispatch(dispatch_uri, memory, flow, registry)
+                if memory is not None else dispatch_uri
+            )
+            steps = _build_thin_plan(flow.get("steps") or [], flow,
+                                     execute=execute, memory=memory)
+            return _thin_driver(steps, envelope, _dispatch,
+                                registry=registry, execute=execute,
+                                max_retries=max_retries,
+                                max_remediations=max_remediations,
+                                max_wall_clock=max_wall_clock)
         finally:
             _restore_service_map(old_map)
-        if memory is not None and result.get("ok"):
-            _update_known_good(flow, registry, memory)
-            _remember_known_good_flow(flow, result, memory)
-        return result
     old_map = _set_service_map(mesh)
     results: dict = {}
     timeline: list = []

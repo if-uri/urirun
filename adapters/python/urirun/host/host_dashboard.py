@@ -308,92 +308,11 @@ from .widgets import (
     service_widget_summary as _service_widget_summary_impl,
 )
 
-
 try:
-    from docid.dedup import (
-        FINGERPRINT_DISTINCT_FIELDS as _DOCID_FINGERPRINT_DISTINCT_FIELDS,
-        VISUAL_NEAR_DISTANCE as _DOCID_VISUAL_NEAR_DISTANCE,
-        VISUAL_STRONG_DISTANCE as _DOCID_VISUAL_STRONG_DISTANCE,
-        business_key as _dedup_business_key,
-        dhash_distance as _dedup_dhash_distance,
-        document_id as _dedup_document_id,
-        document_matches as _dedup_document_matches,
-        fingerprint_match_count as _dedup_fingerprint_match_count,
-        image_dhash as _dedup_image_dhash,
-        image_phash as _dedup_image_phash,
-        metadata_completeness as _dedup_metadata_completeness,
-        normalize_text as _dedup_normalize_text,
-        transaction_fingerprint as _dedup_transaction_fingerprint,
-    )
-    from docid.visual_fingerprint import FieldSource as _DocidFieldSource
-    from docid.visual_fingerprint import merge_records as _docid_merge_records
-except Exception as err:  # noqa: BLE001
-    _DOCID_DEDUP_IMPORT_ERROR = err
-    _DOCID_FINGERPRINT_DISTINCT_FIELDS = ("number", "auth", "time", "card")
-    _DOCID_VISUAL_NEAR_DISTANCE = 10
-    _DOCID_VISUAL_STRONG_DISTANCE = 6
-    _DocidFieldSource = None
-    _dedup_business_key = None
-    _dedup_dhash_distance = None
-    _dedup_document_id = None
-    _dedup_document_matches = None
-    _dedup_fingerprint_match_count = None
-    _dedup_image_dhash = None
-    _dedup_image_phash = None
-    _dedup_metadata_completeness = None
-    _dedup_normalize_text = None
-    _dedup_transaction_fingerprint = None
-    _docid_merge_records = None
-else:
+    import docid.dedup as _docid_dedup_check  # noqa: F401
     _DOCID_DEDUP_IMPORT_ERROR = None
-
-
-_FINGERPRINT_DISTINCT_FIELDS = _DOCID_FINGERPRINT_DISTINCT_FIELDS
-_VISUAL_NEAR_DISTANCE = _DOCID_VISUAL_NEAR_DISTANCE
-_VISUAL_STRONG_DISTANCE = _DOCID_VISUAL_STRONG_DISTANCE
-
-if _dedup_transaction_fingerprint is not None:
-    _transaction_fingerprint = _dedup_transaction_fingerprint
-    _fingerprint_match_count = _dedup_fingerprint_match_count
-    _image_dhash = _dedup_image_dhash
-    _image_phash = _dedup_image_phash
-    _dhash_distance = _dedup_dhash_distance
-    _metadata_completeness = _dedup_metadata_completeness
-    _document_matches = _dedup_document_matches
-    _business_key = _dedup_business_key
-else:
-    def _transaction_fingerprint(text: str) -> dict:
-        return {}
-
-    def _fingerprint_match_count(a: dict | None, b: dict | None) -> int:
-        return 0
-
-    def _image_dhash(path: str | Path) -> str:
-        return ""
-
-    def _image_phash(path: str | Path) -> str:
-        return ""
-
-    def _dhash_distance(a: str, b: str) -> int:
-        return 999
-
-    def _metadata_completeness(meta: dict | None) -> int:
-        return 0
-
-    def _document_matches(existing: dict, *, doc_id: str, source_sha256: str, text_sha256: str,
-                          fingerprint: dict, dhash: str, phash: str = "",
-                          metadata: dict | None = None, text: str = "") -> str:
-        if doc_id and existing.get("docId") == doc_id:
-            return "docId"
-        if source_sha256 and existing.get("sourceSha256") == source_sha256:
-            return "sourceSha256"
-        if text_sha256 and existing.get("textSha256") == text_sha256:
-            return "textSha256"
-        return ""
-
-    def _business_key(meta: dict | None):
-        return None
-
+except Exception as _err:  # noqa: BLE001
+    _DOCID_DEDUP_IMPORT_ERROR = _err
 
 _SERVICE_LOCK = threading.Lock()
 _SERVICE_SERVERS: dict[str, ThreadingHTTPServer] = {}
