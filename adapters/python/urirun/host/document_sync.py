@@ -16,9 +16,47 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import quote
 
-from .contracts import file_transfer_verification
-
 _DOCUMENT_INDEX_LOCK = threading.Lock()
+
+_DEFAULT_MISSING_LIMIT = 50
+
+
+def _verification_check(name: str, *, ok: bool, expected: int, actual: int, **meta: Any) -> dict:
+    row: dict[str, Any] = {"check": name, "ok": bool(ok), "expected": int(expected), "actual": int(actual)}
+    row.update({k: v for k, v in meta.items() if v is not None})
+    return row
+
+
+def file_transfer_verification(
+    *,
+    contract: str,
+    expected: list[str],
+    uploaded: list[str],
+    verified: list[str],
+    mode: str,
+    missing_limit: int = _DEFAULT_MISSING_LIMIT,
+) -> dict:
+    """Verification contract for file-copy style URI flows (moved from contracts.py)."""
+    expected_set = list(expected)
+    uploaded_set = set(uploaded)
+    verified_set = set(verified)
+    missing = [rel for rel in expected_set if rel not in verified_set]
+    checks = [
+        _verification_check("write_ack_for_every_expected_file",
+                            ok=len(uploaded_set) == len(expected_set),
+                            expected=len(expected_set), actual=len(uploaded_set)),
+        _verification_check("sha256_verified_for_every_expected_file",
+                            ok=len(verified_set) == len(expected_set),
+                            expected=len(expected_set), actual=len(verified_set), mode=mode),
+    ]
+    return {
+        "contract": contract, "ok": all(c["ok"] for c in checks), "mode": mode,
+        "expectedFiles": len(expected_set), "uploadedFiles": len(uploaded_set),
+        "verifiedFiles": len(verified_set), "failedFiles": len(missing),
+        "missing": missing[:missing_limit],
+        "truncatedMissing": max(0, len(missing) - missing_limit),
+        "checks": checks,
+    }
 
 
 # --------------------------------------------------------------------------- #

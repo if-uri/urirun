@@ -13,8 +13,12 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import quote
 
-from .widgets import query_value
 from .document_sync import load_document_index as _load_document_index, file_sha256 as _file_sha256
+
+
+def __query_value(query: dict, name: str, default: "str | None" = None) -> "str | None":
+    values = query.get(name)
+    return values[0] if values else default
 
 
 PAGE_ACTION_LOCK = threading.Lock()
@@ -387,15 +391,15 @@ def scanner_session(deps: ScannerBridgeDeps, db: str | None, payload: dict) -> d
 
 
 def uri_event(deps: ScannerBridgeDeps, db: str | None, query: dict[str, list[str]]) -> dict:
-    event = query_value(query, "e", "event") or "event"
+    event = _query_value(query, "e", "event") or "event"
     detail = {
-        "site": query_value(query, "s", ""),
+        "site": _query_value(query, "s", ""),
         "event": event,
-        "path": query_value(query, "p", ""),
-        "url": query_value(query, "u", ""),
-        "referrer": query_value(query, "r", ""),
-        "label": query_value(query, "l", ""),
-        "value": query_value(query, "v", ""),
+        "path": _query_value(query, "p", ""),
+        "url": _query_value(query, "u", ""),
+        "referrer": _query_value(query, "r", ""),
+        "label": _query_value(query, "l", ""),
+        "value": _query_value(query, "v", ""),
         "raw": {
             key: values[0] if len(values) == 1 else values
             for key, values in query.items()
