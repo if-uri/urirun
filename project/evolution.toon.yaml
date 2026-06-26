@@ -1,4 +1,4 @@
-# code2llm/evolution | 1741 func | 111f | 2026-06-26
+# code2llm/evolution | 1745 func | 111f | 2026-06-26
 # generated in 0.01s
 
 NEXT[9] (ranked by impact):
@@ -48,7 +48,7 @@ METRICS-TARGET:
   CC̄:          4.7 → ≤3.3
   max-CC:      21 → ≤10
   god-modules: 25 → 0
-  high-CC(≥15): 15 → ≤7
+  high-CC(≥15): 16 → ≤8
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
@@ -76,4 +76,4 @@ PATTERNS (language parser shared logic):
     - Standardized FunctionInfo/ClassInfo models
 
 HISTORY:
-  prev CC̄=4.6 → now CC̄=4.7
+  prev CC̄=4.7 → now CC̄=4.7

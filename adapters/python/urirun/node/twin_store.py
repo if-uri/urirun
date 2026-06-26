@@ -113,12 +113,17 @@ def durable_memory(path: str | None = None):
       ``_flows``         → flow_key  → flow record               (known-good flows, fully-ok only)
       ``_degraded_flows``→ flow_key  → flow record               (ran but degraded — NOT known-good)
       ``_episodes``      → episode_id → Episode.to_dict()        (episodic memory)
-      ``_proofs``        → proof_key  → {uri, verdict, …}        (reversibility proofs, positives only)"""
+      ``_proofs``        → proof_key  → {uri, verdict, …}        (reversibility proofs, positives only)
+      ``_skills``        → name      → {flow, episode_id, …}     (promoted, replayable named skills)
+      ``_sessions``      → session_id → {steps: [...]}           (trace-first session recorder)"""
     from urirun.node.reversible import TwinMemory
     file_store = JsonFileStore(path)
     flow_store = _NamespacedStore(file_store, "_flows")
     degraded_store = _NamespacedStore(file_store, "_degraded_flows")
     episode_store = _NamespacedStore(file_store, "_episodes")
     proof_store = _NamespacedStore(file_store, "_proofs")
+    skill_store = _NamespacedStore(file_store, "_skills")
+    session_store = _NamespacedStore(file_store, "_sessions")
     return TwinMemory(store=file_store, flow_store=flow_store, degraded_store=degraded_store,
-                      episode_store=episode_store, proof_store=proof_store)
+                      episode_store=episode_store, proof_store=proof_store,
+                      skill_store=skill_store, session_store=session_store)

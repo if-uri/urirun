@@ -90,6 +90,16 @@ PRESETS: dict[str, dict] = {
         "allow_outward": ("urirun.runtime.", "urirun.connectors."),
         "allow_exact": ("urirun",),
     },
+    "G": {
+        "name": "flow",
+        "package": {"urirun.node.flow", "urirun.node.flow_planner", "urirun.node.flow_thin",
+                    "urirun.node.flow_verify", "urirun.node.recovery", "urirun.node.diagnostics"},
+        "package_prefixes": (),
+        # flow sits on kernel + connectors + the node substrate; HOST edges + cycles are blockers.
+        # (Whether it reaches TWIN by import vs URI is checked separately by grep.)
+        "allow_outward": ("urirun.runtime.", "urirun.connectors.", "urirun.node."),
+        "allow_exact": ("urirun",),
+    },
 }
 
 

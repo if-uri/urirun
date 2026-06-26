@@ -749,6 +749,15 @@ class _ExecutorProxy(dict):
 
 EXECUTORS = _ExecutorProxy(_BASE_EXECUTORS)
 
+# CLI bridge: upper-layer modules register command handlers here so v2.py CLI
+# never needs to import them directly. Key = command or sub-key used by _cmd_* dispatch.
+_CLI_BRIDGE: dict = {}
+
+
+def register_cli_command(key: str, fn) -> None:
+    """Register a CLI command implementation from an upper-layer module."""
+    _CLI_BRIDGE[key] = fn
+
 
 def _builtin_error_route_entry(translation: dict) -> dict | None:
     if translation.get("package") != "error":
@@ -1524,9 +1533,11 @@ def _cmd_add_pypi(args, parser) -> int:
 
 
 def _cmd_add_openapi(args, parser) -> int:
-    from urirun.connectors import openapi_import
-
-    return openapi_import.add_openapi_command(args)
+    fn = _CLI_BRIDGE.get("add_openapi")
+    if fn is None:
+        reglib._emit_json({"ok": False, "error": "openapi connector not available (import urirun.connectors.openapi_import to activate)"}, "-")
+        return 1
+    return fn(args)
 
 
 def _cmd_gen(args, parser) -> int:
@@ -1601,15 +1612,14 @@ def _resolve_pip_targets(ids, source, catalog_url, *, org="if-uri", ref=None):
         suffix = f"@{ref}" if ref else ""
         targets = [f"{i} @ git+https://github.com/{org}/{i}.git{suffix}" for i in ids]
         return targets, False, {"fromCatalog": [], "direct": targets}
-    from urirun.connectors import connect_catalog
-    try:
-        catalog = connect_catalog.fetch_catalog(catalog_url)
-        resolved = connect_catalog.resolve_install(catalog, ids)
-        specs = [s["pipSpec"] for s in (resolved.get("pipSpecs") or [])]
-        unknown = resolved.get("unknown") or []
-    except Exception:  # noqa: BLE001 - catalog offline / unreachable -> treat all as raw packages
-        specs, unknown = [], list(ids)
-    return list(specs) + unknown, False, {"fromCatalog": specs, "direct": unknown}
+    fn = _CLI_BRIDGE.get("catalog_resolve_install")
+    if fn is not None:
+        try:
+            specs, unknown = fn(catalog_url, ids)
+        except Exception:  # noqa: BLE001 - catalog offline / unreachable -> treat all as raw packages
+            specs, unknown = [], list(ids)
+        return list(specs) + unknown, False, {"fromCatalog": specs, "direct": unknown}
+    return list(ids), False, {"fromCatalog": [], "direct": list(ids)}
 
 
 def _pip_install_args(targets, *, upgrade, editable):
@@ -1712,7 +1722,7 @@ def _pipspec_version(pipspec: str | None) -> str | None:
     return None
 
 
-def _outdated_rows(catalog, connect_catalog) -> list[dict]:
+def _outdated_rows(catalog, catalog_find=None) -> list[dict]:
     """One row per installed connector: id/package/installed/available/status."""
     seen: set[str] = set()
     rows = []
@@ -1724,7 +1734,7 @@ def _outdated_rows(catalog, connect_catalog) -> list[dict]:
             continue
         seen.add(key)
         installed = getattr(dist, "version", None)
-        connector = connect_catalog._find(catalog, entry_point.name) or {}
+        connector = (catalog_find(catalog, entry_point.name) if catalog_find else None) or {}
         install = connector.get("install") if isinstance(connector.get("install"), dict) else {}
         available = _pipspec_version(install.get("pipSpec"))
         if installed and available:
@@ -1744,13 +1754,14 @@ def _cmd_outdated(args, parser) -> int:
     from the catalog pipSpec (git tag or ``==`` pin). When either is unknown the
     row is reported as ``unknown``; offline (catalog unreachable) -> all unknown.
     """
-    from urirun.connectors import connect_catalog
-
-    try:
-        catalog = connect_catalog.fetch_catalog(args.catalog)
-    except Exception:  # noqa: BLE001 - offline/unreachable -> no available versions
-        catalog = {}
-    rows = _outdated_rows(catalog, connect_catalog)
+    fn = _CLI_BRIDGE.get("catalog_fetch")
+    catalog = {}
+    if fn is not None:
+        try:
+            catalog = fn(args.catalog)
+        except Exception:  # noqa: BLE001 - offline/unreachable -> no available versions
+            pass
+    rows = _outdated_rows(catalog, _CLI_BRIDGE.get("catalog_find"))
     outdated = [r for r in rows if r["status"] == "outdated"]
     if getattr(args, "json", False):
         reglib._emit_json({"ok": True, "outdated": len(outdated), "connectors": rows}, "-")
@@ -1825,9 +1836,11 @@ def _cmd_connectors(args, parser) -> int:
     if target is not None:
         module, func = target
         return getattr(importlib.import_module(module), func)(args)
-    from urirun import connect_catalog
-
-    return connect_catalog.connectors_command(args)
+    fn = _CLI_BRIDGE.get("connectors_command")
+    if fn is not None:
+        return fn(args)
+    reglib._emit_json({"ok": False, "error": f"unknown connectors sub-command: {sub!r}"}, "-")
+    return 1
 
 
 def _cmd_errors(args, parser) -> int:
@@ -1841,15 +1854,19 @@ def _cmd_compat(args, parser) -> int:
 
 
 def _cmd_host(args, parser) -> int:
-    from urirun import mesh
-
-    return mesh.host_command(args)
+    fn = _CLI_BRIDGE.get("host_command")
+    if fn is None:
+        reglib._emit_json({"ok": False, "error": "mesh not available"}, "-")
+        return 1
+    return fn(args)
 
 
 def _cmd_node(args, parser) -> int:
-    from urirun import mesh
-
-    return mesh.node_command(args)
+    fn = _CLI_BRIDGE.get("node_command")
+    if fn is None:
+        reglib._emit_json({"ok": False, "error": "mesh not available"}, "-")
+        return 1
+    return fn(args)
 
 
 def _builtin_binding_items(target: str = "local") -> list[dict]:
@@ -1943,12 +1960,17 @@ def _cmd_run_or_list(args, parser) -> int:
 
 
 def _cmd_version(args, parser) -> int:
-    from urirun.node import mesh
-    info = mesh.version_status(check_latest=not getattr(args, "no_check", False))
+    fn_status = _CLI_BRIDGE.get("version_status")
+    fn_line = _CLI_BRIDGE.get("version_line")
+    check = not getattr(args, "no_check", False)
+    if fn_status is None:
+        print(_package_version())
+        return 0
+    info = fn_status(check_latest=check)
     if getattr(args, "json", False):
         print(json.dumps(info))
     else:
-        print(mesh.version_line(check_latest=not getattr(args, "no_check", False)))
+        print(fn_line(check_latest=check) if fn_line else _package_version())
     return 0
 
 

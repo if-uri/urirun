@@ -801,23 +801,29 @@ def _chat_ask_general(
             environments = _fetch_planner_environments_for_nodes(
                 mesh, selected_nodes, execute, registry, discovered, memory=twin_memory)
             # Recall gate: skip LLM for known intent × environment combinations.
-            # Only fires when twin_memory is live (execute=True) and a matching ok-status
-            # episode exists for the same intent signature + env fingerprint.
+            # Dispatched via twin://host/flow/query/recall so the gate itself is a URI
+            # (introspectable, replaceable, remoteable).  Three-tier priority inside the
+            # handler: episode_id direct → intent×env (episode_store) → intent-only (flow_store).
+            # The flow_store fallback fires even when env_fp is empty — new install, offline node —
+            # closing the loop that the episode gate alone left open.
             flow = None
             generator = None
             if twin_memory is not None and selected_nodes:
-                from urirun.node.episode import intent_signature as _isig  # noqa: PLC0415
+                from urirun.host.dispatch import inprocess_fallback as _iproc  # noqa: PLC0415
                 _node = selected_nodes[0]
                 _env_fp = (twin_memory.known_good(_node) or {}).get("fingerprint") or ""
-                if _env_fp:
-                    _ep = twin_memory.recall_episode(_isig(prompt), _env_fp)
-                    if _ep:
-                        _ep_steps = (_ep.get("plan") or {}).get("steps") or []
-                        if _ep_steps:
-                            flow = {"steps": _ep_steps,
-                                    "task": {"id": "recall", "source": "recall", "title": prompt}}
-                            generator = {"provider": "recall", "fallback": False,
-                                         "cached": True, "episodeId": _ep.get("episode_id")}
+                _recalled = _iproc("twin://host/flow/query/recall",
+                                   {"prompt": prompt, "env_fp": _env_fp, "node": _node})
+                if isinstance(_recalled, dict) and _recalled.get("ok") and _recalled.get("found"):
+                    _rec_steps = _recalled.get("steps") or []
+                    if _rec_steps:
+                        flow = {"steps": _rec_steps,
+                                "task": {"id": "recall", "source": _recalled.get("source", "recall"),
+                                         "title": prompt}}
+                        generator = {"provider": "recall", "fallback": False, "cached": True,
+                                     "episodeId": _recalled.get("episode_id"),
+                                     "flowKey": _recalled.get("flow_key"),
+                                     "source": _recalled.get("source")}
             if flow is None:
                 flow, generator = mesh.make_flow(prompt, discovered, selected_nodes=selected_nodes,
                                                  use_llm=not no_llm, environments=environments)

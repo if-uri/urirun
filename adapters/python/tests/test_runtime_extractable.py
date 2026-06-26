@@ -21,18 +21,10 @@ _REPO = Path(__file__).resolve().parents[3]          # …/urirun
 _IMPORT_ROOT = Path(__file__).resolve().parents[1]   # …/urirun/adapters/python (contains `urirun`)
 _AUDIT_PATH = _REPO / "scripts" / "extraction_audit.py"
 
-# Known upward debt as of 2026-06-26 (8 edges). New pairs outside this set are blocked; removing
-# any is fine. All remaining are lazy in-function reach-outs (CLI composition); v2_service→keyauth
-# is also lazy (only when URIRUN_RUN_IDENTITY is set). Import-time breakers have been resolved.
-_KNOWN_OUTWARD = {
-    ("urirun.runtime.v2", "urirun.connect_catalog"),
-    ("urirun.runtime.v2", "urirun.connectors.connect_catalog"),
-    ("urirun.runtime.v2", "urirun.connectors.openapi_import"),
-    ("urirun.runtime.v2", "urirun.mesh"),
-    ("urirun.runtime.v2", "urirun.node.mesh"),
-    ("urirun.runtime.v2_service", "urirun.node.keyauth"),
-}
-_KNOWN_CYCLES = {"urirun.connectors.connect_catalog", "urirun.node.mesh"}
+# Known upward debt as of 2026-06-26 — CLEAN: all blocking edges resolved.
+# This set must stay empty; any new OUTWARD import from the kernel to upper layers fails the gate.
+_KNOWN_OUTWARD: set = set()
+_KNOWN_CYCLES: set = set()
 
 
 def _load_audit():

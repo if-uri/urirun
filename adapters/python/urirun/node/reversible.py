@@ -220,6 +220,8 @@ class TwinMemory:
     degraded_store: dict = field(default_factory=dict) # flow_key -> record (ran, but degraded — NOT known-good)
     episode_store: dict = field(default_factory=dict)  # episode_id -> Episode.to_dict()
     proof_store: dict = field(default_factory=dict)    # proof_key -> {uri, verdict, ...} (positives only)
+    skill_store: dict = field(default_factory=dict)    # name -> {flow, episode_id, intent_sig, env_fingerprint, ts}
+    session_store: dict = field(default_factory=dict)  # session_id -> {steps: [...], ts}
 
     def remember(self, node: str, profile: dict) -> dict:
         rec = {"fingerprint": environment_fingerprint(profile), "snapshot": profile}
@@ -312,6 +314,21 @@ class TwinMemory:
                 return ep
         return None
 
+    def recall_flow_by_intent(self, prompt: str) -> "dict | None":
+        """Return the most-recent known-good flow record whose stored intent_sig matches prompt.
+
+        Complement to recall_episode: works without an env fingerprint, so it fires even when
+        the node has no known-good baseline yet (new install, first run, offline node).
+        Linear scan — flow_store is small by design (one slot per URI-sequence fingerprint)."""
+        from urirun.node.episode import intent_signature  # noqa: PLC0415 — avoid import cycle
+        sig = intent_signature(prompt)
+        best: "dict | None" = None
+        for rec in self.flow_store.values():
+            if rec.get("intent_sig") == sig and not rec.get("degraded"):
+                if best is None or str(rec.get("ts") or "") > str(best.get("ts") or ""):
+                    best = rec
+        return best
+
     def remember_proof(self, key: str, record: dict) -> None:
         """Persist a reversibility proof keyed by its content-addressed ``proof_key``.
 
@@ -326,6 +343,39 @@ class TwinMemory:
     def recall_proof(self, key: str) -> dict | None:
         """Return the cached positive reversibility verdict for ``proof_key``, or None."""
         return self.proof_store.get(key)
+
+    # ── named skills: a promoted known-good run, replayable by NAME ──────────────────────
+    def remember_skill(self, name: str, record: dict) -> None:
+        """Promote a run to a NAMED skill — a replayable CONCRETE flow keyed by ``name`` (not a
+        parameterized generalization). ``recall_skill(name)`` returns it for direct reuse; the
+        record carries ``flow`` plus the ``episode_id``/``intent_sig``/``env_fingerprint`` it came
+        from, so a drifted environment can be detected (re-plan) rather than silently replayed."""
+        if name:
+            self.skill_store[name] = record
+
+    def recall_skill(self, name: str) -> dict | None:
+        """Return the named skill record (with its ``flow``), or None."""
+        return self.skill_store.get(name)
+
+    def skills(self) -> list[dict]:
+        """All named skills, newest-first (by ``ts``)."""
+        return sorted(self.skill_store.values(), key=lambda r: str(r.get("ts") or ""), reverse=True)
+
+    # ── session recorder: trace-first authoring (append steps → export/promote) ──────────
+    def session_append(self, session_id: str, step: dict) -> list[dict]:
+        """Append one step to a recorded session and return the accumulated step list. The session
+        is the trace-first dual of plan-first authoring: capture what actually ran, then export it
+        to a flow document or promote it to a skill."""
+        rec = dict(self.session_store.get(session_id) or {})
+        steps = list(rec.get("steps") or [])
+        steps.append(step)
+        rec["steps"] = steps
+        self.session_store[session_id] = rec
+        return steps
+
+    def session_steps(self, session_id: str) -> list[dict]:
+        """The steps recorded for a session, in order."""
+        return list((self.session_store.get(session_id) or {}).get("steps") or [])
 
 
 def plausibility(profile: dict, *, reversible: bool = True, irreversible: bool = False,

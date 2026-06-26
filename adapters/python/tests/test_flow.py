@@ -76,7 +76,7 @@ def test_flow_intents_llm_no_model_returns_none(monkeypatch):
 def test_flow_intents_llm_exception_returns_none(monkeypatch):
     """LLM call exception → None (never raises)."""
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
-    import urirun.host.task_planner as _tp
+    import urirun.node._util as _tp
     monkeypatch.setattr(_tp, "quiet_completion",
                         lambda **kw: (_ for _ in ()).throw(RuntimeError("offline")))
     assert _flow_intents_llm("take a screenshot") is None
@@ -85,7 +85,7 @@ def test_flow_intents_llm_exception_returns_none(monkeypatch):
 def test_flow_intents_llm_parses_response(monkeypatch):
     """Valid LLM JSON → intent dict with all _INTENT_NAMES keys."""
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
-    import urirun.host.task_planner as _tp
+    import urirun.node._util as _tp
 
     class _Resp:
         choices = [type("C", (), {"message": type("M", (), {
@@ -111,7 +111,7 @@ def test_flow_intents_default_when_no_llm(monkeypatch):
 def test_flow_intents_all_false_sets_processes(monkeypatch):
     """LLM returning all-false → guard sets processes=True."""
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
-    import urirun.host.task_planner as _tp
+    import urirun.node._util as _tp
 
     class _Resp:
         choices = [type("C", (), {"message": type("M", (), {"content": "{}"})()})()]
@@ -123,7 +123,7 @@ def test_flow_intents_all_false_sets_processes(monkeypatch):
 def test_flow_intents_uses_llm_result(monkeypatch):
     """LLM classification is used verbatim when available."""
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
-    import urirun.host.task_planner as _tp
+    import urirun.node._util as _tp
 
     class _Resp:
         choices = [type("C", (), {"message": type("M", (), {
@@ -138,7 +138,7 @@ def test_flow_intents_uses_llm_result(monkeypatch):
 def test_flow_intents_use_llm_false_skips_llm(monkeypatch):
     """use_llm=False returns all-False even when LLM_MODEL is set."""
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
-    import urirun.host.task_planner as _tp
+    import urirun.node._util as _tp
     monkeypatch.setattr(_tp, "quiet_completion",
                         lambda **kw: (_ for _ in ()).throw(AssertionError("LLM must not be called")))
     intents = _flow_intents("pokaz procesy", use_llm=False)
@@ -148,7 +148,7 @@ def test_flow_intents_use_llm_false_skips_llm(monkeypatch):
 def test_heuristic_flow_use_llm_false_always_empty(monkeypatch):
     """heuristic_flow(..., use_llm=False) produces empty steps — LLM disabled means no intent guessing."""
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
-    import urirun.host.task_planner as _tp
+    import urirun.node._util as _tp
     monkeypatch.setattr(_tp, "quiet_completion",
                         lambda **kw: (_ for _ in ()).throw(AssertionError("LLM must not be called")))
     nodes = [{"name": "pc1", "reachable": True}]

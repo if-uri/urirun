@@ -35,3 +35,20 @@ def json_write(path: str | Path, data: dict) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(f"{json.dumps(data, indent=2, ensure_ascii=False)}\n", encoding="utf-8")
+
+
+def quiet_completion(**kwargs):
+    """``litellm.completion`` with its "Provider List" banner kept off stdout, so a host's JSON
+    stays the only thing on stdout. litellm prints that banner (and other debug) to stdout on
+    first use; we set ``suppress_debug_info`` and redirect stray prints to stderr for the call.
+
+    Lives here (a foundational node/host primitive) so flow_planner (node) and task_planner (host)
+    both reach it DOWN, instead of node→host (which formed a flow_planner⇄task_planner cycle)."""
+    import contextlib
+    import sys
+
+    import litellm
+
+    litellm.suppress_debug_info = True
+    with contextlib.redirect_stdout(sys.stderr):
+        return litellm.completion(**kwargs)

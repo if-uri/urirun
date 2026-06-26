@@ -29,6 +29,12 @@ urirun-v1 = "urirun.v1:main"
 urirun-v2 = "urirun.v2:main"
 uri-copy-id = "urirun.node.mesh:copy_id_cli"
 
+# In-core URI surfaces (trace-first authoring): a promoted known-good run replayable by name,
+# and a session recorder. Declared as bindings so skill:// / session:// resolve like any connector.
+[project.entry-points."urirun.bindings"]
+skill = "urirun.node.skill:skill_bindings"
+session = "urirun.node.skill:session_bindings"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["urirun*"]

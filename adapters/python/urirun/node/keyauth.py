@@ -171,3 +171,12 @@ def verify_request(headers, body: bytes, purpose: str) -> bool:
     if not verify(key, sig, purpose, ts, body):
         return False
     return not _replay_seen(sig)
+
+
+def _register_signer() -> None:
+    """Register sign() into v2_service — inverts the dependency arrow (keyauth→runtime)."""
+    from urirun.runtime import v2_service
+    v2_service.register_signer(sign)
+
+
+_register_signer()

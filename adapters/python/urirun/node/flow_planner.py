@@ -79,7 +79,7 @@ def _flow_intents_llm(prompt: str) -> dict[str, bool] | None:
     if not model:
         return None
     try:
-        from urirun.host.task_planner import quiet_completion
+        from urirun.node._util import quiet_completion
         import json as _json
         names_csv = ", ".join(sorted(_INTENT_NAMES))
         resp = quiet_completion(
@@ -468,7 +468,7 @@ def llm_flow(prompt: str, routes: list[dict], nodes: list[dict],
     model = os.getenv("URIRUN_LLM_MODEL") or os.getenv("LLM_MODEL")
     if not model:
         raise RuntimeError("URIRUN_LLM_MODEL or LLM_MODEL is not set")
-    from urirun.host.task_planner import quiet_completion
+    from urirun.node._util import quiet_completion
 
     allowed_routes = [
         {

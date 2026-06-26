@@ -485,6 +485,33 @@
                 <div class="flows-empty" id="flowsEmpty" style="display:none">No known-good flows yet. Run a flow with execute=true to record one.</div>
             </div>
         </div>
+        <div class="flows-panel" id="episodesPanel">
+            <div class="flows-header" id="episodesToggle">
+                <span class="flows-header-title">&#129504; Episodes</span>
+                <span class="flows-header-count" id="episodesCount">loading...</span>
+            </div>
+            <div class="flows-body collapsed" id="episodesBody">
+                <div class="flows-empty" id="episodesEmpty" style="display:none">No episodes yet. Run a flow with execute=true to record one.</div>
+            </div>
+        </div>
+        <div class="flows-panel" id="proofsPanel">
+            <div class="flows-header" id="proofsToggle">
+                <span class="flows-header-title">&#128737; Reversibility Proofs</span>
+                <span class="flows-header-count" id="proofsCount">loading...</span>
+            </div>
+            <div class="flows-body collapsed" id="proofsBody">
+                <div class="flows-empty" id="proofsEmpty" style="display:none">No reversibility proofs cached yet.</div>
+            </div>
+        </div>
+        <div class="flows-panel" id="degradedPanel">
+            <div class="flows-header" id="degradedToggle">
+                <span class="flows-header-title">&#9888;&#65039; Degraded Runs</span>
+                <span class="flows-header-count" id="degradedCount">loading...</span>
+            </div>
+            <div class="flows-body collapsed" id="degradedBody">
+                <div class="flows-empty" id="degradedEmpty" style="display:none">No degraded runs.</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -878,6 +905,7 @@
                     const data = await res.json();
                     backoffMs = 2000;
                     if (data.flows) renderFlows(data.flows);
+                    renderTwinExtras(data);
                     document.getElementById('sayLead').innerText =
                         `Zsynchronizowano ${new Date().toLocaleTimeString()} · ${data.total ?? 0} znanych przepływów`;
                 } catch (err) {
@@ -934,6 +962,21 @@
         const flowsCount = document.getElementById('flowsCount');
         const flowsEmpty = document.getElementById('flowsEmpty');
         let flowsCollapsed = true;
+        // Extra twin-state panels (episodes / proofs / degraded) — same markup as flows.
+        const episodesBody = document.getElementById('episodesBody');
+        const episodesEmpty = document.getElementById('episodesEmpty');
+        const episodesCount = document.getElementById('episodesCount');
+        const proofsBody = document.getElementById('proofsBody');
+        const proofsEmpty = document.getElementById('proofsEmpty');
+        const proofsCount = document.getElementById('proofsCount');
+        const degradedBody = document.getElementById('degradedBody');
+        const degradedEmpty = document.getElementById('degradedEmpty');
+        const degradedCount = document.getElementById('degradedCount');
+        ['episodes', 'proofs', 'degraded'].forEach(name => {
+            const t = document.getElementById(name + 'Toggle');
+            const b = document.getElementById(name + 'Body');
+            if (t && b) t.addEventListener('click', () => b.classList.toggle('collapsed'));
+        });
 
         flowsToggle.addEventListener('click', () => {
             flowsCollapsed = !flowsCollapsed;
@@ -972,10 +1015,54 @@
             });
         }
 
+        function _renderListPanel(body, empty, count, items, rowHtml, label) {
+            body.querySelectorAll('.flow-row').forEach(el => el.remove());
+            if (!items || items.length === 0) {
+                empty.style.display = ''; count.innerText = '0 ' + label + 's'; return;
+            }
+            empty.style.display = 'none';
+            count.innerText = items.length + ' ' + label + (items.length === 1 ? '' : 's');
+            items.slice(0, 20).forEach(it => {
+                const row = document.createElement('div');
+                row.className = 'flow-row';
+                row.innerHTML = rowHtml(it);
+                body.appendChild(row);
+            });
+        }
+        function renderEpisodes(eps) {
+            _renderListPanel(episodesBody, episodesEmpty, episodesCount, eps, ep => {
+                const st = (ep.outcome && ep.outcome.status) || '?';
+                const steps = ((ep.plan && ep.plan.steps) || []).length;
+                return `<span class="flow-ts">${_fmtTs(ep.ts)}</span>` +
+                    `<span class="flow-prompt" title="${(ep.goal||'').replace(/"/g,'&quot;')}">${ep.goal || '(no goal)'}</span>` +
+                    `<span class="flow-meta">${st} · ${steps}s</span>`;
+            }, 'episode');
+        }
+        function renderProofs(proofs) {
+            _renderListPanel(proofsBody, proofsEmpty, proofsCount, proofs, p => {
+                const v = (p.verdict === true || p.verdict === 'reversible') ? 'reversible' : String(p.verdict);
+                const what = p.uri || p.path || p.proof_key || '(proof)';
+                return `<span class="flow-ts">${p.kind || 'proof'}</span>` +
+                    `<span class="flow-prompt" title="${String(what).replace(/"/g,'&quot;')}">${what}</span>` +
+                    `<span class="flow-meta">${v}</span>`;
+            }, 'proof');
+        }
+        function renderDegraded(rows) {
+            _renderListPanel(degradedBody, degradedEmpty, degradedCount, rows, r => {
+                return `<span class="flow-ts">${_fmtTs(r.ts)}</span>` +
+                    `<span class="flow-prompt" title="${(r.degradedReason||'').replace(/"/g,'&quot;')}">${r.degradedReason || '(degraded)'}</span>` +
+                    `<span class="flow-meta">${((r.steps||[]).length)}s</span>`;
+            }, 'degraded');
+        }
+        function renderTwinExtras(d) {
+            if (d.episodes) renderEpisodes(d.episodes);
+            if (d.proofs) renderProofs(d.proofs);
+            if (d.degradedFlows) renderDegraded(d.degradedFlows);
+        }
         function loadFlows() {
             fetch('/api/twin/state?limit=20', {cache: 'no-store'})
                 .then(r => r.ok ? r.json() : null)
-                .then(d => { if (d && d.flows) renderFlows(d.flows); })
+                .then(d => { if (d) { if (d.flows) renderFlows(d.flows); renderTwinExtras(d); } })
                 .catch(() => { flowsCount.innerText = 'unavailable'; });
         }
 

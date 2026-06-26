@@ -35,6 +35,14 @@ from urirun.runtime import _registry as reglib, v2
 
 DEFAULT_PORT = 8080
 
+_signer = None  # injected by urirun.node.keyauth at import time (inverts the dependency arrow)
+
+
+def register_signer(fn) -> None:
+    """Register the callable that signs HTTP requests with an SSH identity key."""
+    global _signer
+    _signer = fn
+
 
 def service_base(target: str, uri: str | None = None) -> str:
     mapping = os.getenv("URI_SERVICE_MAP")
@@ -54,9 +62,8 @@ def _post(url: str, body: dict, timeout: float):
     # header → unchanged behaviour against open nodes.
     identity = os.getenv("URIRUN_RUN_IDENTITY")
     token = os.getenv("URIRUN_RUN_TOKEN")
-    if identity:
-        from urirun.node import keyauth  # noqa: PLC0415 — lazy: only when URIRUN_RUN_IDENTITY is set
-        headers.update(keyauth.sign(os.path.expanduser(identity), keyauth.PURPOSE_RUN, data))
+    if identity and _signer is not None:
+        headers.update(_signer(os.path.expanduser(identity), "run", data))
     elif token:
         headers["X-Urirun-Token"] = token
     request = urllib.request.Request(url, data=data, headers=headers, method="POST")

@@ -1288,7 +1288,7 @@ class MeshTests(unittest.TestCase):
         (b) steer it to prefer them over the OCR/pixel ui routes for web content. We
         capture the messages sent to the model and verify the catalog + guidance, then
         confirm a CDP-based plan the model could return normalizes against allowed URIs."""
-        import urirun.host.task_planner as task_planner
+        import urirun.node._util as task_planner  # quiet_completion lives here now (cycle break)
 
         captured = {}
 

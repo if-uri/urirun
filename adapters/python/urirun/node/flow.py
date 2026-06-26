@@ -425,9 +425,11 @@ def _remember_known_good_flow(
     it OUT of the known-good store — known-good must mean fully succeeded, not merely no-crash."""
     key = _flow_key(flow)
     degraded, reason = _results_degraded(execution.get("results") or {})
+    from urirun.node.episode import intent_signature as _intent_sig  # noqa: PLC0415
     memory.remember_flow(key, {
         "flowKey": key,
         "prompt": prompt,
+        "intent_sig": _intent_sig(prompt) if prompt else "",
         "steps": flow.get("steps") or [],
         "timeline": execution.get("timeline") or [],
         "nodes": sorted({str(s.get("node") or "") for s in (flow.get("steps") or []) if s.get("node")}),

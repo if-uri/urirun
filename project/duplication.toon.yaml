@@ -1,12 +1,12 @@
-# redup/duplication | 13 groups | 125f 36668L | 2026-06-26
+# redup/duplication | 15 groups | 125f 36748L | 2026-06-26
 
 SUMMARY:
   files_scanned: 125
-  total_lines:   36668
-  dup_groups:    13
-  dup_fragments: 32
-  saved_lines:   118
-  scan_ms:       966
+  total_lines:   36748
+  dup_groups:    15
+  dup_fragments: 36
+  saved_lines:   129
+  scan_ms:       1078
 
 HOTSPOTS[7] (files with most duplication):
   __init__.py  dup=38L  groups=1  frags=3  (0.1%)
@@ -14,10 +14,10 @@ HOTSPOTS[7] (files with most duplication):
   runtime/v2.py  dup=25L  groups=2  frags=6  (0.1%)
   host/dashboard_api.py  dup=25L  groups=2  frags=5  (0.1%)
   host/service_control.py  dup=20L  groups=1  frags=2  (0.1%)
+  host/planfile_adapter.py  dup=10L  groups=2  frags=3  (0.0%)
   runtime/worker.py  dup=8L  groups=1  frags=2  (0.0%)
-  host/chat_orchestrator.py  dup=7L  groups=1  frags=1  (0.0%)
 
-DUPLICATES[13] (ranked by impact):
+DUPLICATES[15] (ranked by impact):
   [a58866334f01e99a] ! STRU  command  L=16 N=3 saved=32 sim=1.00
       __init__.py:47-62  (command)
       __init__.py:65-69  (shell)
@@ -41,6 +41,9 @@ DUPLICATES[13] (ranked by impact):
   [b6b2d4461c71c62d]   STRU  chat_message  L=7 N=2 saved=7 sim=1.00
       host/chat_orchestrator.py:48-54  (chat_message)
       host/host_dashboard.py:373-379  (_chat_message)
+  [cd4f380513131bd1]   STRU  register_ticket_creator  L=7 N=2 saved=7 sim=1.00
+      runtime/errors.py:385-391  (register_ticket_creator)
+      runtime/v2_service.py:41-44  (register_signer)
   [b7534632e49155f1]   STRU  _host_db  L=3 N=3 saved=6 sim=1.00
       host/dashboard_api.py:29-31  (_host_db)
       host/dashboard_api.py:34-36  (_mesh)
@@ -51,6 +54,9 @@ DUPLICATES[13] (ranked by impact):
   [ecb3319de9bb32de]   EXAC  close  L=4 N=2 saved=4 sim=1.00
       runtime/worker.py:156-159  (close)
       runtime/worker.py:187-190  (close)
+  [6fb5c445bd927117]   STRU  _register_ticket_creator  L=4 N=2 saved=4 sim=1.00
+      host/planfile_adapter.py:284-287  (_register_ticket_creator)
+      node/keyauth.py:176-179  (_register_signer)
   [82d9f33906e33db9]   STRU  start_ticket  L=3 N=2 saved=3 sim=1.00
       host/planfile_adapter.py:197-199  (start_ticket)
       host/planfile_adapter.py:266-268  (ready_ticket)
@@ -64,7 +70,7 @@ DUPLICATES[13] (ranked by impact):
       node/node_cli.py:97-99  (_data_artifact_register)
       node/node_cli.py:106-108  (_data_check_add)
 
-REFACTOR[13] (ranked by priority):
+REFACTOR[15] (ranked by priority):
   [1] ○ extract_function   → utils/command.py
       WHY: 3 occurrences of 16-line block across 1 files — saves 32 lines
       FILES: __init__.py
@@ -83,29 +89,35 @@ REFACTOR[13] (ranked by priority):
   [6] ○ extract_function   → host/utils/chat_message.py
       WHY: 2 occurrences of 7-line block across 2 files — saves 7 lines
       FILES: host/chat_orchestrator.py, host/host_dashboard.py
-  [7] ○ extract_function   → host/utils/_host_db.py
+  [7] ○ extract_function   → runtime/utils/register_ticket_creator.py
+      WHY: 2 occurrences of 7-line block across 2 files — saves 7 lines
+      FILES: runtime/errors.py, runtime/v2_service.py
+  [8] ○ extract_function   → host/utils/_host_db.py
       WHY: 3 occurrences of 3-line block across 1 files — saves 6 lines
       FILES: host/dashboard_api.py
-  [8] ○ extract_function   → runtime/utils/replace.py
+  [9] ○ extract_function   → runtime/utils/replace.py
       WHY: 2 occurrences of 5-line block across 2 files — saves 5 lines
       FILES: runtime/v1.py, runtime/v2.py
-  [9] ○ extract_function   → runtime/utils/close.py
+  [10] ○ extract_function   → runtime/utils/close.py
       WHY: 2 occurrences of 4-line block across 1 files — saves 4 lines
       FILES: runtime/worker.py
-  [10] ○ extract_function   → host/utils/start_ticket.py
+  [11] ○ extract_function   → utils/_register_ticket_creator.py
+      WHY: 2 occurrences of 4-line block across 2 files — saves 4 lines
+      FILES: host/planfile_adapter.py, node/keyauth.py
+  [12] ○ extract_function   → host/utils/start_ticket.py
       WHY: 2 occurrences of 3-line block across 1 files — saves 3 lines
       FILES: host/planfile_adapter.py
-  [11] ○ extract_function   → node/utils/save_host_config.py
+  [13] ○ extract_function   → node/utils/save_host_config.py
       WHY: 2 occurrences of 3-line block across 1 files — saves 3 lines
       FILES: node/config.py
-  [12] ○ extract_function   → node/utils/_api_id.py
+  [14] ○ extract_function   → node/utils/_api_id.py
       WHY: 2 occurrences of 3-line block across 2 files — saves 3 lines
       FILES: node/doctor.py, node/transport.py
-  [13] ○ extract_function   → node/utils/_data_artifact_register.py
+  [15] ○ extract_function   → node/utils/_data_artifact_register.py
       WHY: 2 occurrences of 3-line block across 1 files — saves 3 lines
       FILES: node/node_cli.py
 
-QUICK_WINS[7] (low risk, high savings — do first):
+QUICK_WINS[8] (low risk, high savings — do first):
   [1] extract_function   saved=32L  → utils/command.py
       FILES: __init__.py
   [2] extract_function   saved=18L  → host/utils/_free_port_from_old_scanner.py
@@ -118,22 +130,29 @@ QUICK_WINS[7] (low risk, high savings — do first):
       FILES: dashboard_api.py
   [6] extract_function   saved=7L  → host/utils/chat_message.py
       FILES: chat_orchestrator.py, host_dashboard.py
-  [7] extract_function   saved=6L  → host/utils/_host_db.py
+  [7] extract_function   saved=7L  → runtime/utils/register_ticket_creator.py
+      FILES: errors.py, v2_service.py
+  [8] extract_function   saved=6L  → host/utils/_host_db.py
       FILES: dashboard_api.py
 
-EFFORT_ESTIMATE (total ≈ 3.9h):
+DEPENDENCY_RISK[1] (duplicates spanning multiple packages):
+  _register_ticket_creator  packages=2  files=2
+      host/planfile_adapter.py
+      node/keyauth.py
+
+EFFORT_ESTIMATE (total ≈ 4.4h):
   medium command                             saved=32L  ~64min
   medium _free_port_from_old_scanner         saved=18L  ~36min
   medium _cmd_add_openapi                    saved=16L  ~32min
   easy   is_scanner_process                  saved=10L  ~20min
   easy   _api_checks                         saved=8L  ~16min
   easy   chat_message                        saved=7L  ~14min
+  easy   register_ticket_creator             saved=7L  ~14min
   easy   _host_db                            saved=6L  ~12min
   easy   replace                             saved=5L  ~10min
   easy   close                               saved=4L  ~8min
-  easy   start_ticket                        saved=3L  ~6min
-  ... +3 more (~18min)
+  ... +5 more (~40min)
 
 METRICS-TARGET:
-  dup_groups:  13 → 0
-  saved_lines: 118 lines recoverable
+  dup_groups:  15 → 0
+  saved_lines: 129 lines recoverable

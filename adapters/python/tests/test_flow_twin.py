@@ -461,3 +461,51 @@ def test_remember_handler_writes_capture_proofs_to_proof_store():
     assert len(proofs) == 1
     assert proofs[0]["path"] == "/tmp/urirun-shot.png"
     assert proofs[0]["verdict"] is True
+
+
+# ── Recall gate: flow_store fallback + intent_sig indexing ───────────────────
+
+def test_remember_flow_stores_intent_sig():
+    """_remember_known_good_flow writes intent_sig into the flow_store record."""
+    mem = TwinMemory()
+    flow = {"steps": [{"id": "s", "uri": "kvm://host/screen/query/capture", "payload": {}}]}
+    execution = {"timeline": [], "results": {"s": {"ok": True}}}
+    F._remember_known_good_flow(flow, execution, mem, prompt="zrób screenshot")
+    recs = mem.known_good_flows()
+    assert len(recs) == 1
+    assert recs[0].get("intent_sig"), "intent_sig should be stamped on flow record"
+    assert recs[0]["intent_sig"].startswith("intent-")
+
+
+def test_recall_flow_by_intent_finds_matching_record():
+    """recall_flow_by_intent returns the known-good flow for a prompt that normalises to the same sig."""
+    mem = TwinMemory()
+    flow = {"steps": [{"id": "s", "uri": "kvm://host/screen/query/capture", "payload": {}}]}
+    execution = {"timeline": [], "results": {"s": {"ok": True}}}
+    F._remember_known_good_flow(flow, execution, mem, prompt="zrób screenshot")
+    # Exact match
+    rec = mem.recall_flow_by_intent("zrób screenshot")
+    assert rec is not None
+    assert len(rec.get("steps") or []) == 1
+    # Normalisation: different whitespace, same intent
+    rec2 = mem.recall_flow_by_intent("ZRÓB  SCREENSHOT")
+    assert rec2 is not None
+
+
+def test_recall_flow_by_intent_returns_none_for_unknown_intent():
+    mem = TwinMemory()
+    assert mem.recall_flow_by_intent("cos zupelnie innego") is None
+
+
+def test_recall_flow_by_intent_skips_degraded_records():
+    """Degraded flows are not offered for recall."""
+    mem = TwinMemory()
+    from urirun.node.episode import intent_signature
+    mem.remember_flow("key1", {
+        "flowKey": "key1",
+        "intent_sig": intent_signature("capture screen"),
+        "steps": [{"id": "s", "uri": "kvm://host/screen/query/capture"}],
+        "degraded": True,
+        "ts": "2026-01-01T00:00:00Z",
+    })
+    assert mem.recall_flow_by_intent("capture screen") is None

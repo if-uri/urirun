@@ -272,3 +272,37 @@ from urirun.node.node_cli import (  # noqa: E402,F401
 
 # Node state directories moved to urirun.node.paths; re-exported for callers.
 from urirun.node.paths import deploy_dir, node_state_dir, node_token_path  # noqa: E402,F401
+
+
+def _register_cli_bridge() -> None:
+    """Register node/connector CLI commands into the v2 runtime CLI bridge.
+
+    This inverts the dependency arrow: the runtime never imports the node or
+    connector layers — the node layer pushes its CLI implementations down."""
+    from urirun.runtime import v2
+    from urirun.connectors import connect_catalog
+    v2.register_cli_command("host_command", host_command)
+    v2.register_cli_command("node_command", node_command)
+    v2.register_cli_command("version_status", version_status)
+    v2.register_cli_command("version_line", version_line)
+    v2.register_cli_command("connectors_command", connect_catalog.connectors_command)
+    v2.register_cli_command("catalog_fetch", connect_catalog.fetch_catalog)
+    v2.register_cli_command("catalog_find", connect_catalog._find)
+    v2.register_cli_command("catalog_resolve_install", _catalog_resolve_install)
+    v2.register_cli_command("add_openapi", _add_openapi_command)
+
+
+def _catalog_resolve_install(catalog_url, ids):
+    from urirun.connectors import connect_catalog
+    catalog = connect_catalog.fetch_catalog(catalog_url)
+    resolved = connect_catalog.resolve_install(catalog, ids)
+    specs = [s["pipSpec"] for s in (resolved.get("pipSpecs") or [])]
+    return specs, resolved.get("unknown") or []
+
+
+def _add_openapi_command(args):
+    from urirun.connectors import openapi_import
+    return openapi_import.add_openapi_command(args)
+
+
+_register_cli_bridge()

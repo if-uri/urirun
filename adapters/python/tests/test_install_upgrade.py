@@ -86,8 +86,6 @@ def test_pipspec_version_parsing():
 
 
 def test_outdated_flags_version_mismatch(monkeypatch):
-    from urirun.connectors import connect_catalog
-
     catalog = {"connectors": [
         {"id": "alpha", "install": {"pipSpec": "urirun-connector-alpha @ git+https://h/a.git@v2.0.0"}},
         {"id": "beta", "install": {"pipSpec": "urirun-connector-beta==1.0.0"}},
@@ -97,7 +95,15 @@ def test_outdated_flags_version_mismatch(monkeypatch):
         types.SimpleNamespace(name="beta", dist=types.SimpleNamespace(name="urirun-connector-beta", version="1.0.0")),
         types.SimpleNamespace(name="gamma", dist=types.SimpleNamespace(name="urirun-connector-gamma", version="0.1.0")),
     ]
-    monkeypatch.setattr(connect_catalog, "fetch_catalog", lambda *a, **k: catalog)
+
+    def _find_connector(cat, connector_id):
+        for c in (cat.get("connectors") or []):
+            if c.get("id") == connector_id:
+                return c
+        return None
+
+    monkeypatch.setitem(v2._CLI_BRIDGE, "catalog_fetch", lambda url: catalog)
+    monkeypatch.setitem(v2._CLI_BRIDGE, "catalog_find", _find_connector)
     monkeypatch.setattr(v2, "_select_entry_points", lambda group: eps)
 
     out = _capture(v2._cmd_outdated, dict(catalog="x", json=True))

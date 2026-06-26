@@ -109,9 +109,9 @@ def test_v2_service_post_signs_with_identity(monkeypatch, tmp_path):
 
     monkeypatch.setenv("URIRUN_RUN_IDENTITY", str(tmp_path / "fake.key"))
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    # patch keyauth.sign so we don't need a real key
-    from urirun.node import keyauth
-    monkeypatch.setattr(keyauth, "sign",
+    # patch v2_service._signer directly — sign() is now injected via register_signer(), so
+    # monkeypatching keyauth.sign would not affect the already-registered reference.
+    monkeypatch.setattr(v2_service, "_signer",
                         lambda path, purpose, data: {"authorization": "Bearer test-sig"})
 
     v2_service._post("http://127.0.0.1:9999/run", {"uri": "x://h/a/b/c"}, timeout=5.0)

@@ -224,19 +224,8 @@ def heuristic_plan_chat_request(
     )
 
 
-def quiet_completion(**kwargs):
-    """``litellm.completion`` with its "Provider List" banner kept off stdout, so a
-    host's JSON stays the only thing on stdout. litellm prints that banner (and
-    other debug) straight to stdout on first use; we set ``suppress_debug_info`` and
-    redirect any stray prints to stderr for the duration of the call."""
-    import contextlib
-    import sys
-
-    import litellm
-
-    litellm.suppress_debug_info = True
-    with contextlib.redirect_stdout(sys.stderr):
-        return litellm.completion(**kwargs)
+# quiet_completion moved to node._util (break node→host cycle); re-exported for callers.
+from urirun.node._util import quiet_completion  # noqa: E402,F401
 
 
 def llm_plan_chat_request(

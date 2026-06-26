@@ -173,7 +173,7 @@ def test_execute_flow_green_when_every_action_succeeds(monkeypatch) -> None:
 def test_llm_flow_injects_environment_facts_into_planner(monkeypatch) -> None:
     """profile->planner: the live env facts/guidance must reach the LLM planner message, so it
     grounds on reality (surface, real labels) instead of guessing."""
-    import urirun.host.task_planner as tp
+    import urirun.node._util as tp
     monkeypatch.setenv("URIRUN_LLM_MODEL", "test-model")
     captured = {}
 

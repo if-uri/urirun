@@ -1,10 +1,10 @@
-# urirun | 281f 62732L | python:259,shell:10,javascript:4,go:3,rust:2,typescript:2,less:1 | 2026-06-26
-# stats: 2699 func | 146 cls | 281 mod | CC̄=4.3 | critical:242 | cycles:0
+# urirun | 283f 63220L | python:261,shell:10,javascript:4,go:3,rust:2,typescript:2,less:1 | 2026-06-26
+# stats: 2720 func | 148 cls | 283 mod | CC̄=4.3 | critical:244 | cycles:0
 # alerts[5]: CC test_dashboard_html_tracks_tabs_actions_and_chat_fullscreen=125; CC test_archive_scanned_document_writes_pdf_json_index_and_detects_duplicate=26; CC test_sync_documents_to_node_copies_pdfs_and_logs_chat=23; CC test_chat_ask_plans_document_sync_without_llm=22; CC _chat_ask_general=21
 # hotspots[5]: summary fan=29; serve fan=28; main fan=23; _chat_ask_general fan=22; lint_connector fan=19
 # evolution: baseline
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[281]:
+M[283]:
   adapters/bash/example/hash-connector.sh,10
   adapters/bash/urirun.sh,18
   adapters/conformance.py,168
@@ -24,6 +24,7 @@ M[281]:
   adapters/python/tests/test_capability.py,127
   adapters/python/tests/test_capability_doctor.py,196
   adapters/python/tests/test_cdp_surface.py,104
+  adapters/python/tests/test_chat_artifacts.py,83
   adapters/python/tests/test_cli_parser.py,72
   adapters/python/tests/test_client.py,46
   adapters/python/tests/test_codegen.py,164
@@ -57,7 +58,7 @@ M[281]:
   adapters/python/tests/test_flow.py,365
   adapters/python/tests/test_flow_reversible.py,118
   adapters/python/tests/test_flow_rollup.py,220
-  adapters/python/tests/test_flow_twin.py,464
+  adapters/python/tests/test_flow_twin.py,512
   adapters/python/tests/test_formatting.py,130
   adapters/python/tests/test_fs_transfer.py,105
   adapters/python/tests/test_gap5_authoring.py,105
@@ -65,7 +66,7 @@ M[281]:
   adapters/python/tests/test_host_db.py,114
   adapters/python/tests/test_host_integrations.py,108
   adapters/python/tests/test_host_routing.py,170
-  adapters/python/tests/test_install_upgrade.py,109
+  adapters/python/tests/test_install_upgrade.py,115
   adapters/python/tests/test_introspect.py,76
   adapters/python/tests/test_kernel_adoption.py,236
   adapters/python/tests/test_keyauth.py,109
@@ -151,7 +152,7 @@ M[281]:
   adapters/python/urirun/host/android_node.py,163
   adapters/python/urirun/host/artifacts_admin.py,2
   adapters/python/urirun/host/capability.py,161
-  adapters/python/urirun/host/chat_orchestrator.py,896
+  adapters/python/urirun/host/chat_orchestrator.py,936
   adapters/python/urirun/host/connector_admin.py,241
   adapters/python/urirun/host/contracts.py,120
   adapters/python/urirun/host/dashboard_api.py,289
@@ -177,7 +178,7 @@ M[281]:
   adapters/python/urirun/host/scanner_service.py,7
   adapters/python/urirun/host/scheduler.py,136
   adapters/python/urirun/host/service_control.py,463
-  adapters/python/urirun/host/task_planner.py,367
+  adapters/python/urirun/host/task_planner.py,356
   adapters/python/urirun/host/twin_bridge.py,450
   adapters/python/urirun/host/urifix_bridge.py,46
   adapters/python/urirun/host/widgets.py,65
@@ -187,7 +188,7 @@ M[281]:
   adapters/python/urirun/mesh.py,6
   adapters/python/urirun/node/__init__.py,2
   adapters/python/urirun/node/_artifacts.py,112
-  adapters/python/urirun/node/_util.py,38
+  adapters/python/urirun/node/_util.py,55
   adapters/python/urirun/node/_version.py,77
   adapters/python/urirun/node/client.py,559
   adapters/python/urirun/node/config.py,227
@@ -195,23 +196,24 @@ M[281]:
   adapters/python/urirun/node/doctor.py,218
   adapters/python/urirun/node/episode.py,225
   adapters/python/urirun/node/event_schema.py,93
-  adapters/python/urirun/node/flow.py,1067
+  adapters/python/urirun/node/flow.py,1069
   adapters/python/urirun/node/flow_planner.py,696
-  adapters/python/urirun/node/flow_thin.py,489
+  adapters/python/urirun/node/flow_thin.py,483
   adapters/python/urirun/node/flow_verify.py,112
   adapters/python/urirun/node/formatting.py,81
-  adapters/python/urirun/node/keyauth.py,174
+  adapters/python/urirun/node/keyauth.py,183
   adapters/python/urirun/node/manage.py,600
-  adapters/python/urirun/node/mesh.py,275
+  adapters/python/urirun/node/mesh.py,309
   adapters/python/urirun/node/node_cli.py,900
   adapters/python/urirun/node/paths.py,39
   adapters/python/urirun/node/recovery.py,373
-  adapters/python/urirun/node/reversible.py,668
+  adapters/python/urirun/node/reversible.py,718
   adapters/python/urirun/node/routing.py,174
   adapters/python/urirun/node/server.py,997
+  adapters/python/urirun/node/skill.py,164
   adapters/python/urirun/node/task_cli.py,347
   adapters/python/urirun/node/transport.py,541
-  adapters/python/urirun/node/twin_store.py,125
+  adapters/python/urirun/node/twin_store.py,130
   adapters/python/urirun/planfile_adapter.py,6
   adapters/python/urirun/runtime/__init__.py,2
   adapters/python/urirun/runtime/_registry.py,719
@@ -231,11 +233,11 @@ M[281]:
   adapters/python/urirun/runtime/secrets.py,264
   adapters/python/urirun/runtime/tree.py,92
   adapters/python/urirun/runtime/v1.py,472
-  adapters/python/urirun/runtime/v2.py,1997
+  adapters/python/urirun/runtime/v2.py,2019
   adapters/python/urirun/runtime/v2_adopt.py,194
   adapters/python/urirun/runtime/v2_grpc.py,205
   adapters/python/urirun/runtime/v2_mcp.py,213
-  adapters/python/urirun/runtime/v2_service.py,146
+  adapters/python/urirun/runtime/v2_service.py,153
   adapters/python/urirun/runtime/worker.py,290
   adapters/python/urirun/scheduler.py,6
   adapters/python/urirun/task_planner.py,6
@@ -261,7 +263,7 @@ M[281]:
   examples/node-file-transfer/fs_transfer.py,72
   project.sh,69
   scripts/cc_gate.py,82
-  scripts/extraction_audit.py,337
+  scripts/extraction_audit.py,355
   scripts/lint_connectors.py,141
   scripts/release-bump.sh,30
   scripts/repin_connectors.py,177
@@ -394,6 +396,10 @@ D:
     test_nav_history_and_current_url(monkeypatch)
     test_snapshot_primitives_round_trip(monkeypatch)
     test_reexport_binds_same_function_objects()
+  adapters/python/tests/test_chat_artifacts.py:
+    e: _FakeDB,RegisterStepArtifactsTests
+    _FakeDB: __init__(0),register_artifact(5)
+    RegisterStepArtifactsTests: setUp(0),_result(3),test_frozen_screenshot_is_cataloged(0),test_live_widget_is_not_cataloged(0),test_missing_file_is_not_cataloged(0),test_untagged_result_is_not_cataloged(0),test_catalog_hiccup_never_raises(0)
   adapters/python/tests/test_cli_parser.py:
     e: test_cli_imports_without_cycle_and_builds,_commands,test_all_top_level_commands_present,test_representative_subcommands_parse_to_right_dest,test_inherited_and_typed_args_survive_extraction,test_host_add_node_accepts_api_device_flags
     test_cli_imports_without_cycle_and_builds()
@@ -783,7 +789,7 @@ D:
     test_llm_flow_injects_environment_facts_into_planner(monkeypatch)
     test_fetch_planner_environments_builds_context(monkeypatch)
   adapters/python/tests/test_flow_twin.py:
-    e: _mesh,_profile,_flow,test_kvm_targets_collects_distinct_cdp_and_kvm_nodes_only,test_capture_known_good_stores_profile_per_target,test_capture_known_good_skips_targets_that_wont_answer,test_drift_timeline_emits_entry_when_environment_changed,test_drift_timeline_empty_when_matches_known_good,test_execute_flow_with_memory_does_not_abort_on_drift,test_update_known_good_overwrites_baseline_unconditionally,test_execute_flow_with_memory_updates_known_good_on_success,test_execute_flow_with_memory_does_not_update_known_good_on_failure,test_execute_flow_without_memory_is_a_noop_for_twin,test_fetch_planner_environments_threads_memory_into_planner_context,test_execute_flow_remembers_flow_on_success,test_execute_flow_does_not_remember_on_failure,test_execute_flow_remember_flow_key_is_uri_stable,test_execute_flow_no_memory_is_noop_for_flow_store,test_suggest_recall_returns_none_when_flow_not_remembered,test_suggest_recall_returns_record_after_successful_run,test_suggest_recall_same_uris_different_payloads_hits_same_slot,test_suggest_recall_different_uri_sequence_returns_none,test_results_degraded_detects_nested_and_toplevel_shapes,test_enrich_remember_stamps_record_only_when_degraded,test_remember_known_good_flow_routes_degraded_run_aside,test_enrich_remember_passes_user_timeline_into_record,test_enrich_remember_extracts_capture_proofs,test_capture_proofs_from_results_ignores_non_capture_steps,test_plan_with_preflight_marks_step_optional,test_flow_timeline_entry_reversible_field,test_inprocess_discovery_exception_returns_error_dict,test_remember_handler_writes_capture_proofs_to_proof_store
+    e: _mesh,_profile,_flow,test_kvm_targets_collects_distinct_cdp_and_kvm_nodes_only,test_capture_known_good_stores_profile_per_target,test_capture_known_good_skips_targets_that_wont_answer,test_drift_timeline_emits_entry_when_environment_changed,test_drift_timeline_empty_when_matches_known_good,test_execute_flow_with_memory_does_not_abort_on_drift,test_update_known_good_overwrites_baseline_unconditionally,test_execute_flow_with_memory_updates_known_good_on_success,test_execute_flow_with_memory_does_not_update_known_good_on_failure,test_execute_flow_without_memory_is_a_noop_for_twin,test_fetch_planner_environments_threads_memory_into_planner_context,test_execute_flow_remembers_flow_on_success,test_execute_flow_does_not_remember_on_failure,test_execute_flow_remember_flow_key_is_uri_stable,test_execute_flow_no_memory_is_noop_for_flow_store,test_suggest_recall_returns_none_when_flow_not_remembered,test_suggest_recall_returns_record_after_successful_run,test_suggest_recall_same_uris_different_payloads_hits_same_slot,test_suggest_recall_different_uri_sequence_returns_none,test_results_degraded_detects_nested_and_toplevel_shapes,test_enrich_remember_stamps_record_only_when_degraded,test_remember_known_good_flow_routes_degraded_run_aside,test_enrich_remember_passes_user_timeline_into_record,test_enrich_remember_extracts_capture_proofs,test_capture_proofs_from_results_ignores_non_capture_steps,test_plan_with_preflight_marks_step_optional,test_flow_timeline_entry_reversible_field,test_inprocess_discovery_exception_returns_error_dict,test_remember_handler_writes_capture_proofs_to_proof_store,test_remember_flow_stores_intent_sig,test_recall_flow_by_intent_finds_matching_record,test_recall_flow_by_intent_returns_none_for_unknown_intent,test_recall_flow_by_intent_skips_degraded_records
     _mesh()
     _profile(platform;wayland;best;monitors)
     _flow()
@@ -816,6 +822,10 @@ D:
     test_flow_timeline_entry_reversible_field()
     test_inprocess_discovery_exception_returns_error_dict()
     test_remember_handler_writes_capture_proofs_to_proof_store()
+    test_remember_flow_stores_intent_sig()
+    test_recall_flow_by_intent_finds_matching_record()
+    test_recall_flow_by_intent_returns_none_for_unknown_intent()
+    test_recall_flow_by_intent_skips_degraded_records()
   adapters/python/tests/test_formatting.py:
     e: test_format_table_empty,test_format_table_header_and_separator,test_format_table_column_width_matches_longest,_mesh,test_format_nodes_up_node,test_format_nodes_down_node,test_format_nodes_empty_mesh,test_format_nodes_mcp_and_a2a_counts,_route,test_format_routes_shows_uri_column,test_format_routes_sorts_by_uri,test_format_routes_excludes_unsafe,test_format_routes_empty,test_format_tickets_shows_fields,test_format_tickets_empty,test_format_tickets_falls_back_to_title
     test_format_table_empty()
@@ -1855,7 +1865,7 @@ D:
     _capability_check_for_api(api)
     api_node_doctor(node)
   adapters/python/urirun/host/chat_orchestrator.py:
-    e: chat_message,compact_chat_result,_is_document_sync_prompt,_document_sync_node_from_prompt,_chat_ask_phone_scanner,_sync_execute_initial,_sync_ok_and_status,_apply_urifix_recovery,_chat_ask_document_sync,_chat_ask_general_planner_failure,_general_path_complete,_chat_ask_general_capability_gap,_apply_run_credentials,_restore_run_credentials,_fetch_planner_environments_for_nodes,_chat_ask_general_check_offline,_chat_ask_general_build_result,_chat_ask_general,_add_chat_user_message,_chat_insert_twin_preview,chat_ask,ChatDeps
+    e: chat_message,compact_chat_result,_is_document_sync_prompt,_document_sync_node_from_prompt,_chat_ask_phone_scanner,_sync_execute_initial,_sync_ok_and_status,_apply_urifix_recovery,_chat_ask_document_sync,_chat_ask_general_planner_failure,_register_step_artifacts,_general_path_complete,_chat_ask_general_capability_gap,_apply_run_credentials,_restore_run_credentials,_fetch_planner_environments_for_nodes,_chat_ask_general_check_offline,_chat_ask_general_build_result,_chat_ask_general,_add_chat_user_message,_chat_insert_twin_preview,chat_ask,ChatDeps
     ChatDeps:
     chat_message(role;content)
     compact_chat_result(result;payload)
@@ -1867,6 +1877,7 @@ D:
     _apply_urifix_recovery(result;timeline)
     _chat_ask_document_sync(project;db;config;payload;node_urls;token;identity;prompt;execute;no_llm;selected_nodes;selected_targets;deps)
     _chat_ask_general_planner_failure(exc;db;prompt;execute;selected_nodes;selected_targets;deps)
+    _register_step_artifacts(result;db;host_db)
     _general_path_complete(result;db;prompt;execute;selected_nodes;selected_targets;generator;flow;attachments;deps)
     _chat_ask_general_capability_gap(db;prompt;execute;selected_nodes;selected_targets;discovered;capability_gap;deps)
     _apply_run_credentials(token;identity)
@@ -2313,7 +2324,7 @@ D:
     service_status(port;is_process_fn)
     stop_service_pids(port;is_process_fn)
   adapters/python/urirun/host/task_planner.py:
-    e: normalize_text,slug,is_ambiguous,is_destructive,_has_any,_unique,_short_name,_ambiguous_plan,_derive_plan_labels,_derive_acceptance_criteria,heuristic_plan_chat_request,quiet_completion,llm_plan_chat_request,plan_chat_request,ticket_payload,create_tickets_from_plan,PlannedTicket,TaskPlanningResult
+    e: normalize_text,slug,is_ambiguous,is_destructive,_has_any,_unique,_short_name,_ambiguous_plan,_derive_plan_labels,_derive_acceptance_criteria,heuristic_plan_chat_request,llm_plan_chat_request,plan_chat_request,ticket_payload,create_tickets_from_plan,PlannedTicket,TaskPlanningResult
     PlannedTicket:
     TaskPlanningResult:
     normalize_text(value)
@@ -2327,7 +2338,6 @@ D:
     _derive_plan_labels(labels;normalized;domains;daily;screenshot;destructive)
     _derive_acceptance_criteria(domains;screenshot;daily;destructive)
     heuristic_plan_chat_request(prompt)
-    quiet_completion()
     llm_plan_chat_request(prompt)
     plan_chat_request(prompt)
     ticket_payload(ticket;plan)
@@ -2373,12 +2383,13 @@ D:
     materialize_base64_artifacts(data)
     compact_result_artifacts(result;args)
   adapters/python/urirun/node/_util.py:
-    e: now_id,slug,_parse_json_option,json_load,json_write
+    e: now_id,slug,_parse_json_option,json_load,json_write,quiet_completion
     now_id()
     slug(value)
     _parse_json_option(value;default)
     json_load(path)
     json_write(path;data)
+    quiet_completion()
   adapters/python/urirun/node/_version.py:
     e: current_version,_vtuple,latest_version,version_status,version_line
     current_version()
@@ -2575,7 +2586,7 @@ D:
     format_routes(routes)
     format_tickets(tickets)
   adapters/python/urirun/node/keyauth.py:
-    e: new_enroll_token,token_matches,available,authorized_keys_path,_normalize,fingerprint,load_authorized,is_authorized,add_authorized,_canonical,public_openssh,sign,verify,_replay_seen,verify_request
+    e: new_enroll_token,token_matches,available,authorized_keys_path,_normalize,fingerprint,load_authorized,is_authorized,add_authorized,_canonical,public_openssh,sign,verify,_replay_seen,verify_request,_register_signer
     new_enroll_token(length)
     token_matches(expected;provided)
     available()
@@ -2591,6 +2602,7 @@ D:
     verify(openssh;sig_b64;purpose;ts;body)
     _replay_seen(sig)
     verify_request(headers;body;purpose)
+    _register_signer()
   adapters/python/urirun/node/manage.py:
     e: _pip,_install_policy,_classify_source,_policy_allows,install_policy,package_install,_refresh_install_caches,_project_name_from_dir,_project_root,connector_install,_connector_match,_scan_local_connectors,_augment_local_routes,_list_installed_connectors,connector_discover,_derive_local_routes,_read_json_manifest,_read_tellmesh_manifest,_read_connector_manifest,registry_installed,_installed_route_owners,_route_key,_scheme_of,_scope_to_scheme,_match_routes,capability_check,registry_adopt,package_list,runtime_info,_session_type,_compositor,_gpu_info,_resolution_info,_app_count,host_facts,bindings
     _pip(args;timeout)
@@ -2630,6 +2642,10 @@ D:
     host_facts()
     bindings(name)
   adapters/python/urirun/node/mesh.py:
+    e: _register_cli_bridge,_catalog_resolve_install,_add_openapi_command
+    _register_cli_bridge()
+    _catalog_resolve_install(catalog_url;ids)
+    _add_openapi_command(args)
   adapters/python/urirun/node/node_cli.py:
     e: _data_bindings,_data_init,_data_dataset_create,_data_datasets,_data_record_upsert,_data_records,_data_artifact_register,_data_artifacts,_data_check_add,_data_checks,_data_sql,data_command,monitor_command,_parse_api_json_args,_build_implicit_api,_handle_add_node_advanced,_handle_add_node,_host_delegated_command,fulfill_need,supply_command,ensure_command,_maybe_ensure_scheme,_run_streamed,run_command,_print_event,watch_command,_watch_loop,_host_cmd_config,_host_cmd_nodes,_host_cmd_routes,_host_cmd_agents,_host_cmd_doctor,_host_cmd_ask,_host_mesh_command,copy_id_command,copy_id_cli,_split_deploy_doc,_warn_dropped_routes,deploy_command,_maybe_load_dotenv,host_command,_probe_one_route,_render_probe_report,probe_command,node_list_command,node_stop_command,_resolve_registry_source,node_command
     _data_bindings(args;host_db)
@@ -2715,7 +2731,7 @@ D:
     Connector: call(2),scan_uri(1),schema(2)  # The ADOPTION CONTRACT. A connector enters the engine by prov
     Twin: scan(3),rescan(1)  # The environment model + a position signature. Holds its own 
     ReversibleProcess: execute(3),rollback(2),rollback_flow(3)  # The engine: execute with the invariant, build the ledger, ro
-    TwinMemory: remember(2),known_good(1),drift(2),remember_flow(2),recall_flow(1),known_good_flows(0),degraded_flows(0),remember_episode(1),known_good_episodes(0),recall_episode(2),remember_proof(2),recall_proof(1)  # Remembers the KNOWN-GOOD environment fingerprint per node (s
+    TwinMemory: remember(2),known_good(1),drift(2),remember_flow(2),recall_flow(1),known_good_flows(0),degraded_flows(0),remember_episode(1),known_good_episodes(0),recall_episode(2),recall_flow_by_intent(1),remember_proof(2),recall_proof(1),remember_skill(2),recall_skill(1),skills(0),session_append(2),session_steps(1)  # Remembers the KNOWN-GOOD environment fingerprint per node (s
     parse(uri)
     path_of(uri)
     sig(obj)
@@ -2778,6 +2794,18 @@ D:
     _serve_opts_merged(args;node)
     _resolve_serve_opts(args;node)
     _node_serve(args;node;name;registry)
+  adapters/python/urirun/node/skill.py:
+    e: _now,_memory,_episode_for,_uri_skill_promote,_uri_skill_recall,_uri_skill_list,_uri_session_append,_uri_session_export,_uri_session_promote,register
+    _now()
+    _memory()
+    _episode_for(memory;payload)
+    _uri_skill_promote(payload)
+    _uri_skill_recall(payload)
+    _uri_skill_list(payload)
+    _uri_session_append(payload)
+    _uri_session_export(payload)
+    _uri_session_promote(payload)
+    register()
   adapters/python/urirun/node/task_cli.py:
     e: _task_prompt,_ticket_payload,_host_local_registry,_run_executor_handler,_resolves_locally,_run_task_flow,_emit_ticket_result,_task_plan,_task_bindings,_task_schedule,_task_list,_task_show,_task_next,_task_create,_task_claim,_task_start,_task_complete,_task_fail,_task_block,_task_ready,_task_wait,_task_dsl,_task_run,_task_loop,task_command
     _task_prompt(ticket)
@@ -3138,7 +3166,7 @@ D:
     load_registry_arg(arg;openapi_base_url)
     main(argv)
   adapters/python/urirun/runtime/v2.py:
-    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,_handler_kwargs,uri_handler,decorated_bindings,_document_binding_from_expanded,connector_bindings,_select_entry_points,_load_entry_point_bindings,entry_point_bindings,_entry_point_script_issues,connector_health,_collision_index,connector_collisions,entry_point_binding_document,entry_point_registry,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,_first_payload_value,_resolve_error_action,_error_recent,_error_search,_error_info,_error_ticket,run_error_store,register_executor,run_local_function_subprocess,_last_json_object,_builtin_error_route_entry,_builtin_registry_route_entry,_record_error,_run_parse,_run_resolve_route,_run_validate,_run_executor,_run_dry,_run_execute,run,check,list_routes,_strip_runtime_only,_binding_config,_binding_adapter_kind,expand_binding,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_json_arg,_load_many,_package_version,_is_pipx_env,_cmd_scan,_cmd_compile,_cmd_discover,_cmd_adopt_pack,_cmd_tree,_cmd_validate,_cmd_add_command,_cmd_add_pypi,_cmd_add_openapi,_cmd_gen,_cmd_doctor,_pip_command,_resolve_pip_targets,_pip_install_args,_cmd_install,_cmd_upgrade,_pipspec_version,_outdated_rows,_cmd_outdated,_cmd_agent,_print_doctor_report,_cmd_connectors_doctor,_cmd_connectors,_cmd_errors,_cmd_compat,_cmd_host,_cmd_node,_builtin_binding_items,_registry_from_module,_resolve_list_registry,_cmd_run_or_list,_cmd_version,main,_ExecutorProxy,_RunAbort
+    e: model_from_function,_placeholder_kwargs,uri_command,uri_shell,_handler_kwargs,uri_handler,decorated_bindings,_document_binding_from_expanded,connector_bindings,_select_entry_points,_load_entry_point_bindings,entry_point_bindings,_entry_point_script_issues,connector_health,_collision_index,connector_collisions,entry_point_binding_document,entry_point_registry,_schema_for,_apply_defaults,_input_values,validate_input,render_value,render_sequence,render_argv,run_argv_template,run_shell_template,_first_payload_value,_resolve_error_action,_error_recent,_error_search,_error_info,_error_ticket,run_error_store,register_executor,run_local_function_subprocess,_last_json_object,register_cli_command,_builtin_error_route_entry,_builtin_registry_route_entry,_record_error,_run_parse,_run_resolve_route,_run_validate,_run_executor,_run_dry,_run_execute,run,check,list_routes,_strip_runtime_only,_binding_config,_binding_adapter_kind,expand_binding,expand_bindings,compile_registry,build_binding_document,_bindings_as_map,merge_binding_document,write_or_emit_binding,_coerce_default,parse_param_declaration,input_schema_from_params,command_binding_from_cli,pypi_binding,load_registry_arg,_placeholders_in,validate_binding_document,_empty_input_schema,_load_manifest,_scan_package_json,_read_toml,_scan_pyproject,_scan_shell_script,_scan_makefile,_parse_dockerfile_labels,_manifest_candidates,_scan_dockerfile,scan_artifacts,_load_json_arg,_load_many,_package_version,_is_pipx_env,_cmd_scan,_cmd_compile,_cmd_discover,_cmd_adopt_pack,_cmd_tree,_cmd_validate,_cmd_add_command,_cmd_add_pypi,_cmd_add_openapi,_cmd_gen,_cmd_doctor,_pip_command,_resolve_pip_targets,_pip_install_args,_cmd_install,_cmd_upgrade,_pipspec_version,_outdated_rows,_cmd_outdated,_cmd_agent,_print_doctor_report,_cmd_connectors_doctor,_cmd_connectors,_cmd_errors,_cmd_compat,_cmd_host,_cmd_node,_builtin_binding_items,_registry_from_module,_resolve_list_registry,_cmd_run_or_list,_cmd_version,main,_ExecutorProxy,_RunAbort
     _ExecutorProxy: get(2),__contains__(1)  # EXECUTORS dict that includes host-registered executors at lo
     _RunAbort: __init__(1)  # Carries a finished (error) envelope to the single exit point
     model_from_function(fn)
@@ -3178,6 +3206,7 @@ D:
     register_executor(name;fn)
     run_local_function_subprocess(ctx;policy;execute)
     _last_json_object(text)
+    register_cli_command(key;fn)
     _builtin_error_route_entry(translation)
     _builtin_registry_route_entry(translation)
     _record_error(envelope)
@@ -3240,7 +3269,7 @@ D:
     _cmd_install(args;parser)
     _cmd_upgrade(args;parser)
     _pipspec_version(pipspec)
-    _outdated_rows(catalog;connect_catalog)
+    _outdated_rows(catalog;catalog_find)
     _cmd_outdated(args;parser)
     _cmd_agent(args;parser)
     _print_doctor_report(report;unhealthy;dup;shared)
@@ -3293,7 +3322,8 @@ D:
     serve_mcp(registry;policy;mode;instream;outstream)
     main(argv)
   adapters/python/urirun/runtime/v2_service.py:
-    e: service_base,_post,call,make_dispatch
+    e: register_signer,service_base,_post,call,make_dispatch
+    register_signer(fn)
     service_base(target;uri)
     _post(url;body;timeout)
     call(uri;payload;registry;mode;timeout;validate)
