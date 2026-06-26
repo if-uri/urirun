@@ -312,6 +312,42 @@ class TwinMemoryTests(unittest.TestCase):
         self.assertEqual(len(m.known_good_flows()), 1)
         self.assertEqual(m.recall_flow("k1")["ts"], "t1")         # good record intact
 
+    def test_recall_episode_hits_via_derived_intent(self):
+        # make_episode() emits no intent_sig; recall must DERIVE it from the stored goal,
+        # otherwise the whole episode store never pays off (the recall arrow is dead).
+        from urirun.node.episode import make_episode, intent_signature
+        m = TwinMemory()
+        env_fp = environment_fingerprint(self.P1)
+        ep = make_episode(experience_id="x", goal="otwórz przeglądarkę", ts="t0",
+                          env_fingerprint=env_fp, env_snapshot=self.P1, outcome_status="ok")
+        d = ep.to_dict()
+        self.assertNotIn("intent_sig", d)                         # writer stamps nothing
+        m.remember_episode(d)
+        # different wording/case → same normalised intent → hit
+        hit = m.recall_episode(intent_signature("OTWÓRZ   PRZEGLĄDARKĘ"), env_fp)
+        self.assertIsNotNone(hit)
+        self.assertEqual(hit["goal"], "otwórz przeglądarkę")
+
+    def test_recall_episode_misses_on_env_drift(self):
+        from urirun.node.episode import make_episode, intent_signature
+        m = TwinMemory()
+        ep = make_episode(experience_id="x", goal="otwórz przeglądarkę", ts="t0",
+                          env_fingerprint=environment_fingerprint(self.P1),
+                          env_snapshot=self.P1, outcome_status="ok")
+        m.remember_episode(ep.to_dict())
+        drifted_fp = environment_fingerprint(self.P2)             # display changed
+        self.assertIsNone(m.recall_episode(intent_signature("otwórz przeglądarkę"), drifted_fp))
+
+    def test_recall_episode_ignores_degraded_episode(self):
+        from urirun.node.episode import make_episode, intent_signature
+        m = TwinMemory()
+        env_fp = environment_fingerprint(self.P1)
+        ep = make_episode(experience_id="x", goal="zrób screenshot", ts="t0",
+                          env_fingerprint=env_fp, env_snapshot=self.P1, outcome_status="degraded")
+        m.remember_episode(ep.to_dict())
+        # a degraded prior run is not known-good → recall must not return it
+        self.assertIsNone(m.recall_episode(intent_signature("zrób screenshot"), env_fp))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -27,7 +27,7 @@ def _with_intents(**kwargs):
     from urirun.node.flow import _INTENT_NAMES
     base = {k: False for k in _INTENT_NAMES}
     base.update(kwargs)
-    with patch("urirun.node.flow._flow_intents", return_value=base):
+    with patch("urirun.node.flow_planner._flow_intents", return_value=base):
         yield
 
 

@@ -276,3 +276,20 @@ def test_make_local_dispatch_uri_delegates_to_make_dispatch(monkeypatch):
     assert len(calls) == 1
     assert calls[0]["mode"] == "execute"
     assert calls[0]["has_fallback"] is True
+
+
+def test_inprocess_fallback_reaches_twin_preflight():
+    """Full end-to-end: make_local_dispatch_uri with an empty mesh registry must route
+    twin://host/flow/command/preflight through inprocess_fallback to the registered
+    twin connector — verifying the v2_service NOT_FOUND → fallback path is wired.
+
+    This is the regression test for the bug where the preflight step aborted every
+    CDP flow with 'route not found' because v2_service.call used error.type='registry'
+    while make_dispatch checked error.category=='NOT_FOUND'."""
+    from urirun.host.dispatch import make_local_dispatch_uri
+    dispatch = make_local_dispatch_uri({}, "execute")
+    r = dispatch("twin://host/flow/command/preflight",
+                 {"steps": [], "mesh": {"routes": []}})
+    # The twin connector handles it in-process — must succeed (ok=True, not a registry miss).
+    assert r is not None
+    assert r.get("ok") is True, f"preflight route must reach twin connector, got: {r}"
