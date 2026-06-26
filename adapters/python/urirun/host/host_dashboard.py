@@ -1536,26 +1536,16 @@ def _run_inprocess_connector_uri(uri: str, action_payload: dict, db: str | None 
 
 
 def _make_local_dispatch_uri(registry: dict, run_mode: str):
-    """Build a dispatch_uri callable: mesh registry first, in-process connectors second.
+    """Mesh-first dispatch with in-process fallback for installed connectors.
 
-    The two-tier lookup lets diag://, fix://, and twin:// URIs — which are registered
-    in-process via urirun.connector() but not exposed as mesh routes — be reached by
-    the flow runner when those connectors are installed locally.
-
-    Tier 1 (mesh): v2_service.call with the mesh registry — fast, covers served nodes.
-    Tier 2 (in-process): _run_inprocess_connector_uri via discovery — covers installed
-    connectors that aren't mesh-exposed (diag, fix, twin, widget, artifact, …)."""
+    Delegates to v2_service.make_dispatch — see its docstring for the two-tier
+    contract.  The fallback reaches diag://, fix://, twin://, widget://, artifact://
+    that are registered in-process but not exposed as mesh routes."""
     from urirun import v2_service as _v2
-
-    def _dispatch(uri: str, payload: dict | None = None) -> dict | None:
-        r = _v2.call(uri, payload or {}, registry, mode=run_mode)
-        if r and r.get("ok"):
-            return r
-        if (r.get("error") or {}).get("category") == "NOT_FOUND":
-            return _run_inprocess_connector_uri(uri, payload or {})
-        return r
-
-    return _dispatch
+    return _v2.make_dispatch(
+        registry, run_mode,
+        fallback=lambda uri, p: _run_inprocess_connector_uri(uri, p),
+    )
 
 
 _UNROUTED = object()  # sentinel: _uri_invoke_route matched no built-in route (distinct from a handler returning None)
@@ -3395,7 +3385,7 @@ def _free_port_from_old_dashboard(port: int) -> None:
     )
 
 
-# Patchable aliases for process-type is_target functions used by tests
+# Patchable alias for process-type is_target function used by tests
 _is_scanner_process = _is_scanner_process_impl
 _is_chat_process = _is_chat_process_impl
 _is_android_node_process = _is_android_node_process_impl
@@ -3413,7 +3403,7 @@ def _free_port_from_old_scanner(port: int, *, force: bool = False, emit: bool = 
 
 
 def _free_port_from_old_chat(port: int, *, force: bool = False, emit: bool = False) -> dict:
-    """Free a chat-dashboard-owned port before rebinding it."""
+    """Free a chat-service-owned port before rebinding it."""
     return _free_port_from_matching_processes(
         port,
         force=force,
@@ -3424,7 +3414,7 @@ def _free_port_from_old_chat(port: int, *, force: bool = False, emit: bool = Fal
 
 
 def _free_port_from_old_android_node(port: int, *, force: bool = False, emit: bool = False) -> dict:
-    """Free an android-node-owned port before rebinding it."""
+    """Free an android-node-service-owned port before rebinding it."""
     return _free_port_from_matching_processes(
         port,
         force=force,
