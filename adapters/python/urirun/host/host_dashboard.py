@@ -1438,45 +1438,52 @@ def _handle_get_nodes_qr(handler, parsed) -> None:
         _json_response(handler, 500, {"ok": False, "error": str(exc)})
 
 
+def _handle_get_services(handler, parsed, project) -> bool:
+    if parsed.path == "/services/view":
+        _html_response(handler, _service_widget_html(project, parse_qs(parsed.query)))
+        return True
+    if parsed.path == "/services/view.svg":
+        _asset_response(handler, _service_widget_svg(project, parse_qs(parsed.query)).encode("utf-8"),
+                        "image/svg+xml; charset=utf-8")
+        return True
+    if parsed.path == "/assets/urirun.js":
+        _js_sdk_response(handler, project)
+        return True
+    return False
+
+
+def _handle_get_api(handler, parsed, project, db) -> bool:
+    query = parse_qs(parsed.query)
+    if parsed.path == "/api/nodes/phone-web":
+        _json_response(handler, 200, phone_web_nodes(query))
+        return True
+    if parsed.path == "/api/nodes/qr":
+        _handle_get_nodes_qr(handler, parsed)
+        return True
+    if parsed.path == "/api/uri/event":
+        _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))
+        return True
+    if parsed.path == "/api/page/actions/poll":
+        _json_response(handler, 200,
+                       _page_action_poll_impl(_first(query, "target", "scanner") or "scanner",
+                                              int(_first(query, "limit", "4") or 4)))
+        return True
+    if parsed.path == "/api/file":
+        path = _first(query, "path")
+        if not path:
+            _json_response(handler, 400, {"ok": False, "error": "path is required"})
+            return True
+        _file_response(handler, unquote(path), project)
+        return True
+    return False
+
+
 def _handle_get(handler, parsed, project, db, config, node_urls, token, identity):
     if _handle_get_static(handler, parsed, project):
         return
-    if parsed.path == "/api/nodes/phone-web":
-        _json_response(handler, 200, phone_web_nodes(parse_qs(parsed.query)))
+    if _handle_get_services(handler, parsed, project):
         return
-    if parsed.path == "/api/nodes/qr":
-        _handle_get_nodes_qr(handler, parsed)
-        return
-    if parsed.path == "/services/view":
-        _html_response(handler, _service_widget_html(project, parse_qs(parsed.query)))
-        return
-    if parsed.path == "/services/view.svg":
-        _asset_response(
-            handler,
-            _service_widget_svg(project, parse_qs(parsed.query)).encode("utf-8"),
-            "image/svg+xml; charset=utf-8",
-        )
-        return
-    if parsed.path == "/assets/urirun.js":
-        _js_sdk_response(handler, project)
-        return
-    if parsed.path == "/api/uri/event":
-        _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, parse_qs(parsed.query)))
-        return
-    if parsed.path == "/api/page/actions/poll":
-        query = parse_qs(parsed.query)
-        _json_response(
-            handler,
-            200,
-            _page_action_poll_impl(_first(query, "target", "scanner") or "scanner", int(_first(query, "limit", "4") or 4)),
-        )
-        return
-    if parsed.path == "/api/file":
-        path = _first(parse_qs(parsed.query), "path")
-        if not path:
-            _json_response(handler, 400, {"ok": False, "error": "path is required"})
-            return
-        _file_response(handler, unquote(path), project)
+    if _handle_get_api(handler, parsed, project, db):
         return
     status, payload = _dashboard_api_response(parsed.path, project, db, config, parse_qs(parsed.query), node_urls=node_urls)
     _json_response(handler, status, payload)
@@ -1578,30 +1585,36 @@ def _handle_post_chat(handler, parsed, project, db, config, node_urls, token, id
     return False
 
 
-def _handle_post(handler, parsed, parts, project, db, config, node_urls, token, identity):
+def _handle_post_tasks(handler, parsed, parts, project) -> bool:
     if parsed.path == "/api/tasks/create":
-        payload = _read_json(handler)
-        _json_response(handler, 200, task_create(project, payload))
-        return
+        _json_response(handler, 200, task_create(project, _read_json(handler)))
+        return True
     if len(parts) == 4 and parts[0] == "api" and parts[1] == "tasks":
-        payload = _read_json(handler)
-        _json_response(handler, 200, task_action(project, parts[2], parts[3], payload))
-        return
+        _json_response(handler, 200, task_action(project, parts[2], parts[3], _read_json(handler)))
+        return True
+    return False
+
+
+def _handle_post_artifacts(handler, parsed, project, db) -> bool:
     if parsed.path == "/api/artifacts/delete":
-        payload = _read_json(handler)
-        _json_response(handler, 200, _artifacts_delete_impl(_host_db(), project, db, payload))
-        return
+        _json_response(handler, 200, _artifacts_delete_impl(_host_db(), project, db, _read_json(handler)))
+        return True
     if parsed.path == "/api/artifacts/dedupe":
-        payload = _read_json(handler)
-        _json_response(handler, 200, _artifacts_dedupe_rows_impl(_host_db(), project, db, payload))
-        return
+        _json_response(handler, 200, _artifacts_dedupe_rows_impl(_host_db(), project, db, _read_json(handler)))
+        return True
     if parsed.path == "/api/artifacts/cleanup-orphans":
-        payload = _read_json(handler)
-        _json_response(handler, 200, _artifacts_cleanup_orphan_sidecars_impl(_host_db(), project, db, payload))
-        return
+        _json_response(handler, 200, _artifacts_cleanup_orphan_sidecars_impl(_host_db(), project, db, _read_json(handler)))
+        return True
     if parsed.path == "/api/documents/reconcile":
-        payload = _read_json(handler)
-        _json_response(handler, 200, documents_reconcile(project, db, payload))
+        _json_response(handler, 200, documents_reconcile(project, db, _read_json(handler)))
+        return True
+    return False
+
+
+def _handle_post(handler, parsed, parts, project, db, config, node_urls, token, identity):
+    if _handle_post_tasks(handler, parsed, parts, project):
+        return
+    if _handle_post_artifacts(handler, parsed, project, db):
         return
     if _handle_post_connectors(handler, parsed, project, db, config, node_urls, token, identity):
         return

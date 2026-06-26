@@ -1,12 +1,12 @@
-# redup/duplication | 12 groups | 129f 27932L | 2026-06-26
+# redup/duplication | 12 groups | 129f 25892L | 2026-06-26
 
 SUMMARY:
   files_scanned: 129
-  total_lines:   27932
+  total_lines:   25892
   dup_groups:    12
   dup_fragments: 28
   saved_lines:   103
-  scan_ms:       722
+  scan_ms:       965
 
 HOTSPOTS[7] (files with most duplication):
   __init__.py  dup=38L  groups=1  frags=3  (0.1%)
@@ -23,9 +23,9 @@ DUPLICATES[12] (ranked by impact):
       __init__.py:65-69  (shell)
       __init__.py:72-88  (handler)
   [8d9b83d2bd35fb5d]   STRU  _free_port_from_old_scanner  L=9 N=3 saved=18 sim=1.00
-      host/host_dashboard.py:1717-1725  (_free_port_from_old_scanner)
-      host/host_dashboard.py:1728-1736  (_free_port_from_old_chat)
-      host/host_dashboard.py:1739-1747  (_free_port_from_old_android_node)
+      host/host_dashboard.py:1730-1738  (_free_port_from_old_scanner)
+      host/host_dashboard.py:1741-1749  (_free_port_from_old_chat)
+      host/host_dashboard.py:1752-1760  (_free_port_from_old_android_node)
   [19899f9cfc86ca65]   STRU  is_scanner_process  L=10 N=2 saved=10 sim=1.00
       host/service_control.py:213-222  (is_scanner_process)
       host/service_control.py:236-245  (is_android_node_process)
