@@ -10185,6 +10185,41 @@ def _chat_ask_document_sync(
     return result
 
 
+def _general_path_next_intent(execution: dict) -> dict | None:
+    """Produce a structured nextIntent from the PLAYBOOK diagnosis in a failed flow.
+
+    Falls back to a generic urifix repair intent when no PLAYBOOK rule matched.
+    Returns None when the flow succeeded (no next action needed).
+    """
+    if execution.get("ok"):
+        return None
+    recoveries = execution.get("recovery") or []
+    plan = next((r.get("plan") for r in recoveries if isinstance(r.get("plan"), dict)), None)
+    if plan:
+        auto_ids = set(plan.get("autoApplicable") or [])
+        remediation = plan.get("remediation") or []
+        automatic = any(bool(a.get("automatic")) for a in remediation if a.get("id") in auto_ids)
+        return {
+            "id": "playbook-repair",
+            "uri": "urifix://host/chain/command/repair",
+            "cause": plan.get("cause"),
+            "rule": plan.get("rule"),
+            "confidence": plan.get("confidence"),
+            "automatic": automatic,
+            "status": "ready" if automatic else "needs-input",
+            "actions": remediation,
+        }
+    error = execution.get("error") or {}
+    return {
+        "id": "repair-uri-chain",
+        "uri": "urifix://host/chain/command/repair",
+        "automatic": False,
+        "status": "needs-input",
+        "actions": [],
+        "errorCategory": error.get("category") or "UNKNOWN",
+    }
+
+
 def _chat_ask_general_planner_failure(
     exc: BaseException,
     db: str | None,
@@ -10451,6 +10486,8 @@ def _chat_ask_general(
     if execute and not result.get("verification"):
         from urirun.host.contracts import flow_execution_verification as _flow_exec_verify  # noqa: PLC0415
         result["verification"] = _flow_exec_verify(flow, execution)
+    if not result.get("ok") and not result.get("nextIntent"):
+        result["nextIntent"] = _general_path_next_intent(execution)
     result = _compact_chat_result(result, payload)
     attachments = _collect_attachments(result, project)
     result["attachments"] = attachments
