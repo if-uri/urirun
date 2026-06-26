@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-from .node_types import annotate_node_type, node_type_profile
+from .node_types import annotate_node_type, node_type_profile, normalize_node_type
 
 
 PHONE_SCANNER_ROUTES = [
@@ -463,3 +463,57 @@ def node_remove_from_mirror(name: str) -> bool:
         return True
     except Exception:  # noqa: BLE001
         return False
+
+
+def node_kinds_path() -> str:
+    return os.environ.get("URIRUN_NODE_KINDS_FILE") or os.path.expanduser("~/.urirun/node-kinds.json")
+
+
+def node_kinds() -> dict:
+    path = node_kinds_path()
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def set_node_kind(name: str, kind: str) -> None:
+    path = node_kinds_path()
+    kinds = node_kinds()
+    kinds[name] = kind
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(kinds, fh, indent=2)
+    except OSError:
+        pass
+
+
+def node_remove_kind(name: str) -> None:
+    try:
+        kinds = node_kinds()
+        if name in kinds:
+            kinds.pop(name, None)
+            with open(node_kinds_path(), "w", encoding="utf-8") as fh:
+                json.dump(kinds, fh, indent=2)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def annotate_node_kinds(nodes: list) -> None:
+    """Attach node['kind'] from the sidecar (and from a kind:* tag if present) so the UI badges it."""
+    kinds = node_kinds()
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        name = node.get("name")
+        kind = normalize_node_type(kinds.get(name))
+        if not kind:
+            for tag in node.get("tags") or []:
+                if isinstance(tag, str) and tag.startswith("kind:"):
+                    kind = normalize_node_type(tag.split(":", 1)[1])
+                    break
+        if kind:
+            node["kind"] = kind

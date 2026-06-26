@@ -117,6 +117,11 @@ from .object_registry import (
     build_node_entry as _build_node_entry,
     persist_node_to_config as _persist_node_to_config,
     node_remove_from_mirror as _node_remove_from_mirror,
+    node_kinds_path as _node_kinds_path,
+    node_kinds as _node_kinds,
+    set_node_kind as _set_node_kind,
+    node_remove_kind as _node_remove_kind,
+    annotate_node_kinds as _annotate_node_kinds,
 )
 from .scanner_bridge import (
     PAGE_ACTION_LOCK as _SCANNER_PAGE_ACTION_LOCK,
@@ -8422,18 +8427,6 @@ def configured_node_api_request(config: str | None, node_urls: list[str] | None,
     return _configured_api_call(node, api, payload)
 
 
-def _node_remove_kind(name: str) -> None:
-    """Drop a node from the kind sidecar (best-effort)."""
-    try:
-        kinds = _node_kinds()
-        if name in kinds:
-            kinds.pop(name, None)
-            with open(_node_kinds_path(), "w", encoding="utf-8") as fh:
-                json.dump(kinds, fh, indent=2)
-    except Exception:  # noqa: BLE001
-        pass
-
-
 def _node_forget_webpage(name: str) -> bool:
     """Ask the android-node service (8195) to forget a transient webpage node."""
     try:
@@ -8478,51 +8471,6 @@ def node_remove(config: str | None, payload: dict) -> dict:
     forgot = _node_forget_webpage(name) if (transient or not removed) else False
 
     return {"ok": True, "name": name, "removed": removed, "forgot": forgot, "transient": transient}
-
-
-def _node_kinds_path() -> str:
-    return os.environ.get("URIRUN_NODE_KINDS_FILE") or os.path.expanduser("~/.urirun/node-kinds.json")
-
-
-def _node_kinds() -> dict:
-    """Read the name→kind sidecar (server/pc/rdp/smartphone/browser/webpage)."""
-    path = _node_kinds_path()
-    try:
-        with open(path, encoding="utf-8") as fh:
-            data = json.load(fh)
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
-        return {}
-
-
-def _set_node_kind(name: str, kind: str) -> None:
-    """Persist a node's connection kind to the sidecar (best-effort)."""
-    path = _node_kinds_path()
-    kinds = _node_kinds()
-    kinds[name] = kind
-    try:
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump(kinds, fh, indent=2)
-    except OSError:
-        pass
-
-
-def _annotate_node_kinds(nodes: list) -> None:
-    """Attach node['kind'] from the sidecar (and from a kind:* tag if present) so the UI badges it."""
-    kinds = _node_kinds()
-    for node in nodes:
-        if not isinstance(node, dict):
-            continue
-        name = node.get("name")
-        kind = _normalize_node_type_impl(kinds.get(name))
-        if not kind:
-            for tag in node.get("tags") or []:
-                if isinstance(tag, str) and tag.startswith("kind:"):
-                    kind = _normalize_node_type_impl(tag.split(":", 1)[1])
-                    break
-        if kind:
-            node["kind"] = kind
 
 
 def _android_node_service_url() -> str:
