@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Verify a fresh pip install of urirun==VERSION from PyPI delivers all 8 bundled
-# sub-namespaces and that the host↔bundle shims resolve to the same classes.
+# sub-namespaces, shims resolve correctly, node serve starts and serves /health,
+# and host_dashboard imports without urirun-connector-scanner installed.
 #
 # Run AFTER make publish, not before (needs the version to be on PyPI).
 # Usage:
@@ -11,9 +12,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1:-$(cat "$ROOT/VERSION")}"
 VENV="/tmp/_urirun_pypi_gate"
+NODE_DIR="/tmp/_urirun_pypi_gate_node"
+
+cleanup() {
+  [ -n "${NODE_PID:-}" ] && kill "$NODE_PID" >/dev/null 2>&1 || true
+  rm -rf "$VENV" "$NODE_DIR"
+}
+trap cleanup EXIT
 
 echo "==> test-published: pip install urirun==$VERSION (clean venv, no editable, no URIRUN_KERNEL_SRC)"
-rm -rf "$VENV"
+rm -rf "$VENV" "$NODE_DIR"
 python3 -m venv "$VENV"
 "$VENV/bin/pip" install --quiet "urirun==$VERSION"
 
@@ -32,8 +40,9 @@ BUNDLE_CHECKS = [
     ("urirun_twin.twin_store",           "TwinMemory"),
     ("urirun_flow.flow",                 "make_flow"),
     ("urirun_node.server",               "serve_node"),
-    # urirun_scanner shims to external urirun_connector_scanner — test namespace only
-    ("urirun_scanner",                   None),
+    # urirun_scanner: bundled fallback (no urirun_connector_scanner needed)
+    ("urirun_scanner.document_sync",     "sync_documents_to_node"),
+    ("urirun_scanner.artifacts_admin",   "public_chat_attachment"),
 ]
 
 # ── Shim compatibility: host/node paths must resolve to bundle classes ─────────
@@ -43,6 +52,13 @@ SHIM_CHECKS = [
     ("urirun.node.twin_store",           "urirun_twin.twin_store",          "TwinMemory"),
     ("urirun.node.flow",                 "urirun_flow.flow",                "make_flow"),
     ("urirun.runtime._runtime",          "urirun_runtime._runtime",         "DEFAULT_TIMEOUT"),
+]
+
+# ── host_dashboard must import without urirun_connector_scanner ───────────────
+HOST_IMPORT_CHECKS = [
+    "urirun.host.host_dashboard",
+    "urirun.host.document_sync",
+    "urirun.host.chat_orchestrator",
 ]
 
 failures = []
@@ -73,14 +89,72 @@ for shim_path, bundle_path, symbol in SHIM_CHECKS:
     except Exception as e:
         failures.append(f"SHIM ERROR {shim_path}: {e}")
 
+for mod_path in HOST_IMPORT_CHECKS:
+    try:
+        importlib.import_module(mod_path)
+        print(f"  ok  {mod_path} (no urirun_connector_scanner)")
+    except Exception as e:
+        failures.append(f"HOST IMPORT {mod_path}: {e}")
+
 if failures:
     print(f"\nFAILED ({len(failures)} issues):", file=sys.stderr)
     for f in failures:
         print(f"  {f}", file=sys.stderr)
     sys.exit(1)
 
-print(f"\nall {len(BUNDLE_CHECKS)} bundles + {len(SHIM_CHECKS)} shims ok  (urirun=={version})")
+print(f"\nall {len(BUNDLE_CHECKS)} bundles + {len(SHIM_CHECKS)} shims + {len(HOST_IMPORT_CHECKS)} host imports ok  (urirun=={version})")
+PY
+
+# ── node serve end-to-end: start, hit /health, call a built-in route ──────────
+echo "==> test-published: node serve end-to-end"
+mkdir -p "$NODE_DIR"
+
+NODE_PORT="$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")"
+
+cat > "$NODE_DIR/bindings.json" << 'JSON'
+{"version":"urirun.bindings.v2","bindings":{"env://pypi-gate/runtime/query/health":{"kind":"command","adapter":"argv-template","inputSchema":{"type":"object","additionalProperties":false,"properties":{}},"argv":["python3","-c","import json;print(json.dumps({'ok':True,'node':'pypi-gate'}))"],"policy":{"allowExecute":true,"maxArgs":8},"meta":{"title":"Health"}}}}
+JSON
+
+"$VENV/bin/urirun" validate "$NODE_DIR/bindings.json" >/dev/null
+"$VENV/bin/urirun" compile  "$NODE_DIR/bindings.json" --out "$NODE_DIR/registry.json" >/dev/null
+"$VENV/bin/urirun" node init \
+  --config "$NODE_DIR/node.json" \
+  --name pypi-gate --registry "$NODE_DIR/registry.json" \
+  --host 127.0.0.1 --port "$NODE_PORT" --execute >/dev/null
+
+"$VENV/bin/urirun" node serve --config "$NODE_DIR/node.json" --execute \
+  > "$NODE_DIR/node.log" 2>&1 &
+NODE_PID="$!"
+
+"$VENV/bin/python3" - "$NODE_PORT" "$NODE_DIR/node.log" << 'PY'
+import json, sys, time, urllib.request
+
+port, logfile = sys.argv[1], sys.argv[2]
+
+# wait for /health
+for _ in range(40):
+    try:
+        r = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=1).read())
+        if r.get("ok"):
+            print(f"  ok  /health on 127.0.0.1:{port}")
+            break
+    except Exception:
+        time.sleep(0.25)
+else:
+    with open(logfile) as f:
+        print(f.read(), file=sys.stderr)
+    sys.exit("node did not become healthy")
+
+# call a route
+r = json.loads(urllib.request.urlopen(
+    urllib.request.Request(
+        f"http://127.0.0.1:{port}/run",
+        data=json.dumps({"uri":"env://pypi-gate/runtime/query/health","payload":{},"mode":"execute"}).encode(),
+        headers={"Content-Type":"application/json"},
+    ), timeout=5
+).read())
+assert r.get("ok"), f"/run returned not-ok: {r}"
+print(f"  ok  /run env://pypi-gate/runtime/query/health")
 PY
 
 echo "==> test-published: PASSED for urirun==$VERSION"
-rm -rf "$VENV"
