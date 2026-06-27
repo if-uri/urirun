@@ -1,11 +1,11 @@
-# urirun | 268f 42894L | yaml:5,txt:3,shell:14,json:15,python:199,yml:2,javascript:5,java:2,go:3,typescript:2,perl:2,toml:2,rust:2,php:2,c:1,cpp:1,csharp:4,ruby:2 | 2026-06-27
-# generated in 0.05s
-# stats: 2563 func | 0 cls | 268 mod | CC̄=4.7 | critical:23 | cycles:0
-# alerts[5]: CC renderTwinPlanCard=43; fan-out _add_host_subparser=30; fan-out serve=30; fan-out summary=30; CC bestPdf=26
+# urirun | 269f 42918L | yaml:5,txt:3,shell:14,json:15,python:200,yml:2,javascript:5,java:2,go:3,typescript:2,perl:2,toml:2,rust:2,php:2,c:1,cpp:1,csharp:4,ruby:2 | 2026-06-27
+# generated in 0.03s
+# stats: 2534 func | 0 cls | 269 mod | CC̄=4.6 | critical:21 | cycles:0
+# alerts[5]: fan-out _add_host_subparser=30; fan-out serve=30; fan-out summary=30; CC bestPdf=26; CC renderAttachment=26
 # hotspots[5]: _add_host_subparser fan=30; serve fan=30; summary fan=30; main fan=26; NodeHandler._handle_run fan=25
-# evolution: CC̄ 4.7→4.7 (flat 0.0)
+# evolution: CC̄ 4.6→4.6 (flat 0.0)
 # Keys: M=modules, D=details, i=imports, e=exports, c=classes, f=functions, m=methods
-M[268]:
+M[269]:
   Makefile,168
   adapters/bash/example/hash-connector.sh,9
   adapters/bash/urirun.sh,17
@@ -33,7 +33,7 @@ M[268]:
   adapters/php/Urirun.php,73
   adapters/php/composer.json,7
   adapters/php/example/hash-connector.php,14
-  adapters/python/pyproject.toml,76
+  adapters/python/pyproject.toml,77
   adapters/python/scripts/heal_future_imports.py,84
   adapters/python/urirun/__init__.py,766
   adapters/python/urirun/_registry.py,8
@@ -66,10 +66,10 @@ M[268]:
   adapters/python/urirun/host/android_node.py,162
   adapters/python/urirun/host/artifacts_admin.py,4
   adapters/python/urirun/host/capability.py,160
-  adapters/python/urirun/host/chat_orchestrator.py,1527
+  adapters/python/urirun/host/chat_orchestrator.py,1538
   adapters/python/urirun/host/connector_admin.py,240
   adapters/python/urirun/host/contracts.py,119
-  adapters/python/urirun/host/dashboard.js,2809
+  adapters/python/urirun/host/dashboard.js,2829
   adapters/python/urirun/host/dashboard_api.py,288
   adapters/python/urirun/host/dashboard_http.py,181
   adapters/python/urirun/host/decision_loop.py,134
@@ -176,16 +176,17 @@ M[268]:
   adapters/python/urirun_connectors_toolkit/connector_scaffold.py,413
   adapters/python/urirun_connectors_toolkit/connector_sdk.py,87
   adapters/python/urirun_connectors_toolkit/contract_export.py,123
-  adapters/python/urirun_connectors_toolkit/contract_gate.py,437
-  adapters/python/urirun_connectors_toolkit/contract_jsonschema.py,62
-  adapters/python/urirun_connectors_toolkit/contract_lint.py,65
-  adapters/python/urirun_connectors_toolkit/contract_reversible.py,49
+  adapters/python/urirun_connectors_toolkit/contract_gate.py,10
+  adapters/python/urirun_connectors_toolkit/contract_jsonschema.py,2
+  adapters/python/urirun_connectors_toolkit/contract_lint.py,2
+  adapters/python/urirun_connectors_toolkit/contract_reversible.py,2
   adapters/python/urirun_connectors_toolkit/contract_typescript.py,94
   adapters/python/urirun_connectors_toolkit/declarative.py,6
   adapters/python/urirun_connectors_toolkit/resolver.py,169
   adapters/python/urirun_contracts/__init__.py,76
   adapters/python/urirun_flow/__init__.py,216
   adapters/python/urirun_flow/cli.py,65
+  adapters/python/urirun_flow/diagnostics.py,589
   adapters/python/urirun_flow/flow.py,939
   adapters/python/urirun_flow/flow_planner.py,784
   adapters/python/urirun_flow/flow_thin.py,588
@@ -276,7 +277,7 @@ M[268]:
   xlang/run_wires.sh,35
 D:
   adapters/python/urirun/host/dashboard.js:
-    e: VALID_VIEWS,params,initialView,initialChatFull,initialTargets,initialDiscoveryTarget,api,ctrl,timer,response,data,text,esc,linkify,metric,empty,compactJson,setParam,currentControlState,renderUrlState,writeUrlState,search,controls,query,method,applyUrlFilterControls,applyUrlTargetControls,targets,target,discovery,applyControlsFromUrl,search,setChatFullscreen,renderMetrics,counts,renderTasks,exec,reloadTasks,data,gatherTicketFormBody,clearTicketFormFields,createTicket,res,t,createTicketFromChat,prompt,connectorSourceHint,src,pair,buildInstallResultLines,applyInstallResult,lines,installConnector,source,spec,res,parseConnectorTestPayload,raw,fetchConnectorTestResult,node,renderConnectorTestResult,broken,ok,testConnector,uri,env,res,renderNodeCard,renderNodes,help,lanBase,lan,base,lanNeedsSecure,lanUrl,value,useSecure,base,u,qrSrc,qrDetails,url,showViewQr,url,box,copyHostValue,updateHostStatusPill,buildHostConfigRows,renderHostConfigRow,renderHostRouteItem,populateConnectorEnvSelector,cur,nodes,renderHost,host,rows,hostRoutes,nodeAddSnippet,name,url,scanNodes,env,data,nodes,useScannedNode,saveNode,res,saveNodeFromForm,removeNode,msg,res,displayPhoneQrResult,showAddPhoneNodeQR,res,_webNodeTimer,startWebNodePolling,tick,res,devs,saveWebNode,url,res,savePhoneNode,name,url,res,selectNodeKind,renderConnectQr,el,res,_webpageTimer,startWebpagePolling,tick,box,res,devs,saveOneWebpageNode,saveWebpageNode,name,status,res,dev,updateEndpointQr,url,box,typedNodeStatusId,saveTypedNode,name,status,res,gatherApiNodeFields,buildApiNodeDef,saveApiNode,apiDef,res,parseDeviceNodeApis,raw,apis,saveDeviceNodeApiCall,res,saveDeviceNode,name,url,srvUrl,host,port,srvSnippet,host,user,port,rdpSnippet,host,port,startPhoneService,res,restartPhoneService,res,result,gatherNodeTokenInput,name,token,saveNodeToken,res,gatherNodeTokenForData,name,form,input,status,token,saveNodeTokenFor,res,renderTokenVerdict,chk,contactCardActions,isPhoneScanner,startUri,restartUri,contactCard,checked,disabled,pillClass,actions,nodeToContact,meta,serviceToContact,chatContacts,nodes,services,selectedTargets,selectedNodeNames,updateTargetSummary,renderChatContacts,uriTarget,value,normalizeRoute,item,dedupeRoutes,seen,routesForNode,ownRoutes,buildHostDiscoveryObject,host,buildNodeDiscoveryObjects,buildServiceDiscoveryObjects,discoveryObjects,chooseDiscoveryTarget,nodeTarget,serviceTarget,renderDiscovery,objects,selected,active,pillClass,renderRoutes,sel,list,node,testBar,rows,u,cb,nodeTestSelectedUris,testNodeRoutes,uris,res,renderNodeTestResults,r,slot,selectNodeRoutes,summary,testNodeFromList,summary,clearRoutesNodeFilter,summary,renderChecks,renderLogs,rows,filePreviewUrl,artifactFileUrl,artifactVisualPath,path,meta,artifactVisualPreviewUrl,artifactPreview,path,url,artifactThumb,path,visualPath,url,ext,artifactMetaSummary,meta,doc,renderArtifactFileRow,id,path,name,url,metaLine,openLink,download,missing,selected,duplicateCount,duplicates,visibleArtifactIds,selectedVisibleArtifactIds,visible,artifactIdsForDelete,selected,out,updateArtifactSelectionControls,visibleCount,selectedCount,renderArtifactFileGrid,widgetRenderer,artifactRenderSignature,renderArtifacts,renderKey,_loadArtifactsInflight,loadArtifacts,data,deleteArtifacts,expanded,result,cleanupArtifactOrphans,result,dedupeArtifactRows,result,reconcileDocumentsIndex,result,pruned,artifactTableJsonRow,path,copyArtifactsJson,rows,content,basename,attachmentVisualPreviewUrl,meta,displayPath,isPdfAttachment,isScannerFrameAttachment,kind,uri,messageAttachments,detail,document,attachments,rows,hasPdf,renderTwinPlanCard,plan,env,mock,sel,steps,constraints,domain,taskType,needsAuth,selMode,selBadge,stepRows,feasMark,feasCls,revMark,surf,uri,stepsHtml,mockHtml,constraintsHtml,domainTag,authTag,humanGated,renderAttachment,url,meta,ocr,isPdf,fileAvailable,kindClass,visualUrl,pdfUrl,preview,fileUrl,open,download,missing,detailAtt,ocrLine,streamStatusClass,streamDocLabel,doc,streamQualityLabel,quality,reasons,crop,cropReason,renderStreamFrame,quality,score,qualityLabel,previewUrl,preview,renderScannerStream,best,quality,document,status,accepted,bestScore,bestQualityLabel,frames,renderScannerArtifactFrame,preview,href,renderScannerStatusServiceView,data,service,camera,recent,ready,track,renderGenericServiceView,data,renderTableServiceView,data,rows,explicitColumns,columns,table,renderImageServiceView,data,images,body,item,renderVideoServiceView,data,url,body,renderIframeServiceView,data,url,body,renderFormServiceView,data,fields,actionUri,name,type,value,checked,renderGraphServiceView,data,nodes,edges,renderServiceViewShell,renderServiceView,streams,serviceWidgetLinks,target,renderWidgetCard,safeView,status,target,fallbackView,preview,renderWidgetDashboard,services,views,used,cards,view,key,renderServiceViews,active,visible,render,loadWidgetBundleViaUri,jsRes,js,factory,widgets,cssRes,css,_loadServiceViewsInflight,loadServiceViews,data,renderChatMessage,widgetRenderer,detail,timeline,lines,_reconciledContent,c,attachments,role,selected,checkbox,deleteButton,copyMarkdownButton,repeatButton,addTargetsFromText,raw,uriNode,messageTargets,out,detail,timeline,messageMatchesTargets,active,targets,isGroupedScannerEventMessage,scannerLiveVisible,detail,event,content,selectedVisibleChatMessageIds,updateChatSelectionControls,visibleCount,selectedCount,chatMessagePlainText,detail,timeline,attachments,markdownFence,body,chatMessageMarkdown,detail,timeline,attachments,status,target,uri,error,copyTextToClipboard,clipboardError,textarea,previousFocus,copied,reason,copyVisibleChat,content,copyChatMessageMarkdown,sid,message,content,method,chatRenderSignature,renderChatHistory,seenQr,stickToBottom,uri,renderKey,_loadChatHistoryInflight,loadChatHistory,history,deleteChatMessages,result,submitServiceForm,uri,contactAction,action,url,uri,target,previous,applyView,load,taskAction,body,askChat,nodes,result,repeatChatMessage,msg,prompt,detail,nodes,targets,execute,result,discoveryButton,contactButton,deleteButton,deleteId,copyMarkdownButton,copyMarkdownId,repeatButton,repeatId,artifactDeleteId,action,id,view,id,id,form,chatPromptUrlTimer,wrap,fr,search,nextView,initialKind
+    e: VALID_VIEWS,params,initialView,initialChatFull,initialTargets,initialDiscoveryTarget,api,ctrl,timer,response,data,text,esc,linkify,metric,empty,compactJson,setParam,currentControlState,renderUrlState,writeUrlState,search,controls,query,method,applyUrlFilterControls,applyUrlTargetControls,targets,target,discovery,applyControlsFromUrl,search,setChatFullscreen,renderMetrics,counts,renderTasks,exec,reloadTasks,data,gatherTicketFormBody,clearTicketFormFields,createTicket,res,t,createTicketFromChat,prompt,connectorSourceHint,src,pair,buildInstallResultLines,applyInstallResult,lines,installConnector,source,spec,res,parseConnectorTestPayload,raw,fetchConnectorTestResult,node,renderConnectorTestResult,broken,ok,testConnector,uri,env,res,renderNodeCard,renderNodes,help,lanBase,lan,base,lanNeedsSecure,lanUrl,value,useSecure,base,u,qrSrc,qrDetails,url,showViewQr,url,box,copyHostValue,updateHostStatusPill,buildHostConfigRows,renderHostConfigRow,renderHostRouteItem,populateConnectorEnvSelector,cur,nodes,renderHost,host,rows,hostRoutes,nodeAddSnippet,name,url,scanNodes,env,data,nodes,useScannedNode,saveNode,res,saveNodeFromForm,removeNode,msg,res,displayPhoneQrResult,showAddPhoneNodeQR,res,_webNodeTimer,startWebNodePolling,tick,res,devs,saveWebNode,url,res,savePhoneNode,name,url,res,selectNodeKind,renderConnectQr,el,res,_webpageTimer,startWebpagePolling,tick,box,res,devs,saveOneWebpageNode,saveWebpageNode,name,status,res,dev,updateEndpointQr,url,box,typedNodeStatusId,saveTypedNode,name,status,res,gatherApiNodeFields,buildApiNodeDef,saveApiNode,apiDef,res,parseDeviceNodeApis,raw,apis,saveDeviceNodeApiCall,res,saveDeviceNode,name,url,srvUrl,host,port,srvSnippet,host,user,port,rdpSnippet,host,port,startPhoneService,res,restartPhoneService,res,result,gatherNodeTokenInput,name,token,saveNodeToken,res,gatherNodeTokenForData,name,form,input,status,token,saveNodeTokenFor,res,renderTokenVerdict,chk,contactCardActions,isPhoneScanner,startUri,restartUri,contactCard,checked,disabled,pillClass,actions,nodeToContact,meta,serviceToContact,chatContacts,nodes,services,selectedTargets,selectedNodeNames,updateTargetSummary,renderChatContacts,uriTarget,value,normalizeRoute,item,dedupeRoutes,seen,routesForNode,ownRoutes,buildHostDiscoveryObject,host,buildNodeDiscoveryObjects,buildServiceDiscoveryObjects,discoveryObjects,chooseDiscoveryTarget,nodeTarget,serviceTarget,renderDiscovery,objects,selected,active,pillClass,renderRoutes,sel,list,node,testBar,rows,u,cb,nodeTestSelectedUris,testNodeRoutes,uris,res,renderNodeTestResults,r,slot,selectNodeRoutes,summary,testNodeFromList,summary,clearRoutesNodeFilter,summary,renderChecks,renderLogs,rows,filePreviewUrl,artifactFileUrl,artifactVisualPath,path,meta,artifactVisualPreviewUrl,artifactPreview,path,url,artifactThumb,path,visualPath,url,ext,artifactMetaSummary,meta,doc,renderArtifactFileRow,id,path,name,url,metaLine,openLink,download,missing,selected,duplicateCount,duplicates,visibleArtifactIds,selectedVisibleArtifactIds,visible,artifactIdsForDelete,selected,out,updateArtifactSelectionControls,visibleCount,selectedCount,renderArtifactFileGrid,widgetRenderer,artifactRenderSignature,renderArtifacts,renderKey,_loadArtifactsInflight,loadArtifacts,data,deleteArtifacts,expanded,result,cleanupArtifactOrphans,result,dedupeArtifactRows,result,reconcileDocumentsIndex,result,pruned,artifactTableJsonRow,path,copyArtifactsJson,rows,content,basename,attachmentVisualPreviewUrl,meta,displayPath,isPdfAttachment,isScannerFrameAttachment,kind,uri,messageAttachments,detail,document,attachments,rows,hasPdf,twinSelBadge,selMode,twinStepRow,feasMark,feasCls,revMark,uri,twinStepsHtml,twinMockHtml,twinConstraintsHtml,renderTwinPlanCard,plan,env,sel,steps,taskType,selBadge,domainTag,authTag,humanGated,renderAttachment,url,meta,ocr,isPdf,fileAvailable,kindClass,visualUrl,pdfUrl,preview,fileUrl,open,download,missing,detailAtt,ocrLine,streamStatusClass,streamDocLabel,doc,streamQualityLabel,quality,reasons,crop,cropReason,renderStreamFrame,quality,score,qualityLabel,previewUrl,preview,renderScannerStream,best,quality,document,status,accepted,bestScore,bestQualityLabel,frames,renderScannerArtifactFrame,preview,href,renderScannerStatusServiceView,data,service,camera,recent,ready,track,renderGenericServiceView,data,renderTableServiceView,data,rows,explicitColumns,columns,table,renderImageServiceView,data,images,body,item,renderVideoServiceView,data,url,body,renderIframeServiceView,data,url,body,renderFormServiceView,data,fields,actionUri,name,type,value,checked,renderGraphServiceView,data,nodes,edges,renderServiceViewShell,renderServiceView,streams,serviceWidgetLinks,target,renderWidgetCard,safeView,status,target,fallbackView,preview,renderWidgetDashboard,services,views,used,cards,view,key,renderServiceViews,active,visible,render,loadWidgetBundleViaUri,jsRes,js,factory,widgets,cssRes,css,_loadServiceViewsInflight,loadServiceViews,data,reconcileChatContent,c,chatMessageControls,selected,canRepeat,renderChatMessage,widgetRenderer,detail,timeline,lines,attachments,role,ctl,addTargetsFromText,raw,uriNode,messageTargets,out,detail,timeline,messageMatchesTargets,active,targets,isGroupedScannerEventMessage,scannerLiveVisible,detail,event,content,selectedVisibleChatMessageIds,updateChatSelectionControls,visibleCount,selectedCount,chatMessagePlainText,detail,timeline,attachments,markdownFence,body,chatMessageMarkdown,detail,timeline,attachments,status,target,uri,error,copyTextToClipboard,clipboardError,textarea,previousFocus,copied,reason,copyVisibleChat,content,copyChatMessageMarkdown,sid,message,content,method,chatRenderSignature,renderChatHistory,seenQr,stickToBottom,uri,renderKey,_loadChatHistoryInflight,loadChatHistory,history,deleteChatMessages,result,submitServiceForm,uri,contactAction,action,url,uri,target,previous,applyView,load,taskAction,body,askChat,nodes,result,repeatChatMessage,msg,prompt,detail,nodes,targets,execute,result,discoveryButton,contactButton,deleteButton,deleteId,copyMarkdownButton,copyMarkdownId,repeatButton,repeatId,artifactDeleteId,action,id,view,id,id,form,chatPromptUrlTimer,wrap,fr,search,nextView,initialKind
     VALID_VIEWS()
     params()
     initialView()
@@ -609,27 +610,23 @@ D:
     attachments()
     rows()
     hasPdf()
-    renderTwinPlanCard()
-    plan()
-    env()
-    mock()
-    sel()
-    steps()
-    constraints()
-    domain()
-    taskType()
-    needsAuth()
+    twinSelBadge()
     selMode()
-    selBadge()
-    stepRows()
+    twinStepRow()
     feasMark()
     feasCls()
     revMark()
-    surf()
     uri()
-    stepsHtml()
-    mockHtml()
-    constraintsHtml()
+    twinStepsHtml()
+    twinMockHtml()
+    twinConstraintsHtml()
+    renderTwinPlanCard()
+    plan()
+    env()
+    sel()
+    steps()
+    taskType()
+    selBadge()
     domainTag()
     authTag()
     humanGated()
@@ -747,20 +744,19 @@ D:
     _loadServiceViewsInflight()
     loadServiceViews()
     data()
+    reconcileChatContent()
+    c()
+    chatMessageControls()
+    selected()
+    canRepeat()
     renderChatMessage()
     widgetRenderer()
     detail()
     timeline()
     lines()
-    _reconciledContent()
-    c()
     attachments()
     role()
-    selected()
-    checkbox()
-    deleteButton()
-    copyMarkdownButton()
-    repeatButton()
+    ctl()
     addTargetsFromText()
     raw()
     uriNode()
@@ -1012,30 +1008,6 @@ D:
     okExample()
     conform()
     main()
-  adapters/python/urirun_connectors_toolkit/contract_gate.py:
-    e: Contract,Wire,ContractViolation,_parse_const,_leaf_ok,check,validate_output,conform,contract_to_dict,attach_contracts,envelope_violation,enforce,_terminal_type,_walk_oneof,_walk_out,resolve_out_type,assignable,check_wire,find_wire,dig,wire_payload,consumer_input_check
-    Contract:  # One route's canonical contract. The URI path is the stable i...
-    Wire:  # A composition edge: the output of ``producer`` feeds the inp...
-    ContractViolation(AssertionError):  # Handler output diverged from its declared contract...
-    _parse_const(token)
-    _leaf_ok(token;value)
-    check(schema;value;where)
-    validate_output(contract;env)
-    conform(contracts)
-    contract_to_dict(c)
-    attach_contracts(conn;contracts)
-    envelope_violation(contract;envelope)
-    enforce(conn;contracts)
-    _terminal_type(schema)
-    _walk_oneof(schema;segs)
-    _walk_out(schema;segs)
-    resolve_out_type(out_schema;dotted)
-    assignable(producer_tok;consumer_tok)
-    check_wire(wire;contracts)
-    find_wire(wires;producer;consumer)
-    dig(value;dotted)
-    wire_payload(wire;producer_envelope)
-    consumer_input_check(consumer_contract;payload;wire)
   adapters/python/urirun_node/server.py:
     e: EventHub,NodeContext,NodeHandler,send_json,read_raw,read_json,resolve_admin_token,_write_pushed_code,_apply_deploy_env,_registry_to_bindings,_deploy_registry,_reimport_pushed_code,_apply_deploy_surface,_apply_deploy_allow,apply_deploy,_parse_sse_query,_sse_initial_cursor,_sse_event_matches,_sse_frame,_warn_unauthenticated_node,_start_enroll_token_rotation,_announce_node_started,serve_node,_serve_opts_merged,_resolve_serve_opts,_node_serve
     EventHub: __init__(1),publish(1),subscribe(0),unsubscribe(1),replay_since(1),current_id(0),count(0)  # In-memory pub/sub for a node's live event stream (SSE). Each...
@@ -1655,7 +1627,7 @@ Connector a...
     node_token_for(node;fallback)
     run_node_uri(node_url;uri;payload)
   adapters/python/urirun/host/chat_orchestrator.py:
-    e: ChatDeps,chat_message,compact_chat_result,_is_document_sync_prompt,_document_sync_node_from_prompt,_chat_ask_phone_scanner,_sync_execute_initial,_sync_ok_and_status,_apply_urifix_recovery,_chat_ask_document_sync,_classify_exc_remediation,_build_escalation_block,_chat_ask_general_planner_failure,_timeline_steps_all_ok,_resolve_artifact_value,_build_remote_path_maps,_save_inline_attachment,_enrich_remote_attachments,_register_step_artifacts,_emit_general_chat_message,_general_path_complete,_collect_target_names,_try_ensure_kvm_for_node,_try_auto_ensure_screen_capture,_chat_ask_general_capability_gap,_apply_run_credentials,_restore_run_credentials,_actual_nodes_from_steps,_rebuild_node_targets,_filter_mesh_for_targets,_sync_targets_from_flow,_fetch_planner_environments_for_nodes,_find_human_node,_escalate_offline_to_human,_chat_ask_general_check_offline,_chat_ask_general_build_result,_try_recall_gate,_is_selected_remote_node,_flag_remote_capture_inline,_suggest_recall_for_memory,_screen_capability_gap_or_recall,_prompt_names_remote,_apply_host_default_when_no_node_in_prompt,_apply_explicit_target_sync,_apply_local_nl_override,_chat_ask_general,_add_chat_user_message,_chat_insert_twin_preview,_parse_chat_nodes_targets,_init_selected_targets,_infer_node_targets,chat_ask
+    e: ChatDeps,chat_message,compact_chat_result,_is_document_sync_prompt,_document_sync_node_from_prompt,_chat_ask_phone_scanner,_sync_execute_initial,_sync_ok_and_status,_apply_urifix_recovery,_chat_ask_document_sync,_classify_exc_remediation,_build_escalation_block,_chat_ask_general_planner_failure,_timeline_steps_all_ok,_resolve_artifact_value,_build_remote_path_maps,_save_inline_attachment,_enrich_remote_attachments,_register_step_artifacts,_emit_general_chat_message,_general_path_complete,_collect_target_names,_try_ensure_kvm_for_node,_try_auto_ensure_screen_capture,_chat_ask_general_capability_gap,_apply_run_credentials,_restore_run_credentials,_actual_nodes_from_steps,_rebuild_node_targets,_filter_mesh_for_targets,_sync_targets_from_flow,_fetch_planner_environments_for_nodes,_find_human_node,_escalate_offline_to_human,_chat_ask_general_check_offline,_chat_ask_general_build_result,_try_recall_gate,_is_selected_remote_node,_flag_remote_capture_inline,_suggest_recall_for_memory,_screen_capability_gap_or_recall,_prompt_names_remote,_apply_host_default_when_no_node_in_prompt,_has_explicit_remote_selection,_apply_explicit_target_sync,_apply_local_nl_override,_chat_ask_general,_add_chat_user_message,_chat_insert_twin_preview,_parse_chat_nodes_targets,_init_selected_targets,_infer_node_targets,chat_ask
     ChatDeps:
     chat_message(role;content)
     compact_chat_result(result;payload)
@@ -1699,6 +1671,7 @@ Connector a...
     _screen_capability_gap_or_recall(prompt;discovered;selected_nodes;selected_targets;token;identity;execute;mesh;config;node_urls;db;deps)
     _prompt_names_remote(prompt;alias_map)
     _apply_host_default_when_no_node_in_prompt(prompt;selected_nodes;selected_targets;config;node_urls;deps)
+    _has_explicit_remote_selection(requested_nodes;requested_targets)
     _apply_explicit_target_sync(payload;flow;discovered;selected_nodes;selected_targets)
     _apply_local_nl_override(prompt;selected_nodes;selected_targets)
     _chat_ask_general(project;db;config;payload;node_urls;token;identity;prompt;execute;no_llm;selected_nodes;selected_targets;deps)
@@ -2114,11 +2087,6 @@ Connector a...
     backend(action;name)
     dispatch(action)
     registry_report()
-  adapters/python/urirun_connectors_toolkit/contract_lint.py:
-    e: _base,_check_field_type,lint_handler_signatures
-    _base(tok)
-    _check_field_type(route;field;tok;props;problems)
-    lint_handler_signatures(contracts;bindings_doc)
   adapters/python/urirun/host/host_db.py:
     e: db_path,now_iso,new_id,connect,connection,row_dict,rows_dict,init_db,_schema_json,create_dataset,list_datasets,get_dataset,_validate_record,upsert_record,_sync_record_fts,search_records,register_artifact,_query_table,list_artifacts,artifacts_by_ids,delete_artifacts,add_check,recent_checks,add_log,recent_logs,delete_logs,create_llm_session,add_llm_message,read_only_sql,route_db_path,_run_query_route,_run_command_route,run_uri_route
     db_path(path)
@@ -2204,10 +2172,6 @@ Connector a...
     _build_ledger_transitions(raw_ledger)
     _rollback_from_ledger(raw_ledger;mesh;scan_uri)
     _uri_rollback(payload)
-  adapters/python/urirun_connectors_toolkit/contract_reversible.py:
-    e: callspec_fields,callspecs_from_contracts
-    callspec_fields(route;contract)
-    callspecs_from_contracts(contracts)
   adapters/python/urirun_connectors_toolkit/contract_typescript.py:
     e: _const,_ts_object,_ts_token,ts_type,_sanitize,to_typescript
     _const(token)
@@ -2343,12 +2307,6 @@ Connector a...
     _sig(obj)
     environment_fingerprint(profile)
     durable_memory(path)
-  adapters/python/urirun_connectors_toolkit/contract_jsonschema.py:
-    e: _const_value,_dict_schema,_token_schema,to_json_schema
-    _const_value(token)
-    _dict_schema(dialect)
-    _token_schema(tok)
-    to_json_schema(dialect)
   adapters/python/urirun_runtime/v2_grpc.py:
     e: _dumps,_loads,_route_list,serve,channel_target,_method,_validate,call,stream,list_routes,main
     _dumps(value)
@@ -2474,6 +2432,26 @@ Connector a...
     format_nodes(mesh)
     format_routes(routes)
     format_tickets(tickets)
+  adapters/python/urirun_flow/diagnostics.py:
+    e: _Rule,_target,_target_of,_is_login_surface,_build,_decode_error_ctx,diagnose,_match_rule,_surface_upgrade,_cdp_feasible,_controllable,_mark_feasibility,_os_level_unreliable,_rem_has_ui_failure,_rem_already_cdp,_maybe_escalate_surface,fit_to_environment,_uri_classify
+    _Rule: __init__(4),matches(3)
+    _target(step)
+    _target_of(actions)
+    _is_login_surface(surface)
+    _build(rule;step)
+    _decode_error_ctx(error;step)
+    diagnose(error)
+    _match_rule(message;category;scheme)
+    _surface_upgrade(matched;login;scheme)
+    _cdp_feasible(env)
+    _controllable(env)
+    _mark_feasibility(remediation;cdp_feasible;controllable)
+    _os_level_unreliable(env)
+    _rem_has_ui_failure(rem)
+    _rem_already_cdp(rem)
+    _maybe_escalate_surface(diagnosis;env;cdp_feasible)
+    fit_to_environment(diagnosis;environment)
+    _uri_classify(payload)
   adapters/python/urirun_cdp/cdp.py:
     e: CdpError,configure,endpoint,_pages,reachable,_ws_connect,_ws_send,_ws_recv,_call,command,evaluate,navigate,page_ready,nav_history,current_url,read_scroll,write_scroll,read_forms,write_forms,read_storage,_find_chrome,_copy_auth,start_session,await_ready,launch_session
     CdpError(RuntimeError):  # A CDP transport/protocol failure. Connectors may catch + re-...
@@ -2805,13 +2783,16 @@ Connector a...
   adapters/python/urirun/node/paths.py:
   adapters/python/urirun/node/episode.py:
   adapters/python/urirun/connectors/connector_lint.py:
+  adapters/python/urirun_connectors_toolkit/contract_gate.py:
+  adapters/python/urirun_connectors_toolkit/contract_reversible.py:
   adapters/python/urirun_connectors_toolkit/__init__.py:
   adapters/python/urirun/connectors/connect_catalog.py:
   adapters/python/urirun/connectors/openapi_import.py:
   adapters/python/urirun_connectors_toolkit/declarative.py:
+  adapters/python/urirun_connectors_toolkit/contract_jsonschema.py:
   adapters/python/urirun/connectors/connector_smoke.py:
+  adapters/python/urirun_connectors_toolkit/contract_lint.py:
   adapters/python/urirun/connectors/connector_contract.py:
-  adapters/python/urirun/node/diagnostics.py:
   adapters/python/urirun/node/flow_verify.py:
   adapters/python/urirun/runtime/v2_service.py:
   adapters/python/urirun/runtime/cli.py:
@@ -2886,6 +2867,7 @@ Connector a...
   adapters/python/urirun/node/keyauth.py:
   adapters/python/urirun/node/task_cli.py:
   adapters/python/urirun/node/recovery.py:
+  adapters/python/urirun/node/diagnostics.py:
   adapters/python/urirun/node/server.py:
   adapters/python/urirun/node/__init__.py:
   adapters/python/urirun/node/client.py:

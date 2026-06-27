@@ -1,36 +1,15 @@
-# code2llm | 272f 42894L | python:199,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
-# generated in 0.20s
-# CC̅=4.7 | critical:23/2563 | dups:0 | cycles:0
+# code2llm | 273f 43137L | python:200,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
+# generated in 0.16s
+# CC̅=4.6 | critical:0/2579 | dups:0 | cycles:0
 
-HEALTH[20]:
-  🟡 CC    check CC=15 (limit:15)
-  🟡 CC    scanIntervalMs CC=15 (limit:15)
-  🟡 CC    capture CC=20 (limit:15)
-  🟡 CC    bestPdf CC=26 (limit:15)
-  🟡 CC    check CC=15 (limit:15)
-  🟡 CC    leafOk CC=17 (limit:15)
-  🟡 CC    conform CC=19 (limit:15)
-  🟡 CC    savePhoneNode CC=15 (limit:15)
-  🟡 CC    renderDiscovery CC=17 (limit:15)
-  🟡 CC    renderArtifactFileRow CC=19 (limit:15)
-  🟡 CC    renderTwinPlanCard CC=43 (limit:15)
-  🟡 CC    renderAttachment CC=26 (limit:15)
-  🟡 CC    renderScannerStream CC=15 (limit:15)
-  🟡 CC    renderScannerStatusServiceView CC=19 (limit:15)
-  🟡 CC    renderFormServiceView CC=20 (limit:15)
-  🟡 CC    renderServiceView CC=15 (limit:15)
-  🟡 CC    renderWidgetCard CC=26 (limit:15)
-  🟡 CC    renderWidgetDashboard CC=19 (limit:15)
-  🟡 CC    loadWidgetBundleViaUri CC=19 (limit:15)
-  🟡 CC    renderChatMessage CC=26 (limit:15)
+HEALTH[0]: ok
 
-REFACTOR[1]:
-  1. split 20 high-CC methods  (CC>15)
+REFACTOR[0]: none needed
 
-PIPELINES[906]:
+PIPELINES[899]:
   [1] Src [http]: http
       PURITY: 100% pure
-  [2] Src [_attacker_key]: _attacker_key → open → esc → text
+  [2] Src [_attacker_key]: _attacker_key
       PURITY: 100% pure
   [3] Src [record]: record → print
       PURITY: 100% pure
@@ -112,7 +91,7 @@ PIPELINES[906]:
       PURITY: 100% pure
   [42] Src [connector_install]: connector_install → _classify_source
       PURITY: 100% pure
-  [43] Src [connector_discover]: connector_discover → _scan_local_connectors → _read_connector_manifest → _read_tellmesh_manifest → ...(3 more)
+  [43] Src [connector_discover]: connector_discover → _scan_local_connectors → _read_connector_manifest → _read_tellmesh_manifest
       PURITY: 100% pure
   [44] Src [registry_installed]: registry_installed
       PURITY: 100% pure
@@ -130,20 +109,6 @@ PIPELINES[906]:
       PURITY: 100% pure
 
 LAYERS:
-  xlang/                          CC̄=5.5    ←in:0  →out:12  !! split
-  │ !! gate.go                    243L  1C    8m  CC=19     ←1
-  │ contracts.json             229L  0C    0m  CC=0.0    ←0
-  │ driver                      89L  0C    3m  CC=8      ←0
-  │ contracts.kvm.json          71L  0C    0m  CC=0.0    ←0
-  │ peer                        64L  0C    2m  CC=8      ←0
-  │ emit_contracts              37L  0C    1m  CC=3      ←0
-  │ run_wires.sh                35L  0C    0m  CC=0.0    ←0
-  │ run3.sh                     35L  0C    0m  CC=0.0    ←0
-  │ run_driver.sh               35L  0C    0m  CC=0.0    ←0
-  │ !! peer.mjs                     0L  0C   22m  CC=15     ←0
-  │ gate                         0L  0C    1m  CC=3      ←0
-  │ gate.mjs                     0L  0C    9m  CC=12     ←0
-  │
   scripts/                        CC̄=5.2    ←in:166  →out:2
   │ extraction_audit           423L  2C   12m  CC=12     ←0
   │ test_pypi_install.sh       267L  0C    2m  CC=0.0    ←37
@@ -154,22 +119,37 @@ LAYERS:
   │ release-bump.sh             29L  0C    0m  CC=0.0    ←0
   │ sync-versions.sh            25L  0C    0m  CC=0.0    ←0
   │
-  adapters/                       CC̄=4.7    ←in:19  →out:12  !! split
-  │ !! dashboard.js              2809L  0C  410m  CC=43     ←59
-  │ !! v2                        2033L  2C  120m  CC=14     ←6
+  xlang/                          CC̄=4.7    ←in:0  →out:8  !! split
+  │ gate.go                    285L  1C   16m  CC=13     ←1
+  │ contracts.json             229L  0C    0m  CC=0.0    ←0
+  │ driver                      89L  0C    3m  CC=8      ←0
+  │ contracts.kvm.json          71L  0C    0m  CC=0.0    ←0
+  │ peer                        64L  0C    2m  CC=8      ←0
+  │ emit_contracts              37L  0C    1m  CC=3      ←0
+  │ run_wires.sh                35L  0C    0m  CC=0.0    ←0
+  │ run3.sh                     35L  0C    0m  CC=0.0    ←0
+  │ run_driver.sh               35L  0C    0m  CC=0.0    ←0
+  │ peer.mjs                     0L  0C   25m  CC=12     ←0
+  │ gate                         0L  0C    1m  CC=3      ←0
+  │ gate.mjs                     0L  0C    9m  CC=12     ←0
+  │
+  adapters/                       CC̄=4.6    ←in:18  →out:12  !! split
+  │ !! dashboard.js              2935L  0C  435m  CC=14     ←52
+  │ !! v2                        2033L  2C  120m  CC=14     ←5
   │ !! host_dashboard            1934L  0C  102m  CC=14     ←1
   │ !! scanner_bridge            1548L  0C    0m  CC=0.0    ←0
-  │ !! chat_orchestrator         1527L  1C   51m  CC=14     ←0
+  │ !! chat_orchestrator         1538L  1C   52m  CC=14     ←0
   │ !! document_sync             1422L  0C    0m  CC=0.0    ←0
   │ !! server                     997L  3C   55m  CC=14     ←3
   │ !! object_registry            981L  0C   46m  CC=14     ←0
   │ !! flow                       939L  0C   49m  CC=10     ←6
   │ !! node_cli                   910L  0C   57m  CC=13     ←1
-  │ !! flow_planner               784L  0C   33m  CC=14     ←3
+  │ !! flow_planner               838L  0C   35m  CC=14     ←3
   │ !! __init__                   766L  1C   53m  CC=14     ←13
   │ !! _registry                  718L  0C   43m  CC=14     ←1
-  │ !! scanner.js                 664L  0C  116m  CC=26     ←2
+  │ !! scanner.js                 681L  0C  121m  CC=14     ←1
   │ !! _runtime                   597L  1C   30m  CC=13     ←2
+  │ !! diagnostics                589L  1C   19m  CC=8      ←2
   │ !! flow_thin                  588L  1C   27m  CC=14     ←1
   │ !! client                     558L  1C   35m  CC=12     ←1
   │ !! transport                  540L  0C   24m  CC=14     ←3
@@ -178,7 +158,6 @@ LAYERS:
   │ artifacts_admin            495L  0C    0m  CC=0.0    ←0
   │ document_metadata          471L  0C    0m  CC=0.0    ←0
   │ service_control            462L  0C   23m  CC=11     ←0
-  │ !! contract_gate              437L  3C   19m  CC=15     ←2
   │ connector_scaffold         413L  0C   11m  CC=3      ←0
   │ recovery                   393L  0C   23m  CC=10     ←2
   │ reversible                 383L  8C   26m  CC=10     ←5
@@ -233,26 +212,23 @@ LAYERS:
   │ heal_future_imports         84L  0C    3m  CC=7      ←0
   │ urirun.go                   80L  3C    5m  CC=3      ←0
   │ formatting                  80L  0C    4m  CC=8      ←2
+  │ pyproject.toml              77L  0C    0m  CC=0.0    ←0
   │ __init__                    76L  2C    1m  CC=1      ←0
   │ _version                    76L  0C    5m  CC=5      ←1
-  │ pyproject.toml              76L  0C    0m  CC=0.0    ←0
   │ Urirun.php                  73L  1C    5m  CC=3      ←0
   │ project.assets.json         71L  0C    0m  CC=0.0    ←0
   │ urirun-connector.csproj.nuget.dgspec.json    66L  0C    0m  CC=0.0    ←0
-  │ contract_lint               65L  0C    3m  CC=11     ←0
   │ cli                         65L  0C    3m  CC=12     ←0
   │ widgets                     64L  0C    4m  CC=12     ←0
-  │ contract_jsonschema         62L  0C    4m  CC=9      ←2
   │ exec                        61L  0C    2m  CC=10     ←0
   │ index.test.js               52L  0C    1m  CC=1      ←0
-  │ contract_reversible         49L  0C    2m  CC=10     ←0
   │ Urirun.pm                   47L  0C    4m  CC=0.0    ←1
   │ urifix_bridge               45L  0C    1m  CC=12     ←1
   │ urirun.ts                   41L  2C    4m  CC=4      ←0
   │ lib.rs                      39L  1C    4m  CC=1      ←0
   │ urirun.rb                   39L  1C    4m  CC=4      ←0
   │ Urirun.java                 38L  1C    3m  CC=1      ←1
-  │ index.js                    33L  0C   11m  CC=8      ←11
+  │ index.js                    33L  0C   11m  CC=8      ←10
   │ Urirun.cs                   32L  1C    3m  CC=1      ←0
   │ cdp                         31L  0C    0m  CC=0.0    ←0
   │ main.go                     24L  0C    1m  CC=1      ←0
@@ -271,7 +247,7 @@ LAYERS:
   │ hash-connector.ts           10L  0C    1m  CC=1      ←0
   │ v2_service                  10L  0C    5m  CC=9      ←0
   │ cli                         10L  0C    7m  CC=1      ←1
-  │ v1                          10L  0C   25m  CC=14     ←2
+  │ v1                          10L  0C   25m  CC=14     ←3
   │ errors                      10L  0C   32m  CC=13     ←1
   │ daemon                      10L  0C    3m  CC=14     ←0
   │ codegen                     10L  0C   19m  CC=14     ←0
@@ -282,6 +258,7 @@ LAYERS:
   │ tree                        10L  0C    4m  CC=11     ←0
   │ _scan                       10L  0C   34m  CC=14     ←0
   │ Cargo.toml                  10L  0C    0m  CC=0.0    ←0
+  │ contract_gate               10L  0C    0m  CC=0.0    ←0
   │ progress                    10L  0C    0m  CC=0.0    ←0
   │ v2                          10L  0C    0m  CC=0.0    ←0
   │ _runtime                    10L  0C    0m  CC=0.0    ←0
@@ -339,7 +316,6 @@ LAYERS:
   │ connect_catalog              4L  0C   17m  CC=13     ←0
   │ connector_smoke              4L  0C    3m  CC=6      ←0
   │ connector_contract           4L  1C   11m  CC=4      ←0
-  │ diagnostics                  4L  1C   19m  CC=8      ←2
   │ flow_verify                  4L  0C    7m  CC=10     ←1
   │ openapi_import               4L  0C    0m  CC=0.0    ←0
   │ scanner_net                  4L  0C    0m  CC=0.0    ←0
@@ -357,6 +333,7 @@ LAYERS:
   │ config                       4L  0C    0m  CC=0.0    ←0
   │ keyauth                      4L  0C    0m  CC=0.0    ←0
   │ recovery                     4L  0C    0m  CC=0.0    ←0
+  │ diagnostics                  4L  0C    0m  CC=0.0    ←0
   │ server                       4L  0C    0m  CC=0.0    ←0
   │ client                       4L  0C    0m  CC=0.0    ←0
   │ _artifacts                   4L  0C    0m  CC=0.0    ←0
@@ -370,6 +347,9 @@ LAYERS:
   │ twin_store                   4L  0C    0m  CC=0.0    ←0
   │ preconditions                4L  0C    0m  CC=0.0    ←0
   │ .NETCoreApp,Version=v8.0.AssemblyAttributes.cs     4L  0C    0m  CC=0.0    ←0
+  │ contract_reversible          2L  0C    0m  CC=0.0    ←0
+  │ contract_jsonschema          2L  0C    0m  CC=0.0    ←0
+  │ contract_lint                2L  0C    0m  CC=0.0    ←0
   │ __init__                     2L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
@@ -427,25 +407,25 @@ LAYERS:
      xlang/peer.mjs                            0L
 
 COUPLING:
-                           adapters.python              scripts             adapters                xlang      examples.matrix                v1.js  security.mesh-probe        adapters.java        adapters.perl
-      adapters.python                   ──                  142                   19                   ←7                   ←3                    6                   ←1                    1                    1  hub
-              scripts                    2                   ──                  ←11                   ←5                   ←7                                        ←1                                            hub
+                           adapters.python              scripts             adapters      examples.matrix                xlang                v1.js        adapters.java        adapters.perl  security.mesh-probe
+      adapters.python                   ──                  142                   18                   ←2                   ←3                    6                    1                    1                       hub
+              scripts                    2                   ──                  ←11                   ←7                   ←5                                                                                  ←1  hub
              adapters                    1                   11                   ──                                                                                                                                hub
-                xlang                    7                    5                                        ──                                                                                                           !! fan-out
-      examples.matrix                    3                    7                                                             ──                                                                                      !! fan-out
+      examples.matrix                    2                    7                                        ──                                                                                                           !! fan-out
+                xlang                    3                    5                                                             ──                                                                                      !! fan-out
                 v1.js                   ←6                                                                                                       ──                                                                 hub
-  security.mesh-probe                    1                    1                                                                                                       ──                                          
-        adapters.java                   ←1                                                                                                                                                 ──                     
-        adapters.perl                   ←1                                                                                                                                                                      ──
+        adapters.java                   ←1                                                                                                                            ──                                          
+        adapters.perl                   ←1                                                                                                                                                 ──                     
+  security.mesh-probe                                         1                                                                                                                                                 ──
   CYCLES: none
-  HUB: adapters.python/ (fan-in=14)
-  HUB: v1.js/ (fan-in=6)
   HUB: scripts/ (fan-in=166)
-  HUB: adapters/ (fan-in=19)
-  SMELL: adapters.python/ fan-out=169 → split needed
-  SMELL: examples.matrix/ fan-out=10 → split needed
-  SMELL: xlang/ fan-out=12 → split needed
+  HUB: adapters/ (fan-in=18)
+  HUB: v1.js/ (fan-in=6)
+  HUB: adapters.python/ (fan-in=8)
+  SMELL: examples.matrix/ fan-out=9 → split needed
   SMELL: adapters/ fan-out=12 → split needed
+  SMELL: xlang/ fan-out=8 → split needed
+  SMELL: adapters.python/ fan-out=168 → split needed
 
 EXTERNAL:
   validation: run `vallm batch .` → validation.toon

@@ -1,25 +1,24 @@
 # System Architecture Analysis
-<!-- generated in 0.01s -->
 
 ## Overview
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 199, json: 15, shell: 14, yaml: 5, javascript: 5
+- **Languages**: python: 200, json: 15, shell: 14, yaml: 5, javascript: 5
 - **Analysis Mode**: static
-- **Total Functions**: 2563
-- **Total Classes**: 66
-- **Modules**: 268
-- **Entry Points**: 1073
+- **Total Functions**: 2579
+- **Total Classes**: 63
+- **Modules**: 269
+- **Entry Points**: 1065
 
 ## Architecture by Module
 
 ### adapters.python.urirun.host.dashboard
-- **Functions**: 585
+- **Functions**: 606
 - **File**: `dashboard.js`
 
 ### adapters.python.urirun.host.scanner
-- **Functions**: 137
+- **Functions**: 142
 - **File**: `scanner.js`
 
 ### adapters.python.urirun_runtime.v2
@@ -50,7 +49,7 @@
 - **File**: `__init__.py`
 
 ### adapters.python.urirun.host.chat_orchestrator
-- **Functions**: 51
+- **Functions**: 52
 - **Classes**: 1
 - **File**: `chat_orchestrator.py`
 
@@ -77,7 +76,7 @@
 - **File**: `client.py`
 
 ### adapters.python.urirun_flow.flow_planner
-- **Functions**: 33
+- **Functions**: 35
 - **File**: `flow_planner.py`
 
 ### adapters.python.urirun.host.host_db
@@ -189,6 +188,9 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 Reconnects automatically, replaying missed events via Last-Event-ID.
 - **Calls**: adapters.python.urirun_node.config.host_config_for_args, adapters.python.urirun_node.config.node_url, getattr, getattr, bool, bool, sys.stderr.write, sys.stderr.flush
 
+### adapters.python.urirun.host.chat_orchestrator.chat_ask
+- **Calls**: None.strip, adapters.python.urirun.host.chat_orchestrator._parse_chat_nodes_targets, adapters.python.urirun.host.chat_orchestrator._init_selected_targets, adapters.python.urirun.host.chat_orchestrator._infer_node_targets, adapters.python.urirun.host.routing.selected_nodes_from_targets, bool, bool, adapters.python.urirun.host.chat_orchestrator._add_chat_user_message
+
 ### adapters.python.urirun.host.node_health.node_doctor
 > Run all health probes for a urirun node; return a structured per-class report.
 
@@ -204,9 +206,6 @@ Result shape::
 ### adapters.python.urirun.runtime.errors.problem
 > Project an error envelope to RFC 9457 ``application/problem+json``.
 - **Calls**: dict, adapters.python.urirun.runtime.errors.category_meta, err.get, adapters.python.urirun.runtime.errors.classify, err.get, adapters.python.urirun.runtime.errors.error_code, err.get, err.get
-
-### adapters.python.urirun.host.chat_orchestrator.chat_ask
-- **Calls**: None.strip, adapters.python.urirun.host.chat_orchestrator._parse_chat_nodes_targets, adapters.python.urirun.host.chat_orchestrator._init_selected_targets, adapters.python.urirun.host.chat_orchestrator._infer_node_targets, adapters.python.urirun.host.routing.selected_nodes_from_targets, bool, bool, adapters.python.urirun.host.chat_orchestrator._apply_host_default_when_no_node_in_prompt
 
 ### adapters.python.urirun.node.manage.connector_install
 > Install a connector from ANY source into the node's venv:
@@ -483,38 +482,17 @@ concurrency (If-Registry-
 ### adapters.python.urirun.connectors.connector_lint._format_report
 - **Output to**: lines.append, lines.extend, lines.append, lines.append, lines.extend
 
-### adapters.python.urirun_connectors_toolkit.contract_gate._parse_const
-- **Output to**: None.isdigit, int, token.lstrip
-
-### adapters.python.urirun_connectors_toolkit.contract_gate.validate_output
-> Validate an ok-envelope against the contract's ``out`` (no-op when out is empty).
-- **Output to**: adapters.python.urirun_connectors_toolkit.contract_gate.check
-
 ### adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_bindings_validate
 > The bindings document must pass urirun.validate_binding_document.
 - **Output to**: urirun.validate_binding_document, result.get, result.get
 
+### adapters.python.urirun_flow.diagnostics._decode_error_ctx
+- **Output to**: None.casefold, str, str, str, None.get
+
+### adapters.python.urirun_flow.Flow._validate
+- **Output to**: model_validator, self._validate_graph
+
 ## Behavioral Patterns
-
-### recursion__leaf_ok
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._leaf_ok
-
-### recursion_check
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate.check
-
-### recursion__walk_out
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._walk_out
-
-### recursion_to_json_schema
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_jsonschema.to_json_schema
 
 ### recursion_ts_type
 - **Type**: recursion
@@ -571,6 +549,26 @@ concurrency (If-Registry-
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.Connector.handler
 
+### recursion__uri_action_lookup
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun.host.host_dashboard._uri_action_lookup
+
+### recursion_short_value
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun.host.fs_transfer.short_value
+
+### state_machine_Urirun
+- **Type**: state_machine
+- **Confidence**: 0.70
+- **Functions**: adapters.java.Urirun.Urirun.Connector, adapters.java.Urirun.Urirun.Connector, adapters.java.Urirun.Urirun.command, adapters.java.Urirun.Urirun.bindingsJson
+
+### state_machine_Connector
+- **Type**: state_machine
+- **Confidence**: 0.70
+- **Functions**: adapters.ts.urirun.Connector.command, adapters.ts.urirun.Connector.document, adapters.ts.urirun.Connector.toJSON, adapters.ts.urirun.Connector.connector
+
 ## Public API Surface
 
 Functions exposed as public API (no underscore prefix):
@@ -606,13 +604,13 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
 - `adapters.python.urirun.host.node_api.configured_api_headers` - 23 calls
+- `adapters.python.urirun.host.chat_orchestrator.chat_ask` - 23 calls
 - `adapters.python.urirun.host.node_health.node_doctor` - 23 calls
 - `adapters.python.urirun.node.doctor.format_doctor_report` - 22 calls
 - `adapters.python.urirun_connectors_toolkit.resolver.index_local` - 22 calls
 - `adapters.python.urirun.runtime.errors.problem` - 22 calls
 - `adapters.python.urirun_runtime._runtime.run` - 22 calls
 - `adapters.python.urirun.host.host_dashboard.serve` - 22 calls
-- `adapters.python.urirun.host.chat_orchestrator.chat_ask` - 22 calls
 - `adapters.python.urirun.node.manage.connector_install` - 21 calls
 - `adapters.python.urirun_flow.run.resolve_step` - 21 calls
 
