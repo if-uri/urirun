@@ -455,6 +455,44 @@ def _collect_infeasible_constraints(environments: list[dict] | None) -> list[dic
     return result
 
 
+def _strip_focus_from_cdp_flows(steps: list[dict]) -> list[dict]:
+    """Remove window/command/focus steps from flows that use CDP.
+
+    CDP communicates directly with the browser process — window focus is irrelevant
+    and blocks flows when the window title doesn't match yet (e.g. pre-navigation).
+    Repairs LLM non-compliance with the CDP FOCUS RULE in the planner prompt.
+
+    Graph bypass: when step B (removed) depends on A, and step C depends on B,
+    C's depends_on is rewritten to A (B's predecessors), not left empty.
+    """
+    has_cdp = any("cdp/session/command/ensure" in str(s.get("uri", "")) for s in steps)
+    if not has_cdp:
+        return steps
+
+    removed: dict[str, list[str]] = {}  # id → its own deps (for bypass rewriting)
+    for step in steps:
+        if "window/command/focus" in str(step.get("uri", "")):
+            removed[step.get("id", "")] = list(step.get("depends_on") or [])
+
+    if not removed:
+        return steps
+
+    def _bypass(deps: list[str]) -> list[str]:
+        """Replace any dep on a removed step with that step's own deps (transitive)."""
+        result: list[str] = []
+        for d in deps:
+            if d in removed:
+                result.extend(_bypass(removed[d]))
+            else:
+                result.append(d)
+        return result
+
+    return [
+        {**s, "depends_on": _bypass(list(s.get("depends_on") or []))}
+        for s in steps if s.get("id", "") not in removed
+    ]
+
+
 def normalize_flow(flow: dict, allowed_uris: set[str], routes: list[dict] | None = None,
                    infeasible_constraints: list[dict] | None = None) -> dict:
     task = flow.get("task") if isinstance(flow.get("task"), dict) else {}
@@ -465,6 +503,7 @@ def normalize_flow(flow: dict, allowed_uris: set[str], routes: list[dict] | None
     steps = [_normalize_flow_step(step, index, allowed_uris, used, routes=routes,
                                   infeasible_constraints=infeasible_constraints)
              for index, step in enumerate(raw_steps, start=1)]
+    steps = _strip_focus_from_cdp_flows(steps)
     steps = _inject_cdp_ready_probes(steps, allowed_uris, used, routes=routes)
     return {"task": _normalize_flow_task(task), "steps": steps}
 
