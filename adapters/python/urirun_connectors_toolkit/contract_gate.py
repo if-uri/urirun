@@ -156,18 +156,100 @@ def contract_to_dict(c: Contract) -> dict:
 
 
 def attach_contracts(conn, contracts: dict[str, Contract]):
-    """Join contracts onto the connector's live bindings BY ROUTE KEY (zero duplication).
+    """Join contracts onto live bindings BY ROUTE KEY (zero duplication).
 
-    Mutates each matched binding's ``meta["contract"]`` so ``conn.bindings()`` / the manifest carry
-    the output shape + examples — the model an LLM planner needs. Returns ``conn`` for chaining::
+    A contract key is either a connector-local path (joined via ``conn.uri``) or a full URI
+    (for multi-scheme connectors that have no single ``conn`` — pass ``conn=None``). Mutates each
+    matched binding's ``meta["contract"]`` so ``conn.bindings()`` / the manifest carry the output
+    shape + examples — the model an LLM planner needs. Returns ``conn`` for chaining::
 
-        conn = attach_contracts(urirun.connector("kvm", scheme="kvm"), CONTRACTS)
+        conn = attach_contracts(urirun.connector("kvm", scheme="kvm"), CONTRACTS)   # local paths
+        attach_contracts(None, CONTRACTS_WITH_FULL_URI_KEYS)                         # multi-scheme
     """
     from urirun.v2 import decorated_bindings
 
     store = decorated_bindings().get("bindings", {})
     for route, c in contracts.items():
-        binding = store.get(conn.uri(route))
+        uri = route if "://" in route else conn.uri(route)
+        binding = store.get(uri)
         if binding is not None:
             binding.setdefault("meta", {})["contract"] = contract_to_dict(c)
+    return conn
+
+
+# ── runtime guard (enforce) ───────────────────────────────────────────────────
+
+class ContractViolation(AssertionError):
+    """Handler output diverged from its declared contract."""
+
+
+def envelope_violation(contract: Contract, envelope: dict) -> "str | None":
+    """Check ``envelope`` against the contract; return a violation message or None.
+
+    ok-path: checks ``out`` schema.
+    error-path: checks the ``remediation.class`` (or ``error.remediationClass``) is declared.
+    Returns None when conformant so callers can ``assert envelope_violation(...) is None``.
+    """
+    try:
+        if envelope.get("ok"):
+            if contract.out:
+                check(contract.out, envelope, "out")
+            return None
+        rem = envelope.get("remediation")
+        cls = rem.get("class") if isinstance(rem, dict) else None
+        if cls is None:
+            err = envelope.get("error")
+            if isinstance(err, dict):
+                cls = err.get("remediationClass")
+        if contract.errors and cls is not None and cls not in contract.errors:
+            return f"error class {cls!r} not in declared {list(contract.errors)}"
+    except AssertionError as exc:
+        return str(exc)
+    return None
+
+
+def enforce(conn, contracts: dict, *, validate: bool):
+    """Wrap ``conn.handler`` so each decorated handler is guarded by its contract.
+
+    ``validate=True``  — wraps the handler; ``ContractViolation`` raised at call site on drift.
+    ``validate=False`` — zero overhead; the CI gate already verified the contract.
+
+    Also calls ``conn.attach_contract(route, contract)`` when available, so ``bindings()``
+    can carry the contract meta without a separate ``attach_contracts`` call.
+
+    Usage in a connector's ``core.py``::
+
+        conn = enforce(urirun.connector("kvm", scheme="kvm"), CONTRACTS,
+                       validate=bool(os.environ.get("URIRUN_CONTRACT_CHECK")))
+
+    Handlers are registered normally via ``@conn.handler``; the gate is injected transparently.
+    """
+    import functools
+
+    base_handler = conn.handler
+
+    def handler(route: str, **kw):
+        deco = base_handler(route, **kw)
+
+        def wrap(fn):
+            contract = contracts.get(route)
+            if contract is not None and hasattr(conn, "attach_contract"):
+                conn.attach_contract(route, contract)
+            if contract is None or not validate:
+                return deco(fn)
+
+            @functools.wraps(fn)
+            def guarded(*args, **kwargs):
+                out = fn(*args, **kwargs)
+                if isinstance(out, dict):
+                    bad = envelope_violation(contract, out)
+                    if bad:
+                        raise ContractViolation(f"{route} → {bad}")
+                return out
+
+            return deco(guarded)
+
+        return wrap
+
+    conn.handler = handler
     return conn
