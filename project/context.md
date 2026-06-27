@@ -7,15 +7,15 @@
 - **Primary Language**: python
 - **Languages**: python: 199, json: 15, shell: 14, yaml: 5, javascript: 5
 - **Analysis Mode**: static
-- **Total Functions**: 2540
+- **Total Functions**: 2563
 - **Total Classes**: 66
 - **Modules**: 268
-- **Entry Points**: 1072
+- **Entry Points**: 1073
 
 ## Architecture by Module
 
 ### adapters.python.urirun.host.dashboard
-- **Functions**: 559
+- **Functions**: 585
 - **File**: `dashboard.js`
 
 ### adapters.python.urirun.host.scanner
@@ -76,13 +76,13 @@
 - **Classes**: 1
 - **File**: `client.py`
 
-### adapters.python.urirun.host.host_db
-- **Functions**: 33
-- **File**: `host_db.py`
-
 ### adapters.python.urirun_flow.flow_planner
 - **Functions**: 33
 - **File**: `flow_planner.py`
+
+### adapters.python.urirun.host.host_db
+- **Functions**: 33
+- **File**: `host_db.py`
 
 ### adapters.python.urirun_runtime._runtime
 - **Functions**: 30
@@ -93,15 +93,15 @@
 - **Functions**: 29
 - **File**: `discovery.py`
 
-### adapters.python.urirun.host.planfile_adapter
-- **Functions**: 27
-- **Classes**: 1
-- **File**: `planfile_adapter.py`
-
 ### adapters.python.urirun_flow.flow_thin
 - **Functions**: 27
 - **Classes**: 1
 - **File**: `flow_thin.py`
+
+### adapters.python.urirun.host.planfile_adapter
+- **Functions**: 27
+- **Classes**: 1
+- **File**: `planfile_adapter.py`
 
 ## Key Entry Points
 
@@ -483,17 +483,43 @@ concurrency (If-Registry-
 ### adapters.python.urirun.connectors.connector_lint._format_report
 - **Output to**: lines.append, lines.extend, lines.append, lines.append, lines.extend
 
+### adapters.python.urirun_connectors_toolkit.contract_gate._parse_const
+- **Output to**: None.isdigit, int, token.lstrip
+
+### adapters.python.urirun_connectors_toolkit.contract_gate.validate_output
+> Validate an ok-envelope against the contract's ``out`` (no-op when out is empty).
+- **Output to**: adapters.python.urirun_connectors_toolkit.contract_gate.check
+
 ### adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_bindings_validate
 > The bindings document must pass urirun.validate_binding_document.
 - **Output to**: urirun.validate_binding_document, result.get, result.get
 
-### adapters.python.urirun.node.diagnostics._decode_error_ctx
-- **Output to**: None.casefold, str, str, str, None.get
-
-### adapters.python.urirun_flow.Flow._validate
-- **Output to**: model_validator, self._validate_graph
-
 ## Behavioral Patterns
+
+### recursion__leaf_ok
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._leaf_ok
+
+### recursion_check
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate.check
+
+### recursion__walk_out
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._walk_out
+
+### recursion_to_json_schema
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_jsonschema.to_json_schema
+
+### recursion_ts_type
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_typescript.ts_type
 
 ### recursion__field_type
 - **Type**: recursion
@@ -544,31 +570,6 @@ concurrency (If-Registry-
 - **Type**: recursion
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.Connector.handler
-
-### recursion__uri_action_lookup
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun.host.host_dashboard._uri_action_lookup
-
-### recursion_short_value
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun.host.fs_transfer.short_value
-
-### recursion__leaf_ok
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._leaf_ok
-
-### recursion_check
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate.check
-
-### recursion__walk_out
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._walk_out
 
 ## Public API Surface
 

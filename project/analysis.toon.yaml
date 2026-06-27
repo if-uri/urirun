@@ -1,33 +1,33 @@
-# code2llm | 272f 42793L | python:199,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
-# generated in 0.17s
-# CC̅=4.7 | critical:37/2540 | dups:0 | cycles:0
+# code2llm | 272f 42894L | python:199,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
+# generated in 0.20s
+# CC̅=4.7 | critical:23/2563 | dups:0 | cycles:0
 
 HEALTH[20]:
+  🟡 CC    check CC=15 (limit:15)
   🟡 CC    scanIntervalMs CC=15 (limit:15)
   🟡 CC    capture CC=20 (limit:15)
   🟡 CC    bestPdf CC=26 (limit:15)
   🟡 CC    check CC=15 (limit:15)
   🟡 CC    leafOk CC=17 (limit:15)
   🟡 CC    conform CC=19 (limit:15)
-  🟡 CC    check CC=15 (limit:15)
-  🟡 CC    createTicket CC=25 (limit:15)
-  🟡 CC    installConnector CC=26 (limit:15)
-  🟡 CC    testConnector CC=21 (limit:15)
-  🟡 CC    renderNodes CC=16 (limit:15)
-  🟡 CC    renderHost CC=30 (limit:15)
-  🟡 CC    showAddPhoneNodeQR CC=16 (limit:15)
   🟡 CC    savePhoneNode CC=15 (limit:15)
-  🟡 CC    saveTypedNode CC=20 (limit:15)
-  🟡 CC    saveApiNode CC=29 (limit:15)
-  🟡 CC    saveDeviceNode CC=23 (limit:15)
-  🟡 CC    saveNodeToken CC=16 (limit:15)
-  🟡 CC    saveNodeTokenFor CC=16 (limit:15)
-  🟡 CC    contactCard CC=17 (limit:15)
+  🟡 CC    renderDiscovery CC=17 (limit:15)
+  🟡 CC    renderArtifactFileRow CC=19 (limit:15)
+  🟡 CC    renderTwinPlanCard CC=43 (limit:15)
+  🟡 CC    renderAttachment CC=26 (limit:15)
+  🟡 CC    renderScannerStream CC=15 (limit:15)
+  🟡 CC    renderScannerStatusServiceView CC=19 (limit:15)
+  🟡 CC    renderFormServiceView CC=20 (limit:15)
+  🟡 CC    renderServiceView CC=15 (limit:15)
+  🟡 CC    renderWidgetCard CC=26 (limit:15)
+  🟡 CC    renderWidgetDashboard CC=19 (limit:15)
+  🟡 CC    loadWidgetBundleViaUri CC=19 (limit:15)
+  🟡 CC    renderChatMessage CC=26 (limit:15)
 
 REFACTOR[1]:
   1. split 20 high-CC methods  (CC>15)
 
-PIPELINES[908]:
+PIPELINES[906]:
   [1] Src [http]: http
       PURITY: 100% pure
   [2] Src [_attacker_key]: _attacker_key → open → esc → text
@@ -155,7 +155,7 @@ LAYERS:
   │ sync-versions.sh            25L  0C    0m  CC=0.0    ←0
   │
   adapters/                       CC̄=4.7    ←in:19  →out:12  !! split
-  │ !! dashboard.js              2708L  0C  387m  CC=43     ←59
+  │ !! dashboard.js              2809L  0C  410m  CC=43     ←59
   │ !! v2                        2033L  2C  120m  CC=14     ←6
   │ !! host_dashboard            1934L  0C  102m  CC=14     ←1
   │ !! scanner_bridge            1548L  0C    0m  CC=0.0    ←0
@@ -178,7 +178,7 @@ LAYERS:
   │ artifacts_admin            495L  0C    0m  CC=0.0    ←0
   │ document_metadata          471L  0C    0m  CC=0.0    ←0
   │ service_control            462L  0C   23m  CC=11     ←0
-  │ !! contract_gate              437L  3C   19m  CC=15     ←1
+  │ !! contract_gate              437L  3C   19m  CC=15     ←2
   │ connector_scaffold         413L  0C   11m  CC=3      ←0
   │ recovery                   393L  0C   23m  CC=10     ←2
   │ reversible                 383L  8C   26m  CC=10     ←5
@@ -239,8 +239,8 @@ LAYERS:
   │ Urirun.php                  73L  1C    5m  CC=3      ←0
   │ project.assets.json         71L  0C    0m  CC=0.0    ←0
   │ urirun-connector.csproj.nuget.dgspec.json    66L  0C    0m  CC=0.0    ←0
-  │ cli                         65L  0C    3m  CC=12     ←0
   │ contract_lint               65L  0C    3m  CC=11     ←0
+  │ cli                         65L  0C    3m  CC=12     ←0
   │ widgets                     64L  0C    4m  CC=12     ←0
   │ contract_jsonschema         62L  0C    4m  CC=9      ←2
   │ exec                        61L  0C    2m  CC=10     ←0
@@ -271,7 +271,7 @@ LAYERS:
   │ hash-connector.ts           10L  0C    1m  CC=1      ←0
   │ v2_service                  10L  0C    5m  CC=9      ←0
   │ cli                         10L  0C    7m  CC=1      ←1
-  │ v1                          10L  0C   25m  CC=14     ←3
+  │ v1                          10L  0C   25m  CC=14     ←2
   │ errors                      10L  0C   32m  CC=13     ←1
   │ daemon                      10L  0C    3m  CC=14     ←0
   │ codegen                     10L  0C   19m  CC=14     ←0
@@ -438,14 +438,14 @@ COUPLING:
         adapters.java                   ←1                                                                                                                                                 ──                     
         adapters.perl                   ←1                                                                                                                                                                      ──
   CYCLES: none
+  HUB: adapters.python/ (fan-in=14)
+  HUB: v1.js/ (fan-in=6)
   HUB: scripts/ (fan-in=166)
   HUB: adapters/ (fan-in=19)
-  HUB: v1.js/ (fan-in=6)
-  HUB: adapters.python/ (fan-in=14)
-  SMELL: adapters/ fan-out=12 → split needed
+  SMELL: adapters.python/ fan-out=169 → split needed
   SMELL: examples.matrix/ fan-out=10 → split needed
   SMELL: xlang/ fan-out=12 → split needed
-  SMELL: adapters.python/ fan-out=169 → split needed
+  SMELL: adapters/ fan-out=12 → split needed
 
 EXTERNAL:
   validation: run `vallm batch .` → validation.toon

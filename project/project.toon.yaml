@@ -1,23 +1,23 @@
-# urirun | 2540 func | 143f | 42793L | python | 2026-06-27
+# urirun | 2563 func | 143f | 42894L | python | 2026-06-27
 # generated in 0.00s
 
 HEALTH:
-  CC̄=4.7  critical=320 (limit:10)  dup=2  cycles=0
+  CC̄=4.7  critical=322 (limit:10)  dup=2  cycles=0
 
 ALERTS[20]:
   !!! cc_exceeded      renderTwinPlanCard = 43 (limit:15)
-  !!! cc_exceeded      renderHost = 30 (limit:15)
   !!! high_fan_out     _add_host_subparser = 30 (limit:10)
   !!! high_fan_out     serve = 30 (limit:10)
   !!! high_fan_out     summary = 30 (limit:10)
-  !!! cc_exceeded      saveApiNode = 29 (limit:15)
   !!! cc_exceeded      bestPdf = 26 (limit:15)
-  !!! cc_exceeded      installConnector = 26 (limit:15)
   !!! cc_exceeded      renderAttachment = 26 (limit:15)
   !!! cc_exceeded      renderWidgetCard = 26 (limit:15)
+  !!! cc_exceeded      renderChatMessage = 26 (limit:15)
+  !!! high_fan_out     main = 26 (limit:10)
+  !!! high_fan_out     NodeHandler._handle_run = 25 (limit:10)
 
 MODULES[272] (top by size):
-  M[adapters/python/urirun/host/dashboard.js] 2708L C:0 F:387 CC↑43 D:59 (javascript)
+  M[adapters/python/urirun/host/dashboard.js] 2809L C:0 F:410 CC↑43 D:59 (javascript)
   M[adapters/python/urirun_runtime/v2.py] 2033L C:2 F:120 CC↑14 D:6 (python)
   M[adapters/python/urirun/host/host_dashboard.py] 1934L C:0 F:102 CC↑14 D:1 (python)
   M[adapters/python/urirun_scanner/scanner_bridge.py] 1548L C:0 F:0 CC↑0 D:0 (python)
@@ -43,10 +43,10 @@ HOTSPOTS[10]:
 
 REFACTOR[15]:
   [1] H/L Split bestPdf (CC=26)
-  [2] H/L Split createTicket (CC=25)
-  [3] H/L Split installConnector (CC=26)
-  [4] H/L Split renderHost (CC=30)
-  [5] H/L Split saveApiNode (CC=29)
+  [2] H/L Split renderTwinPlanCard (CC=43)
+  [3] H/L Split renderAttachment (CC=26)
+  [4] H/L Split renderWidgetCard (CC=26)
+  [5] H/L Split renderChatMessage (CC=26)
 
 EVOLUTION:
-  2026-06-27 CC̄=4.7 crit=320 42793L // Automated analysis
+  2026-06-27 CC̄=4.7 crit=322 42894L // Automated analysis

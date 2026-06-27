@@ -1,6 +1,6 @@
 # code2llm call graph | /home/tom/github/if-uri/urirun
-# generated in 0.23s
-# nodes: 462 | edges: 500 | modules: 58
+# generated in 0.27s
+# nodes: 465 | edges: 500 | modules: 59
 # CC̄=4.7
 
 HUBS[20]:
@@ -18,18 +18,20 @@ HUBS[20]:
     CC=14  in:0  out:31  total:31
   adapters.python.urirun.host.dashboard.open
     CC=1  in:30  out:1  total:31
+  adapters.python.urirun_connectors_toolkit.contract_gate.check
+    CC=15  in:11  out:19  total:30
   adapters.python.urirun_node.server.NodeHandler._handle_run
     CC=14  in:0  out:29  total:29
-  scripts.transport_swap_proof.main
-    CC=5  in:0  out:29  total:29
   adapters.python.urirun_node.server.NodeHandler._handle_deploy
     CC=11  in:0  out:29  total:29
+  scripts.transport_swap_proof.main
+    CC=5  in:0  out:29  total:29
   adapters.python.urirun.connectors.connector_lint.verify_connector
     CC=6  in:1  out:27  total:28
-  adapters.python.urirun_node.server.apply_deploy
-    CC=12  in:2  out:25  total:27
   adapters.python.urirun_runtime.v2.validate_binding_document
     CC=12  in:3  out:24  total:27
+  adapters.python.urirun_node.server.apply_deploy
+    CC=12  in:2  out:25  total:27
   adapters.python.urirun.connectors.connector_lint.lint_connector
     CC=9  in:3  out:24  total:27
   adapters.python.urirun_connectors_toolkit.resolver.resolve
@@ -42,8 +44,6 @@ HUBS[20]:
     CC=12  in:2  out:22  total:24
   adapters.python.urirun_node.server.NodeHandler._get
     CC=12  in:4  out:19  total:23
-  adapters.python.urirun_node.server._serve_opts_merged
-    CC=14  in:1  out:21  total:22
 
 MODULES:
   adapters.c.urirun  [4 funcs]
@@ -78,10 +78,9 @@ MODULES:
     _heal_file  CC=7  out:12
     heal  CC=6  out:7
     main  CC=5  out:9
-  adapters.python.urirun  [3 funcs]
+  adapters.python.urirun  [2 funcs]
     manifest  CC=11  out:13
     handler  CC=1  out:1
-    result_data  CC=8  out:7
   adapters.python.urirun.connectors.connect_catalog  [17 funcs]
     _cmd_check  CC=7  out:15
     _cmd_install  CC=13  out:14
@@ -122,17 +121,8 @@ MODULES:
     json_load  CC=1  out:3
     json_write  CC=1  out:4
     slug  CC=2  out:3
-  adapters.python.urirun.node.diagnostics  [17 funcs]
-    _build  CC=3  out:3
-    _cdp_feasible  CC=3  out:5
-    _controllable  CC=3  out:5
-    _decode_error_ctx  CC=8  out:8
-    _is_login_surface  CC=5  out:8
-    _mark_feasibility  CC=7  out:5
-    _match_rule  CC=4  out:2
-    _maybe_escalate_surface  CC=6  out:6
-    _os_level_unreliable  CC=4  out:4
-    _rem_already_cdp  CC=6  out:7
+  adapters.python.urirun.node.diagnostics  [1 funcs]
+    diagnose  CC=4  out:7
   adapters.python.urirun.node.doctor  [11 funcs]
     _api_id  CC=8  out:9
     _api_protocol  CC=4  out:6
@@ -157,12 +147,6 @@ MODULES:
   adapters.python.urirun.node.event_schema  [2 funcs]
     _step_inverse  CC=5  out:1
     step_category  CC=3  out:1
-  adapters.python.urirun.node.flow_verify  [5 funcs]
-    _dig_value  CC=5  out:4
-    _flow_stdout  CC=6  out:7
-    _goal_passed  CC=8  out:5
-    _run_goal_check  CC=6  out:12
-    _verify_log_fragment_check  CC=6  out:6
   adapters.python.urirun.node.manage  [32 funcs]
     _app_count  CC=5  out:4
     _augment_local_routes  CC=5  out:7
@@ -231,11 +215,36 @@ MODULES:
     neutral_document  CC=5  out:4
     schema_document  CC=2  out:3
     write_artifacts  CC=1  out:16
-  adapters.python.urirun_connectors_toolkit.contract_jsonschema  [1 funcs]
+  adapters.python.urirun_connectors_toolkit.contract_gate  [18 funcs]
+    _leaf_ok  CC=7  out:15
+    _parse_const  CC=4  out:3
+    _terminal_type  CC=5  out:4
+    _walk_oneof  CC=9  out:5
+    _walk_out  CC=12  out:13
+    assignable  CC=4  out:0
+    attach_contracts  CC=5  out:7
+    check  CC=15  out:19
+    check_wire  CC=10  out:11
+    conform  CC=13  out:10
+  adapters.python.urirun_connectors_toolkit.contract_jsonschema  [4 funcs]
+    _const_value  CC=4  out:3
+    _dict_schema  CC=6  out:5
+    _token_schema  CC=4  out:6
     to_json_schema  CC=9  out:9
+  adapters.python.urirun_connectors_toolkit.contract_lint  [3 funcs]
+    _base  CC=4  out:3
+    _check_field_type  CC=8  out:6
+    lint_handler_signatures  CC=11  out:12
   adapters.python.urirun_connectors_toolkit.contract_reversible  [2 funcs]
     callspec_fields  CC=10  out:11
     callspecs_from_contracts  CC=2  out:3
+  adapters.python.urirun_connectors_toolkit.contract_typescript  [6 funcs]
+    _const  CC=3  out:3
+    _sanitize  CC=3  out:2
+    _ts_object  CC=5  out:8
+    _ts_token  CC=5  out:8
+    to_typescript  CC=2  out:14
+    ts_type  CC=10  out:12
   adapters.python.urirun_connectors_toolkit.resolver  [8 funcs]
     _candidate_dirs  CC=1  out:4
     _read_manifest  CC=3  out:4
@@ -245,16 +254,13 @@ MODULES:
     index_local  CC=12  out:22
     resolve  CC=12  out:24
     resolve_command  CC=6  out:14
-  adapters.python.urirun_flow  [2 funcs]
-    _validate_graph  CC=11  out:13
-    order  CC=3  out:6
   adapters.python.urirun_flow.cli  [2 funcs]
     _load_flow  CC=3  out:8
     _load_python_flow  CC=4  out:6
   adapters.python.urirun_flow.flow  [2 funcs]
     _flow_transport  CC=1  out:8
     execute_flow  CC=3  out:9
-  adapters.python.urirun_flow.recovery  [22 funcs]
+  adapters.python.urirun_flow.recovery  [18 funcs]
     _apply_one_remediation  CC=7  out:11
     _cdp_page_ready_actions  CC=3  out:3
     _dispatch_recovery  CC=6  out:11
@@ -344,7 +350,8 @@ MODULES:
     _mqtt_publish_fn  CC=2  out:3
     _parse_sse_line  CC=6  out:8
     _pids_on_port  CC=9  out:15
-  adapters.python.urirun_runtime.v2  [1 funcs]
+  adapters.python.urirun_runtime.v2  [2 funcs]
+    decorated_bindings  CC=2  out:1
     validate_binding_document  CC=12  out:24
   adapters.python.urirun_twin.planner  [7 funcs]
     _action_matrix_hints  CC=11  out:9
