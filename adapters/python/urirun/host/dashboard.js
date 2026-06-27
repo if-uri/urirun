@@ -127,8 +127,7 @@
       renderUrlState();
     }
 
-    function applyControlsFromUrl() {
-      const search = new URLSearchParams(window.location.search);
+    function applyUrlFilterControls(search) {
       if ($('sprintFilter') && search.get('sprint')) $('sprintFilter').value = search.get('sprint');
       if ($('queueFilter') && search.has('queue')) $('queueFilter').value = search.get('queue') || '';
       if ($('chatExecute')) {
@@ -139,6 +138,9 @@
       if ($('chatPrompt') && (search.has('prompt') || search.has('message'))) {
         $('chatPrompt').value = search.get('prompt') || search.get('message') || '';
       }
+    }
+
+    function applyUrlTargetControls(search) {
       const targets = (search.get('targets') || 'host').split(',').map((item) => item.trim()).filter(Boolean);
       state.selectedTargets = targets.length ? targets : ['host'];
       (search.get('nodes') || '').split(',').map((item) => item.trim()).filter(Boolean).forEach((node) => {
@@ -147,6 +149,12 @@
       });
       const discovery = (search.get('discovery') || search.get('registry') || '').trim();
       if (discovery) state.discoveryTarget = discovery;
+    }
+
+    function applyControlsFromUrl() {
+      const search = new URLSearchParams(window.location.search);
+      applyUrlFilterControls(search);
+      applyUrlTargetControls(search);
     }
 
     function setChatFullscreen(enabled, options = {}) {
@@ -205,16 +213,25 @@
 
     // Create a planfile ticket from the manual form. POSTs to /api/tasks/create (planfile_adapter),
     // so it is the same ticket store the CLI and agents use.
-    async function createTicket(extra = {}) {
-      const status = $('newTicketStatus');
-      const body = {
+    function gatherTicketFormBody() {
+      return {
         name: ($('newTicketName') || {}).value || '',
         description: ($('newTicketDesc') || {}).value || '',
         priority: ($('newTicketPriority') || {}).value || 'normal',
         queue: ($('newTicketQueue') || {}).value || 'default',
         labels: ($('newTicketLabels') || {}).value || '',
-        ...extra,
       };
+    }
+
+    function clearTicketFormFields() {
+      if ($('newTicketName')) $('newTicketName').value = '';
+      if ($('newTicketDesc')) $('newTicketDesc').value = '';
+      if ($('newTicketLabels')) $('newTicketLabels').value = '';
+    }
+
+    async function createTicket(extra = {}) {
+      const status = $('newTicketStatus');
+      const body = { ...gatherTicketFormBody(), ...extra };
       if (!String(body.name).trim() && !String(body.prompt || '').trim()) {
         if (status) status.textContent = 'podaj tytuł (lub użyj \u201eZ promptu czatu\u201d)';
         return;
@@ -224,9 +241,7 @@
         const res = await api('/api/tasks/create', { method: 'POST', body: JSON.stringify(body) });
         const t = res.ticket || {};
         if (status) status.textContent = `utworzono: ${t.id || ''} ${t.name || ''}`;
-        if ($('newTicketName')) $('newTicketName').value = '';
-        if ($('newTicketDesc')) $('newTicketDesc').value = '';
-        if ($('newTicketLabels')) $('newTicketLabels').value = '';
+        clearTicketFormFields();
         await reloadTasks();
       } catch (error) {
         if (status) status.textContent = 'b\u0142\u0105d: ' + error.message;
@@ -257,6 +272,23 @@
       if ($('connectorSpec')) $('connectorSpec').placeholder = pair[1];
     }
 
+    function buildInstallResultLines(res) {
+      const lines = [];
+      if (res.command) lines.push('$ ' + res.command);
+      if (res.schemes && res.schemes.length) lines.push('schematy URI: ' + res.schemes.join(', '));
+      if (res.hint) lines.push('hint: ' + res.hint);
+      if (res.stdout) lines.push(res.stdout);
+      if (res.stderr) lines.push(res.stderr);
+      return lines;
+    }
+
+    async function applyInstallResult(res, status, out) {
+      if (status) status.textContent = res.ok ? '\u2713 zainstalowano' : '\u2717 ' + (res.error || 'blad');
+      const lines = buildInstallResultLines(res);
+      if (out) out.textContent = lines.join('\n') || JSON.stringify(res, null, 2);
+      if (res.ok && typeof load === 'function') load().catch(() => {});
+    }
+
     async function installConnector() {
       const source = ($('connectorSource') || {}).value || 'pip';
       const spec = (($('connectorSpec') || {}).value || '').trim();
@@ -267,15 +299,7 @@
       if (out) out.textContent = 'pip install ... (' + source + ': ' + spec + ')';
       try {
         const res = await api('/api/connectors/install', { method: 'POST', body: JSON.stringify({ source, spec }) });
-        if (status) status.textContent = res.ok ? '\u2713 zainstalowano' : '\u2717 ' + (res.error || 'blad');
-        const lines = [];
-        if (res.command) lines.push('$ ' + res.command);
-        if (res.schemes && res.schemes.length) lines.push('schematy URI: ' + res.schemes.join(', '));
-        if (res.hint) lines.push('hint: ' + res.hint);
-        if (res.stdout) lines.push(res.stdout);
-        if (res.stderr) lines.push(res.stderr);
-        if (out) out.textContent = lines.join('\n') || JSON.stringify(res, null, 2);
-        if (res.ok && typeof load === 'function') load().catch(() => {});
+        await applyInstallResult(res, status, out);
       } catch (error) {
         if (status) status.textContent = '\u2717 ' + error.message;
         if (out) out.textContent = error.message;
@@ -286,6 +310,21 @@
       const raw = (($('connectorTestPayload') || {}).value || '').trim();
       if (!raw) return {};
       try { return JSON.parse(raw); } catch (e) { throw new Error('payload nie jest poprawnym JSON: ' + e.message); }
+    }
+
+    async function fetchConnectorTestResult(env, uri, payload) {
+      if (env === 'host') {
+        return await api('/api/connectors/test', { method: 'POST', body: JSON.stringify({ uri, payload }) });
+      }
+      const node = env.replace(/^node:/, '');
+      return await api('/api/nodes/test-routes', { method: 'POST', body: JSON.stringify({ node, uris: [uri] }) });
+    }
+
+    function renderConnectorTestResult(res, status, out) {
+      const broken = res.results && res.results.filter ? res.results.filter((r) => r.status && r.status !== 'ok').length : 0;
+      const ok = res.ok !== false && broken === 0;
+      if (status) status.textContent = ok ? '\u2713 dziala' : '\u2717 blad/niepelne';
+      if (out) out.textContent = JSON.stringify(res, null, 2).slice(0, 4000);
     }
 
     async function testConnector() {
@@ -299,26 +338,16 @@
       if (status) status.textContent = 'testuje na ' + env + '...';
       if (out) out.textContent = '';
       try {
-        let res;
-        if (env === 'host') {
-          res = await api('/api/connectors/test', { method: 'POST', body: JSON.stringify({ uri, payload }) });
-        } else {
-          const node = env.replace(/^node:/, '');
-          res = await api('/api/nodes/test-routes', { method: 'POST', body: JSON.stringify({ node, uris: [uri] }) });
-        }
-        const broken = res.results && res.results.filter ? res.results.filter((r) => r.status && r.status !== 'ok').length : 0;
-        const ok = res.ok !== false && broken === 0;
-        if (status) status.textContent = ok ? '\u2713 dziala' : '\u2717 blad/niepelne';
-        if (out) out.textContent = JSON.stringify(res, null, 2).slice(0, 4000);
+        const res = await fetchConnectorTestResult(env, uri, payload);
+        renderConnectorTestResult(res, status, out);
       } catch (error) {
         if (status) status.textContent = '\u2717 ' + error.message;
         if (out) out.textContent = error.message;
       }
     }
 
-    function renderNodes(nodes) {
-      $('nodeCount').textContent = `${nodes.length} configured`;
-      $('nodesList').innerHTML = nodes.map((node) => `<div class="item node-row${state.selectedRoutesNode === node.name ? ' node-row-active' : ''}" data-node="${esc(node.name)}" onclick="selectNodeRoutes(this.dataset.node)" title="Kliknij, aby pokazać procesy URI tego węzła">
+    function renderNodeCard(node) {
+      return `<div class="item node-row${state.selectedRoutesNode === node.name ? ' node-row-active' : ''}" data-node="${esc(node.name)}" onclick="selectNodeRoutes(this.dataset.node)" title="Kliknij, aby pokazać procesy URI tego węzła">
         <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
           <span><strong>${esc(node.name)}</strong> <span class="pill ${node.reachable ? 'up' : 'down'}">${node.reachable ? 'up' : 'down'}</span>${node.kind ? ` <span class="pill kind">${esc(node.kind)}</span>` : ''}</span>
           <span style="display:flex;gap:6px">
@@ -340,7 +369,12 @@
             </div>
           </div>
         </details>
-      </div>`).join('') || empty('No nodes configured — use “➕ Jak dodać node” below to add one.');
+      </div>`;
+    }
+
+    function renderNodes(nodes) {
+      $('nodeCount').textContent = `${nodes.length} configured`;
+      $('nodesList').innerHTML = nodes.map(renderNodeCard).join('') || empty('No nodes configured — use "➕ Jak dodać node" below to add one.');
       // Surface the how-to-add panel automatically when nothing is configured, so a missing
       // node (e.g. a sync target that failed with "node_url is required") is fixable in place.
       const help = document.querySelector('.add-node-help');
@@ -416,15 +450,16 @@
     // Render the dedicated Host menu: identity, on-disk paths and mesh counts for the local host,
     // plus the URI routes the host itself exposes. Data comes straight from /api/summary (no extra
     // endpoint) — this is the host counterpart to the Nodes view, split out into its own tab.
-    function renderHost(summary) {
-      summary = summary || {};
-      const host = summary.host || {};
+    function updateHostStatusPill(host) {
       const pill = $('hostStatusPill');
       if (pill) {
         pill.textContent = host.status || (host.reachable ? 'up' : 'local');
         pill.className = 'pill ' + (host.reachable === false ? 'down' : 'up');
       }
-      const rows = [
+    }
+
+    function buildHostConfigRows(summary, host) {
+      return [
         { label: 'Host', value: host.label || 'urirun host' },
         { label: 'Katalog projektu', value: summary.project || host.url || '', mono: true, copy: true },
         { label: 'Baza danych (db)', value: summary.db || '', mono: true, copy: true },
@@ -433,21 +468,27 @@
         { label: 'Procesy URI hosta', value: `${(summary.hostRoutes || []).length}` },
         { label: 'Usługi (services)', value: `${summary.serviceCount || 0}` },
       ];
-      $('hostConfigList').innerHTML = rows.map((row) => `<div class="item">
+    }
+
+    function renderHostConfigRow(row) {
+      return `<div class="item">
         <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
           <span class="subtle">${esc(row.label)}</span>
           ${row.copy && row.value ? `<button type="button" title="Kopiuj" onclick="copyHostValue(this, ${JSON.stringify(row.value).replace(/"/g, '&quot;')})">⧉</button>` : ''}
         </div>
         <div class="${row.mono ? 'mono' : ''}">${esc(row.value) || '<span class="subtle">—</span>'}</div>
-      </div>`).join('');
+      </div>`;
+    }
 
-      const hostRoutes = summary.hostRoutes || [];
-      $('hostRouteCount').textContent = `${hostRoutes.length} routes`;
-      $('hostRoutesList').innerHTML = hostRoutes.slice(0, 80).map((route) => `<div class="item">
+    function renderHostRouteItem(route) {
+      return `<div class="item">
         <div class="route-title"><span class="mono">${esc(route.uri)}</span>${route.safe === false ? '<span class="pill down">unsafe</span>' : ''}</div>
         ${route.title ? `<div>${esc(route.title)}</div>` : ''}
         <div class="subtle">${esc(text(route.kind, 'route'))} · ${esc(text(route.layer, 'host'))}${route.source ? ` · ${esc(route.source)}` : ''}</div>
-      </div>`).join('') || empty('Host nie udostępnia żadnych procesów URI.');
+      </div>`;
+    }
+
+    function populateConnectorEnvSelector(summary) {
       const envSel = $('connectorTestEnv');
       if (envSel) {
         const cur = envSel.value;
@@ -456,6 +497,18 @@
           ...nodes.map((n) => `<option value="node:${esc(n.name)}">node: ${esc(n.name)}${n.reachable ? '' : ' (offline)'}</option>`)].join('');
         if (cur) envSel.value = cur;
       }
+    }
+
+    function renderHost(summary) {
+      summary = summary || {};
+      const host = summary.host || {};
+      updateHostStatusPill(host);
+      const rows = buildHostConfigRows(summary, host);
+      $('hostConfigList').innerHTML = rows.map(renderHostConfigRow).join('');
+      const hostRoutes = summary.hostRoutes || [];
+      $('hostRouteCount').textContent = `${hostRoutes.length} routes`;
+      $('hostRoutesList').innerHTML = hostRoutes.slice(0, 80).map(renderHostRouteItem).join('') || empty('Host nie udostępnia żadnych procesów URI.');
+      populateConnectorEnvSelector(summary);
       if (typeof connectorSourceHint === 'function') connectorSourceHint();
     }
 
@@ -548,22 +601,26 @@
     // Smartphone node enrollment: ask the host for a QR pointing at the android-node setup
     // service (port 8195). The phone scans it, downloads the APK / Termux bootstrap, and joins
     // the mesh as a node — same model as the Lenovo laptop.
+    function displayPhoneQrResult(res) {
+      const box = $('phoneNodeQrContainer');
+      const img = $('phoneNodeQr');
+      if (img) img.innerHTML = res.previewUrl
+        ? '<img src="' + esc(res.previewUrl) + '" alt="QR instalacji smartfona">'
+        : '<span class="subtle">QR zapisany: ' + esc(res.uri || '') + '</span>';
+      if ($('phoneNodeUrl')) $('phoneNodeUrl').textContent = res.url || '';
+      if ($('phoneNodeReach')) $('phoneNodeReach').textContent = res.serviceReachable
+        ? '✅ Serwis android-node odpowiada — zeskanuj QR telefonem.'
+        : '⚠️ Serwis android-node nie odpowiada pod ' + (res.url || '') + ' — uruchom „urirun-android-node serve" na hoście.';
+      if (box) box.style.display = '';
+    }
+
     async function showAddPhoneNodeQR() {
       const status = $('addPhoneNodeStatus');
       if (status) status.textContent = 'generuję QR…';
       try {
         const res = await api('/api/nodes/phone-qr', { method: 'POST', body: JSON.stringify({}) });
         if (!res.ok) throw new Error(res.error || 'nie udało się wygenerować QR');
-        const box = $('phoneNodeQrContainer');
-        const img = $('phoneNodeQr');
-        if (img) img.innerHTML = res.previewUrl
-          ? '<img src="' + esc(res.previewUrl) + '" alt="QR instalacji smartfona">'
-          : '<span class="subtle">QR zapisany: ' + esc(res.uri || '') + '</span>';
-        if ($('phoneNodeUrl')) $('phoneNodeUrl').textContent = res.url || '';
-        if ($('phoneNodeReach')) $('phoneNodeReach').textContent = res.serviceReachable
-          ? '✅ Serwis android-node odpowiada — zeskanuj QR telefonem.'
-          : '⚠️ Serwis android-node nie odpowiada pod ' + (res.url || '') + ' — uruchom „urirun-android-node serve" na hoście.';
-        if (box) box.style.display = '';
+        displayPhoneQrResult(res);
         if (status) status.textContent = '';
         startWebNodePolling();  // pages that open the URL auto-appear as webpage nodes
       } catch (error) {
@@ -708,14 +765,19 @@
     }
 
     // Generic typed-node save: persists name + url + kind via /api/nodes/add.
-	    async function saveTypedNode(kind, nameId, url) {
-	      const name = ((document.getElementById(nameId) || {}).value || '').trim();
-	      const status = document.getElementById(kind === 'server' ? 'srvStatus'
-	        : kind === 'pc' ? 'pcStatus' : kind === 'rdp' ? 'rdpStatus'
-	        : kind === 'browser-debug' ? 'brStatus'
-	        : kind === 'browser-chrome-plugin' ? 'chromePluginStatus'
-	        : kind === 'browser-firefox-plugin' ? 'firefoxPluginStatus'
-	        : 'webStatus');
+    function typedNodeStatusId(kind) {
+      if (kind === 'server') return 'srvStatus';
+      if (kind === 'pc') return 'pcStatus';
+      if (kind === 'rdp') return 'rdpStatus';
+      if (kind === 'browser-debug') return 'brStatus';
+      if (kind === 'browser-chrome-plugin') return 'chromePluginStatus';
+      if (kind === 'browser-firefox-plugin') return 'firefoxPluginStatus';
+      return 'webStatus';
+    }
+
+    async function saveTypedNode(kind, nameId, url) {
+      const name = ((document.getElementById(nameId) || {}).value || '').trim();
+      const status = document.getElementById(typedNodeStatusId(kind));
       url = (url || '').trim();
       if (!name || !url) { if (status) status.textContent = 'podaj nazwę i URL/endpoint'; return; }
       if (status) status.textContent = 'zapisuję…';
@@ -724,62 +786,83 @@
         if (status) status.textContent = 'zapisano (' + kind + '): ' + (res.node ? res.node.url : name);
         if (typeof load === 'function') load().catch(() => {});
       } catch (error) {
-	        if (status) status.textContent = 'błąd zapisu: ' + error.message;
-	      }
-	    }
+        if (status) status.textContent = 'błąd zapisu: ' + error.message;
+      }
+    }
 
-	    async function saveApiNode() {
-	      const status = $('apiNodeStatus');
-	      const name = (($('apiNodeName') || {}).value || '').trim();
-	      const url = (($('apiNodeUrl') || {}).value || '').trim();
-	      const apiId = (($('apiNodeApiId') || {}).value || 'main').trim();
-	      const apiKind = (($('apiNodeApiKind') || {}).value || 'rest').trim();
-	      const authType = (($('apiNodeAuthType') || {}).value || '').trim();
-	      const secret = (($('apiNodeSecret') || {}).value || '').trim();
-	      if (!name || !url) { if (status) status.textContent = 'podaj nazwę i URL API'; return; }
-	      const apiDef = {id: apiId, kind: apiKind, url};
-	      if (authType || secret) apiDef.auth = {type: authType || 'bearer', token: secret};
-	      if (status) status.textContent = 'zapisuję…';
-	      try {
-	        const res = await api('/api/nodes/api/add', {
-	          method: 'POST',
-	          body: JSON.stringify({name, url, kind: 'api', apis: [apiDef]}),
-	        });
-	        if (!res.ok) throw new Error(res.error || 'nie udało się zapisać API node');
-	        if ($('apiNodeSecret')) $('apiNodeSecret').value = '';
-	        if (status) status.textContent = 'zapisano API node: ' + (res.node ? res.node.url : name);
-	        if (typeof load === 'function') load().catch(() => {});
-	      } catch (error) {
-	        if (status) status.textContent = 'błąd zapisu: ' + error.message;
-	      }
-	    }
+    function gatherApiNodeFields() {
+      return {
+        name: (($('apiNodeName') || {}).value || '').trim(),
+        url: (($('apiNodeUrl') || {}).value || '').trim(),
+        apiId: (($('apiNodeApiId') || {}).value || 'main').trim(),
+        apiKind: (($('apiNodeApiKind') || {}).value || 'rest').trim(),
+        authType: (($('apiNodeAuthType') || {}).value || '').trim(),
+        secret: (($('apiNodeSecret') || {}).value || '').trim(),
+      };
+    }
 
-	    async function saveDeviceNode() {
-	      const status = $('deviceNodeStatus');
-	      const name = (($('deviceNodeName') || {}).value || '').trim();
-	      const url = (($('deviceNodeUrl') || {}).value || '').trim();
-	      if (!name || !url) { if (status) status.textContent = 'podaj nazwę i główny URL urządzenia'; return; }
-	      let apis = [];
-	      try {
-	        apis = JSON.parse((($('deviceNodeApis') || {}).value || '[]').trim() || '[]');
-	        if (!Array.isArray(apis)) throw new Error('apis[] musi być tablicą JSON');
-	      } catch (error) {
-	        if (status) status.textContent = 'błąd JSON apis[]: ' + error.message;
-	        return;
-	      }
-	      if (status) status.textContent = 'zapisuję…';
-	      try {
-	        const res = await api('/api/nodes/api/add', {
-	          method: 'POST',
-	          body: JSON.stringify({name, url, kind: 'device', apis}),
-	        });
-	        if (!res.ok) throw new Error(res.error || 'nie udało się zapisać device node');
-	        if (status) status.textContent = 'zapisano device node: ' + (res.node ? res.node.url : name);
-	        if (typeof load === 'function') load().catch(() => {});
-	      } catch (error) {
-	        if (status) status.textContent = 'błąd zapisu: ' + error.message;
-	      }
-	    }
+    function buildApiNodeDef(apiId, apiKind, url, authType, secret) {
+      const apiDef = {id: apiId, kind: apiKind, url};
+      if (authType || secret) apiDef.auth = {type: authType || 'bearer', token: secret};
+      return apiDef;
+    }
+
+    async function saveApiNode() {
+      const status = $('apiNodeStatus');
+      const {name, url, apiId, apiKind, authType, secret} = gatherApiNodeFields();
+      if (!name || !url) { if (status) status.textContent = 'podaj nazwę i URL API'; return; }
+      const apiDef = buildApiNodeDef(apiId, apiKind, url, authType, secret);
+      if (status) status.textContent = 'zapisuję…';
+      try {
+        const res = await api('/api/nodes/api/add', {
+          method: 'POST',
+          body: JSON.stringify({name, url, kind: 'api', apis: [apiDef]}),
+        });
+        if (!res.ok) throw new Error(res.error || 'nie udało się zapisać API node');
+        if ($('apiNodeSecret')) $('apiNodeSecret').value = '';
+        if (status) status.textContent = 'zapisano API node: ' + (res.node ? res.node.url : name);
+        if (typeof load === 'function') load().catch(() => {});
+      } catch (error) {
+        if (status) status.textContent = 'błąd zapisu: ' + error.message;
+      }
+    }
+
+    function parseDeviceNodeApis() {
+      const raw = (($('deviceNodeApis') || {}).value || '[]').trim() || '[]';
+      const apis = JSON.parse(raw);
+      if (!Array.isArray(apis)) throw new Error('apis[] musi być tablicą JSON');
+      return apis;
+    }
+
+    async function saveDeviceNodeApiCall(name, url, apis, status) {
+      if (status) status.textContent = 'zapisuję…';
+      try {
+        const res = await api('/api/nodes/api/add', {
+          method: 'POST',
+          body: JSON.stringify({name, url, kind: 'device', apis}),
+        });
+        if (!res.ok) throw new Error(res.error || 'nie udało się zapisać device node');
+        if (status) status.textContent = 'zapisano device node: ' + (res.node ? res.node.url : name);
+        if (typeof load === 'function') load().catch(() => {});
+      } catch (error) {
+        if (status) status.textContent = 'błąd zapisu: ' + error.message;
+      }
+    }
+
+    async function saveDeviceNode() {
+      const status = $('deviceNodeStatus');
+      const name = (($('deviceNodeName') || {}).value || '').trim();
+      const url = (($('deviceNodeUrl') || {}).value || '').trim();
+      if (!name || !url) { if (status) status.textContent = 'podaj nazwę i główny URL urządzenia'; return; }
+      let apis;
+      try {
+        apis = parseDeviceNodeApis();
+      } catch (error) {
+        if (status) status.textContent = 'błąd JSON apis[]: ' + error.message;
+        return;
+      }
+      await saveDeviceNodeApiCall(name, url, apis, status);
+    }
 
 	    function srvUrl() {
       const host = (($('srvHost') || {}).value || '').trim();
@@ -838,11 +921,16 @@
 
     // Store the node's management token in the OS keyring (server-side). The value is sent once,
     // never echoed back; the field is cleared on success. User types it — never pre-filled.
-    async function saveNodeToken() {
-      const status = $('addNodeTokenStatus');
+    function gatherNodeTokenInput() {
       const name = (($('addNodeName') || {}).value || '').trim();
       const tokenEl = $('addNodeToken');
       const token = (tokenEl && tokenEl.value) || '';
+      return {name, tokenEl, token};
+    }
+
+    async function saveNodeToken() {
+      const status = $('addNodeTokenStatus');
+      const {name, tokenEl, token} = gatherNodeTokenInput();
       if (!name) { if (status) status.textContent = 'najpierw podaj nazwę node\'a'; return; }
       if (!token) { if (status) status.textContent = 'wklej token'; return; }
       if (status) status.textContent = 'zapisuję token…';
@@ -857,12 +945,17 @@
 
     // Per-node token save (from a node card in the Nodes view). Reuses /api/nodes/token; the
     // node name is the card's, the value goes straight to the OS keyring server-side.
-    async function saveNodeTokenFor(btn) {
+    function gatherNodeTokenForData(btn) {
       const name = btn && btn.dataset ? btn.dataset.node : '';
       const form = btn.closest('.node-token-form');
       const input = form ? form.querySelector('.node-token-input') : null;
       const status = form ? form.querySelector('.node-token-status') : null;
       const token = (input && input.value) || '';
+      return {name, input, status, token};
+    }
+
+    async function saveNodeTokenFor(btn) {
+      const {name, input, status, token} = gatherNodeTokenForData(btn);
       if (!name) { if (status) status.textContent = 'brak nazwy węzła'; return; }
       if (!token) { if (status) status.textContent = 'wklej token'; return; }
       if (status) status.textContent = 'zapisuję token…';
@@ -891,58 +984,71 @@
       return '<span style="color:#a16207">🟡 zapisano w keyring, nie zweryfikowano</span> — ' + esc((chk && chk.reason) || 'węzeł niedostępny');
     }
 
-	    function contactCard(contact) {
-	      const checked = state.selectedTargets.includes(contact.id) ? 'checked' : '';
-	      const disabled = contact.disabled ? 'disabled' : '';
-	      const pillClass = contact.reachable === false ? 'down' : contact.status === 'running' || contact.reachable ? 'up' : '';
-	      const isPhoneScanner = contact.id === 'service:phone-scanner';
-	      const startUri = isPhoneScanner ? 'dashboard://host/phone-scanner/command/start' : '';
-	      const restartUri = isPhoneScanner ? 'dashboard://host/service/phone-scanner/command/restart' : '';
-	      const inputId = `chat-target-${String(contact.id || 'target').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
-	      const actions = [
-	        startUri ? `<button type="button" data-contact-action="invoke-uri" data-uri="${esc(startUri)}" data-target="${esc(contact.id)}">Start</button>` : '',
-	        restartUri ? `<button type="button" data-contact-action="invoke-uri" data-uri="${esc(restartUri)}" data-target="${esc(contact.id)}">Restart</button>` : '',
-	        contact.url ? `<button type="button" data-contact-action="open-url" data-url="${esc(contact.url)}" data-target="${esc(contact.id)}">Open</button>` : '',
-	      ].filter(Boolean).join('');
-	      return `<div class="contact-card">
-	        <input id="${esc(inputId)}" type="checkbox" name="chatTarget" value="${esc(contact.id)}" ${checked} ${disabled}>
-	        <span class="contact-body">
-	          <label class="contact-title" for="${esc(inputId)}">${esc(contact.label)}</label>
-	          <span class="pill ${pillClass}">${esc(contact.status || contact.kind)}</span>
-	          <span class="contact-meta">${esc(contact.meta || contact.url || '')}</span>
-	          ${actions ? `<span class="contact-actions">${actions}</span>` : ''}
-	        </span>
-	      </div>`;
-	    }
+    function contactCardActions(contact) {
+      const isPhoneScanner = contact.id === 'service:phone-scanner';
+      const startUri = isPhoneScanner ? 'dashboard://host/phone-scanner/command/start' : '';
+      const restartUri = isPhoneScanner ? 'dashboard://host/service/phone-scanner/command/restart' : '';
+      return [
+        startUri ? `<button type="button" data-contact-action="invoke-uri" data-uri="${esc(startUri)}" data-target="${esc(contact.id)}">Start</button>` : '',
+        restartUri ? `<button type="button" data-contact-action="invoke-uri" data-uri="${esc(restartUri)}" data-target="${esc(contact.id)}">Restart</button>` : '',
+        contact.url ? `<button type="button" data-contact-action="open-url" data-url="${esc(contact.url)}" data-target="${esc(contact.id)}">Open</button>` : '',
+      ].filter(Boolean).join('');
+    }
+
+    function contactCard(contact) {
+      const checked = state.selectedTargets.includes(contact.id) ? 'checked' : '';
+      const disabled = contact.disabled ? 'disabled' : '';
+      const pillClass = contact.reachable === false ? 'down' : contact.status === 'running' || contact.reachable ? 'up' : '';
+      const inputId = `chat-target-${String(contact.id || 'target').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      const actions = contactCardActions(contact);
+      return `<div class="contact-card">
+        <input id="${esc(inputId)}" type="checkbox" name="chatTarget" value="${esc(contact.id)}" ${checked} ${disabled}>
+        <span class="contact-body">
+          <label class="contact-title" for="${esc(inputId)}">${esc(contact.label)}</label>
+          <span class="pill ${pillClass}">${esc(contact.status || contact.kind)}</span>
+          <span class="contact-meta">${esc(contact.meta || contact.url || '')}</span>
+          ${actions ? `<span class="contact-actions">${actions}</span>` : ''}
+        </span>
+      </div>`;
+    }
+
+    function nodeToContact(node) {
+      const meta = node.displayUrl && node.displayUrl !== node.url
+        ? ('device: ' + node.displayUrl + (node.relayUrl || node.url ? ' | relay: ' + (node.relayUrl || node.url) : ''))
+        : (node.url || '');
+      return {
+        id: `node:${node.name}`,
+        kind: 'node',
+        label: `urirun node: ${node.name}`,
+        status: node.reachable ? 'up' : 'down',
+        reachable: !!node.reachable,
+        disabled: !node.reachable,
+        url: node.url || '',
+        meta,
+      };
+    }
+
+    function serviceToContact(service) {
+      return {
+        id: service.id || `service:${service.name}`,
+        kind: 'service',
+        label: service.label || `urirun service: ${service.name}`,
+        status: service.status || (service.reachable ? 'running' : 'stopped'),
+        reachable: !!service.reachable,
+        url: service.url || '',
+        routes: service.routes || [],
+      };
+    }
 
     function chatContacts(summary) {
       const nodes = summary.nodes || [];
       const services = summary.services || [];
       return [
         { id: 'host', kind: 'host', label: 'urirun host', status: 'local', reachable: true, url: summary.project || '' },
-        ...nodes.map((node) => ({
-          id: `node:${node.name}`,
-          kind: 'node',
-          label: `urirun node: ${node.name}`,
-          status: node.reachable ? 'up' : 'down',
-          reachable: !!node.reachable,
-          disabled: !node.reachable,
-          url: node.url || '',
-          meta: node.displayUrl && node.displayUrl !== node.url
-            ? ('device: ' + node.displayUrl + (node.relayUrl || node.url ? ' | relay: ' + (node.relayUrl || node.url) : ''))
-            : (node.url || ''),
-        })),
-	        ...services.map((service) => ({
-	          id: service.id || `service:${service.name}`,
-	          kind: 'service',
-	          label: service.label || `urirun service: ${service.name}`,
-	          status: service.status || (service.reachable ? 'running' : 'stopped'),
-	          reachable: !!service.reachable,
-	          url: service.url || '',
-	          routes: service.routes || [],
-	        })),
-	      ];
-	    }
+        ...nodes.map(nodeToContact),
+        ...services.map(serviceToContact),
+      ];
+    }
 
     function selectedTargets() {
       const values = [...document.querySelectorAll('input[name="chatTarget"]:checked')].map((item) => item.value);
@@ -1002,13 +1108,7 @@
       return (summary.routes || []).filter((route) => route.node === node.name || uriTarget(route.uri) === node.name);
     }
 
-    function discoveryObjects(summary) {
-      if (Array.isArray(summary.objects) && summary.objects.length) {
-        return summary.objects.map((item) => ({
-          ...item,
-          routes: dedupeRoutes((item.routes || []).map((route) => normalizeRoute(route, item))),
-        }));
-      }
+    function buildHostDiscoveryObject(summary) {
       const host = summary.host || {};
       const hostOwner = {
         id: 'host',
@@ -1018,11 +1118,14 @@
         reachable: host.reachable !== false,
         url: host.url || summary.project || '',
       };
-      const hostObject = {
+      return {
         ...hostOwner,
         routes: dedupeRoutes((host.routes || summary.hostRoutes || []).map((route) => normalizeRoute(route, hostOwner))),
       };
-      const nodeObjects = (summary.nodes || []).map((node) => {
+    }
+
+    function buildNodeDiscoveryObjects(summary) {
+      return (summary.nodes || []).map((node) => {
         const owner = {
           id: `node:${node.name}`,
           kind: 'node',
@@ -1031,12 +1134,12 @@
           reachable: !!node.reachable,
           url: node.url || '',
         };
-        return {
-          ...owner,
-          routes: dedupeRoutes(routesForNode(summary, node).map((route) => normalizeRoute(route, owner))),
-        };
+        return { ...owner, routes: dedupeRoutes(routesForNode(summary, node).map((route) => normalizeRoute(route, owner))) };
       });
-      const serviceObjects = (summary.services || []).map((service) => {
+    }
+
+    function buildServiceDiscoveryObjects(summary) {
+      return (summary.services || []).map((service) => {
         const owner = {
           id: service.id || `service:${service.name}`,
           kind: 'service',
@@ -1045,12 +1148,18 @@
           reachable: !!service.reachable,
           url: service.url || '',
         };
-        return {
-          ...owner,
-          routes: dedupeRoutes((service.routes || []).map((route) => normalizeRoute(route, owner))),
-        };
+        return { ...owner, routes: dedupeRoutes((service.routes || []).map((route) => normalizeRoute(route, owner))) };
       });
-      return [hostObject, ...nodeObjects, ...serviceObjects];
+    }
+
+    function discoveryObjects(summary) {
+      if (Array.isArray(summary.objects) && summary.objects.length) {
+        return summary.objects.map((item) => ({
+          ...item,
+          routes: dedupeRoutes((item.routes || []).map((route) => normalizeRoute(route, item))),
+        }));
+      }
+      return [buildHostDiscoveryObject(summary), ...buildNodeDiscoveryObjects(summary), ...buildServiceDiscoveryObjects(summary)];
     }
 
     function chooseDiscoveryTarget(objects) {

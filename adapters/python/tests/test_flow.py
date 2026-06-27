@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import pytest
+from urirun_flow.flow_planner import _strip_focus_from_cdp_flows
 from urirun.node.flow import (
     _dig_path,
     _flow_intents,

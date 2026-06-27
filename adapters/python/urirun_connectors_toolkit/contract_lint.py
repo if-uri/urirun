@@ -29,6 +29,19 @@ def _base(tok: Any) -> str:
     return tok[1:] if isinstance(tok, str) and tok.startswith("?") else (tok if isinstance(tok, str) else "")
 
 
+def _check_field_type(route: str, field: str, tok: Any, props: dict, problems: list[str]) -> None:
+    if field not in props:
+        problems.append(f"{route}: contract.inp declares {field!r} but the handler signature has no such param")
+        return
+    base = _base(tok)
+    if not base or base.startswith(("const:", "enum:")):
+        return  # literal/enum tokens don't map to a single JSON scalar type
+    want = _TOKEN_JSON_TYPE.get(base)
+    got = (props[field] or {}).get("type")
+    if want and got and want != got:
+        problems.append(f"{route}.{field}: contract type {base!r} (JSON {want!r}) != signature type {got!r}")
+
+
 def lint_handler_signatures(contracts: dict, bindings_doc: dict, *, conn_uri=None) -> list[str]:
     """Return a list of contract↔signature problems ([] = clean).
 
@@ -48,15 +61,5 @@ def lint_handler_signatures(contracts: dict, bindings_doc: dict, *, conn_uri=Non
             continue
         props = (binding.get("inputSchema") or {}).get("properties") or {}
         for field, tok in (inp or {}).items():
-            if field not in props:
-                problems.append(f"{route}: contract.inp declares {field!r} but the handler signature has no such param")
-                continue
-            base = _base(tok)
-            if not base or base.startswith(("const:", "enum:")):
-                continue  # literal/enum tokens don't map to a single JSON scalar type
-            want = _TOKEN_JSON_TYPE.get(base)
-            got = (props[field] or {}).get("type")
-            if want and got and want != got:
-                problems.append(
-                    f"{route}.{field}: contract type {base!r} (JSON {want!r}) != signature type {got!r}")
+            _check_field_type(route, field, tok, props, problems)
     return problems

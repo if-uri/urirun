@@ -461,6 +461,33 @@ _DISPATCH_CONTINUE = object()   # sentinel: loop continues
 _DISPATCH_BREAK    = object()   # sentinel: loop must break (done)
 
 
+_IRREVERSIBLE_URI_SUFFIXES = (
+    "/session/command/write",
+    "/log/command/write",
+    "/notes/command/write",
+    "/memory/command/write",
+)
+
+
+def _irreversible_skip(step: dict, uri: str, results: dict, timeline: list, sid: str) -> "object | None":
+    """Return _DISPATCH_CONTINUE when the step must be skipped due to a degraded prior result; None otherwise."""
+    is_irr = (
+        step.get("reversible") is False
+        or any(suf in uri for suf in _IRREVERSIBLE_URI_SUFFIXES)
+    )
+    if not is_irr:
+        return None
+    prior_deg, deg_reason = _results_degraded(results)
+    if not prior_deg:
+        return None
+    skip_r = {"ok": True, "skipped": True,
+              "skippedReason": f"prior step degraded: {deg_reason}",
+              "next": {"kind": "continue"}}
+    timeline.append(_thin_step_entry(sid, uri, skip_r))
+    results[sid] = skip_r
+    return _DISPATCH_CONTINUE
+
+
 def _thin_dispatch_step(step: dict, envelope: FlowEnvelope, dispatch_uri,
                         timeline: list, results: dict) -> "dict | object":
     """Execute one step and return:
@@ -478,28 +505,9 @@ def _thin_dispatch_step(step: dict, envelope: FlowEnvelope, dispatch_uri,
     # A degraded prior step (e.g. xdg-portal capture placeholder) means the plan's
     # precondition is not met — an irreversible write based on that degraded result
     # would record false information.
-    # Catches both:
-    #   • explicit step.reversible = False (twin-generated steps)
-    #   • LLM-generated steps with known-irreversible URI path suffixes (no reversible field)
-    _IRREVERSIBLE_URI_SUFFIXES = (
-        "/session/command/write",
-        "/log/command/write",
-        "/notes/command/write",
-        "/memory/command/write",
-    )
-    _step_is_irreversible = (
-        step.get("reversible") is False
-        or any(suf in uri for suf in _IRREVERSIBLE_URI_SUFFIXES)
-    )
-    if _step_is_irreversible:
-        prior_deg, deg_reason = _results_degraded(results)
-        if prior_deg:
-            skip_r = {"ok": True, "skipped": True,
-                      "skippedReason": f"prior step degraded: {deg_reason}",
-                      "next": {"kind": "continue"}}
-            timeline.append(_thin_step_entry(sid, uri, skip_r))
-            results[sid] = skip_r
-            return _DISPATCH_CONTINUE
+    irr_skip = _irreversible_skip(step, uri, results, timeline, sid)
+    if irr_skip is not None:
+        return irr_skip
 
     payload = resolve_step_payload(step.get("payload") or {}, results)
     if "/memory/command/remember" in uri:
@@ -509,7 +517,6 @@ def _thin_dispatch_step(step: dict, envelope: FlowEnvelope, dispatch_uri,
     r = dispatch_uri(uri, payload)
 
     if step.get("optional"):
-        kind = (r.get("next") or {}).get("kind") or "continue"
         timeline.append(_thin_step_entry(sid, uri, r))
         results[sid] = r
         return _DISPATCH_CONTINUE

@@ -25,31 +25,38 @@ def _const_value(token: str) -> Any:
     return token
 
 
+def _dict_schema(dialect: dict) -> dict:
+    props: dict[str, Any] = {}
+    required: list[str] = []
+    for key, spec in dialect.items():
+        optional = isinstance(spec, str) and spec.startswith("?")
+        props[key] = to_json_schema(spec[1:] if optional else spec)
+        if not optional:
+            required.append(key)
+    schema: dict[str, Any] = {"type": "object", "properties": props}
+    if required:
+        schema["required"] = required
+    return schema
+
+
+def _token_schema(tok: str) -> dict:
+    if tok.startswith("const:"):
+        return {"const": _const_value(tok[len("const:"):])}
+    if tok.startswith("enum:"):
+        return {"enum": tok[len("enum:"):].split("|")}
+    if tok in _LEAF:
+        return {"type": _LEAF[tok]}
+    return {}
+
+
 def to_json_schema(dialect: Any) -> dict:
     """Map a contract dialect node to a JSON Schema node (optionality is expressed via an object's
     ``required`` list, not on the leaf itself)."""
     if isinstance(dialect, dict):
         if "oneOf" in dialect:
             return {"oneOf": [to_json_schema(alt) for alt in dialect["oneOf"]]}
-        props: dict[str, Any] = {}
-        required: list[str] = []
-        for key, spec in dialect.items():
-            optional = isinstance(spec, str) and spec.startswith("?")
-            props[key] = to_json_schema(spec[1:] if optional else spec)
-            if not optional:
-                required.append(key)
-        schema: dict[str, Any] = {"type": "object", "properties": props}
-        if required:
-            schema["required"] = required
-        return schema
+        return _dict_schema(dialect)
     if isinstance(dialect, list):
         return {"type": "array", "items": to_json_schema(dialect[0])} if dialect else {"type": "array"}
     tok = dialect[1:] if isinstance(dialect, str) and dialect.startswith("?") else dialect
-    if isinstance(tok, str):
-        if tok.startswith("const:"):
-            return {"const": _const_value(tok[len("const:"):])}
-        if tok.startswith("enum:"):
-            return {"enum": tok[len("enum:"):].split("|")}
-        if tok in _LEAF:
-            return {"type": _LEAF[tok]}
-    return {}  # "any" / unknown -> unconstrained
+    return _token_schema(tok) if isinstance(tok, str) else {}  # "any" / unknown -> unconstrained

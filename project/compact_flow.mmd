@@ -1,10 +1,10 @@
 flowchart TD
-%% generated in 0.19s
+%% generated in 0.16s
     adapters__conformance["adapters.conformance<br/>7 funcs"]
     adapters__java["adapters.java<br/>4 funcs"]
     adapters__js["adapters.js<br/>12 funcs"]
     adapters__perl["adapters.perl<br/>4 funcs"]
-    adapters__python["adapters.python<br/>2294 funcs"]
+    adapters__python["adapters.python<br/>2325 funcs"]
     examples__matrix["examples.matrix<br/>3 funcs"]
     scripts__cc_gate["scripts.cc_gate<br/>3 funcs"]
     scripts__extraction_audit["scripts.extraction_audit<br/>12 funcs"]
@@ -14,7 +14,10 @@ flowchart TD
     scripts__transport_swap_proof["scripts.transport_swap_proof<br/>5 funcs"]
     security__mesh_probe["security.mesh-probe<br/>3 funcs"]
     v1__js["v1.js<br/>57 funcs"]
-    adapters__python ==>|139| scripts__test_pypi_install
+    xlang__driver["xlang.driver<br/>3 funcs"]
+    xlang__emit_contracts["xlang.emit_contracts<br/>1 funcs"]
+    xlang__peer["xlang.peer<br/>24 funcs"]
+    adapters__python ==>|142| scripts__test_pypi_install
     scripts__extraction_audit ==>|20| scripts__test_pypi_install
     adapters__python ==>|19| adapters__js
     scripts__repin_connectors ==>|12| scripts__test_pypi_install
@@ -24,7 +27,11 @@ flowchart TD
     scripts__lint_connectors ==>|6| scripts__test_pypi_install
     adapters__python ==>|6| v1__js
     scripts__cc_gate ==>|4| scripts__test_pypi_install
+    xlang__peer ==>|4| adapters__python
     examples__matrix -->|3| adapters__python
+    xlang__driver -->|3| scripts__test_pypi_install
+    xlang__emit_contracts -->|2| adapters__python
+    xlang__peer -->|2| scripts__test_pypi_install
     security__mesh_probe -->|1| adapters__python
     security__mesh_probe -->|1| scripts__test_pypi_install
     scripts__lint_connectors -->|1| adapters__python
@@ -32,3 +39,4 @@ flowchart TD
     adapters__conformance -->|1| adapters__python
     adapters__python -->|1| adapters__perl
     adapters__python -->|1| adapters__java
+    xlang__driver -->|1| adapters__python

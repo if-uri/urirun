@@ -5,17 +5,17 @@
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 189, json: 13, shell: 11, yaml: 5, javascript: 5
+- **Languages**: python: 199, json: 15, shell: 14, yaml: 5, javascript: 5
 - **Analysis Mode**: static
-- **Total Functions**: 2463
-- **Total Classes**: 65
-- **Modules**: 252
-- **Entry Points**: 1042
+- **Total Functions**: 2540
+- **Total Classes**: 66
+- **Modules**: 268
+- **Entry Points**: 1072
 
 ## Architecture by Module
 
 ### adapters.python.urirun.host.dashboard
-- **Functions**: 557
+- **Functions**: 559
 - **File**: `dashboard.js`
 
 ### adapters.python.urirun.host.scanner
@@ -49,14 +49,14 @@
 - **Classes**: 1
 - **File**: `__init__.py`
 
+### adapters.python.urirun.host.chat_orchestrator
+- **Functions**: 51
+- **Classes**: 1
+- **File**: `chat_orchestrator.py`
+
 ### adapters.python.urirun_flow.flow
 - **Functions**: 49
 - **File**: `flow.py`
-
-### adapters.python.urirun.host.chat_orchestrator
-- **Functions**: 47
-- **Classes**: 1
-- **File**: `chat_orchestrator.py`
 
 ### adapters.python.urirun.host.object_registry
 - **Functions**: 46
@@ -80,6 +80,10 @@
 - **Functions**: 33
 - **File**: `host_db.py`
 
+### adapters.python.urirun_flow.flow_planner
+- **Functions**: 33
+- **File**: `flow_planner.py`
+
 ### adapters.python.urirun_runtime._runtime
 - **Functions**: 30
 - **Classes**: 1
@@ -94,13 +98,8 @@
 - **Classes**: 1
 - **File**: `planfile_adapter.py`
 
-### adapters.python.urirun_twin.reversible
-- **Functions**: 26
-- **Classes**: 8
-- **File**: `reversible.py`
-
 ### adapters.python.urirun_flow.flow_thin
-- **Functions**: 26
+- **Functions**: 27
 - **Classes**: 1
 - **File**: `flow_thin.py`
 
@@ -135,15 +134,15 @@ Main execution flows into the system:
 ### scripts.transport_swap_proof.main
 - **Calls**: CallableTransport, subprocess.Popen, CallableTransport, scripts.test_pypi_install.print, scripts.test_pypi_install.print, scripts.test_pypi_install.print, scripts.transport_swap_proof.timed, scripts.transport_swap_proof.timed
 
+### adapters.python.urirun_node.server.NodeHandler._handle_run
+- **Calls**: adapters.python.urirun_node.server.read_raw, self._validate_run_request, str, self._dispatch_control_uri, self._run_target, _normalize_request, progress.RunControl, adapters.python.urirun_node.server.send_json
+
 ### adapters.python.urirun_node.server.NodeHandler._handle_deploy
 - **Calls**: adapters.python.urirun_node.server.read_raw, body.get, scripts.test_pypi_install.print, adapters.python.urirun_node.server.send_json, adapters.python.urirun_node.server.send_json, self._admin_ok, adapters.python.urirun_node.server.send_json, json.loads
 
 ### adapters.python.urirun.host.connector_admin.connector_install
 > Install a URI connector on the host or a node from a chosen source.
 - **Calls**: None.strip, target.startswith, None.lower, None.strip, adapters.python.urirun.host.connector_admin.connector_pip_tail, isinstance, adapters.python.urirun.host.connector_admin._connector_install_node, subprocess.run
-
-### adapters.python.urirun_node.server.NodeHandler._handle_run
-- **Calls**: adapters.python.urirun_node.server.read_raw, self._validate_run_request, str, self._dispatch_control_uri, self._run_target, _normalize_request, progress.RunControl, adapters.python.urirun_node.server.send_json
 
 ### adapters.python.urirun_runtime.v2._cmd_upgrade
 > Upgrade urirun itself (no ids) or installed connectors (``install --upgrade``).
@@ -206,14 +205,14 @@ Result shape::
 > Project an error envelope to RFC 9457 ``application/problem+json``.
 - **Calls**: dict, adapters.python.urirun.runtime.errors.category_meta, err.get, adapters.python.urirun.runtime.errors.classify, err.get, adapters.python.urirun.runtime.errors.error_code, err.get, err.get
 
+### adapters.python.urirun.host.chat_orchestrator.chat_ask
+- **Calls**: None.strip, adapters.python.urirun.host.chat_orchestrator._parse_chat_nodes_targets, adapters.python.urirun.host.chat_orchestrator._init_selected_targets, adapters.python.urirun.host.chat_orchestrator._infer_node_targets, adapters.python.urirun.host.routing.selected_nodes_from_targets, bool, bool, adapters.python.urirun.host.chat_orchestrator._apply_host_default_when_no_node_in_prompt
+
 ### adapters.python.urirun.node.manage.connector_install
 > Install a connector from ANY source into the node's venv:
 - a catalog id ("browser-control") → urirun-connector-<id> (PyPI, then if-uri GitHub),
 - a l
 - **Calls**: None.strip, adapters.python.urirun.node.manage._classify_source, adapters.python.urirun.node.manage._install_policy, adapters.python.urirun.node.manage._policy_allows, res.get, payload.get, payload.get, payload.get
-
-### adapters.python.urirun.host.chat_orchestrator.chat_ask
-- **Calls**: None.strip, adapters.python.urirun.host.chat_orchestrator._parse_chat_nodes_targets, adapters.python.urirun.host.chat_orchestrator._init_selected_targets, adapters.python.urirun.host.chat_orchestrator._infer_node_targets, adapters.python.urirun.host.routing.selected_nodes_from_targets, bool, bool, adapters.python.urirun.host.chat_orchestrator._add_chat_user_message
 
 ### examples.matrix.verify.main
 - **Calls**: contracts.get, sorted, None.removesuffix, adapters.python.urirun_runtime.v2.validate_binding_document, examples.matrix.verify.essential, contracts.items, json.load, scripts.test_pypi_install.print
@@ -250,7 +249,13 @@ _stream_events [adapters.python.urirun_node.server.NodeHandler]
   └─ →> _sse_initial_cursor
 ```
 
-### Flow 4: _handle_deploy
+### Flow 4: _handle_run
+```
+_handle_run [adapters.python.urirun_node.server.NodeHandler]
+  └─ →> read_raw
+```
+
+### Flow 5: _handle_deploy
 ```
 _handle_deploy [adapters.python.urirun_node.server.NodeHandler]
   └─ →> read_raw
@@ -258,16 +263,10 @@ _handle_deploy [adapters.python.urirun_node.server.NodeHandler]
   └─ →> print
 ```
 
-### Flow 5: connector_install
+### Flow 6: connector_install
 ```
 connector_install [adapters.python.urirun.host.connector_admin]
   └─> connector_pip_tail
-```
-
-### Flow 6: _handle_run
-```
-_handle_run [adapters.python.urirun_node.server.NodeHandler]
-  └─ →> read_raw
 ```
 
 ### Flow 7: _cmd_upgrade
@@ -484,33 +483,17 @@ concurrency (If-Registry-
 ### adapters.python.urirun.connectors.connector_lint._format_report
 - **Output to**: lines.append, lines.extend, lines.append, lines.append, lines.extend
 
-### adapters.python.urirun_connectors_toolkit.contract_gate._parse_const
-- **Output to**: None.isdigit, int, token.lstrip
-
-### adapters.python.urirun_connectors_toolkit.contract_gate.validate_output
-> Validate an ok-envelope against the contract's ``out`` (no-op when out is empty).
-- **Output to**: adapters.python.urirun_connectors_toolkit.contract_gate.check
-
 ### adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_bindings_validate
 > The bindings document must pass urirun.validate_binding_document.
 - **Output to**: urirun.validate_binding_document, result.get, result.get
 
+### adapters.python.urirun.node.diagnostics._decode_error_ctx
+- **Output to**: None.casefold, str, str, str, None.get
+
+### adapters.python.urirun_flow.Flow._validate
+- **Output to**: model_validator, self._validate_graph
+
 ## Behavioral Patterns
-
-### recursion__leaf_ok
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._leaf_ok
-
-### recursion_check
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate.check
-
-### recursion__walk_out
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._walk_out
 
 ### recursion__field_type
 - **Type**: recursion
@@ -572,6 +555,21 @@ concurrency (If-Registry-
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.host.fs_transfer.short_value
 
+### recursion__leaf_ok
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._leaf_ok
+
+### recursion_check
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate.check
+
+### recursion__walk_out
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._walk_out
+
 ## Public API Surface
 
 Functions exposed as public API (no underscore prefix):
@@ -613,9 +611,9 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.runtime.errors.problem` - 22 calls
 - `adapters.python.urirun_runtime._runtime.run` - 22 calls
 - `adapters.python.urirun.host.host_dashboard.serve` - 22 calls
+- `adapters.python.urirun.host.chat_orchestrator.chat_ask` - 22 calls
 - `adapters.python.urirun.node.manage.connector_install` - 21 calls
 - `adapters.python.urirun_flow.run.resolve_step` - 21 calls
-- `adapters.python.urirun.host.host_db.search_records` - 21 calls
 
 ## System Interactions
 
@@ -642,17 +640,17 @@ graph TD
     main --> CallableTransport
     main --> Popen
     main --> print
+    _handle_run --> read_raw
+    _handle_run --> _validate_run_reques
+    _handle_run --> str
+    _handle_run --> _dispatch_control_ur
+    _handle_run --> _run_target
     _handle_deploy --> read_raw
     _handle_deploy --> get
     _handle_deploy --> print
     _handle_deploy --> send_json
     connector_install --> strip
     connector_install --> startswith
-    connector_install --> lower
-    connector_install --> connector_pip_tail
-    _handle_run --> read_raw
-    _handle_run --> _validate_run_reques
-    _handle_run --> str
 ```
 
 ## Reverse Engineering Guidelines
