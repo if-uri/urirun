@@ -1267,6 +1267,24 @@ def _suggest_recall_for_memory(flow: dict, twin_memory: object | None) -> dict |
     return _suggest_recall(flow, twin_memory)
 
 
+def _screen_capability_gap_or_recall(prompt, discovered, selected_nodes, selected_targets,
+                                     token, identity, execute, mesh, config, node_urls, db, deps):
+    """Return (early_response, discovered): an escalation response when the prompt needs screen
+    capture, no route exists, auto-ensure could not deploy one, AND recall has no episode to replay;
+    otherwise (None, discovered). A known-good Episode is itself proof the capability is reachable,
+    so it pre-empts the gap. `discovered` is re-fetched after a successful auto-ensure."""
+    gap = screen_document_capability_gap(prompt, discovered, selected_nodes, selected_targets)
+    if gap and _try_auto_ensure_screen_capture(discovered, selected_nodes, selected_targets, token, identity):
+        discovered = mesh.discover_mesh(deps.host_config_fn(config, node_urls))
+        gap = screen_document_capability_gap(prompt, discovered, selected_nodes, selected_targets)
+    if gap:
+        from urirun.node.twin_store import durable_memory as _dm_gap  # noqa: PLC0415
+        if (not execute) or _try_recall_gate(_dm_gap(), selected_nodes, prompt)[0] is None:
+            return _chat_ask_general_capability_gap(
+                db, prompt, execute, selected_nodes, selected_targets, discovered, gap, deps), discovered
+    return None, discovered
+
+
 def _chat_ask_general(
     project: str,
     db: str | None,
@@ -1287,20 +1305,11 @@ def _chat_ask_general(
     old_token, old_identity = _apply_run_credentials(token, identity)
     try:
         discovered = mesh.discover_mesh(deps.host_config_fn(config, node_urls))
-        capability_gap = screen_document_capability_gap(prompt, discovered, selected_nodes, selected_targets)
-        if capability_gap:
-            # Auto-ensure: if we have SSH credentials, deploy the missing connector and retry once.
-            if _try_auto_ensure_screen_capture(discovered, selected_nodes, selected_targets, token, identity):
-                discovered = mesh.discover_mesh(deps.host_config_fn(config, node_urls))
-                capability_gap = screen_document_capability_gap(prompt, discovered, selected_nodes, selected_targets)
-        if capability_gap:
-            # A known-good Episode for this intent is itself proof the capability is reachable (it
-            # ran successfully before), so prefer replaying it over escalating the gap to the user.
-            # Only when execute is on and recall has no episode do we surface the capability gap.
-            from urirun.node.twin_store import durable_memory as _dm_gap  # noqa: PLC0415
-            if (not execute) or _try_recall_gate(_dm_gap(), selected_nodes, prompt)[0] is None:
-                return _chat_ask_general_capability_gap(
-                    db, prompt, execute, selected_nodes, selected_targets, discovered, capability_gap, deps)
+        _gap_resp, discovered = _screen_capability_gap_or_recall(
+            prompt, discovered, selected_nodes, selected_targets, token, identity,
+            execute, mesh, config, node_urls, db, deps)
+        if _gap_resp is not None:
+            return _gap_resp
         registry = mesh.registry_from_routes(discovered.get("routes") or [])
         offline_fail = _chat_ask_general_check_offline(
             selected_nodes, discovered, db, prompt, execute, selected_targets, deps)

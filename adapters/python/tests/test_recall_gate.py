@@ -59,11 +59,27 @@ class FlowRecallHandlerTests(unittest.TestCase):
         self.assertTrue(flow_recall(episode_id=self.episode_id, skip_drift_check=True)["found"])
 
     def test_drift_suppresses_recall(self):
-        # No live node here, so env/query/drift can't confirm no-drift -> recall suppressed.
+        # When the drift route EXPLICITLY reports drift, recall is suppressed and the caller re-plans.
         from urirun_connector_twin.core import flow_recall
+        import urirun.v2_service as _svc
+        orig = _svc.call
+        def _fake(uri, *a, **k):
+            if "env/query/drift" in uri:
+                return {"ok": True, "result": {"value": {"drift": True, "known": True}}}
+            return orig(uri, *a, **k)
+        _svc.call = _fake
+        self.addCleanup(lambda: setattr(_svc, "call", orig))
         r = flow_recall(prompt=self.prompt, env_fp=self.env_fp)  # drift check NOT skipped
         self.assertFalse(r["found"])
         self.assertTrue(r["driftDetected"])
+
+    def test_missing_drift_route_allows_recall(self):
+        # The twin://<node>/env/query/drift route is not always registered. A MISSING drift signal
+        # (indeterminate, not an explicit drift=True) must not permanently disable recall — the
+        # recalled flow is re-validated by preflight — so recall fails OPEN here rather than dead.
+        from urirun_connector_twin.core import flow_recall
+        r = flow_recall(prompt=self.prompt, env_fp=self.env_fp)  # no live drift route → indeterminate
+        self.assertTrue(r["found"])
 
     def test_unknown_intent_misses(self):
         from urirun_connector_twin.core import flow_recall
