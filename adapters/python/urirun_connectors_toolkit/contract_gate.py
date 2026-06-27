@@ -74,6 +74,7 @@ def _leaf_ok(token: str, value: Any) -> bool:
     checkers = {
         "str": lambda v: isinstance(v, str),
         "int": lambda v: isinstance(v, int) and not isinstance(v, bool),
+        "num": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool),
         "bool": lambda v: isinstance(v, bool),
         "obj": lambda v: isinstance(v, dict),
         "list": lambda v: isinstance(v, list),
