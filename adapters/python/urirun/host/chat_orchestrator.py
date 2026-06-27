@@ -1331,6 +1331,13 @@ def _apply_host_default_when_no_node_in_prompt(
     return [], ["host"]
 
 
+def _has_explicit_remote_selection(requested_nodes: list[str], requested_targets: list[str]) -> bool:
+    """True when the request already contains a deliberate remote node selection from the UI/API."""
+    if any(str(node).strip() for node in requested_nodes or []):
+        return True
+    return any(str(target).strip().startswith("node:") for target in requested_targets or [])
+
+
 def _apply_explicit_target_sync(payload, flow, discovered, selected_nodes, selected_targets):
     """Sync targets from flow when the user did not explicitly choose them; flag remote capture."""
     explicit = [str(t).strip() for t in (payload.get("targets") or []) if str(t).strip()]
@@ -1511,8 +1518,12 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
     execute = bool(payload.get("execute"))
     no_llm = bool(payload.get("no_llm") or payload.get("noLlm"))
     # Rule: if the prompt doesn't mention which node to use, default to host.
-    selected_nodes, selected_targets = _apply_host_default_when_no_node_in_prompt(
-        prompt, selected_nodes, selected_targets, config, node_urls, deps)
+    # But do not override an explicit UI/API node target. The URL/query payload is part of the
+    # command contract: nodes=lenovo or targets=node:lenovo must win even when the natural-language
+    # prompt says only "publish to LinkedIn".
+    if not _has_explicit_remote_selection(requested_nodes, requested_targets):
+        selected_nodes, selected_targets = _apply_host_default_when_no_node_in_prompt(
+            prompt, selected_nodes, selected_targets, config, node_urls, deps)
     _add_chat_user_message(
         db, prompt, config, node_urls, execute=execute, no_llm=no_llm,
         requested_nodes=requested_nodes, requested_targets=requested_targets,

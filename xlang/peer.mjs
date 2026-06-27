@@ -30,27 +30,31 @@ function leafOk(tok, v) {
     default: return false;
   }
 }
+function checkOneOf(alts, value, where) {
+  const errs = [];
+  for (let i = 0; i < alts.length; i++) {
+    try { check(alts[i], value, `${where}|oneOf[${i}]`); return; } catch (e) { errs.push(e.message); }
+  }
+  throw new Error(`${where}: matched none of oneOf -> ${JSON.stringify(errs)}`);
+}
+function checkObject(schema, value, where) {
+  if (!isObj(value)) throw new Error(`${where}: expected object`);
+  for (const [k, spec] of Object.entries(schema)) {
+    if (!(k in value)) { if (typeof spec === 'string' && spec.startsWith('?')) continue; throw new Error(`${where}: missing required key '${k}'`); }
+    check(spec, value[k], `${where}.${k}`);
+  }
+}
+function checkList(schema, value, where) { // homogeneous list: schema[0] describes every element
+  if (!Array.isArray(value)) throw new Error(`${where}: expected list`);
+  if (schema.length) value.forEach((it, i) => check(schema[0], it, `${where}[${i}]`));
+}
 function check(schema, value, where) {
   if (isObj(schema)) {
-    if ('oneOf' in schema) {
-      const errs = [];
-      for (let i = 0; i < schema.oneOf.length; i++) {
-        try { check(schema.oneOf[i], value, `${where}|oneOf[${i}]`); return; } catch (e) { errs.push(e.message); }
-      }
-      throw new Error(`${where}: matched none of oneOf -> ${JSON.stringify(errs)}`);
-    }
-    if (!isObj(value)) throw new Error(`${where}: expected object`);
-    for (const [k, spec] of Object.entries(schema)) {
-      if (!(k in value)) { if (typeof spec === 'string' && spec.startsWith('?')) continue; throw new Error(`${where}: missing required key '${k}'`); }
-      check(spec, value[k], `${where}.${k}`);
-    }
+    if ('oneOf' in schema) { checkOneOf(schema.oneOf, value, where); return; }
+    checkObject(schema, value, where);
     return;
   }
-  if (Array.isArray(schema)) { // homogeneous list: schema[0] describes every element
-    if (!Array.isArray(value)) throw new Error(`${where}: expected list`);
-    if (schema.length) value.forEach((it, i) => check(schema[0], it, `${where}[${i}]`));
-    return;
-  }
+  if (Array.isArray(schema)) { checkList(schema, value, where); return; }
   if (!leafOk(schema, value)) throw new Error(`${where}: ${JSON.stringify(value)} does not satisfy '${schema}'`);
 }
 

@@ -67,6 +67,31 @@ def test_normalize_flow_accepts_concrete_uri_for_templated_route():
     assert out["steps"][0]["uri"] == "kvm://kvm/display/query/info"  # concrete kept; node binds {host}
 
 
+def test_normalize_flow_falls_back_from_missing_cdp_click_fill_to_ui_routes():
+    allowed = {
+        "kvm://host/cdp/session/command/ensure",
+        "kvm://host/cdp/session/query/ready",
+        "kvm://host/cdp/page/command/navigate",
+        "kvm://host/ui/command/click",
+        "kvm://host/ui/command/fill",
+    }
+    flow_doc = {"task": {"id": "t"}, "steps": [
+        {"id": "ensure", "uri": "kvm://host/cdp/session/command/ensure", "depends_on": []},
+        {"id": "nav", "uri": "kvm://host/cdp/page/command/navigate",
+         "payload": {"url": "https://linkedin.com"}, "depends_on": ["ensure"]},
+        {"id": "compose", "uri": "kvm://host/cdp/page/command/click",
+         "payload": {"role": "button", "text": "Start a post"}, "depends_on": ["nav"]},
+        {"id": "fill", "uri": "kvm://host/cdp/page/command/fill",
+         "payload": {"role": "textbox", "text": "New post"}, "depends_on": ["compose"]},
+    ]}
+    out = flow.normalize_flow(flow_doc, allowed)
+    by_id = {step["id"]: step for step in out["steps"]}
+    assert by_id["compose"]["uri"] == "kvm://host/ui/command/click"
+    assert by_id["compose"]["payload"] == {"role": "button", "text": "Start a post"}
+    assert by_id["fill"]["uri"] == "kvm://host/ui/command/fill"
+    assert by_id["fill"]["payload"] == {"role": "textbox", "value": "New post"}
+
+
 # --- flow: CDP launch/probe split (ensure→ready must precede any page step) -----
 # Regression for the LinkedIn flow that failed at cdp/page/query/ready because the
 # planner emitted ensure (launching:true, port NOT bound) directly followed by a

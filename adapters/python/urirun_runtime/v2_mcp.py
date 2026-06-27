@@ -80,7 +80,7 @@ def _contract_output_schema(meta: dict) -> "dict | None":
     if not isinstance(contract, dict) or not contract.get("output"):
         return None
     try:
-        from urirun_connectors_toolkit.contract_jsonschema import to_json_schema
+        from urirun_contract.contract_jsonschema import to_json_schema
         schema = to_json_schema(contract["output"])
     except Exception:  # noqa: BLE001
         return None

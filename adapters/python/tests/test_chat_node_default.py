@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+from urirun.host import chat_orchestrator as co
 from urirun.host.chat_orchestrator import _apply_host_default_when_no_node_in_prompt
 
 
@@ -29,6 +30,38 @@ class TestHostDefault(unittest.TestCase):
             ["lenovo"], ["host", "node:lenovo"])
         self.assertEqual(targets, ["host"])
         self.assertEqual(nodes, [])
+
+    def test_chat_ask_preserves_explicit_dashboard_node_selection(self):
+        messages = []
+        deps = co.ChatDeps(
+            host_db_fn=MagicMock(),
+            mesh_fn=MagicMock(),
+            host_config_fn=MagicMock(return_value={}),
+            node_alias_map_fn=MagicMock(return_value=ALIAS),
+            add_chat_message_fn=lambda db, msg: messages.append(msg),
+            page_action_enqueue_fn=MagicMock(),
+            ensure_phone_scanner_fn=MagicMock(),
+            sync_documents_fn=MagicMock(),
+        )
+
+        def fake_general(project, db, config, payload, node_urls, token, identity,
+                         prompt, execute, no_llm, selected_nodes, selected_targets, deps):
+            return {"ok": True, "selectedNodes": selected_nodes, "selectedTargets": selected_targets}
+
+        payload = {
+            "prompt": "opublikuj post na LinkedIn",
+            "nodes": ["lenovo"],
+            "targets": ["host", "node:lenovo"],
+            "execute": True,
+        }
+        with patch.object(co, "_chat_insert_twin_preview", lambda *a, **k: None), \
+             patch.object(co, "_chat_ask_general", fake_general):
+            result = co.chat_ask("proj", "db", None, payload, [], None, None, deps)
+
+        self.assertEqual(result["selectedNodes"], ["lenovo"])
+        self.assertEqual(result["selectedTargets"], ["host", "node:lenovo"])
+        self.assertEqual(messages[0]["detail"]["resolvedNodes"], ["lenovo"])
+        self.assertEqual(messages[0]["detail"]["resolvedTargets"], ["host", "node:lenovo"])
 
     def test_node_name_in_prompt_keeps_remote(self):
         nodes, targets = self._call(

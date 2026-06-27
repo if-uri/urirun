@@ -274,6 +274,46 @@ def _uri_is_available(uri: str, allowed_uris: set[str]) -> bool:
     return any(_uri_matches_template(uri, allowed) for allowed in allowed_uris if "{" in allowed)
 
 
+_CDP_PAGE_TO_UI_SUFFIX = {
+    "/cdp/page/command/click": "/ui/command/click",
+    "/cdp/page/command/fill": "/ui/command/fill",
+}
+
+
+def _replace_uri_action_path(uri: str, suffix: str) -> str:
+    scheme, _, rest = str(uri).partition("://")
+    target = rest.split("/", 1)[0] if rest else "host"
+    return f"{scheme}://{target}{suffix}"
+
+
+def _fallback_ui_uri_for_unavailable_cdp(uri: str, allowed_uris: set[str]) -> str | None:
+    """Map old/nonexistent CDP click/fill routes onto the KVM UI router when available.
+
+    Some planners still emit cdp/page/command/click|fill because CDP navigate/ready exists.
+    The KVM connector exposes DOM-backed click/fill through ui/command/* instead; normalize to
+    that real route rather than failing the entire flow as "URI is not available"."""
+    for cdp_suffix, ui_suffix in _CDP_PAGE_TO_UI_SUFFIX.items():
+        if not uri.endswith(cdp_suffix):
+            continue
+        scheme, _, _rest = str(uri).partition("://")
+        candidates = [_replace_uri_action_path(uri, ui_suffix)]
+        if scheme == "kvm":
+            candidates.append(f"kvm://host{ui_suffix}")
+        for candidate in candidates:
+            if _uri_is_available(candidate, allowed_uris):
+                return candidate
+    return None
+
+
+def _rewrite_payload_for_fallback_uri(uri: str, payload: dict) -> dict:
+    if not uri.endswith("/ui/command/fill"):
+        return payload
+    out = dict(payload)
+    if not out.get("value") and out.get("text"):
+        out["value"] = out.pop("text")
+    return out
+
+
 # ── Infeasibility helpers ─────────────────────────────────────────────────────
 
 def _infeasibility_error(uri: str, c: dict) -> str:
@@ -332,13 +372,18 @@ def _normalize_flow_step(step: dict, index: int, allowed_uris: set[str], used: s
                          infeasible_constraints: "list[dict] | None" = None) -> dict:
     """Validate and canonicalize one flow step; `used` tracks taken ids to keep them unique."""
     uri = str(step.get("uri", ""))
+    payload = step.get("payload") if isinstance(step.get("payload"), dict) else {}
     if not _uri_is_available(uri, allowed_uris):
-        raise ValueError(f"URI is not available: {uri}")
+        fallback = _fallback_ui_uri_for_unavailable_cdp(uri, allowed_uris)
+        if fallback:
+            uri = fallback
+            payload = _rewrite_payload_for_fallback_uri(uri, payload)
+        else:
+            raise ValueError(f"URI is not available: {uri}")
     if infeasible_constraints:
         c = _step_is_infeasible(uri, infeasible_constraints)
         if c is not None:
             raise ValueError(_infeasibility_error(uri, c))
-    payload = step.get("payload") if isinstance(step.get("payload"), dict) else {}
     _validate_step_payload(uri, payload, routes)
     step_id = _unique_step_id(step, index, used)
     deps = [slug(str(dep)) for dep in step.get("depends_on", []) if isinstance(dep, str)]
@@ -643,6 +688,8 @@ def llm_flow(prompt: str, routes: list[dict], nodes: list[dict],
                 "ROUTE PREFERENCE — when the target is web content in a browser and the allowedRoutes "
                 "expose CDP page commands (uris containing 'cdp/page/command/click' or "
                 "'cdp/page/command/fill'), PREFER THEM for clicking buttons/links and filling fields: "
+                "Do not infer cdp/page/command/click or cdp/page/command/fill from cdp/page/command/navigate; "
+                "click/fill are separate routes and must appear explicitly in allowedRoutes. "
                 "they act through the DOM by role/visible-label, so they are coordinate-free and immune "
                 "to OCR misreads. For those CDP commands pass the target as 'text' (the visible label) "
                 "and 'role' (e.g. 'button', 'link', 'textbox') — NOT a CSS or Playwright selector — and "

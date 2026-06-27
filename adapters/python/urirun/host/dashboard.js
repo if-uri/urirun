@@ -134,7 +134,7 @@
         $('chatExecute').checked = search.get('execute') !== '0';
         $('chatMode').textContent = $('chatExecute').checked ? 'execute' : 'dry-run';
       }
-      if ($('chatNoLlm')) $('chatNoLlm').checked = search.get('no_llm') === '1';
+      if ($('chatNoLlm')) $('chatNoLlm').checked = search.get('no_llm') === '1' || search.get('noLlm') === '1';
       if ($('chatPrompt') && (search.has('prompt') || search.has('message'))) {
         $('chatPrompt').value = search.get('prompt') || search.get('message') || '';
       }
@@ -1717,6 +1717,14 @@
       ).join('');
     }
 
+    function twinPlanBadges(att, plan) {
+      return {
+        domainTag: att.domain ? `<span class="pill" style="font-size:0.78em">${esc(att.domain)}</span>` : '',
+        authTag: att.needsAuth ? `<span class="pill" style="font-size:0.78em;background:var(--warn,#f59e0b20)">auth required</span>` : '',
+        humanGated: plan.humanGated ? `<div style="color:var(--warn,#f59e0b);font-size:0.82em;margin:4px 0">⚠ human-gated: ${esc(plan.guidance||plan.blockedBy||'')}</div>` : '',
+      };
+    }
+
     function renderTwinPlanCard(att) {
       const plan = att.plan || {};
       const env = att.environment || {};
@@ -1725,9 +1733,7 @@
       const taskType = att.taskType || 'task';
 
       const selBadge = twinSelBadge(sel);
-      const domainTag = att.domain ? `<span class="pill" style="font-size:0.78em">${esc(att.domain)}</span>` : '';
-      const authTag = att.needsAuth ? `<span class="pill" style="font-size:0.78em;background:var(--warn,#f59e0b20)">auth required</span>` : '';
-      const humanGated = plan.humanGated ? `<div style="color:var(--warn,#f59e0b);font-size:0.82em;margin:4px 0">⚠ human-gated: ${esc(plan.guidance||plan.blockedBy||'')}</div>` : '';
+      const { domainTag, authTag, humanGated } = twinPlanBadges(att, plan);
 
       return `<div class="attachment" style="border:1px solid var(--border-color);border-radius:4px;padding:8px 10px;width:100%;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
@@ -1747,6 +1753,22 @@
       </div>`;
     }
 
+    function attachmentPreviewHtml(att, isPdf, fileAvailable) {
+      const pdfUrl = isPdf && fileAvailable ? text(att.previewUrl || att.filePreviewUrl || '') : '';
+      if (isPdf && pdfUrl) {
+        return `<iframe class="attachment-pdf-frame" src="${esc(pdfUrl)}" title="${esc(basename(att.path))}" loading="lazy"></iframe>`;
+      }
+      const visualUrl = isPdf ? attachmentVisualPreviewUrl(att) : text(att.previewUrl || '');
+      if (visualUrl) return `<img src="${esc(visualUrl)}" alt="${esc(basename(att.path))}" loading="lazy">`;
+      if (isPdf) return `<div class="attachment-pdf-preview"><span>PDF</span><small>${esc(basename(att.path))}</small></div>`;
+      return `<div class="subtle">preview unavailable</div>`;
+    }
+
+    function attachmentOcrLine(ocr) {
+      if (ocr.ok) return `<div class="subtle">OCR ${esc(ocr.backend || '')}: ${esc(text(ocr.text).slice(0, 160))}</div>`;
+      return ocr.error ? `<div class="subtle">OCR: ${esc(ocr.error)}</div>` : '';
+    }
+
     function renderAttachment(att) {
       if (att.kind === 'twin-plan') {
         return renderTwinPlanCard(att);
@@ -1760,25 +1782,12 @@
       const isPdf = isPdfAttachment(att);
       const fileAvailable = att.fileExists !== false;
       const kindClass = att.kind === 'qr-code' ? ' attachment-qr' : isPdf ? ' attachment-pdf' : '';
-      const visualUrl = isPdf ? attachmentVisualPreviewUrl(att) : text(att.previewUrl || '');
-      const pdfUrl = isPdf && fileAvailable ? text(att.previewUrl || att.filePreviewUrl || '') : '';
-      const preview = isPdf && pdfUrl
-        ? `<iframe class="attachment-pdf-frame" src="${esc(pdfUrl)}" title="${esc(basename(att.path))}" loading="lazy"></iframe>`
-        : (visualUrl
-          ? `<img src="${esc(visualUrl)}" alt="${esc(basename(att.path))}" loading="lazy">`
-          : (isPdf
-            ? `<div class="attachment-pdf-preview"><span>PDF</span><small>${esc(basename(att.path))}</small></div>`
-            : `<div class="subtle">preview unavailable</div>`));
+      const preview = attachmentPreviewHtml(att, isPdf, fileAvailable);
       const fileUrl = fileAvailable ? text(att.previewUrl || att.filePreviewUrl || '') : '';
-      const open = fileUrl
-        ? `<a href="${esc(fileUrl)}" target="_blank" rel="noreferrer">open</a>`
-        : '';
-      const download = fileUrl ? `<a href="${esc(fileUrl)}" download>download</a>` : '';
+      const { openLink: open, download } = artifactRowLinks(fileUrl);
       const missing = att.fileExists === false ? '<span class="pill down">missing file</span>' : '';
       const detailAtt = fileAvailable ? att : {...att, previewUrl: '', filePreviewUrl: ''};
-      const ocrLine = ocr.ok
-        ? `<div class="subtle">OCR ${esc(ocr.backend || '')}: ${esc(text(ocr.text).slice(0, 160))}</div>`
-        : (ocr.error ? `<div class="subtle">OCR: ${esc(ocr.error)}</div>` : '');
+      const ocrLine = attachmentOcrLine(ocr);
       return `<div class="attachment${kindClass}">
         ${preview}
         <div class="mono">${esc(basename(att.path))}</div>
@@ -1826,6 +1835,18 @@
       </div>`;
     }
 
+    function streamBestSummary(stream, bestScore, bestQualityLabel) {
+      const qual = bestQualityLabel ? ` · ${esc(bestQualityLabel)}` : '';
+      const err = stream.error ? ` · ${esc(stream.error)}` : '';
+      return `${esc(stream.count || 0)} frame(s) · best score ${esc(bestScore)}${qual}${err}`;
+    }
+
+    function streamAcceptedLink(accepted, document) {
+      if (!accepted) return '';
+      const href = document.previewUrl || `/api/file?path=${encodeURIComponent(document.path)}`;
+      return `<div><a href="${esc(href)}" download>${esc(basename(document.path))}</a></div>`;
+    }
+
     function renderScannerStream(stream, title='phone scanner stream') {
       const best = stream.best || {};
       const quality = best.quality || {};
@@ -1845,8 +1866,8 @@
           <span class="subtle">${esc(stream.updatedAt || '')}</span>
         </div>
         <div><strong>${esc(streamDocLabel(best))}</strong></div>
-        <div class="subtle">${esc(stream.count || 0)} frame(s) · best score ${esc(bestScore)}${bestQualityLabel ? ` · ${esc(bestQualityLabel)}` : ''}${stream.error ? ` · ${esc(stream.error)}` : ''}</div>
-        ${accepted ? `<div><a href="${esc(document.previewUrl || `/api/file?path=${encodeURIComponent(document.path)}`)}" download>${esc(basename(document.path))}</a></div>` : ''}
+        <div class="subtle">${streamBestSummary(stream, bestScore, bestQualityLabel)}</div>
+        ${streamAcceptedLink(accepted, document)}
         ${frames.length ? `<div class="stream-frames">${frames.map(renderStreamFrame).join('')}</div>` : ''}
         <details><summary>URI / JSON</summary><pre>${esc(JSON.stringify(stream, null, 2))}</pre></details>
       </div>`;
@@ -1867,28 +1888,36 @@
       </div>`;
     }
 
-    function renderScannerStatusServiceView(view) {
-      const data = view.data || {};
-      const service = data.service || {};
-      const camera = data.cameraStatus || {};
-      const recent = Array.isArray(data.recentArtifacts) ? data.recentArtifacts : [];
-      const ready = camera.ready ? 'ready' : (camera.ok === false ? 'error' : 'not ready');
-      const track = camera.track || {};
-      const body = `<div class="service-graph">
-          <div class="item">
+    function scannerServiceItem(service) {
+      return `<div class="item">
             <strong>service</strong>
             <div><span class="pill ${service.reachable ? 'up' : 'down'}">${esc(service.status || 'unknown')}</span></div>
             <div class="mono">${esc(service.url || '')}</div>
-          </div>
-          <div class="item">
+          </div>`;
+    }
+
+    function scannerCameraItem(camera, track) {
+      const ready = camera.ready ? 'ready' : (camera.ok === false ? 'error' : 'not ready');
+      return `<div class="item">
             <strong>browser camera</strong>
             <div><span class="pill ${camera.ready ? 'up' : 'down'}">${esc(ready)}</span></div>
             <div class="subtle">${esc(camera.width || 0)}x${esc(camera.height || 0)} · ${esc(track.readyState || '')}</div>
             <div class="mono">${esc(track.label || camera.uri || '')}</div>
             ${camera.error ? `<div class="subtle">${esc(camera.error)}</div>` : ''}
-          </div>
-        </div>
-        ${recent.length ? `<div class="stream-frames">${recent.map(renderScannerArtifactFrame).join('')}</div>` : '<div class="subtle">No scanner artifacts yet</div>'}`;
+          </div>`;
+    }
+
+    function renderScannerStatusServiceView(view) {
+      const data = view.data || {};
+      const service = data.service || {};
+      const camera = data.cameraStatus || {};
+      const recent = Array.isArray(data.recentArtifacts) ? data.recentArtifacts : [];
+      const track = camera.track || {};
+      const recentHtml = recent.length
+        ? `<div class="stream-frames">${recent.map(renderScannerArtifactFrame).join('')}</div>`
+        : '<div class="subtle">No scanner artifacts yet</div>';
+      const body = `<div class="service-graph">${scannerServiceItem(service)}${scannerCameraItem(camera, track)}</div>
+        ${recentHtml}`;
       return renderServiceViewShell(view, body);
     }
 
@@ -1956,22 +1985,28 @@
       return renderServiceViewShell(view, body);
     }
 
+    function serviceFormField(field) {
+      const name = field.name || field.key || field.label || 'field';
+      const type = field.type || 'text';
+      const value = field.value || field.default || '';
+      const checked = type === 'checkbox' && (field.checked || value === true || value === 'true') ? 'checked' : '';
+      return `<label class="stack">
+            <span class="subtle">${esc(field.label || name)}</span>
+            <input type="${esc(type)}" name="${esc(name)}" value="${esc(value)}" ${checked} ${field.readonly ? 'readonly' : ''}>
+          </label>`;
+    }
+
     function renderFormServiceView(view) {
       const data = view.data || {};
       const fields = Array.isArray(data.fields) ? data.fields : [];
       const actionUri = data.actionUri || data.uri || view.actionUri || '';
+      const fieldsHtml = fields.map(serviceFormField).join('') || '<div class="subtle">no fields</div>';
+      const actionHtml = actionUri
+        ? `<div class="mono">${esc(actionUri)}</div><button type="submit">Run URI</button>`
+        : '<div class="subtle">no action URI</div>';
       const body = `<form class="service-form-preview" data-service-form data-action-uri="${esc(actionUri)}">
-        ${fields.map((field) => {
-          const name = field.name || field.key || field.label || 'field';
-          const type = field.type || 'text';
-          const value = field.value || field.default || '';
-          const checked = type === 'checkbox' && (field.checked || value === true || value === 'true') ? 'checked' : '';
-          return `<label class="stack">
-            <span class="subtle">${esc(field.label || name)}</span>
-            <input type="${esc(type)}" name="${esc(name)}" value="${esc(value)}" ${checked} ${field.readonly ? 'readonly' : ''}>
-          </label>`;
-        }).join('') || '<div class="subtle">no fields</div>'}
-        ${actionUri ? `<div class="mono">${esc(actionUri)}</div><button type="submit">Run URI</button>` : '<div class="subtle">no action URI</div>'}
+        ${fieldsHtml}
+        ${actionHtml}
       </form>`;
       return renderServiceViewShell(view, body);
     }
@@ -2002,19 +2037,26 @@
       </div>`;
     }
 
+    const SERVICE_VIEW_RENDERERS = {
+      table: renderTableServiceView,
+      image: renderImageServiceView,
+      'image-list': renderImageServiceView,
+      video: renderVideoServiceView,
+      iframe: renderIframeServiceView,
+      page: renderIframeServiceView,
+      web: renderIframeServiceView,
+      form: renderFormServiceView,
+      graph: renderGraphServiceView,
+    };
+
     function renderServiceView(view) {
       if (view.view === 'scanner-status') return renderScannerStatusServiceView(view);
       if (view.view === 'scanner-stream') {
         const streams = view.data && Array.isArray(view.data.streams) ? view.data.streams : [];
         return streams.map((stream) => renderScannerStream(stream, view.title || 'phone scanner stream')).join('');
       }
-      if (view.view === 'table') return renderTableServiceView(view);
-      if (view.view === 'image' || view.view === 'image-list') return renderImageServiceView(view);
-      if (view.view === 'video') return renderVideoServiceView(view);
-      if (view.view === 'iframe' || view.view === 'page' || view.view === 'web') return renderIframeServiceView(view);
-      if (view.view === 'form') return renderFormServiceView(view);
-      if (view.view === 'graph') return renderGraphServiceView(view);
-      return renderGenericServiceView(view);
+      const renderer = SERVICE_VIEW_RENDERERS[view.view];
+      return renderer ? renderer(view) : renderGenericServiceView(view);
     }
 
     function serviceWidgetLinks(service, view) {
@@ -2028,29 +2070,57 @@
       return links.length ? `<div class="artifact-actions">${links.join('')}</div>` : '';
     }
 
+    function widgetPreviewHtml(view, fallbackView) {
+      if (view) return renderServiceView(view);
+      if (fallbackView) return renderIframeServiceView(fallbackView);
+      return `<div class="stream-card"><div class="subtle">No live view published yet for this service.</div></div>`;
+    }
+
+    function widgetStatusPill(status) {
+      const cls = status === 'running' || status === 'up' || status === 'live' ? 'up' : 'down';
+      return `<span class="pill ${cls}">${esc(status)}</span>`;
+    }
+
+    function widgetCardTitle(service, safeView, target) {
+      return service.label || service.name || safeView.title || target || 'service';
+    }
+
+    function widgetQrUrl(service, target) {
+      return service.url || service.bindUrl || ('/services/view?target=' + encodeURIComponent(target));
+    }
+
+    function widgetFallbackView(service, target, status) {
+      if (!service.url) return null;
+      return {title: `${service.name || target || 'service'} page`, target, status, view: 'page', data: {url: service.url}};
+    }
+
     function renderWidgetCard(service, view) {
       const safeView = view || {};
       const status = service.status || safeView.status || 'live';
       const target = service.id || safeView.target || safeView.serviceId || '';
-      const fallbackView = service.url
-        ? {title: `${service.name || target || 'service'} page`, target, status, view: 'page', data: {url: service.url}}
-        : null;
-      const preview = view
-        ? renderServiceView(view)
-        : (fallbackView ? renderIframeServiceView(fallbackView) : `<div class="stream-card"><div class="subtle">No live view published yet for this service.</div></div>`);
+      const preview = widgetPreviewHtml(view, widgetFallbackView(service, target, status));
+      const metaLine = service.url || service.bindUrl || safeView.updatedAt || '';
       return `<div class="widget-card">
         <div class="stream-head">
           <div>
-            <strong>${esc(service.label || service.name || safeView.title || target || 'service')}</strong>
+            <strong>${esc(widgetCardTitle(service, safeView, target))}</strong>
             <div class="mono">${esc(target)}</div>
           </div>
-          <span class="pill ${status === 'running' || status === 'up' || status === 'live' ? 'up' : 'down'}">${esc(status)}</span>
+          ${widgetStatusPill(status)}
         </div>
-        <div class="subtle">${esc(service.url || service.bindUrl || safeView.updatedAt || '')}</div>
+        <div class="subtle">${esc(metaLine)}</div>
         ${serviceWidgetLinks(service, safeView)}
-        ${qrDetails(service.url || service.bindUrl || ('/services/view?target=' + encodeURIComponent(target)), service.name || target, 'widget')}
+        ${qrDetails(widgetQrUrl(service, target), service.name || target, 'widget')}
         <div class="widget-preview">${preview}</div>
       </div>`;
+    }
+
+    function findServiceView(views, service) {
+      return views.find((item) => item.target === service.id || item.serviceId === service.id || item.serviceId === service.name || item.target === service.name);
+    }
+
+    function orphanWidgetCard(view) {
+      return renderWidgetCard({id: view.target || view.serviceId, label: view.title || view.serviceId || view.target, status: view.status || view.kind || 'live'}, view);
     }
 
     function renderWidgetDashboard() {
@@ -2058,14 +2128,14 @@
       const views = state.serviceViews || [];
       const used = new Set();
       const cards = services.map((service) => {
-        const view = views.find((item) => item.target === service.id || item.serviceId === service.id || item.serviceId === service.name || item.target === service.name);
+        const view = findServiceView(views, service);
         if (view) used.add(view.id || view.target || view.serviceId);
         return renderWidgetCard(service, view);
       });
       views.forEach((view) => {
         const key = view.id || view.target || view.serviceId;
         if (used.has(key)) return;
-        cards.push(renderWidgetCard({id: view.target || view.serviceId, label: view.title || view.serviceId || view.target, status: view.status || view.kind || 'live'}, view));
+        cards.push(orphanWidgetCard(view));
       });
       $('widgetCount').textContent = `${cards.length} widget(s)`;
       $('widgetGrid').innerHTML = cards.join('') || empty('No services or widgets available');
@@ -2084,40 +2154,44 @@
     // Load the chat-stream widgets from the widget:// connector over a URI request, so the page
     // renders chatStreamList from the published catalogue instead of its inline copy. Best-effort:
     // any failure leaves state.widgetRender null and the inline renderers keep working.
+    function applyWidgetJsBundle(js) {
+      if (!js) return;
+      // The bundle is a single concatenated module (imports/exports stripped); evaluate it in
+      // its own scope and hand back the renderers the dashboard can consume. The generic
+      // service-view renderer is used for live widgets; dashboard widgets cover artifacts and
+      // chat cards without duplicating those templates in this file.
+      const factory = new Function(js + "\n;return {"
+        + "renderServiceView: (typeof renderServiceView === 'function') ? renderServiceView : null,"
+        + "renderDashboardWidget: (typeof renderDashboardWidget === 'function') ? renderDashboardWidget : null"
+        + "};");
+      const widgets = factory();
+      if (widgets && typeof widgets.renderServiceView === 'function') state.widgetRender = widgets.renderServiceView;
+      state.dashboardWidgets = widgets || null;
+    }
+
+    function applyWidgetCss(css) {
+      if (!css) return;
+      let styleEl = $('urirunWidgetCss');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'urirunWidgetCss';
+        document.head.appendChild(styleEl);
+      }
+      styleEl.textContent = css;
+    }
+
     async function loadWidgetBundleViaUri() {
       try {
         const jsRes = await api('/api/uri/invoke', {
           method: 'POST',
           body: JSON.stringify({ uri: 'widget://host/bundle/query/js', mode: 'execute', payload: {}, source: 'widget-bundle' }),
         });
-        const js = jsRes && jsRes.result && jsRes.result.js;
-        if (js) {
-          // The bundle is a single concatenated module (imports/exports stripped); evaluate it in
-          // its own scope and hand back the renderers the dashboard can consume. The generic
-          // service-view renderer is used for live widgets; dashboard widgets cover artifacts and
-          // chat cards without duplicating those templates in this file.
-          const factory = new Function(js + "\n;return {"
-            + "renderServiceView: (typeof renderServiceView === 'function') ? renderServiceView : null,"
-            + "renderDashboardWidget: (typeof renderDashboardWidget === 'function') ? renderDashboardWidget : null"
-            + "};");
-          const widgets = factory();
-          if (widgets && typeof widgets.renderServiceView === 'function') state.widgetRender = widgets.renderServiceView;
-          state.dashboardWidgets = widgets || null;
-        }
+        applyWidgetJsBundle(jsRes && jsRes.result && jsRes.result.js);
         const cssRes = await api('/api/uri/invoke', {
           method: 'POST',
           body: JSON.stringify({ uri: 'widget://host/bundle/query/css', mode: 'execute', payload: {}, source: 'widget-bundle' }),
         });
-        const css = cssRes && cssRes.result && cssRes.result.css;
-        if (css) {
-          let styleEl = $('urirunWidgetCss');
-          if (!styleEl) {
-            styleEl = document.createElement('style');
-            styleEl.id = 'urirunWidgetCss';
-            document.head.appendChild(styleEl);
-          }
-          styleEl.textContent = css;
-        }
+        applyWidgetCss(cssRes && cssRes.result && cssRes.result.css);
         if (state.widgetRender) renderServiceViews();
         if (state.dashboardWidgets && typeof state.dashboardWidgets.renderDashboardWidget === 'function') {
           renderArtifacts(state.artifacts, { force: true });
@@ -2268,6 +2342,14 @@
       $('chatClearSelectionBtn').disabled = selectedCount === 0;
     }
 
+    function timelinePlainLines(timeline) {
+      return timeline.map((step) => `- ${step.ok ? 'ok' : 'fail'} ${step.target || ''} ${step.uri || ''}`.trim());
+    }
+
+    function attachmentPlainLines(attachments) {
+      return attachments.map((att) => `- ${att.kind || 'file'} ${att.path || att.uri || att.previewUrl || ''}`.trim());
+    }
+
     function chatMessagePlainText(message) {
       const detail = message.detail || {};
       const timeline = detail.timeline || [];
@@ -2276,24 +2358,22 @@
         `[${message.created_at || ''}] ${message.role || 'system'}`,
         text(message.content || ''),
       ].filter(Boolean);
-      if (timeline.length) {
-        parts.push('URI timeline:');
-        timeline.forEach((step) => {
-          parts.push(`- ${step.ok ? 'ok' : 'fail'} ${step.target || ''} ${step.uri || ''}`.trim());
-        });
-      }
-      if (attachments.length) {
-        parts.push('Attachments:');
-        attachments.forEach((att) => {
-          parts.push(`- ${att.kind || 'file'} ${att.path || att.uri || att.previewUrl || ''}`.trim());
-        });
-      }
+      if (timeline.length) parts.push('URI timeline:', ...timelinePlainLines(timeline));
+      if (attachments.length) parts.push('Attachments:', ...attachmentPlainLines(attachments));
       return parts.join('\n');
     }
 
     function markdownFence(value, lang='') {
       const body = text(value).replace(/```/g, '`\u200b``');
       return '```' + (lang || '') + '\n' + body + '\n```';
+    }
+
+    function timelineMarkdownLine(step) {
+      const status = step.ok ? 'ok' : 'fail';
+      const target = step.target || '';
+      const uri = step.uri || '';
+      const error = step.error ? ` error=${JSON.stringify(step.error)}` : '';
+      return `${status} ${target} ${uri}${error}`.trim();
     }
 
     function chatMessageMarkdown(message) {
@@ -2309,13 +2389,7 @@
       if (message.id) parts.push(`- id: ${message.id}`);
       parts.push('', '## Content', '', markdownFence(message.content || '', 'text'));
       if (timeline.length) {
-        parts.push('', '## URI Timeline', '', markdownFence(timeline.map((step) => {
-          const status = step.ok ? 'ok' : 'fail';
-          const target = step.target || '';
-          const uri = step.uri || '';
-          const error = step.error ? ` error=${JSON.stringify(step.error)}` : '';
-          return `${status} ${target} ${uri}${error}`.trim();
-        }).join('\n'), 'text'));
+        parts.push('', '## URI Timeline', '', markdownFence(timeline.map(timelineMarkdownLine).join('\n'), 'text'));
       }
       if (attachments.length) {
         parts.push('', '## Attachments', '');
@@ -2569,7 +2643,7 @@
     }
 
     async function askChat(event) {
-      event.preventDefault();
+      if (event && event.preventDefault) event.preventDefault();
       const prompt = $('chatPrompt').value.trim();
       if (!prompt) return;
       state.selectedTargets = selectedTargets();
@@ -2605,19 +2679,60 @@
       }
     }
 
+    function chatAutoRunEnabled(search) {
+      const action = search.get('action') || '';
+      const prompt = (search.get('prompt') || search.get('message') || '').trim();
+      if (!prompt) return false;
+      if (!(search.get('execute') === '1' || search.get('autorun') === '1')) return false;
+      return action === 'chat:run' || action === 'chat:repeat' || action === 'tab:chat';
+    }
+
+    function chatAutoRunKey(search) {
+      return ['prompt', 'message', 'nodes', 'targets', 'execute', 'no_llm', 'noLlm']
+        .map((name) => `${name}=${search.get(name) || ''}`).join('&');
+    }
+
+    function chatAutoRunAlreadySeen(key) {
+      try {
+        const storageKey = `urirun:chat-autorun:${key}`;
+        if (sessionStorage.getItem(storageKey)) return true;
+        sessionStorage.setItem(storageKey, new Date().toISOString());
+      } catch (_) {
+        return false;
+      }
+      return false;
+    }
+
+    async function maybeAutoRunChatFromUrl(search) {
+      if (!chatAutoRunEnabled(search)) return;
+      const key = chatAutoRunKey(search);
+      if (chatAutoRunAlreadySeen(key)) return;
+      state.view = 'chat';
+      applyView('chat');
+      $('chatStatus').textContent = 'running from URL...';
+      await askChat();
+    }
+
     // Re-run a previous user command: resend its prompt with the same nodes/targets/execute
     // captured in the message detail (falls back to the current composer selections).
-    async function repeatChatMessage(id) {
-      const msg = (state.chatMessages || []).find((m) => m.id === id);
-      if (!msg) return;
+    function repeatRequestFromMessage(msg) {
       const prompt = (msg.content || '').trim();
-      if (!prompt) return;
+      if (!prompt) return null;
       const detail = msg.detail || {};
       const nodes = detail.selectedNodes || detail.requestedNodes || selectedNodeNames();
       // Use requestedTargets (what the user originally selected) rather than selectedTargets
       // (which includes the LLM-inferred node). Empty = let the orchestrator re-infer.
       const targets = detail.requestedTargets || [];
       const execute = detail.execute !== undefined ? !!detail.execute : $('chatExecute').checked;
+      return { prompt, nodes, targets, execute };
+    }
+
+    async function repeatChatMessage(id) {
+      const msg = (state.chatMessages || []).find((m) => m.id === id);
+      if (!msg) return;
+      const req = repeatRequestFromMessage(msg);
+      if (!req) return;
+      const { prompt, nodes, targets, execute } = req;
       if ($('chatPrompt')) $('chatPrompt').value = prompt;
       state.view = 'chat';
       writeUrlState({ action: 'chat:repeat', prompt, prompt_len: prompt.length, nodes: (nodes || []).join(','), targets: (targets || []).join(',') });
@@ -2849,6 +2964,6 @@
     setInterval(() => loadArtifacts().catch(() => {}), 4000);
     loadServiceViews().catch(() => {});
     loadWidgetBundleViaUri().catch(() => {});
-    load().catch((error) => {
+    load().then(() => maybeAutoRunChatFromUrl(new URLSearchParams(window.location.search))).catch((error) => {
       $('contextLine').textContent = error.message;
     });

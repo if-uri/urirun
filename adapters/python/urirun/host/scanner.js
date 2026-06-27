@@ -57,19 +57,17 @@
       return Number.isFinite(raw) && raw > 0 ? raw : fallback;
     }
 
+    function positivePresentNumber(options, key) {
+      if (!Object.prototype.hasOwnProperty.call(options || {}, key)) return null;
+      const value = Number(options[key]);
+      return Number.isFinite(value) && value > 0 ? value : null;
+    }
+
     function scanIntervalMs(options={}) {
-      if (Object.prototype.hasOwnProperty.call(options || {}, 'interval')) {
-        const seconds = Number(options.interval);
-        if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
-      }
-      if (Object.prototype.hasOwnProperty.call(options || {}, 'intervalSeconds')) {
-        const seconds = Number(options.intervalSeconds);
-        if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
-      }
-      if (Object.prototype.hasOwnProperty.call(options || {}, 'intervalMs')) {
-        const ms = Number(options.intervalMs);
-        if (Number.isFinite(ms) && ms > 0) return ms;
-      }
+      const seconds = positivePresentNumber(options, 'interval') ?? positivePresentNumber(options, 'intervalSeconds');
+      if (seconds !== null) return seconds * 1000;
+      const ms = positivePresentNumber(options, 'intervalMs');
+      if (ms !== null) return ms;
       if (scannerParams.has('interval')) return numericParam('interval', 3) * 1000;
       if (scannerParams.has('scanInterval')) return numericParam('scanInterval', 3) * 1000;
       return numericParam('intervalMs', 3000);
@@ -383,6 +381,25 @@
       });
     }
 
+    function captureLabel(kind, duplicateLabel, supersededLabel, defaultLabel) {
+      if (kind === 'duplicate') return duplicateLabel;
+      if (kind === 'superseded') return supersededLabel;
+      return defaultLabel;
+    }
+
+    function resolveMinScore(options={}) {
+      return Number(Object.prototype.hasOwnProperty.call(options || {}, 'minScore') ? options.minScore : numericParam('minScore', 45));
+    }
+
+    function reportRejectedScan(data) {
+      const sc = data.quality && data.quality.score != null ? Number(data.quality.score).toFixed(0) : '?';
+      const reasons = data.quality && Array.isArray(data.quality.reasons) ? data.quality.reasons.join(', ') : '';
+      const why = data.reason || reasons || 'low quality scan';
+      setState(`discarded — ${why} (score ${sc}, min ${data.minScore})`, true);
+      feedbackTone('error');
+      return data;
+    }
+
     async function capture(options={}) {
       const w = video.videoWidth || 1920;
       const h = video.videoHeight || 1080;
@@ -390,16 +407,9 @@
       try {
         const data = await sendFrame({archive: true, ...options});
         if (!data || data.ok === false) throw new Error((data && data.error) || 'scan failed');
-        if (data.rejected) {
-          const sc = data.quality && data.quality.score != null ? Number(data.quality.score).toFixed(0) : '?';
-          const reasons = data.quality && Array.isArray(data.quality.reasons) ? data.quality.reasons.join(', ') : '';
-          const why = data.reason || reasons || 'low quality scan';
-          setState(`discarded — ${why} (score ${sc}, min ${data.minScore})`, true);
-          feedbackTone('error');
-          return data;
-        }
+        if (data.rejected) return reportRejectedScan(data);
         const kind = captureFeedbackKind(data);
-        const label = kind === 'duplicate' ? 'already saved' : kind === 'superseded' ? 'updated' : 'saved';
+        const label = captureLabel(kind, 'already saved', 'updated', 'saved');
         const savedArtifact = data.primaryArtifact || data.documentArtifact || data.artifact || {};
         setState(`${label} ${savedArtifact.path || data.uri}`);
         feedbackTone(kind);
@@ -408,6 +418,32 @@
         feedbackTone('error');
         throw err;
       }
+    }
+
+    async function captureBestFrame(seriesId, frame, total) {
+      setState(`frame ${frame}/${total}...`);
+      const data = await sendFrame({
+        archive: false,
+        mode: 'best-candidate',
+        seriesId,
+        frameIndex: frame,
+        frameCount: total
+      });
+      if (!data || data.ok === false) throw new Error((data && data.error) || 'candidate scan failed');
+      const best = data.series && data.series.best ? data.series.best : data.candidate;
+      const score = best && best.quality ? Number(best.quality.score || 0).toFixed(1) : '0.0';
+      setState(`frame ${frame}/${total}, best score ${score}`);
+      return best;
+    }
+
+    async function finishBestSeries(seriesId, minScore) {
+      const finalData = await invokeURI('scanner://host/best/command/finish', {seriesId, minScore});
+      if (!finalData || finalData.ok === false) throw new Error((finalData && finalData.error) || 'best scan failed');
+      const kind = captureFeedbackKind(finalData);
+      const label = captureLabel(kind, 'already saved', 'updated best', 'saved best');
+      setState(`${label} ${finalData.document && finalData.document.path ? finalData.document.path : finalData.uri}`);
+      feedbackTone(kind);
+      return finalData;
     }
 
     async function bestPdf(options={}) {
@@ -419,30 +455,11 @@
       const intervalMs = scanIntervalMs(options);
       const seriesId = `best-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       try {
-        let best = null;
         for (let frame = 1; frame <= total; frame += 1) {
-          setState(`frame ${frame}/${total}...`);
-          const data = await sendFrame({
-            archive: false,
-            mode: 'best-candidate',
-            seriesId,
-            frameIndex: frame,
-            frameCount: total
-          });
-          if (!data || data.ok === false) throw new Error((data && data.error) || 'candidate scan failed');
-          best = data.series && data.series.best ? data.series.best : data.candidate;
-          const score = best && best.quality ? Number(best.quality.score || 0).toFixed(1) : '0.0';
-          setState(`frame ${frame}/${total}, best score ${score}`);
+          await captureBestFrame(seriesId, frame, total);
           if (frame < total) await sleep(intervalMs);
         }
-        const minScore = Number(Object.prototype.hasOwnProperty.call(options || {}, 'minScore') ? options.minScore : numericParam('minScore', 45));
-        const finalData = await invokeURI('scanner://host/best/command/finish', {seriesId, minScore});
-        if (!finalData || finalData.ok === false) throw new Error((finalData && finalData.error) || 'best scan failed');
-        const kind = captureFeedbackKind(finalData);
-        const label = kind === 'duplicate' ? 'already saved' : kind === 'superseded' ? 'updated best' : 'saved best';
-        setState(`${label} ${finalData.document && finalData.document.path ? finalData.document.path : finalData.uri}`);
-        feedbackTone(kind);
-        return finalData;
+        return await finishBestSeries(seriesId, resolveMinScore(options));
       } catch (err) {
         feedbackTone('error');
         throw err;
@@ -456,7 +473,7 @@
     function bestOptions(options={}) {
       return {
         count: Number(options.count || numericParam('count', Number(document.getElementById('bestCount').value || '6'))),
-        minScore: Number(Object.prototype.hasOwnProperty.call(options || {}, 'minScore') ? options.minScore : numericParam('minScore', 45)),
+        minScore: resolveMinScore(options),
         intervalMs: scanIntervalMs(options),
       };
     }

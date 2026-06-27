@@ -69,6 +69,8 @@ class HostDashboardTests(unittest.TestCase):
                 with urllib.request.urlopen(f"{base}/dashboard.js", timeout=5) as js_resp:
                     js = js_resp.read().decode("utf-8")
                 self.assertIn("/api/summary", js)
+                self.assertIn("maybeAutoRunChatFromUrl", js)
+                self.assertIn("action === 'tab:chat'", js)
                 self.assertIn("documentReconcileBtn", html)  # index reconcile button is wired in
 
                 summary = get_json(f"{base}/api/summary")
