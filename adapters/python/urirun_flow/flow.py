@@ -559,7 +559,7 @@ def _build_thin_plan(steps: list[dict], flow: dict, *, execute: bool,
     whether the thin driver automatically inserts them into every kvm flow.
 
     ``routes`` is forwarded into the drift/remember step payloads so the URI handlers
-    can build a registry and call ``kvm://{node}/environment/query/profile`` without
+    can build a registry and call ``kvm://{node}/env/query/profile`` without
     an ambient global registry."""
     plan = _plan_with_preflight(steps, execute=execute)
     if not execute:
@@ -859,7 +859,7 @@ def _uri_env_drift(payload: dict) -> dict:
     routes = payload.get("routes") or []
     registry = registry_from_routes(routes)
     try:
-        prof_r = v2_service.call(f"kvm://{node}/environment/query/profile",
+        prof_r = v2_service.call(f"kvm://{node}/env/query/profile",
                                  {}, registry, mode="execute")
         val = (prof_r.get("result") or {}).get("value")
         profile = val if isinstance(val, dict) else {}
@@ -881,7 +881,7 @@ def _uri_env_drift(payload: dict) -> dict:
 
 def _remember_node_profile(memory, node: str, registry: dict) -> None:
     try:
-        prof_r = v2_service.call(f"kvm://{node}/environment/query/profile",
+        prof_r = v2_service.call(f"kvm://{node}/env/query/profile",
                                  {}, registry, mode="execute")
         val = (prof_r.get("result") or {}).get("value")
         if isinstance(val, dict) and val:

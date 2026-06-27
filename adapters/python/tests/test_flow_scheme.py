@@ -142,7 +142,7 @@ class TestRecallDriftGuard(unittest.TestCase):
         self.assertEqual(result.get("source"), "episode")
 
     def test_recall_suppresses_episode_when_drift_detected(self):
-        # _drift_ok() calls kvm://host/environment/query/profile + mem.drift() in-process.
+        # _drift_ok() calls kvm://host/env/query/profile + mem.drift() in-process.
         # Store a known-good baseline first, then return a DIFFERENT profile so drift fires.
         # environment_fingerprint keys on: platform, wayland, display, monitor COUNT, best,
         # osLevelReliable — NOT pixel dimensions, so change best/osLevelReliable to fake drift.

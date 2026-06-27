@@ -60,7 +60,7 @@ class FlowRecallHandlerTests(unittest.TestCase):
 
     def test_drift_suppresses_recall(self):
         # When the live kvm env profile differs from the stored known-good, recall is suppressed.
-        # _drift_ok() calls kvm://host/environment/query/profile in-process; we patch _svc.call
+        # _drift_ok() calls kvm://host/env/query/profile in-process; we patch _svc.call
         # to return a DIFFERENT profile so mem.drift() reports drifted=True.
         from urirun_connector_twin.core import flow_recall
         import urirun.v2_service as _svc
@@ -69,7 +69,7 @@ class FlowRecallHandlerTests(unittest.TestCase):
         # resolution), so flip dims that actually change the fingerprint to simulate real drift.
         drifted_profile = {**self.prof, "best": "vision", "osLevelReliable": False}
         def _fake(uri, *a, **k):
-            if "environment/query/profile" in uri:
+            if "env/query/profile" in uri:
                 return {"ok": True, "result": {"value": drifted_profile}}
             return orig(uri, *a, **k)
         _svc.call = _fake
