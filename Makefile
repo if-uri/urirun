@@ -130,6 +130,22 @@ build: ## Build the Python adapter (wheel + sdist) into adapters/python/dist/. N
 publish: test-local sync-versions version-check build ## Manual fallback upload to PyPI (CI release.yml auto-publishes on main). Needs: pip install twine; TWINE_USERNAME=__token__ TWINE_PASSWORD=$$PYPI_API_TOKEN (or ~/.pypirc). Runs test-local gate first.
 	cd adapters/python && $(PYTHON) -m twine upload --skip-existing dist/*
 
+MONO ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))..
+META_PKGS := urirun-runtime urirun-cdp urirun-connectors-toolkit urirun-flow
+
+.PHONY: publish-meta
+publish-meta: ## Build and publish the 4 meta-packages to PyPI. Run AFTER `make publish` (they depend on urirun>=VERSION). Needs twine + PYPI_API_TOKEN.
+	@for pkg in $(META_PKGS); do \
+	  dir="$(MONO)/$$pkg"; \
+	  if [ ! -f "$$dir/pyproject.toml" ]; then echo "SKIP $$pkg (not found at $$dir)"; continue; fi; \
+	  echo "==> build $$pkg"; \
+	  rm -rf "$$dir/dist" "$$dir/build"; \
+	  cd "$$dir" && $(PYTHON) -m build --no-isolation && cd -; \
+	  echo "==> upload $$pkg"; \
+	  cd "$$dir" && $(PYTHON) -m twine upload --skip-existing dist/* && cd -; \
+	  echo "==> done $$pkg"; \
+	done
+
 .PHONY: release
 release: sync-versions version-check ## Tag the current version and push it; CI (release.yml) then builds + publishes to PyPI.
 	@v=$$(cat adapters/python/VERSION); \
