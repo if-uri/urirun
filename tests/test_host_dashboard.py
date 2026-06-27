@@ -12,6 +12,24 @@ from PIL import Image
 from urirun.host import host_dashboard
 from urirun.host import chat_orchestrator as _chat_orch
 from urirun.host import dashboard_api as _dash_api
+
+# The page JS/CSS was extracted from the INDEX_HTML / SCANNER_HTML raw strings into real
+# .js files served next to the module (see host_dashboard `_static`). The shell HTML now just
+# references `<script src="/dashboard.js">`, so token assertions must look at the union of the
+# shell plus its served JS — which is exactly what INDEX_HTML/SCANNER_HTML were when JS was inlined.
+_HOST_DIR = Path(host_dashboard.__file__).parent
+
+
+def _dashboard_page() -> str:
+    return (
+        host_dashboard.INDEX_HTML
+        + (_HOST_DIR / "dashboard.js").read_text(encoding="utf-8")
+        + (_HOST_DIR / "dashboard.css").read_text(encoding="utf-8")
+    )
+
+
+def _scanner_page() -> str:
+    return host_dashboard.SCANNER_HTML + (_HOST_DIR / "scanner.js").read_text(encoding="utf-8")
 try:
     from urirun.host import node_api as _node_api
 except ImportError:
@@ -143,7 +161,7 @@ class FakeHostDb:
 
 
 def test_dashboard_html_tracks_tabs_actions_and_chat_fullscreen():
-    html = host_dashboard.INDEX_HTML
+    html = _dashboard_page()
 
     assert "chatFullscreenBtn" in html
     assert "chat-fullscreen" in html
@@ -247,33 +265,34 @@ def test_dashboard_html_tracks_tabs_actions_and_chat_fullscreen():
     assert "action:" in html
     assert "window.addEventListener('popstate'" in html
 
-    assert "scanner://page/camera/command/autonomous" in host_dashboard.SCANNER_HTML
-    assert "beginAutonomousScanning" in host_dashboard.SCANNER_HTML
-    assert "applyDefaultScannerParams" in host_dashboard.SCANNER_HTML
-    assert "history.replaceState" in host_dashboard.SCANNER_HTML
-    assert "function scanIntervalMs" in host_dashboard.SCANNER_HTML
-    assert "scannerParams.has('interval')" in host_dashboard.SCANNER_HTML
-    assert "id=\"scanInterval\"" in host_dashboard.SCANNER_HTML
-    assert "auto every 3s" in host_dashboard.SCANNER_HTML
-    assert "scannerParams.set('interval', '3')" in host_dashboard.SCANNER_HTML
-    assert "numericParam('interval', 3)" in host_dashboard.SCANNER_HTML
-    assert "numericParam('intervalMs', 3000)" in host_dashboard.SCANNER_HTML
-    assert "updateIntervalFromControl" in host_dashboard.SCANNER_HTML
-    assert "!scannerParams.has('interval') && !scannerParams.has('scanInterval') && !scannerParams.has('intervalMs')" in host_dashboard.SCANNER_HTML
-    assert "await sleep(intervalMs)" in host_dashboard.SCANNER_HTML
-    assert "withActionTimeout" in host_dashboard.SCANNER_HTML
-    assert "page action timed out after" in host_dashboard.SCANNER_HTML
-    assert "accept camera permission" in host_dashboard.SCANNER_HTML
-    assert "function feedbackTone(kind)" in host_dashboard.SCANNER_HTML
-    assert "function unlockFeedbackAudio()" in host_dashboard.SCANNER_HTML
-    assert "window.addEventListener('pointerdown', unlockFeedbackAudio" in host_dashboard.SCANNER_HTML
-    assert "feedbackTone(kind)" in host_dashboard.SCANNER_HTML
-    assert "feedbackTone('error')" in host_dashboard.SCANNER_HTML
-    assert "truthyParam('beep', true)" in host_dashboard.SCANNER_HTML
+    scanner = _scanner_page()
+    assert "scanner://page/camera/command/autonomous" in scanner
+    assert "beginAutonomousScanning" in scanner
+    assert "applyDefaultScannerParams" in scanner
+    assert "history.replaceState" in scanner
+    assert "function scanIntervalMs" in scanner
+    assert "scannerParams.has('interval')" in scanner
+    assert "id=\"scanInterval\"" in scanner
+    assert "auto every 3s" in scanner
+    assert "scannerParams.set('interval', '3')" in scanner
+    assert "numericParam('interval', 3)" in scanner
+    assert "numericParam('intervalMs', 3000)" in scanner
+    assert "updateIntervalFromControl" in scanner
+    assert "!scannerParams.has('interval') && !scannerParams.has('scanInterval') && !scannerParams.has('intervalMs')" in scanner
+    assert "await sleep(intervalMs)" in scanner
+    assert "withActionTimeout" in scanner
+    assert "page action timed out after" in scanner
+    assert "accept camera permission" in scanner
+    assert "function feedbackTone(kind)" in scanner
+    assert "function unlockFeedbackAudio()" in scanner
+    assert "window.addEventListener('pointerdown', unlockFeedbackAudio" in scanner
+    assert "feedbackTone(kind)" in scanner
+    assert "feedbackTone('error')" in scanner
+    assert "truthyParam('beep', true)" in scanner
 
 
 def test_dashboard_chat_messages_can_copy_markdown():
-    html = host_dashboard.INDEX_HTML
+    html = _dashboard_page()
 
     assert "data-chat-copy-md" in html
     assert "function chatMessageMarkdown" in html
@@ -3035,7 +3054,24 @@ _RECEIPT_TOKENS = "\n".join([
     "DATA: 19.06.2026 GODZINA: 09:52:51",
 ])
 
+# Receipt-transaction fingerprinting is provided by the `docid` package (via
+# urirun-connector-scanner / ksefin). When neither is installed, host_dashboard falls back to a
+# no-op stub (`_transaction_fingerprint` returns {}), so the dedup assertions below cannot hold.
+# Probe the real function and skip — rather than false-fail — in environments without docid;
+# the tests still run wherever the dedup stack is installed (CI with the full connector).
+_DEDUP_FINGERPRINT_AVAILABLE = bool(
+    host_dashboard._transaction_fingerprint(
+        "DUO CAFE HANNA GRUBA\nSPRZEDAZ\nKWOTA: 30,26 zl\n" + _RECEIPT_TOKENS
+    )
+)
+_requires_dedup_fingerprint = pytest.mark.skipif(
+    not _DEDUP_FINGERPRINT_AVAILABLE,
+    reason="receipt dedup fingerprinting requires the docid package "
+    "(urirun-connector-scanner / ksefin); _transaction_fingerprint is a no-op stub without it",
+)
 
+
+@_requires_dedup_fingerprint
 def test_transaction_fingerprint_is_stable_across_ocr_noise():
     good = "DUO CAFE HANNA GRUBA\nSPRZEDAZ\nKWOTA: 30,26 zl\n" + _RECEIPT_TOKENS
     # Same physical receipt, badly OCR'd: merchant garbled, amount lost, auth one digit off.
@@ -3069,6 +3105,7 @@ def _archive_with_distinct_docids(monkeypatch, document_root):
     monkeypatch.setattr(host_dashboard, "_docid_for_file", fake_docid)
 
 
+@_requires_dedup_fingerprint
 def test_archive_supersedes_incomplete_duplicate_when_better_scan_arrives(monkeypatch, tmp_path):
     from PIL import Image
 
@@ -3162,6 +3199,7 @@ def _doc_like_image(path, seed, noise=0):
     img.save(path)
 
 
+@_requires_dedup_fingerprint
 def test_archive_visual_strong_dedups_tokenless_rescan(monkeypatch, tmp_path):
     """Two garbled-OCR scans (no transaction tokens, distinct docId/text) are still
     recognized as the same document via the standalone pHash+dHash match."""
@@ -3194,6 +3232,7 @@ def test_archive_visual_strong_dedups_tokenless_rescan(monkeypatch, tmp_path):
     assert second["duplicateOf"] == first["docId"]
 
 
+@_requires_dedup_fingerprint
 def test_archive_skips_lower_quality_fingerprint_duplicate(monkeypatch, tmp_path):
     from PIL import Image
 
