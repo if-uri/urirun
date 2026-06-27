@@ -1342,10 +1342,20 @@ def _chat_ask_general(
             return _chat_ask_general_planner_failure(exc, db, prompt, execute, selected_nodes, selected_targets, deps)
         _recall = _suggest_recall_for_memory(flow, twin_memory)
         _run_mode = "execute" if execute else "dry-run"
-        # local_first=True when user explicitly chose the host target: try the installed
-        # connector in-process BEFORE consulting serviceMap (which would route kvm://host/...
-        # to the remote node that advertises that scheme, even when the host has it locally).
-        _local_first = (selected_targets == ["host"])
+        # local_first=True when the user wants steps to run on the local (dashboard) machine.
+        # Two signals:
+        #  a) selected_targets == ["host"] — only host selected in UI
+        #  b) NL prompt explicitly says "local computer" — override even if remote nodes are
+        #     checked in the UI (e.g. "lokalnym komputerze" with lenovo also selected)
+        _LOCAL_NL_KWS = ("lokalnym", "lokalny", "lokalnie", "lokalnego", "lokalnej",
+                         "local computer", "my computer", "this computer", "this machine")
+        _prompt_says_local = any(kw in prompt.lower() for kw in _LOCAL_NL_KWS)
+        _local_first = (selected_targets == ["host"]) or _prompt_says_local
+        if _prompt_says_local and selected_targets != ["host"]:
+            # NL says "local" but UI has remote nodes checked — honour NL intent and
+            # dispatch only to host so kvm://host/... doesn't go to a remote node.
+            selected_targets = ["host"]
+            selected_nodes = []
         _dispatch = make_local_dispatch_uri(registry, _run_mode, local_first=_local_first)
         execution = mesh.execute_flow(flow, discovered, registry, execute=execute, memory=twin_memory,
                                       dispatch_uri=_dispatch)
