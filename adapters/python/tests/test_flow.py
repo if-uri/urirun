@@ -270,6 +270,11 @@ def test_resolve_step_payload_mixed():
     assert resolved["limit"] == 5
 
 
+def test_resolve_step_payload_keeps_cdp_copy_from_literal():
+    payload = {"copy_from": "~/.config/google-chrome"}
+    assert resolve_step_payload(payload, {}) == payload
+
+
 def test_resolve_step_payload_none_safe():
     assert resolve_step_payload(None, {}) == {}
 
@@ -406,3 +411,60 @@ def test_rewrite_cdp_profile_is_idempotent_and_scoped():
     other = [{"id": "n", "uri": "kvm://host/cdp/page/command/navigate",
               "payload": {"user_data_dir": "~/.config/google-chrome/Default"}}]
     assert _rewrite_cdp_profile_for_auth(other) == other
+
+
+def test_autonomous_linkedin_flow_pipeline(monkeypatch):
+    """End-to-end autonomous planning for the LinkedIn case: make_flow() with a stubbed LLM that
+    returns the historically-failing flow must yield an EXECUTABLE plan — the ensure step rewritten
+    to copy_from (lock-safe login profile clone) and the cdp/page click|fill steps mapped onto the
+    available kvm ui/command router (with text->value fixup), instead of failing as 'URI not available'
+    or launching a cookie-less throwaway Chrome."""
+    monkeypatch.setenv("LLM_MODEL", "stub/model")
+    monkeypatch.delenv("URIRUN_LLM_MODEL", raising=False)
+
+    llm_flow_json = {
+        "task": {"id": "linkedin_publish_post", "title": "Opublikuj post na LinkedIn"},
+        "steps": [
+            {"id": "ensure", "uri": "kvm://host/cdp/session/command/ensure",
+             "payload": {"user_data_dir": "~/.config/google-chrome/Default"}, "depends_on": []},
+            {"id": "navigate", "uri": "kvm://host/cdp/page/command/navigate",
+             "payload": {"url": "https://www.linkedin.com/feed/"}, "depends_on": ["ensure"]},
+            {"id": "click_start", "uri": "kvm://host/cdp/page/command/click",
+             "payload": {"role": "button", "text": "Zacznij publikację"}, "depends_on": ["navigate"]},
+            {"id": "fill_post", "uri": "kvm://host/cdp/page/command/fill",
+             "payload": {"role": "textbox", "text": "Nowy post na LinkedIn"}, "depends_on": ["click_start"]},
+        ],
+    }
+
+    import urirun.node._util as _util
+
+    class _Resp:
+        choices = [type("C", (), {"message": type("M", (), {"content": json.dumps(llm_flow_json)})()})()]
+
+    monkeypatch.setattr(_util, "quiet_completion", lambda **kw: _Resp())
+
+    routes = [{"uri": u, "safe": True, "node": "host"} for u in (
+        "kvm://host/cdp/session/command/ensure",
+        "kvm://host/cdp/session/query/ready",
+        "kvm://host/cdp/page/command/navigate",
+        "kvm://host/cdp/page/query/ready",
+        "kvm://host/ui/command/click",
+        "kvm://host/ui/command/fill",
+    )]
+    mesh = {"routes": routes, "nodes": [{"name": "host", "reachable": True}]}
+
+    from urirun_flow.flow_planner import make_flow
+    flow, generator = make_flow("opublikuj post na LinkedIn", mesh, selected_nodes=["host"], use_llm=True)
+
+    assert generator["provider"] == "litellm", generator
+    uris = [s["uri"] for s in flow["steps"]]
+    # MY fix: the ensure step clones the logged-in profile instead of fighting the live lock.
+    ensure = next(s for s in flow["steps"] if s["uri"].endswith("/cdp/session/command/ensure"))
+    assert ensure["payload"].get("copy_from") == "~/.config/google-chrome"
+    assert "user_data_dir" not in ensure["payload"]
+    # bundled fallback: cdp/page click|fill became the available ui/command/* routes (no failure).
+    assert "kvm://host/ui/command/click" in uris
+    assert "kvm://host/ui/command/fill" in uris
+    assert not any("cdp/page/command/click" in u or "cdp/page/command/fill" in u for u in uris)
+    fill = next(s for s in flow["steps"] if s["uri"].endswith("/ui/command/fill"))
+    assert fill["payload"].get("value") == "Nowy post na LinkedIn"
