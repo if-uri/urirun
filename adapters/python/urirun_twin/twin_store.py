@@ -102,6 +102,12 @@ class _NamespacedStore:
         self._parent._data[self._ns] = bucket
         self._parent._flush()
 
+    def __delitem__(self, key: str) -> None:
+        bucket = dict(self._parent._data.get(self._ns) or {})
+        del bucket[key]
+        self._parent._data[self._ns] = bucket
+        self._parent._flush()
+
     def values(self) -> list:
         return list(self._bucket().values())
 
