@@ -5,18 +5,22 @@
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 185, json: 13, shell: 11, yaml: 5, javascript: 4
+- **Languages**: python: 189, json: 13, shell: 11, yaml: 5, javascript: 5
 - **Analysis Mode**: static
-- **Total Functions**: 2322
-- **Total Classes**: 62
-- **Modules**: 247
-- **Entry Points**: 956
+- **Total Functions**: 2451
+- **Total Classes**: 64
+- **Modules**: 252
+- **Entry Points**: 1037
 
 ## Architecture by Module
 
 ### adapters.python.urirun.host.dashboard
-- **Functions**: 556
+- **Functions**: 557
 - **File**: `dashboard.js`
+
+### adapters.python.urirun.host.scanner
+- **Functions**: 137
+- **File**: `scanner.js`
 
 ### adapters.python.urirun_runtime.v2
 - **Functions**: 120
@@ -62,6 +66,11 @@
 - **Functions**: 43
 - **File**: `_registry.py`
 
+### adapters.python.urirun_twin.twin_store
+- **Functions**: 42
+- **Classes**: 3
+- **File**: `twin_store.py`
+
 ### adapters.python.urirun_node.client
 - **Functions**: 35
 - **Classes**: 1
@@ -93,14 +102,6 @@
 ### adapters.python.urirun.host.twin_bridge
 - **Functions**: 26
 - **File**: `twin_bridge.py`
-
-### adapters.python.urirun.host.dashboard_api
-- **Functions**: 25
-- **File**: `dashboard_api.py`
-
-### adapters.python.urirun.host.task_cli
-- **Functions**: 25
-- **File**: `task_cli.py`
 
 ## Key Entry Points
 
@@ -306,11 +307,11 @@ so this is a normal
 - **Key Methods**: adapters.python.urirun_node.server.NodeHandler.ctx, adapters.python.urirun_node.server.NodeHandler.do_OPTIONS, adapters.python.urirun_node.server.NodeHandler._guarded, adapters.python.urirun_node.server.NodeHandler.do_GET, adapters.python.urirun_node.server.NodeHandler.do_POST, adapters.python.urirun_node.server.NodeHandler._health_payload, adapters.python.urirun_node.server.NodeHandler._routes_payload, adapters.python.urirun_node.server.NodeHandler._get, adapters.python.urirun_node.server.NodeHandler._get_errors, adapters.python.urirun_node.server.NodeHandler._post
 - **Inherits**: BaseHTTPRequestHandler
 
-### adapters.python.urirun.node.twin_store.TwinMemory
+### adapters.python.urirun_twin.twin_store.TwinMemory
 > Remembers the KNOWN-GOOD environment fingerprint per node (snapshot-on-success), so a later
 run dete
 - **Methods**: 21
-- **Key Methods**: adapters.python.urirun.node.twin_store.TwinMemory.remember, adapters.python.urirun.node.twin_store.TwinMemory.known_good, adapters.python.urirun.node.twin_store.TwinMemory.drift, adapters.python.urirun.node.twin_store.TwinMemory.remember_flow, adapters.python.urirun.node.twin_store.TwinMemory.recall_flow, adapters.python.urirun.node.twin_store.TwinMemory.known_good_flows, adapters.python.urirun.node.twin_store.TwinMemory.degraded_flows, adapters.python.urirun.node.twin_store.TwinMemory.remember_episode, adapters.python.urirun.node.twin_store.TwinMemory.known_good_episodes, adapters.python.urirun.node.twin_store.TwinMemory.recall_episode
+- **Key Methods**: adapters.python.urirun_twin.twin_store.TwinMemory.remember, adapters.python.urirun_twin.twin_store.TwinMemory.known_good, adapters.python.urirun_twin.twin_store.TwinMemory.drift, adapters.python.urirun_twin.twin_store.TwinMemory.remember_flow, adapters.python.urirun_twin.twin_store.TwinMemory.recall_flow, adapters.python.urirun_twin.twin_store.TwinMemory.known_good_flows, adapters.python.urirun_twin.twin_store.TwinMemory.degraded_flows, adapters.python.urirun_twin.twin_store.TwinMemory.remember_episode, adapters.python.urirun_twin.twin_store.TwinMemory.known_good_episodes, adapters.python.urirun_twin.twin_store.TwinMemory.recall_episode
 
 ### adapters.python.urirun.Connector
 > Small convention helper for connector packages.
@@ -328,12 +329,12 @@ Sub-class and set class attributes::
 - **Methods**: 11
 - **Key Methods**: adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.compile, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.dispatch_dry, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.dispatch_execute, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.assert_ok, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.assert_reply_shape, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_bindings_validate, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_bindings_compile, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_bindings_serializable, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_dry_run_routes_return_valid_reply_shape, adapters.python.urirun.connectors.connector_contract.ConnectorContractSuite.test_execute_cases
 
-### adapters.python.urirun.node.twin_store._NamespacedStore
+### adapters.python.urirun_twin.twin_store._NamespacedStore
 > Wraps a JsonFileStore so all reads/writes go through a named sub-key.
 
 ``store["_flows"]["abc"]`` be
-- **Methods**: 9
-- **Key Methods**: adapters.python.urirun.node.twin_store._NamespacedStore.__init__, adapters.python.urirun.node.twin_store._NamespacedStore._bucket, adapters.python.urirun.node.twin_store._NamespacedStore.get, adapters.python.urirun.node.twin_store._NamespacedStore.__getitem__, adapters.python.urirun.node.twin_store._NamespacedStore.__contains__, adapters.python.urirun.node.twin_store._NamespacedStore.__setitem__, adapters.python.urirun.node.twin_store._NamespacedStore.values, adapters.python.urirun.node.twin_store._NamespacedStore.items, adapters.python.urirun.node.twin_store._NamespacedStore.keys
+- **Methods**: 10
+- **Key Methods**: adapters.python.urirun_twin.twin_store._NamespacedStore.__init__, adapters.python.urirun_twin.twin_store._NamespacedStore._bucket, adapters.python.urirun_twin.twin_store._NamespacedStore.get, adapters.python.urirun_twin.twin_store._NamespacedStore.__getitem__, adapters.python.urirun_twin.twin_store._NamespacedStore.__contains__, adapters.python.urirun_twin.twin_store._NamespacedStore.__setitem__, adapters.python.urirun_twin.twin_store._NamespacedStore.__delitem__, adapters.python.urirun_twin.twin_store._NamespacedStore.values, adapters.python.urirun_twin.twin_store._NamespacedStore.items, adapters.python.urirun_twin.twin_store._NamespacedStore.keys
 
 ### adapters.python.urirun_flow.Flow
 - **Methods**: 8
@@ -346,11 +347,11 @@ bounded queue; publis
 - **Methods**: 7
 - **Key Methods**: adapters.python.urirun_node.server.EventHub.__init__, adapters.python.urirun_node.server.EventHub.publish, adapters.python.urirun_node.server.EventHub.subscribe, adapters.python.urirun_node.server.EventHub.unsubscribe, adapters.python.urirun_node.server.EventHub.replay_since, adapters.python.urirun_node.server.EventHub.current_id, adapters.python.urirun_node.server.EventHub.count
 
-### adapters.python.urirun.node.twin_store.JsonFileStore
+### adapters.python.urirun_twin.twin_store.JsonFileStore
 > A dict-like store that persists every write to a single JSON file (atomic replace), so a
 TwinMemory 
 - **Methods**: 7
-- **Key Methods**: adapters.python.urirun.node.twin_store.JsonFileStore.__init__, adapters.python.urirun.node.twin_store.JsonFileStore.get, adapters.python.urirun.node.twin_store.JsonFileStore.items, adapters.python.urirun.node.twin_store.JsonFileStore.__getitem__, adapters.python.urirun.node.twin_store.JsonFileStore.__contains__, adapters.python.urirun.node.twin_store.JsonFileStore.__setitem__, adapters.python.urirun.node.twin_store.JsonFileStore._flush
+- **Key Methods**: adapters.python.urirun_twin.twin_store.JsonFileStore.__init__, adapters.python.urirun_twin.twin_store.JsonFileStore.get, adapters.python.urirun_twin.twin_store.JsonFileStore.items, adapters.python.urirun_twin.twin_store.JsonFileStore.__getitem__, adapters.python.urirun_twin.twin_store.JsonFileStore.__contains__, adapters.python.urirun_twin.twin_store.JsonFileStore.__setitem__, adapters.python.urirun_twin.twin_store.JsonFileStore._flush
 
 ### adapters.python.urirun_runtime.worker.WorkerPool
 > A single long-lived connector worker. Reuse across many URI calls.
@@ -549,6 +550,16 @@ concurrency (If-Registry-
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.host.fs_transfer.short_value
 
+### recursion__leaf_ok
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate._leaf_ok
+
+### recursion_check
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_connectors_toolkit.contract_gate.check
+
 ### recursion__uri_action_lookup
 - **Type**: recursion
 - **Confidence**: 0.90
@@ -558,16 +569,6 @@ concurrency (If-Registry-
 - **Type**: state_machine
 - **Confidence**: 0.70
 - **Functions**: adapters.java.Urirun.Urirun.Connector, adapters.java.Urirun.Urirun.Connector, adapters.java.Urirun.Urirun.command, adapters.java.Urirun.Urirun.bindingsJson
-
-### state_machine_Connector
-- **Type**: state_machine
-- **Confidence**: 0.70
-- **Functions**: adapters.ts.urirun.Connector.command, adapters.ts.urirun.Connector.document, adapters.ts.urirun.Connector.toJSON, adapters.ts.urirun.Connector.connector
-
-### state_machine_Connector
-- **Type**: state_machine
-- **Confidence**: 0.70
-- **Functions**: adapters.php.Urirun.Connector.__construct, adapters.php.Urirun.Connector.target, adapters.php.Urirun.Connector.command, adapters.php.Urirun.Connector.bindings, adapters.php.Urirun.Connector.bindingsJson
 
 ## Public API Surface
 
@@ -590,8 +591,8 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.connectors.connector_lint.verify_connector` - 27 calls
 - `adapters.python.urirun.runtime.errors.info` - 27 calls
 - `adapters.python.urirun_node.client.NodeClient.resolve_refs` - 26 calls
-- `adapters.python.urirun.host.discovery.node_alias_map_from_env` - 26 calls
 - `adapters.python.urirun.host.node_api.execute_http_request` - 26 calls
+- `adapters.python.urirun.host.discovery.node_alias_map_from_env` - 26 calls
 - `adapters.python.urirun_node.server.apply_deploy` - 25 calls
 - `adapters.python.urirun.runtime.codegen.proto_from_registry` - 25 calls
 - `adapters.python.urirun_runtime.v2_grpc.main` - 25 calls
@@ -603,8 +604,8 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.host.object_registry.probe_node_token` - 24 calls
 - `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
-- `adapters.python.urirun.host.node_health.node_doctor` - 23 calls
 - `adapters.python.urirun.host.node_api.configured_api_headers` - 23 calls
+- `adapters.python.urirun.host.node_health.node_doctor` - 23 calls
 - `adapters.python.urirun.node.doctor.format_doctor_report` - 22 calls
 - `adapters.python.urirun_connectors_toolkit.resolver.index_local` - 22 calls
 - `adapters.python.urirun.runtime.errors.problem` - 22 calls

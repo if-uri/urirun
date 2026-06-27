@@ -1,8 +1,9 @@
-# code2llm | 248f 40153L | python:185,json:13,shell:11,yaml:5,javascript:4,csharp:4,txt:3,yml:2,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
-# generated in 0.20s
-# CC̅=4.7 | critical:32/2322 | dups:0 | cycles:0
+# code2llm | 253f 40187L | python:189,json:13,shell:11,yaml:5,javascript:5,csharp:4,txt:3,yml:2,java:2,go:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
+# generated in 0.17s
+# CC̅=4.7 | critical:35/2451 | dups:0 | cycles:0
 
 HEALTH[20]:
+  🟡 CC    _thin_dispatch_step CC=16 (limit:15)
   🟡 CC    applyControlsFromUrl CC=22 (limit:15)
   🟡 CC    createTicket CC=25 (limit:15)
   🟡 CC    installConnector CC=26 (limit:15)
@@ -22,12 +23,11 @@ HEALTH[20]:
   🟡 CC    renderDiscovery CC=17 (limit:15)
   🟡 CC    renderArtifactFileRow CC=19 (limit:15)
   🟡 CC    renderTwinPlanCard CC=43 (limit:15)
-  🟡 CC    renderAttachment CC=26 (limit:15)
 
 REFACTOR[1]:
   1. split 20 high-CC methods  (CC>15)
 
-PIPELINES[822]:
+PIPELINES[873]:
   [1] Src [http]: http
       PURITY: 100% pure
   [2] Src [_attacker_key]: _attacker_key → open → esc → text
@@ -140,21 +140,22 @@ LAYERS:
   │ release-bump.sh             29L  0C    0m  CC=0.0    ←0
   │ sync-versions.sh            25L  0C    0m  CC=0.0    ←0
   │
-  adapters/                       CC̄=4.8    ←in:18  →out:12  !! split
-  │ !! dashboard.js              2693L  0C  384m  CC=43     ←55
-  │ !! html_templates            2227L  0C    3m  CC=6      ←0
-  │ !! v2                        2033L  2C  120m  CC=14     ←5
-  │ !! host_dashboard            1930L  0C  102m  CC=14     ←1
+  adapters/                       CC̄=4.7    ←in:19  →out:12  !! split
+  │ !! dashboard.js              2700L  0C  385m  CC=43     ←56
+  │ !! v2                        2033L  2C  120m  CC=14     ←6
+  │ !! host_dashboard            1934L  0C  102m  CC=14     ←1
   │ !! scanner_bridge            1548L  0C    0m  CC=0.0    ←0
   │ !! document_sync             1422L  0C    0m  CC=0.0    ←0
-  │ !! chat_orchestrator         1415L  1C   45m  CC=14     ←0
+  │ !! chat_orchestrator         1418L  1C   45m  CC=14     ←0
   │ !! server                     996L  3C   55m  CC=14     ←3
   │ !! object_registry            981L  0C   46m  CC=14     ←0
   │ !! flow                       939L  0C   49m  CC=10     ←6
   │ !! node_cli                   910L  0C   57m  CC=13     ←1
   │ !! __init__                   766L  1C   53m  CC=14     ←13
   │ !! _registry                  718L  0C   43m  CC=14     ←1
+  │ !! scanner.js                 664L  0C  116m  CC=26     ←1
   │ !! _runtime                   597L  1C   30m  CC=13     ←2
+  │ !! flow_thin                  568L  1C   26m  CC=16     ←1
   │ !! client                     558L  1C   35m  CC=12     ←1
   │ !! transport                  540L  0C   24m  CC=14     ←3
   │ !! twin_bridge                528L  0C   26m  CC=12     ←1
@@ -168,6 +169,7 @@ LAYERS:
   │ host_integrations          374L  0C   16m  CC=8      ←0
   │ discovery                  372L  0C   29m  CC=14     ←2
   │ fs_transfer                362L  0C   15m  CC=14     ←5
+  │ twin_store                 359L  3C   42m  CC=9      ←0
   │ task_planner               355L  2C   15m  CC=12     ←0
   │ task_cli                   346L  0C   25m  CC=12     ←0
   │ scanner_service            342L  0C    0m  CC=0.0    ←0
@@ -180,10 +182,12 @@ LAYERS:
   │ node_types                 265L  0C    8m  CC=8      ←1
   │ secrets                    263L  1C   18m  CC=9      ←1
   │ node_api                   260L  0C   12m  CC=13     ←0
+  │ contract_gate              255L  2C    9m  CC=13     ←0
   │ connector_admin            240L  0C    9m  CC=14     ←1
   │ run                        236L  0C   12m  CC=14     ←1
   │ config                     226L  0C   17m  CC=9      ←3
   │ node_health                224L  0C    9m  CC=13     ←0
+  │ preconditions              218L  1C   14m  CC=12     ←0
   │ __init__                   216L  3C   12m  CC=13     ←0
   │ v2_grpc                    207L  0C   11m  CC=9      ←0
   │ discovery                  202L  0C    9m  CC=9      ←0
@@ -194,11 +198,12 @@ LAYERS:
   │ planner                    172L  0C    7m  CC=14     ←1
   │ resolver                   169L  0C   10m  CC=13     ←1
   │ new-connector.sh           168L  0C    1m  CC=0.0    ←0
+  │ dispatch                   168L  0C    7m  CC=12     ←1
   │ conformance                167L  0C    7m  CC=7      ←0
+  │ routing                    164L  0C   10m  CC=14     ←1
   │ android_node               162L  0C    7m  CC=14     ←1
-  │ !! routing                    161L  0C    8m  CC=17     ←1
-  │ dispatch                   160L  0C    7m  CC=12     ←1
   │ capability                 160L  0C    6m  CC=12     ←0
+  │ html_templates             156L  0C    3m  CC=6      ←0
   │ scanner_net                153L  0C    0m  CC=0.0    ←0
   │ scheduler                  135L  0C    6m  CC=4      ←0
   │ decision_loop              134L  0C    5m  CC=13     ←1
@@ -226,7 +231,7 @@ LAYERS:
   │ lib.rs                      39L  1C    4m  CC=1      ←0
   │ urirun.rb                   39L  1C    4m  CC=4      ←0
   │ Urirun.java                 38L  1C    3m  CC=1      ←1
-  │ index.js                    33L  0C   11m  CC=8      ←10
+  │ index.js                    33L  0C   11m  CC=8      ←11
   │ Urirun.cs                   32L  1C    3m  CC=1      ←0
   │ cdp                         31L  0C    0m  CC=0.0    ←0
   │ main.go                     24L  0C    1m  CC=1      ←0
@@ -234,9 +239,9 @@ LAYERS:
   │ urirun_test.c               18L  0C    2m  CC=2      ←0
   │ urirun.sh                   17L  0C    2m  CC=0.0    ←0
   │ urirun-connector.csproj.FileListAbsolute.txt    15L  0C    0m  CC=0.0    ←0
-  │ package.json                14L  0C    0m  CC=0.0    ←0
   │ hash_connector.pl           14L  0C    0m  CC=0.0    ←0
   │ hash-connector.php          14L  0C    0m  CC=0.0    ←0
+  │ package.json                14L  0C    0m  CC=0.0    ←0
   │ urirun.h                    13L  0C    1m  CC=1      ←0
   │ hash_connector.rs           12L  0C    1m  CC=1      ←0
   │ HashConnector.java          11L  1C    1m  CC=1      ←0
@@ -308,8 +313,6 @@ LAYERS:
   │ _util                        4L  0C    6m  CC=2      ←7
   │ doctor                       4L  0C   13m  CC=9      ←1
   │ paths                        4L  0C    3m  CC=5      ←4
-  │ preconditions                4L  1C   14m  CC=12     ←0
-  │ twin_store                   4L  3C   41m  CC=9      ←0
   │ episode                      4L  6C   10m  CC=14     ←4
   │ connector_lint               4L  0C   38m  CC=14     ←1
   │ connect_catalog              4L  0C   17m  CC=13     ←0
@@ -317,7 +320,6 @@ LAYERS:
   │ connector_contract           4L  1C   11m  CC=4      ←0
   │ diagnostics                  4L  1C   19m  CC=8      ←2
   │ flow_verify                  4L  0C    7m  CC=10     ←1
-  │ flow_thin                    4L  1C   26m  CC=14     ←1
   │ flow_planner                 4L  0C   31m  CC=14     ←3
   │ openapi_import               4L  0C    0m  CC=0.0    ←0
   │ scanner_net                  4L  0C    0m  CC=0.0    ←0
@@ -341,8 +343,11 @@ LAYERS:
   │ reversible                   4L  0C    0m  CC=0.0    ←0
   │ formatting                   4L  0C    0m  CC=0.0    ←0
   │ mesh                         4L  0C    0m  CC=0.0    ←0
+  │ flow_thin                    4L  0C    0m  CC=0.0    ←0
   │ transport                    4L  0C    0m  CC=0.0    ←0
   │ flow                         4L  0C    0m  CC=0.0    ←0
+  │ twin_store                   4L  0C    0m  CC=0.0    ←0
+  │ preconditions                4L  0C    0m  CC=0.0    ←0
   │ .NETCoreApp,Version=v8.0.AssemblyAttributes.cs     4L  0C    0m  CC=0.0    ←0
   │ __init__                     2L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
@@ -381,7 +386,7 @@ LAYERS:
   ./                              CC̄=0.0    ←in:0  →out:0
   │ !! planfile.yaml             1319L  0C    0m  CC=0.0    ←0
   │ !! goal.yaml                  538L  0C    0m  CC=0.0    ←0
-  │ Makefile                   152L  0C    0m  CC=0.0    ←0
+  │ Makefile                   168L  0C    0m  CC=0.0    ←0
   │ prefact.yaml                94L  0C    0m  CC=0.0    ←0
   │ project.sh                  69L  0C    0m  CC=0.0    ←0
   │ requirements.txt            32L  0C    0m  CC=0.0    ←0
@@ -399,7 +404,7 @@ LAYERS:
 
 COUPLING:
                            adapters.python              scripts             adapters      examples.matrix                v1.js  security.mesh-probe        adapters.java        adapters.perl
-      adapters.python                   ──                  139                   18                   ←3                    6                   ←1                    1                    1  hub
+      adapters.python                   ──                  139                   19                   ←3                    6                   ←1                    1                    1  hub
               scripts                    2                   ──                  ←11                   ←7                                        ←1                                            hub
              adapters                    1                   11                   ──                                                                                                           hub
       examples.matrix                    3                    7                                        ──                                                                                      !! fan-out
@@ -408,13 +413,13 @@ COUPLING:
         adapters.java                   ←1                                                                                                                            ──                     
         adapters.perl                   ←1                                                                                                                                                 ──
   CYCLES: none
-  HUB: adapters/ (fan-in=18)
-  HUB: adapters.python/ (fan-in=7)
+  HUB: adapters/ (fan-in=19)
   HUB: scripts/ (fan-in=158)
   HUB: v1.js/ (fan-in=6)
+  HUB: adapters.python/ (fan-in=7)
   SMELL: adapters/ fan-out=12 → split needed
-  SMELL: adapters.python/ fan-out=165 → split needed
   SMELL: examples.matrix/ fan-out=10 → split needed
+  SMELL: adapters.python/ fan-out=166 → split needed
 
 EXTERNAL:
   validation: run `vallm batch .` → validation.toon

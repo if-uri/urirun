@@ -1,8 +1,8 @@
-# urirun | 2322 func | 129f | 40153L | python | 2026-06-27
+# urirun | 2451 func | 131f | 40205L | python | 2026-06-27
 # generated in 0.00s
 
 HEALTH:
-  CC̄=4.7  critical=291 (limit:10)  dup=2  cycles=0
+  CC̄=4.7  critical=304 (limit:10)  dup=2  cycles=0
 
 ALERTS[20]:
   !!! cc_exceeded      renderTwinPlanCard = 43 (limit:15)
@@ -16,14 +16,13 @@ ALERTS[20]:
   !!! cc_exceeded      renderWidgetCard = 26 (limit:15)
   !!! cc_exceeded      renderChatMessage = 26 (limit:15)
 
-MODULES[248] (top by size):
-  M[adapters/python/urirun/host/dashboard.js] 2693L C:0 F:384 CC↑43 D:55 (javascript)
-  M[adapters/python/urirun/host/html_templates.py] 2227L C:0 F:3 CC↑6 D:0 (python)
-  M[adapters/python/urirun_runtime/v2.py] 2033L C:2 F:120 CC↑14 D:5 (python)
-  M[adapters/python/urirun/host/host_dashboard.py] 1930L C:0 F:102 CC↑14 D:1 (python)
+MODULES[253] (top by size):
+  M[adapters/python/urirun/host/dashboard.js] 2700L C:0 F:385 CC↑43 D:56 (javascript)
+  M[adapters/python/urirun_runtime/v2.py] 2033L C:2 F:120 CC↑14 D:6 (python)
+  M[adapters/python/urirun/host/host_dashboard.py] 1934L C:0 F:102 CC↑14 D:1 (python)
   M[adapters/python/urirun_scanner/scanner_bridge.py] 1548L C:0 F:0 CC↑0 D:0 (python)
+  M[adapters/python/urirun/host/chat_orchestrator.py] 1436L C:1 F:45 CC↑14 D:0 (python)
   M[adapters/python/urirun_scanner/document_sync.py] 1422L C:0 F:0 CC↑0 D:0 (python)
-  M[adapters/python/urirun/host/chat_orchestrator.py] 1415L C:1 F:45 CC↑14 D:0 (python)
   M[planfile.yaml] 1319L C:0 F:0 CC↑0 D:0 (yaml)
   M[adapters/python/urirun_node/server.py] 996L C:3 F:55 CC↑14 D:3 (python)
   M[adapters/python/urirun/host/object_registry.py] 981L C:0 F:46 CC↑14 D:0 (python)
@@ -31,8 +30,9 @@ MODULES[248] (top by size):
   M[adapters/python/urirun/host/node_cli.py] 910L C:0 F:57 CC↑13 D:1 (python)
   M[adapters/python/urirun/__init__.py] 766L C:1 F:53 CC↑14 D:13 (python)
   M[adapters/python/urirun_runtime/_registry.py] 718L C:0 F:43 CC↑14 D:1 (python)
+  M[adapters/python/urirun/host/scanner.js] 664L C:0 F:116 CC↑26 D:1 (javascript)
   M[adapters/python/urirun_runtime/_runtime.py] 597L C:1 F:30 CC↑13 D:2 (python)
-  LANGS: python:185/json:13/shell:11/yaml:5/javascript:4/csharp:4/c:3/txt:3/ruby:2/typescript:2/go:2/php:2/java:2/rust:2/other:2/toml:2/yml:2/pm:1/perl:1
+  LANGS: python:189/json:13/shell:11/javascript:5/yaml:5/csharp:4/c:3/txt:3/ruby:2/typescript:2/go:2/php:2/java:2/rust:2/other:2/toml:2/yml:2/pm:1/perl:1
 
 HOTSPOTS[10]:
   ★ _add_host_subparser fan=30  // The `host` command tree (init/add-node/config/nodes/routes/agents/watch/dashboar
@@ -49,4 +49,4 @@ REFACTOR[15]:
   [5] H/L Split renderTwinPlanCard (CC=43)
 
 EVOLUTION:
-  2026-06-27 CC̄=4.7 crit=291 40153L // Automated analysis
+  2026-06-27 CC̄=4.7 crit=304 40205L // Automated analysis

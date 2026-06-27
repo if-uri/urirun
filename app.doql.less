@@ -145,6 +145,20 @@ workflow[name="publish"] {
   step-1: run cmd=cd adapters/python && $(PYTHON) -m twine upload --skip-existing dist/*;
 }
 
+workflow[name="publish-meta"] {
+  trigger: manual;
+  step-1: run cmd=for pkg in $(META_PKGS); do \;
+  step-2: run cmd=dir="$(MONO)/$$pkg"; \;
+  step-3: run cmd=if [ ! -f "$$dir/pyproject.toml" ]; then echo "SKIP $$pkg (not found at $$dir)"; continue; fi; \;
+  step-4: run cmd=echo "==> build $$pkg"; \;
+  step-5: run cmd=rm -rf "$$dir/dist" "$$dir/build"; \;
+  step-6: run cmd=cd "$$dir" && $(PYTHON) -m build --no-isolation && cd -; \;
+  step-7: run cmd=echo "==> upload $$pkg"; \;
+  step-8: run cmd=cd "$$dir" && $(PYTHON) -m twine upload --skip-existing dist/* && cd -; \;
+  step-9: run cmd=echo "==> done $$pkg"; \;
+  step-10: run cmd=done;
+}
+
 workflow[name="release"] {
   trigger: manual;
   step-1: run cmd=v=$$(cat adapters/python/VERSION); \;
