@@ -1412,7 +1412,8 @@ def _unwrap_recall(recalled) -> dict | None:
     return recalled if (recalled.get("steps") or []) else None
 
 
-def _try_recall_gate(twin_memory, selected_nodes: list, prompt: str) -> tuple:
+def _try_recall_gate(twin_memory, selected_nodes: list, prompt: str,
+                     routes: list[dict] | None = None, registry: dict | None = None) -> tuple:
     """Check the episode recall gate; return (flow, generator) or (None, None) on miss."""
     if twin_memory is None:
         return None, None
@@ -1428,6 +1429,12 @@ def _try_recall_gate(twin_memory, selected_nodes: list, prompt: str) -> tuple:
             "task": {"id": "recall", "source": _recalled.get("source", "recall"), "title": prompt}}
     from urirun_flow.flow_planner import prepare_screenshot_capture_flow  # noqa: PLC0415
     flow = prepare_screenshot_capture_flow(flow, prompt, {str(s.get("uri") or "") for s in _rec_steps if isinstance(s, dict)})
+    if routes:
+        from urirun_flow.env_selection import recall_env_enum_replan_required  # noqa: PLC0415
+        inventories = _env_enum_inventories(flow, registry or {}, routes)
+        replan = recall_env_enum_replan_required(flow, routes, inventories)
+        if replan.get("required"):
+            return None, None
     generator = {"provider": "recall", "fallback": False, "cached": True,
                  "episodeId": _recalled.get("episode_id"),
                  "flowKey": _recalled.get("flow_key"),
@@ -1779,7 +1786,8 @@ def _chat_ask_general(
             # handler: episode_id direct → intent×env (episode_store) → intent-only (flow_store).
             # The flow_store fallback fires even when env_fp is empty — new install, offline node —
             # closing the loop that the episode gate alone left open.
-            flow, generator = _try_recall_gate(twin_memory, selected_nodes, prompt)
+            flow, generator = _try_recall_gate(
+                twin_memory, selected_nodes, prompt, discovered.get("routes") or [], registry)
             if flow is None:
                 retrieval = _retrieve_experience_context(
                     twin_memory, selected_nodes, prompt, discovered.get("routes") or [])

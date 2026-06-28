@@ -1,7 +1,7 @@
 # Architektura systemu urirun
 
 <!-- docs-nav -->
-📖 **Dokumentacja urirun:** [← README](../README.md) · **Architektura** · [Autonomia](AUTONOMY_ARCHITECTURE.md) · [Komponenty](COMPONENTS.md) · [URI Objects](URI_OBJECTS.md) · [Łączenie node](NODE_CONNECTIONS.md) · [Dashboard & chat](HOST_DASHBOARD_CHAT.md) · [Host↔Node](HOST_NODE_COMMUNICATION.md) · [Sekrety](SECRETS.md) · [Archiwum dok.](DOCUMENT_ARCHIVE.md) · [Decision Loop](DECISION_LOOP.md) · [Roadmap](REFACTOR_ROADMAP.md) · [Podział paczek](URIRUN_PACKAGE_SPLIT_PLAN.md) · [Planfile](PLANFILE_HOST_INTEGRATION_PLAN.md)
+📖 **Dokumentacja urirun:** [← README](../README.md) · **Architektura** · [Autonomia](AUTONOMY_ARCHITECTURE.md) · [Retrieval](EXPERIENCE_RETRIEVAL.md) · [Komponenty](COMPONENTS.md) · [URI Objects](URI_OBJECTS.md) · [Łączenie node](NODE_CONNECTIONS.md) · [Dashboard & chat](HOST_DASHBOARD_CHAT.md) · [Host↔Node](HOST_NODE_COMMUNICATION.md) · [Sekrety](SECRETS.md) · [Archiwum dok.](DOCUMENT_ARCHIVE.md) · [Decision Loop](DECISION_LOOP.md) · [Roadmap](REFACTOR_ROADMAP.md) · [Podział paczek](URIRUN_PACKAGE_SPLIT_PLAN.md) · [Planfile](PLANFILE_HOST_INTEGRATION_PLAN.md)
 <!-- /docs-nav -->
 
 Status: 2026-06-28.
@@ -499,6 +499,7 @@ Makefile poszczególnych paczek.
 
 - [Komponenty](COMPONENTS.md): pojęcia operatora i granice host/node/service.
 - [Autonomia](AUTONOMY_ARCHITECTURE.md): LLM proponuje plan, kernel go akceptuje lub blokuje.
+- [Experience Retrieval](EXPERIENCE_RETRIEVAL.md): kandydaci retrieval/recall przed krokiem propose.
 - [URI Objects](URI_OBJECTS.md): kontrakt objectów, artifactów i widgetów.
 - [Dashboard & chat](HOST_DASHBOARD_CHAT.md): UI operatora, chat, recovery.
 - [Host↔Node](HOST_NODE_COMMUNICATION.md): API i transport host-node.

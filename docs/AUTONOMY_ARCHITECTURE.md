@@ -1,7 +1,7 @@
 # Architektura autonomii urirun
 
 <!-- docs-nav -->
-📖 **Dokumentacja urirun:** [← README](../README.md) · [Architektura](ARCHITECTURE.md) · **Autonomia** · [Komponenty](COMPONENTS.md) · [Decision Loop](DECISION_LOOP.md) · [Roadmap](REFACTOR_ROADMAP.md)
+📖 **Dokumentacja urirun:** [← README](../README.md) · [Architektura](ARCHITECTURE.md) · **Autonomia** · [Retrieval](EXPERIENCE_RETRIEVAL.md) · [Komponenty](COMPONENTS.md) · [Decision Loop](DECISION_LOOP.md) · [Roadmap](REFACTOR_ROADMAP.md)
 <!-- /docs-nav -->
 
 Status: 2026-06-28.
@@ -100,6 +100,9 @@ Wejście: `{intent, fingerprint/env_fp, node, k, routes}`. Wyjście:
 Kandydaci są materiałem roboczym dla LLM: pokazują sprawdzone epizody,
 potencjalnie trafne trasy i preferencje z aktualnego fingerprintu. Nie są
 decyzją i nie omijają `router://host/plan/query/accept`.
+
+Szczegółowy opis tej warstwy, krawędzi exact/similarity i diagramów Mermaid jest
+w [EXPERIENCE_RETRIEVAL.md](EXPERIENCE_RETRIEVAL.md).
 
 Warstwa retrieval ma dwie klasy krawędzi:
 
