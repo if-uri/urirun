@@ -71,6 +71,10 @@ class HostDashboardTests(unittest.TestCase):
                 self.assertIn("/api/summary", js)
                 self.assertIn("maybeAutoRunChatFromUrl", js)
                 self.assertIn("action === 'tab:chat'", js)
+                self.assertIn("target_explicit: targetExplicit", js)
+                self.assertIn("item.checked = item.value === 'host'", js)
+                self.assertIn("!== 'tab:chat'", js)
+                self.assertIn("normalizedKey !== key", js)
                 self.assertIn("documentReconcileBtn", html)  # index reconcile button is wired in
 
                 summary = get_json(f"{base}/api/summary")
@@ -433,6 +437,16 @@ class NodeTestRoutesTests(unittest.TestCase):
         "fs://host/path/query/stat": {"ok": False, "error": {"category": "NOT_FOUND",
                                                              "message": "Route not found: fs.path.query"}},
         "env://n/runtime/query/health": {"ok": True, "result": {"value": {"ok": True, "version": "1"}}},
+        "kvm://host/screen/query/capture": {
+            "ok": True,
+            "result": {
+                "value": {
+                    "ok": True,
+                    "degraded": True,
+                    "degradedReason": "xdg-portal returned a placeholder",
+                }
+            },
+        },
         "fs://host/file/command/write_blob": {"ok": True, "result": {"value": {"ok": True}}},
     }
 
@@ -453,13 +467,15 @@ class NodeTestRoutesTests(unittest.TestCase):
             [p.stop() for p in ctx]
         self.assertTrue(r["ok"])
         self.assertEqual(r["mode"], "query")
-        self.assertEqual(r["tested"], 3)            # the 3 /query/ routes, NOT the command
+        self.assertEqual(r["tested"], 4)            # the 4 /query/ routes, NOT the command
         self.assertEqual(r["okCount"], 2)           # blob + health
-        self.assertEqual(r["reachable"], 2)         # not-found stat is not reachable
+        self.assertEqual(r["degraded"], 1)          # degraded is reachable, but not ok
+        self.assertEqual(r["reachable"], 3)         # not-found stat is not reachable
         self.assertEqual(r["broken"], 1)
         statuses = {x["uri"]: x["status"] for x in r["results"]}
         self.assertEqual(statuses["fs://host/path/query/stat"], "not-found")
         self.assertEqual(statuses["fs://host/file/query/blob"], "ok")
+        self.assertEqual(statuses["kvm://host/screen/query/capture"], "degraded")
 
     def test_selected_mode_tests_exact_uris_including_commands(self):
         ctx = self._patched()

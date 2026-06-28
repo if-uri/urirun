@@ -1,4 +1,5 @@
 # System Architecture Analysis
+<!-- generated in 0.01s -->
 
 ## Overview
 
@@ -6,15 +7,15 @@
 - **Primary Language**: python
 - **Languages**: python: 200, json: 15, shell: 14, yaml: 5, javascript: 5
 - **Analysis Mode**: static
-- **Total Functions**: 2579
+- **Total Functions**: 2582
 - **Total Classes**: 63
 - **Modules**: 269
-- **Entry Points**: 1065
+- **Entry Points**: 1067
 
 ## Architecture by Module
 
 ### adapters.python.urirun.host.dashboard
-- **Functions**: 606
+- **Functions**: 616
 - **File**: `dashboard.js`
 
 ### adapters.python.urirun.host.scanner
@@ -49,12 +50,12 @@
 - **File**: `__init__.py`
 
 ### adapters.python.urirun.host.chat_orchestrator
-- **Functions**: 52
+- **Functions**: 53
 - **Classes**: 1
 - **File**: `chat_orchestrator.py`
 
 ### adapters.python.urirun_flow.flow
-- **Functions**: 49
+- **Functions**: 50
 - **File**: `flow.py`
 
 ### adapters.python.urirun.host.object_registry
@@ -70,14 +71,14 @@
 - **Classes**: 3
 - **File**: `twin_store.py`
 
+### adapters.python.urirun_flow.flow_planner
+- **Functions**: 39
+- **File**: `flow_planner.py`
+
 ### adapters.python.urirun_node.client
 - **Functions**: 35
 - **Classes**: 1
 - **File**: `client.py`
-
-### adapters.python.urirun_flow.flow_planner
-- **Functions**: 35
-- **File**: `flow_planner.py`
 
 ### adapters.python.urirun.host.host_db
 - **Functions**: 33
@@ -93,7 +94,7 @@
 - **File**: `discovery.py`
 
 ### adapters.python.urirun_flow.flow_thin
-- **Functions**: 27
+- **Functions**: 28
 - **Classes**: 1
 - **File**: `flow_thin.py`
 
@@ -189,7 +190,7 @@ Reconnects automatically, replaying missed events via Last-Event-ID.
 - **Calls**: adapters.python.urirun_node.config.host_config_for_args, adapters.python.urirun_node.config.node_url, getattr, getattr, bool, bool, sys.stderr.write, sys.stderr.flush
 
 ### adapters.python.urirun.host.chat_orchestrator.chat_ask
-- **Calls**: None.strip, adapters.python.urirun.host.chat_orchestrator._parse_chat_nodes_targets, adapters.python.urirun.host.chat_orchestrator._init_selected_targets, adapters.python.urirun.host.chat_orchestrator._infer_node_targets, adapters.python.urirun.host.routing.selected_nodes_from_targets, bool, bool, adapters.python.urirun.host.chat_orchestrator._add_chat_user_message
+- **Calls**: None.strip, adapters.python.urirun.host.chat_orchestrator._parse_chat_nodes_targets, adapters.python.urirun.host.chat_orchestrator._target_selection_explicit, adapters.python.urirun.host.chat_orchestrator._init_selected_targets, adapters.python.urirun.host.chat_orchestrator._infer_node_targets, adapters.python.urirun.host.routing.selected_nodes_from_targets, bool, bool
 
 ### adapters.python.urirun.host.node_health.node_doctor
 > Run all health probes for a urirun node; return a structured per-class report.
@@ -402,11 +403,9 @@ child processes t
 - **Methods**: 4
 - **Key Methods**: adapters.ruby.urirun.Connector.initialize, adapters.ruby.urirun.Connector.command, adapters.ruby.urirun.Connector.bindings, adapters.ruby.urirun.Connector.bindings_json
 
-### adapters.python.urirun_twin.reversible.Connector
-> The ADOPTION CONTRACT. A connector enters the engine by providing these three.
+### adapters.python.urirun_connectors_toolkit.backend_registry.Backend
 - **Methods**: 3
-- **Key Methods**: adapters.python.urirun_twin.reversible.Connector.call, adapters.python.urirun_twin.reversible.Connector.scan_uri, adapters.python.urirun_twin.reversible.Connector.schema
-- **Inherits**: Protocol
+- **Key Methods**: adapters.python.urirun_connectors_toolkit.backend_registry.Backend.missing, adapters.python.urirun_connectors_toolkit.backend_registry.Backend.platform_ok, adapters.python.urirun_connectors_toolkit.backend_registry.Backend.available
 
 ## Data Transformation Functions
 
@@ -466,10 +465,6 @@ concurrency (If-Registry-
 ### adapters.python.urirun_node.transport._parse_sse_line
 - **Output to**: line.startswith, ev.setdefault, json.loads, line.startswith, None.strip
 
-### adapters.python.urirun_twin.reversible.parse
-> ``scheme://node/path`` -> (scheme, node, path).
-- **Output to**: uri.split, rest.partition
-
 ### adapters.python.urirun.connectors.connector_lint._format_secret_reads
 - **Output to**: sr.get, sr.get, lines.append, lines.append, sr.get
 
@@ -492,12 +487,10 @@ concurrency (If-Registry-
 ### adapters.python.urirun_flow.Flow._validate
 - **Output to**: model_validator, self._validate_graph
 
-## Behavioral Patterns
+### adapters.python.urirun_flow.Flow._validate_graph
+- **Output to**: set, len, len, FlowError, visit
 
-### recursion_ts_type
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_connectors_toolkit.contract_typescript.ts_type
+## Behavioral Patterns
 
 ### recursion__field_type
 - **Type**: recursion
@@ -569,6 +562,11 @@ concurrency (If-Registry-
 - **Confidence**: 0.70
 - **Functions**: adapters.ts.urirun.Connector.command, adapters.ts.urirun.Connector.document, adapters.ts.urirun.Connector.toJSON, adapters.ts.urirun.Connector.connector
 
+### state_machine_Connector
+- **Type**: state_machine
+- **Confidence**: 0.70
+- **Functions**: adapters.php.Urirun.Connector.__construct, adapters.php.Urirun.Connector.target, adapters.php.Urirun.Connector.command, adapters.php.Urirun.Connector.bindings, adapters.php.Urirun.Connector.bindingsJson
+
 ## Public API Surface
 
 Functions exposed as public API (no underscore prefix):
@@ -601,10 +599,10 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun_runtime.v2.validate_binding_document` - 24 calls
 - `adapters.python.urirun.host.node_cli.watch_command` - 24 calls
 - `adapters.python.urirun.host.object_registry.probe_node_token` - 24 calls
+- `adapters.python.urirun.host.chat_orchestrator.chat_ask` - 24 calls
 - `adapters.python.urirun.runtime.v1.run` - 23 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
 - `adapters.python.urirun.host.node_api.configured_api_headers` - 23 calls
-- `adapters.python.urirun.host.chat_orchestrator.chat_ask` - 23 calls
 - `adapters.python.urirun.host.node_health.node_doctor` - 23 calls
 - `adapters.python.urirun.node.doctor.format_doctor_report` - 22 calls
 - `adapters.python.urirun_connectors_toolkit.resolver.index_local` - 22 calls

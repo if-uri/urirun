@@ -790,12 +790,43 @@ def _fetch_kvm_query(step: dict, registry: dict, route: str, marker: str) -> dic
     target = route_target(str(step.get("uri") or ""))
     if not target:
         return None
-    try:
-        env = v2_service.call(f"kvm://{target}/{route}", {}, registry, mode="execute")
-        value = result_data(env)
-        return value if isinstance(value, dict) and marker in value else None
-    except Exception:  # noqa: BLE001
-        return None
+    candidates = [f"kvm://{target}/{route}"]
+    routed = _kvm_query_uri_for_node(registry, target, route)
+    if routed and routed not in candidates:
+        candidates.append(routed)
+    if target == "host":
+        # For host-targeted calls keep the historical direct path only. A remote node can
+        # advertise kvm://host/...; callers that mean that node pass kvm://<node>/... and
+        # get routed through the registry metadata fallback above.
+        candidates = candidates[:1]
+    for uri in candidates:
+        try:
+            env = v2_service.call(uri, {}, registry, mode="execute")
+            value = result_data(env)
+            if isinstance(value, dict) and marker in value:
+                return value
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
+def _kvm_query_uri_for_node(registry: dict, node: str, route: str) -> str | None:
+    """Return the advertised KVM query URI for a host-config node name.
+
+    Remote nodes often serve local capabilities as kvm://host/... while the compiled registry
+    carries the real mesh node in route metadata (meta.node). Planner/memory code asks for
+    "lenovo"; dispatch must call the advertised URI, not invent kvm://lenovo/... when that
+    route does not exist.
+    """
+    suffix = f"/{route}"
+    for item in (registry or {}).get("index", {}).values():
+        if not isinstance(item, dict):
+            continue
+        uri = str(item.get("uri") or "")
+        meta = item.get("meta") or {}
+        if uri.startswith("kvm://") and uri.endswith(suffix) and str(meta.get("node") or "") == node:
+            return uri
+    return None
 
 
 def _fetch_env_profile(step: dict, registry: dict) -> dict | None:

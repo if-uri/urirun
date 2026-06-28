@@ -240,68 +240,68 @@ environment[name="local"] {
 
 ## Call Graph
 
-*463 nodes · 500 edges · 60 modules · CC̄=4.7*
+*464 nodes · 500 edges · 57 modules · CC̄=4.6*
 
 ### Hubs (by degree)
 
 | Function | CC | in | out | total |
 |----------|----|----|-----|-------|
-| `print` *(in scripts.test_pypi_install)* | 0 | 217 | 0 | **217** |
-| `list` *(in adapters.python.urirun.host.dashboard)* | 8 | 109 | 4 | **113** |
+| `print` *(in scripts.test_pypi_install)* | 0 | 214 | 0 | **214** |
+| `list` *(in adapters.python.urirun.host.dashboard)* | 8 | 110 | 4 | **114** |
 | `send_json` *(in adapters.python.urirun_node.server)* | 1 | 44 | 12 | **56** |
 | `print_report` *(in scripts.extraction_audit)* | 12 ⚠ | 1 | 36 | **37** |
 | `normalize_error` *(in adapters.python.urirun_flow.recovery)* | 10 ⚠ | 2 | 30 | **32** |
-| `open` *(in adapters.python.urirun.host.dashboard)* | 1 | 30 | 1 | **31** |
 | `_stream_events` *(in adapters.python.urirun_node.server.NodeHandler)* | 14 ⚠ | 0 | 31 | **31** |
 | `_handle_deploy` *(in adapters.python.urirun_node.server.NodeHandler)* | 11 ⚠ | 0 | 29 | **29** |
+| `_handle_run` *(in adapters.python.urirun_node.server.NodeHandler)* | 14 ⚠ | 0 | 29 | **29** |
 
 ```toon markpact:analysis path=project/calls.toon.yaml
 # code2llm call graph | /home/tom/github/if-uri/urirun
 # generated in 0.23s
-# nodes: 463 | edges: 500 | modules: 60
-# CC̄=4.7
+# nodes: 464 | edges: 500 | modules: 57
+# CC̄=4.6
 
 HUBS[20]:
   scripts.test_pypi_install.print
-    CC=0  in:217  out:0  total:217
+    CC=0  in:214  out:0  total:214
   adapters.python.urirun.host.dashboard.list
-    CC=8  in:109  out:4  total:113
+    CC=8  in:110  out:4  total:114
   adapters.python.urirun_node.server.send_json
     CC=1  in:44  out:12  total:56
   scripts.extraction_audit.print_report
     CC=12  in:1  out:36  total:37
   adapters.python.urirun_flow.recovery.normalize_error
     CC=10  in:2  out:30  total:32
-  adapters.python.urirun.host.dashboard.open
-    CC=1  in:30  out:1  total:31
   adapters.python.urirun_node.server.NodeHandler._stream_events
     CC=14  in:0  out:31  total:31
   adapters.python.urirun_node.server.NodeHandler._handle_deploy
     CC=11  in:0  out:29  total:29
-  scripts.transport_swap_proof.main
-    CC=5  in:0  out:29  total:29
   adapters.python.urirun_node.server.NodeHandler._handle_run
     CC=14  in:0  out:29  total:29
+  scripts.transport_swap_proof.main
+    CC=5  in:0  out:29  total:29
   adapters.python.urirun.connectors.connector_lint.verify_connector
     CC=6  in:1  out:27  total:28
   adapters.python.urirun_node.server.apply_deploy
     CC=12  in:2  out:25  total:27
-  adapters.python.urirun.connectors.connector_lint.lint_connector
-    CC=9  in:3  out:24  total:27
   adapters.python.urirun_runtime.v2.validate_binding_document
     CC=12  in:3  out:24  total:27
+  adapters.python.urirun.connectors.connector_lint.lint_connector
+    CC=9  in:3  out:24  total:27
+  adapters.python.urirun_flow.flow_planner._append_target_steps
+    CC=14  in:1  out:26  total:27
   adapters.python.urirun_connectors_toolkit.resolver.resolve
     CC=12  in:2  out:24  total:26
   adapters.python.urirun.connectors.connect_catalog._cmd_show
     CC=9  in:0  out:25  total:25
   adapters.python.urirun_connectors_toolkit.resolver.index_local
     CC=12  in:2  out:22  total:24
-  adapters.python.urirun_connectors_toolkit.contract_jsonschema.to_json_schema
-    CC=17  in:6  out:18  total:24
   adapters.python.urirun.host.dashboard.type
     CC=2  in:22  out:1  total:23
   adapters.python.urirun_node.server.NodeHandler._get
     CC=12  in:4  out:19  total:23
+  adapters.python.urirun_flow.run.resolve_step
+    CC=14  in:1  out:21  total:22
 
 MODULES:
   adapters.c.urirun  [4 funcs]
@@ -336,9 +336,10 @@ MODULES:
     _heal_file  CC=7  out:12
     heal  CC=6  out:7
     main  CC=5  out:9
-  adapters.python.urirun  [2 funcs]
+  adapters.python.urirun  [3 funcs]
     manifest  CC=11  out:13
     handler  CC=1  out:1
+    result_data  CC=8  out:7
   adapters.python.urirun.connectors.connect_catalog  [17 funcs]
     _cmd_check  CC=7  out:15
     _cmd_install  CC=13  out:14
@@ -372,24 +373,14 @@ MODULES:
     smoke  CC=6  out:20
     smoke_command  CC=2  out:4
   adapters.python.urirun.host.dashboard  [3 funcs]
+    cls  CC=1  out:1
     list  CC=8  out:4
-    open  CC=1  out:1
     type  CC=2  out:1
-  adapters.python.urirun.node._util  [3 funcs]
+  adapters.python.urirun.node._util  [4 funcs]
     json_load  CC=1  out:3
     json_write  CC=1  out:4
+    quiet_completion  CC=1  out:2
     slug  CC=2  out:3
-  adapters.python.urirun.node.diagnostics  [17 funcs]
-    _build  CC=3  out:3
-    _cdp_feasible  CC=3  out:5
-    _controllable  CC=3  out:5
-    _decode_error_ctx  CC=8  out:8
-    _is_login_surface  CC=5  out:8
-    _mark_feasibility  CC=7  out:5
-    _match_rule  CC=4  out:2
-    _maybe_escalate_surface  CC=6  out:6
-    _os_level_unreliable  CC=4  out:4
-    _rem_already_cdp  CC=6  out:7
   adapters.python.urirun.node.doctor  [11 funcs]
     _api_id  CC=8  out:9
     _api_protocol  CC=4  out:6
@@ -414,10 +405,14 @@ MODULES:
   adapters.python.urirun.node.event_schema  [2 funcs]
     _step_inverse  CC=5  out:1
     step_category  CC=3  out:1
-  adapters.python.urirun.node.flow_verify  [3 funcs]
+  adapters.python.urirun.node.flow_verify  [7 funcs]
     _dig_value  CC=5  out:4
+    _flow_stdout  CC=6  out:7
     _goal_passed  CC=8  out:5
     _run_goal_check  CC=6  out:12
+    _verify_goal_check  CC=5  out:4
+    _verify_log_fragment_check  CC=6  out:6
+    verify_flow_execution  CC=10  out:10
   adapters.python.urirun.node.manage  [32 funcs]
     _app_count  CC=5  out:4
     _augment_local_routes  CC=5  out:7
@@ -433,7 +428,7 @@ MODULES:
     deploy_dir  CC=5  out:7
     node_state_dir  CC=1  out:3
     node_token_path  CC=1  out:1
-  adapters.python.urirun.node.routing  [10 funcs]
+  adapters.python.urirun.node.routing  [11 funcs]
     binding_for_remote_route  CC=3  out:5
     registry_fingerprint  CC=2  out:7
     registry_from_routes  CC=3  out:3
@@ -443,7 +438,7 @@ MODULES:
     route_targets_for_nodes  CC=14  out:10
     routes_from_registry  CC=8  out:15
     safe_route  CC=1  out:4
-    uri_is_denied  CC=2  out:1
+    target_nodes  CC=10  out:3
   adapters.python.urirun.node.skill  [14 funcs]
     _episode_for  CC=8  out:6
     _memory  CC=1  out:1
@@ -458,6 +453,8 @@ MODULES:
   adapters.python.urirun.runtime.dispatch_protocol  [2 funcs]
     reply_fields  CC=9  out:10
     validate_reply  CC=6  out:8
+  adapters.python.urirun.runtime.v2_service  [1 funcs]
+    call  CC=9  out:10
   adapters.python.urirun_connectors_toolkit.backend_registry  [7 funcs]
     missing  CC=5  out:2
     platform_ok  CC=2  out:1
@@ -480,23 +477,6 @@ MODULES:
   adapters.python.urirun_connectors_toolkit.connector_sdk  [2 funcs]
     connector_cli  CC=5  out:11
     emit  CC=1  out:2
-  adapters.python.urirun_connectors_toolkit.contract_export  [5 funcs]
-    _load  CC=1  out:3
-    main  CC=5  out:9
-    neutral_document  CC=5  out:4
-    schema_document  CC=2  out:3
-    write_artifacts  CC=1  out:16
-  adapters.python.urirun_connectors_toolkit.contract_jsonschema  [1 funcs]
-    to_json_schema  CC=17  out:18
-  adapters.python.urirun_connectors_toolkit.contract_lint  [2 funcs]
-    _base  CC=4  out:3
-    lint_handler_signatures  CC=18  out:17
-  adapters.python.urirun_connectors_toolkit.contract_reversible  [2 funcs]
-    callspec_fields  CC=10  out:11
-    callspecs_from_contracts  CC=2  out:3
-  adapters.python.urirun_connectors_toolkit.contract_typescript  [2 funcs]
-    _sanitize  CC=3  out:2
-    to_typescript  CC=2  out:14
   adapters.python.urirun_connectors_toolkit.resolver  [8 funcs]
     _candidate_dirs  CC=1  out:4
     _read_manifest  CC=3  out:4
@@ -506,15 +486,38 @@ MODULES:
     index_local  CC=12  out:22
     resolve  CC=12  out:24
     resolve_command  CC=6  out:14
-  adapters.python.urirun_flow  [2 funcs]
+  adapters.python.urirun_flow  [4 funcs]
     _validate_graph  CC=11  out:13
+    from_dict  CC=1  out:1
+    from_yaml  CC=2  out:2
     order  CC=3  out:6
   adapters.python.urirun_flow.cli  [2 funcs]
     _load_flow  CC=3  out:8
     _load_python_flow  CC=4  out:6
-  adapters.python.urirun_flow.flow  [2 funcs]
-    _flow_transport  CC=1  out:8
+  adapters.python.urirun_flow.diagnostics  [17 funcs]
+    _build  CC=3  out:3
+    _cdp_feasible  CC=3  out:5
+    _controllable  CC=3  out:5
+    _decode_error_ctx  CC=8  out:8
+    _is_login_surface  CC=5  out:8
+    _mark_feasibility  CC=7  out:5
+    _match_rule  CC=4  out:2
+    _maybe_escalate_surface  CC=6  out:6
+    _os_level_unreliable  CC=4  out:4
+    _rem_already_cdp  CC=6  out:7
+  adapters.python.urirun_flow.flow  [1 funcs]
     execute_flow  CC=3  out:9
+  adapters.python.urirun_flow.flow_planner  [16 funcs]
+    _append_target_steps  CC=14  out:26
+    _fallback_ui_uri_for_unavailable_cdp  CC=6  out:7
+    _flow_intents  CC=6  out:3
+    _flow_intents_llm  CC=6  out:8
+    _normalize_flow_step  CC=8  out:18
+    _replace_uri_action_path  CC=2  out:3
+    _unique_step_id  CC=3  out:4
+    _uri_is_available  CC=4  out:2
+    _uri_matches_template  CC=6  out:8
+    _uri_segments  CC=1  out:3
   adapters.python.urirun_flow.recovery  [22 funcs]
     _apply_one_remediation  CC=7  out:11
     _cdp_page_ready_actions  CC=3  out:3
@@ -526,6 +529,17 @@ MODULES:
     _llm_model_actions  CC=1  out:0
     _not_found_actions  CC=5  out:3
     _transient_actions  CC=2  out:3
+  adapters.python.urirun_flow.run  [10 funcs]
+    _flow_policy  CC=5  out:5
+    _prereq_skip  CC=5  out:3
+    _resolve_payload  CC=3  out:2
+    _result_value  CC=3  out:4
+    _skip_envelope  CC=1  out:0
+    _skip_step  CC=1  out:1
+    envelope_ok  CC=6  out:5
+    flow_summary  CC=8  out:13
+    resolve_step  CC=14  out:21
+    run_flow  CC=12  out:15
   adapters.python.urirun_node._artifacts  [5 funcs]
     _artifact_extension  CC=9  out:5
     _decode_base64_artifact  CC=6  out:6
@@ -538,10 +552,8 @@ MODULES:
     latest_version  CC=5  out:16
     version_line  CC=3  out:1
     version_status  CC=5  out:4
-  adapters.python.urirun_node.client  [8 funcs]
+  adapters.python.urirun_node.client  [6 funcs]
     __init__  CC=1  out:5
-    _load_module_source  CC=6  out:5
-    _read_folder_files  CC=5  out:8
     deploy  CC=9  out:8
     get  CC=1  out:3
     routes  CC=1  out:3
@@ -615,18 +627,7 @@ MODULES:
     _planner_surface_guidance  CC=6  out:10
     planner_context  CC=6  out:9
     plausibility  CC=14  out:14
-  adapters.python.urirun_twin.reversible  [20 funcs]
-    execute  CC=8  out:14
-    rollback_flow  CC=6  out:7
-    call  CC=1  out:0
-    rescan  CC=1  out:2
-    scan  CC=2  out:5
-    _build_ledger_transitions  CC=5  out:12
-    _inner_value  CC=5  out:6
-    _inverse_uri  CC=3  out:6
-    _normalize_stuck  CC=8  out:10
-    _rollback_from_ledger  CC=6  out:9
-  adapters.python.urirun_twin.twin_store  [14 funcs]
+  adapters.python.urirun_twin.twin_store  [15 funcs]
     __init__  CC=5  out:5
     items  CC=1  out:2
     drift  CC=3  out:2
@@ -683,12 +684,10 @@ MODULES:
   scripts.transport_swap_proof  [2 funcs]
     main  CC=5  out:29
     timed  CC=2  out:5
-  security.mesh-probe.probe  [2 funcs]
-    _attacker_key  CC=1  out:5
+  security.mesh-probe.probe  [1 funcs]
     record  CC=2  out:2
 
 EDGES:
-  security.mesh-probe.probe._attacker_key → adapters.python.urirun.host.dashboard.open
   security.mesh-probe.probe.record → scripts.test_pypi_install.print
   examples.matrix.verify.essential → adapters.python.urirun.host.dashboard.list
   examples.matrix.verify.main → adapters.python.urirun_runtime.v2.validate_binding_document
@@ -738,6 +737,7 @@ EDGES:
   adapters.conformance._collect_outputs → adapters.conformance.python_reference
   adapters.conformance._collect_outputs → scripts.test_pypi_install.print
   adapters.conformance._validate_contracts → adapters.conformance.essential
+  adapters.conformance._validate_contracts → scripts.test_pypi_install.print
 ```
 
 ## Test Contracts
@@ -757,50 +757,50 @@ EDGES:
 ```toon markpact:analysis path=project/calls.toon.yaml
 # code2llm call graph | /home/tom/github/if-uri/urirun
 # generated in 0.23s
-# nodes: 463 | edges: 500 | modules: 60
-# CC̄=4.7
+# nodes: 464 | edges: 500 | modules: 57
+# CC̄=4.6
 
 HUBS[20]:
   scripts.test_pypi_install.print
-    CC=0  in:217  out:0  total:217
+    CC=0  in:214  out:0  total:214
   adapters.python.urirun.host.dashboard.list
-    CC=8  in:109  out:4  total:113
+    CC=8  in:110  out:4  total:114
   adapters.python.urirun_node.server.send_json
     CC=1  in:44  out:12  total:56
   scripts.extraction_audit.print_report
     CC=12  in:1  out:36  total:37
   adapters.python.urirun_flow.recovery.normalize_error
     CC=10  in:2  out:30  total:32
-  adapters.python.urirun.host.dashboard.open
-    CC=1  in:30  out:1  total:31
   adapters.python.urirun_node.server.NodeHandler._stream_events
     CC=14  in:0  out:31  total:31
   adapters.python.urirun_node.server.NodeHandler._handle_deploy
     CC=11  in:0  out:29  total:29
-  scripts.transport_swap_proof.main
-    CC=5  in:0  out:29  total:29
   adapters.python.urirun_node.server.NodeHandler._handle_run
     CC=14  in:0  out:29  total:29
+  scripts.transport_swap_proof.main
+    CC=5  in:0  out:29  total:29
   adapters.python.urirun.connectors.connector_lint.verify_connector
     CC=6  in:1  out:27  total:28
   adapters.python.urirun_node.server.apply_deploy
     CC=12  in:2  out:25  total:27
-  adapters.python.urirun.connectors.connector_lint.lint_connector
-    CC=9  in:3  out:24  total:27
   adapters.python.urirun_runtime.v2.validate_binding_document
     CC=12  in:3  out:24  total:27
+  adapters.python.urirun.connectors.connector_lint.lint_connector
+    CC=9  in:3  out:24  total:27
+  adapters.python.urirun_flow.flow_planner._append_target_steps
+    CC=14  in:1  out:26  total:27
   adapters.python.urirun_connectors_toolkit.resolver.resolve
     CC=12  in:2  out:24  total:26
   adapters.python.urirun.connectors.connect_catalog._cmd_show
     CC=9  in:0  out:25  total:25
   adapters.python.urirun_connectors_toolkit.resolver.index_local
     CC=12  in:2  out:22  total:24
-  adapters.python.urirun_connectors_toolkit.contract_jsonschema.to_json_schema
-    CC=17  in:6  out:18  total:24
   adapters.python.urirun.host.dashboard.type
     CC=2  in:22  out:1  total:23
   adapters.python.urirun_node.server.NodeHandler._get
     CC=12  in:4  out:19  total:23
+  adapters.python.urirun_flow.run.resolve_step
+    CC=14  in:1  out:21  total:22
 
 MODULES:
   adapters.c.urirun  [4 funcs]
@@ -835,9 +835,10 @@ MODULES:
     _heal_file  CC=7  out:12
     heal  CC=6  out:7
     main  CC=5  out:9
-  adapters.python.urirun  [2 funcs]
+  adapters.python.urirun  [3 funcs]
     manifest  CC=11  out:13
     handler  CC=1  out:1
+    result_data  CC=8  out:7
   adapters.python.urirun.connectors.connect_catalog  [17 funcs]
     _cmd_check  CC=7  out:15
     _cmd_install  CC=13  out:14
@@ -871,24 +872,14 @@ MODULES:
     smoke  CC=6  out:20
     smoke_command  CC=2  out:4
   adapters.python.urirun.host.dashboard  [3 funcs]
+    cls  CC=1  out:1
     list  CC=8  out:4
-    open  CC=1  out:1
     type  CC=2  out:1
-  adapters.python.urirun.node._util  [3 funcs]
+  adapters.python.urirun.node._util  [4 funcs]
     json_load  CC=1  out:3
     json_write  CC=1  out:4
+    quiet_completion  CC=1  out:2
     slug  CC=2  out:3
-  adapters.python.urirun.node.diagnostics  [17 funcs]
-    _build  CC=3  out:3
-    _cdp_feasible  CC=3  out:5
-    _controllable  CC=3  out:5
-    _decode_error_ctx  CC=8  out:8
-    _is_login_surface  CC=5  out:8
-    _mark_feasibility  CC=7  out:5
-    _match_rule  CC=4  out:2
-    _maybe_escalate_surface  CC=6  out:6
-    _os_level_unreliable  CC=4  out:4
-    _rem_already_cdp  CC=6  out:7
   adapters.python.urirun.node.doctor  [11 funcs]
     _api_id  CC=8  out:9
     _api_protocol  CC=4  out:6
@@ -913,10 +904,14 @@ MODULES:
   adapters.python.urirun.node.event_schema  [2 funcs]
     _step_inverse  CC=5  out:1
     step_category  CC=3  out:1
-  adapters.python.urirun.node.flow_verify  [3 funcs]
+  adapters.python.urirun.node.flow_verify  [7 funcs]
     _dig_value  CC=5  out:4
+    _flow_stdout  CC=6  out:7
     _goal_passed  CC=8  out:5
     _run_goal_check  CC=6  out:12
+    _verify_goal_check  CC=5  out:4
+    _verify_log_fragment_check  CC=6  out:6
+    verify_flow_execution  CC=10  out:10
   adapters.python.urirun.node.manage  [32 funcs]
     _app_count  CC=5  out:4
     _augment_local_routes  CC=5  out:7
@@ -932,7 +927,7 @@ MODULES:
     deploy_dir  CC=5  out:7
     node_state_dir  CC=1  out:3
     node_token_path  CC=1  out:1
-  adapters.python.urirun.node.routing  [10 funcs]
+  adapters.python.urirun.node.routing  [11 funcs]
     binding_for_remote_route  CC=3  out:5
     registry_fingerprint  CC=2  out:7
     registry_from_routes  CC=3  out:3
@@ -942,7 +937,7 @@ MODULES:
     route_targets_for_nodes  CC=14  out:10
     routes_from_registry  CC=8  out:15
     safe_route  CC=1  out:4
-    uri_is_denied  CC=2  out:1
+    target_nodes  CC=10  out:3
   adapters.python.urirun.node.skill  [14 funcs]
     _episode_for  CC=8  out:6
     _memory  CC=1  out:1
@@ -957,6 +952,8 @@ MODULES:
   adapters.python.urirun.runtime.dispatch_protocol  [2 funcs]
     reply_fields  CC=9  out:10
     validate_reply  CC=6  out:8
+  adapters.python.urirun.runtime.v2_service  [1 funcs]
+    call  CC=9  out:10
   adapters.python.urirun_connectors_toolkit.backend_registry  [7 funcs]
     missing  CC=5  out:2
     platform_ok  CC=2  out:1
@@ -979,23 +976,6 @@ MODULES:
   adapters.python.urirun_connectors_toolkit.connector_sdk  [2 funcs]
     connector_cli  CC=5  out:11
     emit  CC=1  out:2
-  adapters.python.urirun_connectors_toolkit.contract_export  [5 funcs]
-    _load  CC=1  out:3
-    main  CC=5  out:9
-    neutral_document  CC=5  out:4
-    schema_document  CC=2  out:3
-    write_artifacts  CC=1  out:16
-  adapters.python.urirun_connectors_toolkit.contract_jsonschema  [1 funcs]
-    to_json_schema  CC=17  out:18
-  adapters.python.urirun_connectors_toolkit.contract_lint  [2 funcs]
-    _base  CC=4  out:3
-    lint_handler_signatures  CC=18  out:17
-  adapters.python.urirun_connectors_toolkit.contract_reversible  [2 funcs]
-    callspec_fields  CC=10  out:11
-    callspecs_from_contracts  CC=2  out:3
-  adapters.python.urirun_connectors_toolkit.contract_typescript  [2 funcs]
-    _sanitize  CC=3  out:2
-    to_typescript  CC=2  out:14
   adapters.python.urirun_connectors_toolkit.resolver  [8 funcs]
     _candidate_dirs  CC=1  out:4
     _read_manifest  CC=3  out:4
@@ -1005,15 +985,38 @@ MODULES:
     index_local  CC=12  out:22
     resolve  CC=12  out:24
     resolve_command  CC=6  out:14
-  adapters.python.urirun_flow  [2 funcs]
+  adapters.python.urirun_flow  [4 funcs]
     _validate_graph  CC=11  out:13
+    from_dict  CC=1  out:1
+    from_yaml  CC=2  out:2
     order  CC=3  out:6
   adapters.python.urirun_flow.cli  [2 funcs]
     _load_flow  CC=3  out:8
     _load_python_flow  CC=4  out:6
-  adapters.python.urirun_flow.flow  [2 funcs]
-    _flow_transport  CC=1  out:8
+  adapters.python.urirun_flow.diagnostics  [17 funcs]
+    _build  CC=3  out:3
+    _cdp_feasible  CC=3  out:5
+    _controllable  CC=3  out:5
+    _decode_error_ctx  CC=8  out:8
+    _is_login_surface  CC=5  out:8
+    _mark_feasibility  CC=7  out:5
+    _match_rule  CC=4  out:2
+    _maybe_escalate_surface  CC=6  out:6
+    _os_level_unreliable  CC=4  out:4
+    _rem_already_cdp  CC=6  out:7
+  adapters.python.urirun_flow.flow  [1 funcs]
     execute_flow  CC=3  out:9
+  adapters.python.urirun_flow.flow_planner  [16 funcs]
+    _append_target_steps  CC=14  out:26
+    _fallback_ui_uri_for_unavailable_cdp  CC=6  out:7
+    _flow_intents  CC=6  out:3
+    _flow_intents_llm  CC=6  out:8
+    _normalize_flow_step  CC=8  out:18
+    _replace_uri_action_path  CC=2  out:3
+    _unique_step_id  CC=3  out:4
+    _uri_is_available  CC=4  out:2
+    _uri_matches_template  CC=6  out:8
+    _uri_segments  CC=1  out:3
   adapters.python.urirun_flow.recovery  [22 funcs]
     _apply_one_remediation  CC=7  out:11
     _cdp_page_ready_actions  CC=3  out:3
@@ -1025,6 +1028,17 @@ MODULES:
     _llm_model_actions  CC=1  out:0
     _not_found_actions  CC=5  out:3
     _transient_actions  CC=2  out:3
+  adapters.python.urirun_flow.run  [10 funcs]
+    _flow_policy  CC=5  out:5
+    _prereq_skip  CC=5  out:3
+    _resolve_payload  CC=3  out:2
+    _result_value  CC=3  out:4
+    _skip_envelope  CC=1  out:0
+    _skip_step  CC=1  out:1
+    envelope_ok  CC=6  out:5
+    flow_summary  CC=8  out:13
+    resolve_step  CC=14  out:21
+    run_flow  CC=12  out:15
   adapters.python.urirun_node._artifacts  [5 funcs]
     _artifact_extension  CC=9  out:5
     _decode_base64_artifact  CC=6  out:6
@@ -1037,10 +1051,8 @@ MODULES:
     latest_version  CC=5  out:16
     version_line  CC=3  out:1
     version_status  CC=5  out:4
-  adapters.python.urirun_node.client  [8 funcs]
+  adapters.python.urirun_node.client  [6 funcs]
     __init__  CC=1  out:5
-    _load_module_source  CC=6  out:5
-    _read_folder_files  CC=5  out:8
     deploy  CC=9  out:8
     get  CC=1  out:3
     routes  CC=1  out:3
@@ -1114,18 +1126,7 @@ MODULES:
     _planner_surface_guidance  CC=6  out:10
     planner_context  CC=6  out:9
     plausibility  CC=14  out:14
-  adapters.python.urirun_twin.reversible  [20 funcs]
-    execute  CC=8  out:14
-    rollback_flow  CC=6  out:7
-    call  CC=1  out:0
-    rescan  CC=1  out:2
-    scan  CC=2  out:5
-    _build_ledger_transitions  CC=5  out:12
-    _inner_value  CC=5  out:6
-    _inverse_uri  CC=3  out:6
-    _normalize_stuck  CC=8  out:10
-    _rollback_from_ledger  CC=6  out:9
-  adapters.python.urirun_twin.twin_store  [14 funcs]
+  adapters.python.urirun_twin.twin_store  [15 funcs]
     __init__  CC=5  out:5
     items  CC=1  out:2
     drift  CC=3  out:2
@@ -1182,12 +1183,10 @@ MODULES:
   scripts.transport_swap_proof  [2 funcs]
     main  CC=5  out:29
     timed  CC=2  out:5
-  security.mesh-probe.probe  [2 funcs]
-    _attacker_key  CC=1  out:5
+  security.mesh-probe.probe  [1 funcs]
     record  CC=2  out:2
 
 EDGES:
-  security.mesh-probe.probe._attacker_key → adapters.python.urirun.host.dashboard.open
   security.mesh-probe.probe.record → scripts.test_pypi_install.print
   examples.matrix.verify.essential → adapters.python.urirun.host.dashboard.list
   examples.matrix.verify.main → adapters.python.urirun_runtime.v2.validate_binding_document
@@ -1237,44 +1236,28 @@ EDGES:
   adapters.conformance._collect_outputs → adapters.conformance.python_reference
   adapters.conformance._collect_outputs → scripts.test_pypi_install.print
   adapters.conformance._validate_contracts → adapters.conformance.essential
+  adapters.conformance._validate_contracts → scripts.test_pypi_install.print
 ```
 
 ### Code Analysis (`project/analysis.toon.yaml`)
 
 ```toon markpact:analysis path=project/analysis.toon.yaml
-# code2llm | 272f 42275L | python:199,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
+# code2llm | 273f 43122L | python:200,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-28
 # generated in 0.17s
-# CC̅=4.7 | critical:41/2510 | dups:0 | cycles:0
+# CC̅=4.6 | critical:3/2582 | dups:0 | cycles:0
 
-HEALTH[20]:
-  🟡 CC    to_json_schema CC=17 (limit:15)
-  🟡 CC    lint_handler_signatures CC=18 (limit:15)
-  🟡 CC    ts_type CC=18 (limit:15)
-  🟡 CC    _thin_dispatch_step CC=18 (limit:15)
-  🟡 CC    applyControlsFromUrl CC=22 (limit:15)
-  🟡 CC    createTicket CC=25 (limit:15)
-  🟡 CC    installConnector CC=26 (limit:15)
-  🟡 CC    testConnector CC=21 (limit:15)
-  🟡 CC    renderNodes CC=16 (limit:15)
-  🟡 CC    renderHost CC=30 (limit:15)
-  🟡 CC    showAddPhoneNodeQR CC=16 (limit:15)
-  🟡 CC    savePhoneNode CC=15 (limit:15)
-  🟡 CC    saveTypedNode CC=20 (limit:15)
-  🟡 CC    saveApiNode CC=29 (limit:15)
-  🟡 CC    saveDeviceNode CC=23 (limit:15)
-  🟡 CC    saveNodeToken CC=16 (limit:15)
-  🟡 CC    saveNodeTokenFor CC=16 (limit:15)
-  🟡 CC    contactCard CC=17 (limit:15)
-  🟡 CC    chatContacts CC=18 (limit:15)
-  🟡 CC    discoveryObjects CC=21 (limit:15)
+HEALTH[3]:
+  🟡 CC    applyUrlFilterControls CC=15 (limit:15)
+  🟡 CC    classify_route_run CC=15 (limit:15)
+  🟡 CC    _filter_mesh_for_targets CC=18 (limit:15)
 
 REFACTOR[1]:
-  1. split 20 high-CC methods  (CC>15)
+  1. split 3 high-CC methods  (CC>15)
 
-PIPELINES[903]:
+PIPELINES[900]:
   [1] Src [http]: http
       PURITY: 100% pure
-  [2] Src [_attacker_key]: _attacker_key → open → esc → text
+  [2] Src [_attacker_key]: _attacker_key
       PURITY: 100% pure
   [3] Src [record]: record → print
       PURITY: 100% pure
@@ -1356,7 +1339,7 @@ PIPELINES[903]:
       PURITY: 100% pure
   [42] Src [connector_install]: connector_install → _classify_source
       PURITY: 100% pure
-  [43] Src [connector_discover]: connector_discover → _scan_local_connectors → _read_connector_manifest → _read_tellmesh_manifest → ...(3 more)
+  [43] Src [connector_discover]: connector_discover → _scan_local_connectors → _read_connector_manifest → _read_tellmesh_manifest
       PURITY: 100% pure
   [44] Src [registry_installed]: registry_installed
       PURITY: 100% pure
@@ -1374,8 +1357,18 @@ PIPELINES[903]:
       PURITY: 100% pure
 
 LAYERS:
-  xlang/                          CC̄=5.5    ←in:0  →out:8  !! split
-  │ !! gate.go                    243L  1C    8m  CC=19     ←1
+  scripts/                        CC̄=5.2    ←in:163  →out:2
+  │ extraction_audit           423L  2C   12m  CC=12     ←0
+  │ test_pypi_install.sh       267L  0C    2m  CC=0.0    ←36
+  │ repin_connectors           176L  0C    7m  CC=11     ←0
+  │ lint_connectors            140L  0C    6m  CC=13     ←0
+  │ transport_swap_proof       118L  0C    5m  CC=6      ←0
+  │ cc_gate                     81L  0C    3m  CC=8      ←0
+  │ release-bump.sh             29L  0C    0m  CC=0.0    ←0
+  │ sync-versions.sh            25L  0C    0m  CC=0.0    ←0
+  │
+  xlang/                          CC̄=4.7    ←in:0  →out:8  !! split
+  │ gate.go                    285L  1C   16m  CC=13     ←1
   │ contracts.json             229L  0C    0m  CC=0.0    ←0
   │ driver                      89L  0C    3m  CC=8      ←0
   │ contracts.kvm.json          71L  0C    0m  CC=0.0    ←0
@@ -1384,37 +1377,28 @@ LAYERS:
   │ run_wires.sh                35L  0C    0m  CC=0.0    ←0
   │ run3.sh                     35L  0C    0m  CC=0.0    ←0
   │ run_driver.sh               35L  0C    0m  CC=0.0    ←0
-  │ !! peer.mjs                     0L  0C   22m  CC=15     ←0
+  │ peer.mjs                     0L  0C   25m  CC=12     ←0
   │ gate                         0L  0C    1m  CC=3      ←0
   │ gate.mjs                     0L  0C    9m  CC=12     ←0
   │
-  scripts/                        CC̄=5.2    ←in:166  →out:2
-  │ extraction_audit           423L  2C   12m  CC=12     ←0
-  │ test_pypi_install.sh       264L  0C    2m  CC=0.0    ←37
-  │ repin_connectors           176L  0C    7m  CC=11     ←0
-  │ lint_connectors            140L  0C    6m  CC=13     ←0
-  │ transport_swap_proof       118L  0C    5m  CC=6      ←0
-  │ cc_gate                     81L  0C    3m  CC=8      ←0
-  │ release-bump.sh             29L  0C    0m  CC=0.0    ←0
-  │ sync-versions.sh            25L  0C    0m  CC=0.0    ←0
-  │
-  adapters/                       CC̄=4.7    ←in:18  →out:12  !! split
-  │ !! dashboard.js              2700L  0C  385m  CC=43     ←58
+  adapters/                       CC̄=4.6    ←in:18  →out:12  !! split
+  │ !! dashboard.js              2979L  0C  441m  CC=15     ←51
   │ !! v2                        2033L  2C  120m  CC=14     ←5
   │ !! host_dashboard            1934L  0C  102m  CC=14     ←1
+  │ !! chat_orchestrator         1568L  1C   53m  CC=18     ←0
   │ !! scanner_bridge            1548L  0C    0m  CC=0.0    ←0
-  │ !! chat_orchestrator         1492L  1C   49m  CC=14     ←0
   │ !! document_sync             1422L  0C    0m  CC=0.0    ←0
   │ !! server                     997L  3C   55m  CC=14     ←3
   │ !! object_registry            981L  0C   46m  CC=14     ←0
-  │ !! flow                       939L  0C   49m  CC=10     ←6
+  │ !! flow                       948L  0C   50m  CC=10     ←6
+  │ !! flow_planner               916L  0C   39m  CC=14     ←3
   │ !! node_cli                   910L  0C   57m  CC=13     ←1
   │ !! __init__                   766L  1C   53m  CC=14     ←13
-  │ !! flow_planner               745L  0C   32m  CC=14     ←3
   │ !! _registry                  718L  0C   43m  CC=14     ←1
-  │ !! scanner.js                 664L  0C  116m  CC=26     ←1
+  │ !! scanner.js                 681L  0C  121m  CC=14     ←2
   │ !! _runtime                   597L  1C   30m  CC=13     ←2
-  │ !! flow_thin                  581L  1C   26m  CC=18     ←1
+  │ !! flow_thin                  594L  1C   28m  CC=14     ←1
+  │ !! diagnostics                589L  1C   19m  CC=8      ←2
   │ !! client                     558L  1C   35m  CC=12     ←1
   │ !! transport                  540L  0C   24m  CC=14     ←3
   │ !! twin_bridge                528L  0C   26m  CC=12     ←1
@@ -1423,12 +1407,12 @@ LAYERS:
   │ document_metadata          471L  0C    0m  CC=0.0    ←0
   │ service_control            462L  0C   23m  CC=11     ←0
   │ connector_scaffold         413L  0C   11m  CC=3      ←0
+  │ reversible                 396L  8C   27m  CC=10     ←1
   │ recovery                   393L  0C   23m  CC=10     ←2
-  │ reversible                 383L  8C   26m  CC=10     ←5
+  │ !! discovery                  375L  0C   29m  CC=15     ←2
   │ host_integrations          374L  0C   16m  CC=8      ←0
-  │ discovery                  372L  0C   29m  CC=14     ←2
   │ fs_transfer                362L  0C   15m  CC=14     ←5
-  │ twin_store                 359L  3C   42m  CC=9      ←0
+  │ twin_store                 359L  3C   42m  CC=9      ←4
   │ task_planner               355L  2C   15m  CC=12     ←0
   │ task_cli                   346L  0C   25m  CC=12     ←0
   │ scanner_service            342L  0C    0m  CC=0.0    ←0
@@ -1467,12 +1451,10 @@ LAYERS:
   │ scheduler                  135L  0C    6m  CC=4      ←0
   │ decision_loop              134L  0C    5m  CC=13     ←1
   │ backend_registry           129L  2C   10m  CC=11     ←0
-  │ contract_export            123L  0C    5m  CC=5      ←0
   │ contracts                  119L  0C    8m  CC=5      ←0
   │ _artifacts                 111L  0C    5m  CC=9      ←2
   │ progress                    89L  1C   11m  CC=3      ←0
   │ connector_sdk               87L  0C    3m  CC=5      ←2
-  │ !! contract_typescript         87L  0C    4m  CC=18     ←1
   │ heal_future_imports         84L  0C    3m  CC=7      ←0
   │ urirun.go                   80L  3C    5m  CC=3      ←0
   │ formatting                  80L  0C    4m  CC=8      ←2
@@ -1484,11 +1466,8 @@ LAYERS:
   │ urirun-connector.csproj.nuget.dgspec.json    66L  0C    0m  CC=0.0    ←0
   │ cli                         65L  0C    3m  CC=12     ←0
   │ widgets                     64L  0C    4m  CC=12     ←0
-  │ !! contract_lint               62L  0C    2m  CC=18     ←0
   │ exec                        61L  0C    2m  CC=10     ←0
-  │ !! contract_jsonschema         55L  0C    2m  CC=17     ←2
   │ index.test.js               52L  0C    1m  CC=1      ←0
-  │ contract_reversible         49L  0C    2m  CC=10     ←0
   │ Urirun.pm                   47L  0C    4m  CC=0.0    ←1
   │ urifix_bridge               45L  0C    1m  CC=12     ←1
   │ urirun.ts                   41L  2C    4m  CC=4      ←0
@@ -1498,7 +1477,6 @@ LAYERS:
   │ index.js                    33L  0C   11m  CC=8      ←10
   │ Urirun.cs                   32L  1C    3m  CC=1      ←0
   │ cdp                         31L  0C    0m  CC=0.0    ←0
-  │ contract_gate               27L  0C    0m  CC=0.0    ←0
   │ main.go                     24L  0C    1m  CC=1      ←0
   │ urirun-connector.AssemblyInfo.cs    22L  0C    0m  CC=0.0    ←0
   │ urirun_test.c               18L  0C    2m  CC=2      ←0
@@ -1512,8 +1490,9 @@ LAYERS:
   │ HashConnector.java          11L  1C    1m  CC=1      ←0
   │ tsconfig.json               11L  0C    0m  CC=0.0    ←0
   │ v2                          11L  0C    0m  CC=0.0    ←0
+  │ __init__                    11L  0C    0m  CC=0.0    ←0
   │ hash-connector.ts           10L  0C    1m  CC=1      ←0
-  │ v2_service                  10L  0C    5m  CC=9      ←0
+  │ v2_service                  10L  0C    5m  CC=9      ←1
   │ cli                         10L  0C    7m  CC=1      ←1
   │ v1                          10L  0C   25m  CC=14     ←3
   │ errors                      10L  0C   32m  CC=13     ←1
@@ -1526,6 +1505,7 @@ LAYERS:
   │ tree                        10L  0C    4m  CC=11     ←0
   │ _scan                       10L  0C   34m  CC=14     ←0
   │ Cargo.toml                  10L  0C    0m  CC=0.0    ←0
+  │ contract_gate               10L  0C    0m  CC=0.0    ←0
   │ progress                    10L  0C    0m  CC=0.0    ←0
   │ v2                          10L  0C    0m  CC=0.0    ←0
   │ _runtime                    10L  0C    0m  CC=0.0    ←0
@@ -1553,6 +1533,7 @@ LAYERS:
   │ hash_connector.rb            8L  0C    0m  CC=0.0    ←0
   │ composer.json                7L  0C    0m  CC=0.0    ←0
   │ Program.cs                   7L  0C    0m  CC=0.0    ←0
+  │ contract_export              7L  0C    0m  CC=0.0    ←0
   │ declarative                  6L  0C    0m  CC=0.0    ←0
   │ uinput                       6L  0C    0m  CC=0.0    ←0
   │ __init__                     6L  0C    0m  CC=0.0    ←0
@@ -1583,7 +1564,6 @@ LAYERS:
   │ connect_catalog              4L  0C   17m  CC=13     ←0
   │ connector_smoke              4L  0C    3m  CC=6      ←0
   │ connector_contract           4L  1C   11m  CC=4      ←0
-  │ diagnostics                  4L  1C   19m  CC=8      ←2
   │ flow_verify                  4L  0C    7m  CC=10     ←1
   │ openapi_import               4L  0C    0m  CC=0.0    ←0
   │ scanner_net                  4L  0C    0m  CC=0.0    ←0
@@ -1601,6 +1581,7 @@ LAYERS:
   │ config                       4L  0C    0m  CC=0.0    ←0
   │ keyauth                      4L  0C    0m  CC=0.0    ←0
   │ recovery                     4L  0C    0m  CC=0.0    ←0
+  │ diagnostics                  4L  0C    0m  CC=0.0    ←0
   │ server                       4L  0C    0m  CC=0.0    ←0
   │ client                       4L  0C    0m  CC=0.0    ←0
   │ _artifacts                   4L  0C    0m  CC=0.0    ←0
@@ -1614,8 +1595,11 @@ LAYERS:
   │ twin_store                   4L  0C    0m  CC=0.0    ←0
   │ preconditions                4L  0C    0m  CC=0.0    ←0
   │ .NETCoreApp,Version=v8.0.AssemblyAttributes.cs     4L  0C    0m  CC=0.0    ←0
+  │ contract_reversible          2L  0C    0m  CC=0.0    ←0
+  │ contract_jsonschema          2L  0C    0m  CC=0.0    ←0
+  │ contract_lint                2L  0C    0m  CC=0.0    ←0
   │ __init__                     2L  0C    0m  CC=0.0    ←0
-  │ __init__                     1L  0C    0m  CC=0.0    ←0
+  │ contract_typescript          2L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
@@ -1671,25 +1655,25 @@ LAYERS:
      xlang/peer.mjs                            0L
 
 COUPLING:
-                           adapters.python              scripts             adapters      examples.matrix                xlang                v1.js  security.mesh-probe        adapters.java        adapters.perl
-      adapters.python                   ──                  142                   18                   ←3                   ←3                    6                   ←1                    1                    1  hub
-              scripts                    2                   ──                  ←11                   ←7                   ←5                                        ←1                                            hub
+                           adapters.python              scripts             adapters      examples.matrix                xlang                v1.js        adapters.java        adapters.perl  security.mesh-probe
+      adapters.python                   ──                  139                   18                   ←2                   ←3                    6                    1                    1                       hub
+              scripts                    2                   ──                  ←11                   ←7                   ←5                                                                                  ←1  hub
              adapters                    1                   11                   ──                                                                                                                                hub
-      examples.matrix                    3                    7                                        ──                                                                                                           !! fan-out
+      examples.matrix                    2                    7                                        ──                                                                                                           !! fan-out
                 xlang                    3                    5                                                             ──                                                                                      !! fan-out
                 v1.js                   ←6                                                                                                       ──                                                                 hub
-  security.mesh-probe                    1                    1                                                                                                       ──                                          
-        adapters.java                   ←1                                                                                                                                                 ──                     
-        adapters.perl                   ←1                                                                                                                                                                      ──
+        adapters.java                   ←1                                                                                                                            ──                                          
+        adapters.perl                   ←1                                                                                                                                                 ──                     
+  security.mesh-probe                                         1                                                                                                                                                 ──
   CYCLES: none
   HUB: adapters/ (fan-in=18)
+  HUB: scripts/ (fan-in=163)
+  HUB: adapters.python/ (fan-in=8)
   HUB: v1.js/ (fan-in=6)
-  HUB: scripts/ (fan-in=166)
-  HUB: adapters.python/ (fan-in=10)
   SMELL: xlang/ fan-out=8 → split needed
   SMELL: adapters/ fan-out=12 → split needed
-  SMELL: examples.matrix/ fan-out=10 → split needed
-  SMELL: adapters.python/ fan-out=168 → split needed
+  SMELL: examples.matrix/ fan-out=9 → split needed
+  SMELL: adapters.python/ fan-out=165 → split needed
 
 EXTERNAL:
   validation: run `vallm batch .` → validation.toon
@@ -1699,15 +1683,15 @@ EXTERNAL:
 ### Duplication (`project/duplication.toon.yaml`)
 
 ```toon markpact:analysis path=project/duplication.toon.yaml
-# redup/duplication | 9 groups | 131f 13486L | 2026-06-27
+# redup/duplication | 9 groups | 131f 13565L | 2026-06-28
 
 SUMMARY:
   files_scanned: 131
-  total_lines:   13486
+  total_lines:   13565
   dup_groups:    9
   dup_fragments: 21
   saved_lines:   90
-  scan_ms:       679
+  scan_ms:       426
 
 HOTSPOTS[7] (files with most duplication):
   host/host_dashboard.py  dup=40L  groups=3  frags=6  (0.3%)
@@ -1812,13 +1796,13 @@ METRICS-TARGET:
 ### Evolution / Churn (`project/evolution.toon.yaml`)
 
 ```toon markpact:analysis path=project/evolution.toon.yaml
-# code2llm/evolution | 2464 func | 131f | 2026-06-27
+# code2llm/evolution | 2536 func | 126f | 2026-06-28
 # generated in 0.01s
 
-NEXT[10] (ranked by impact):
+NEXT[3] (ranked by impact):
   [1] !! SPLIT           adapters/python/urirun/host/dashboard.js
-      WHY: 2700L, 0 classes, max CC=43
-      EFFORT: ~4h  IMPACT: 116100
+      WHY: 2979L, 0 classes, max CC=15
+      EFFORT: ~4h  IMPACT: 44685
 
   [2] !! SPLIT           adapters/python/urirun_runtime/v2.py
       WHY: 2033L, 2 classes, max CC=14
@@ -1828,45 +1812,17 @@ NEXT[10] (ranked by impact):
       WHY: 1934L, 0 classes, max CC=14
       EFFORT: ~4h  IMPACT: 27076
 
-  [4] !! SPLIT-FUNC      renderChatMessage  CC=26  fan=17
-      WHY: CC=26 exceeds 15
-      EFFORT: ~1h  IMPACT: 442
-
-  [5] !! SPLIT-FUNC      bestPdf  CC=26  fan=17
-      WHY: CC=26 exceeds 15
-      EFFORT: ~1h  IMPACT: 442
-
-  [6] !! SPLIT-FUNC      renderHost  CC=30  fan=14
-      WHY: CC=30 exceeds 15
-      EFFORT: ~1h  IMPACT: 420
-
-  [7] !! SPLIT-FUNC      renderTwinPlanCard  CC=43  fan=8
-      WHY: CC=43 exceeds 15
-      EFFORT: ~1h  IMPACT: 344
-
-  [8] !  SPLIT-FUNC      _thin_dispatch_step  CC=18  fan=17
-      WHY: CC=18 exceeds 15
-      EFFORT: ~1h  IMPACT: 306
-
-  [9] !  SPLIT-FUNC      renderNodes  CC=16  fan=16
-      WHY: CC=16 exceeds 15
-      EFFORT: ~1h  IMPACT: 256
-
-  [10] !  SPLIT-FUNC      lint_handler_signatures  CC=18  fan=14
-      WHY: CC=18 exceeds 15
-      EFFORT: ~1h  IMPACT: 252
-
 
 RISKS[3]:
-  ⚠ Splitting adapters/python/urirun/host/dashboard.js may break 385 import paths
+  ⚠ Splitting adapters/python/urirun/host/dashboard.js may break 441 import paths
   ⚠ Splitting adapters/python/urirun_runtime/v2.py may break 120 import paths
   ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 102 import paths
 
 METRICS-TARGET:
-  CC̄:          4.7 → ≤3.3
-  max-CC:      43 → ≤20
-  god-modules: 22 → 0
-  high-CC(≥15): 41 → ≤20
+  CC̄:          4.6 → ≤3.2
+  max-CC:      18 → ≤9
+  god-modules: 23 → 0
+  high-CC(≥15): 3 → ≤1
   hub-types:   0 → ≤0
 
 PATTERNS (language parser shared logic):
@@ -1894,7 +1850,7 @@ PATTERNS (language parser shared logic):
     - Standardized FunctionInfo/ClassInfo models
 
 HISTORY:
-  prev CC̄=4.7 → now CC̄=4.7
+  prev CC̄=4.5 → now CC̄=4.6
 ```
 
 ## Intent

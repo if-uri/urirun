@@ -1,12 +1,16 @@
-# code2llm | 273f 43137L | python:200,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-27
-# generated in 0.16s
-# CC̅=4.6 | critical:0/2579 | dups:0 | cycles:0
+# code2llm | 273f 43122L | python:200,json:15,shell:14,yaml:5,javascript:5,csharp:4,txt:3,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-28
+# generated in 0.17s
+# CC̅=4.6 | critical:3/2582 | dups:0 | cycles:0
 
-HEALTH[0]: ok
+HEALTH[3]:
+  🟡 CC    applyUrlFilterControls CC=15 (limit:15)
+  🟡 CC    classify_route_run CC=15 (limit:15)
+  🟡 CC    _filter_mesh_for_targets CC=18 (limit:15)
 
-REFACTOR[0]: none needed
+REFACTOR[1]:
+  1. split 3 high-CC methods  (CC>15)
 
-PIPELINES[899]:
+PIPELINES[900]:
   [1] Src [http]: http
       PURITY: 100% pure
   [2] Src [_attacker_key]: _attacker_key
@@ -109,9 +113,9 @@ PIPELINES[899]:
       PURITY: 100% pure
 
 LAYERS:
-  scripts/                        CC̄=5.2    ←in:166  →out:2
+  scripts/                        CC̄=5.2    ←in:163  →out:2
   │ extraction_audit           423L  2C   12m  CC=12     ←0
-  │ test_pypi_install.sh       267L  0C    2m  CC=0.0    ←37
+  │ test_pypi_install.sh       267L  0C    2m  CC=0.0    ←36
   │ repin_connectors           176L  0C    7m  CC=11     ←0
   │ lint_connectors            140L  0C    6m  CC=13     ←0
   │ transport_swap_proof       118L  0C    5m  CC=6      ←0
@@ -134,23 +138,23 @@ LAYERS:
   │ gate.mjs                     0L  0C    9m  CC=12     ←0
   │
   adapters/                       CC̄=4.6    ←in:18  →out:12  !! split
-  │ !! dashboard.js              2935L  0C  435m  CC=14     ←52
+  │ !! dashboard.js              2979L  0C  441m  CC=15     ←51
   │ !! v2                        2033L  2C  120m  CC=14     ←5
   │ !! host_dashboard            1934L  0C  102m  CC=14     ←1
+  │ !! chat_orchestrator         1568L  1C   53m  CC=18     ←0
   │ !! scanner_bridge            1548L  0C    0m  CC=0.0    ←0
-  │ !! chat_orchestrator         1538L  1C   52m  CC=14     ←0
   │ !! document_sync             1422L  0C    0m  CC=0.0    ←0
   │ !! server                     997L  3C   55m  CC=14     ←3
   │ !! object_registry            981L  0C   46m  CC=14     ←0
-  │ !! flow                       939L  0C   49m  CC=10     ←6
+  │ !! flow                       948L  0C   50m  CC=10     ←6
+  │ !! flow_planner               916L  0C   39m  CC=14     ←3
   │ !! node_cli                   910L  0C   57m  CC=13     ←1
-  │ !! flow_planner               838L  0C   35m  CC=14     ←3
   │ !! __init__                   766L  1C   53m  CC=14     ←13
   │ !! _registry                  718L  0C   43m  CC=14     ←1
-  │ !! scanner.js                 681L  0C  121m  CC=14     ←1
+  │ !! scanner.js                 681L  0C  121m  CC=14     ←2
   │ !! _runtime                   597L  1C   30m  CC=13     ←2
+  │ !! flow_thin                  594L  1C   28m  CC=14     ←1
   │ !! diagnostics                589L  1C   19m  CC=8      ←2
-  │ !! flow_thin                  588L  1C   27m  CC=14     ←1
   │ !! client                     558L  1C   35m  CC=12     ←1
   │ !! transport                  540L  0C   24m  CC=14     ←3
   │ !! twin_bridge                528L  0C   26m  CC=12     ←1
@@ -159,12 +163,12 @@ LAYERS:
   │ document_metadata          471L  0C    0m  CC=0.0    ←0
   │ service_control            462L  0C   23m  CC=11     ←0
   │ connector_scaffold         413L  0C   11m  CC=3      ←0
+  │ reversible                 396L  8C   27m  CC=10     ←1
   │ recovery                   393L  0C   23m  CC=10     ←2
-  │ reversible                 383L  8C   26m  CC=10     ←5
+  │ !! discovery                  375L  0C   29m  CC=15     ←2
   │ host_integrations          374L  0C   16m  CC=8      ←0
-  │ discovery                  372L  0C   29m  CC=14     ←2
   │ fs_transfer                362L  0C   15m  CC=14     ←5
-  │ twin_store                 359L  3C   42m  CC=9      ←0
+  │ twin_store                 359L  3C   42m  CC=9      ←4
   │ task_planner               355L  2C   15m  CC=12     ←0
   │ task_cli                   346L  0C   25m  CC=12     ←0
   │ scanner_service            342L  0C    0m  CC=0.0    ←0
@@ -203,10 +207,8 @@ LAYERS:
   │ scheduler                  135L  0C    6m  CC=4      ←0
   │ decision_loop              134L  0C    5m  CC=13     ←1
   │ backend_registry           129L  2C   10m  CC=11     ←0
-  │ contract_export            123L  0C    5m  CC=5      ←0
   │ contracts                  119L  0C    8m  CC=5      ←0
   │ _artifacts                 111L  0C    5m  CC=9      ←2
-  │ contract_typescript         94L  0C    6m  CC=10     ←1
   │ progress                    89L  1C   11m  CC=3      ←0
   │ connector_sdk               87L  0C    3m  CC=5      ←2
   │ heal_future_imports         84L  0C    3m  CC=7      ←0
@@ -244,8 +246,9 @@ LAYERS:
   │ HashConnector.java          11L  1C    1m  CC=1      ←0
   │ tsconfig.json               11L  0C    0m  CC=0.0    ←0
   │ v2                          11L  0C    0m  CC=0.0    ←0
+  │ __init__                    11L  0C    0m  CC=0.0    ←0
   │ hash-connector.ts           10L  0C    1m  CC=1      ←0
-  │ v2_service                  10L  0C    5m  CC=9      ←0
+  │ v2_service                  10L  0C    5m  CC=9      ←1
   │ cli                         10L  0C    7m  CC=1      ←1
   │ v1                          10L  0C   25m  CC=14     ←3
   │ errors                      10L  0C   32m  CC=13     ←1
@@ -286,6 +289,7 @@ LAYERS:
   │ hash_connector.rb            8L  0C    0m  CC=0.0    ←0
   │ composer.json                7L  0C    0m  CC=0.0    ←0
   │ Program.cs                   7L  0C    0m  CC=0.0    ←0
+  │ contract_export              7L  0C    0m  CC=0.0    ←0
   │ declarative                  6L  0C    0m  CC=0.0    ←0
   │ uinput                       6L  0C    0m  CC=0.0    ←0
   │ __init__                     6L  0C    0m  CC=0.0    ←0
@@ -351,7 +355,7 @@ LAYERS:
   │ contract_jsonschema          2L  0C    0m  CC=0.0    ←0
   │ contract_lint                2L  0C    0m  CC=0.0    ←0
   │ __init__                     2L  0C    0m  CC=0.0    ←0
-  │ __init__                     1L  0C    0m  CC=0.0    ←0
+  │ contract_typescript          2L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
   │ __init__                     1L  0C    0m  CC=0.0    ←0
@@ -408,7 +412,7 @@ LAYERS:
 
 COUPLING:
                            adapters.python              scripts             adapters      examples.matrix                xlang                v1.js        adapters.java        adapters.perl  security.mesh-probe
-      adapters.python                   ──                  142                   18                   ←2                   ←3                    6                    1                    1                       hub
+      adapters.python                   ──                  139                   18                   ←2                   ←3                    6                    1                    1                       hub
               scripts                    2                   ──                  ←11                   ←7                   ←5                                                                                  ←1  hub
              adapters                    1                   11                   ──                                                                                                                                hub
       examples.matrix                    2                    7                                        ──                                                                                                           !! fan-out
@@ -418,14 +422,14 @@ COUPLING:
         adapters.perl                   ←1                                                                                                                                                 ──                     
   security.mesh-probe                                         1                                                                                                                                                 ──
   CYCLES: none
-  HUB: scripts/ (fan-in=166)
   HUB: adapters/ (fan-in=18)
-  HUB: v1.js/ (fan-in=6)
+  HUB: scripts/ (fan-in=163)
   HUB: adapters.python/ (fan-in=8)
-  SMELL: examples.matrix/ fan-out=9 → split needed
-  SMELL: adapters/ fan-out=12 → split needed
+  HUB: v1.js/ (fan-in=6)
   SMELL: xlang/ fan-out=8 → split needed
-  SMELL: adapters.python/ fan-out=168 → split needed
+  SMELL: adapters/ fan-out=12 → split needed
+  SMELL: examples.matrix/ fan-out=9 → split needed
+  SMELL: adapters.python/ fan-out=165 → split needed
 
 EXTERNAL:
   validation: run `vallm batch .` → validation.toon

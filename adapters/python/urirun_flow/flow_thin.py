@@ -42,9 +42,10 @@ def resolve_step_payload(payload: dict, results: dict) -> dict:
     ``payload: {slug: <results.slugify_text.result.slug>}``. This is the same
     convention the orchestrator examples used by hand.
     """
+    literal_from_keys = {"copy_from"}
     resolved = {}
     for key, value in (payload or {}).items():
-        if key.endswith("_from") and isinstance(value, str):
+        if key.endswith("_from") and key not in literal_from_keys and isinstance(value, str):
             resolved[key[: -len("_from")]] = _dig_path(results, value)
         else:
             resolved[key] = value
@@ -223,7 +224,7 @@ def _thin_retry_once(sid: str, uri: str, payload: dict, envelope: FlowEnvelope,
     kind2 = _next_kind(r2)
     envelope.record(uri, "return", ok=r2.get("ok", True), next=kind2, retry=True)
     entry: dict = {"id": f"{sid}:retry", "uri": uri,
-                   "ok": r2.get("ok", True), "target": route_target(uri)}
+                   "ok": r2.get("ok", True), "target": _thin_result_target(uri, r2)}
     if extra:
         entry.update(extra)
     timeline.append(entry)
@@ -299,7 +300,7 @@ def _thin_update_ledger(envelope: "FlowEnvelope", uri: str, r: dict) -> None:
 
 def _thin_step_entry(sid: str, uri: str, r: dict) -> dict:
     """Build a timeline entry for one step result."""
-    entry: dict = {"id": sid, "uri": uri, "ok": r.get("ok", True), "target": route_target(uri)}
+    entry: dict = {"id": sid, "uri": uri, "ok": r.get("ok", True), "target": _thin_result_target(uri, r)}
     if not r.get("ok"):
         entry["error"] = r.get("error")
     for _k in ("type", "action", "drift"):
@@ -317,6 +318,11 @@ def _thin_step_entry(sid: str, uri: str, r: dict) -> dict:
         # Command step without a connector-returned inverse — cannot be rolled back.
         entry["reversible"] = False
     return entry
+
+
+def _thin_result_target(uri: str, result: dict) -> str:
+    service = str((result or {}).get("service") or "").strip()
+    return service or route_target(uri)
 
 
 def _thin_fold_inner_ok(r: dict) -> dict:

@@ -1549,6 +1549,17 @@ class TwinMemoryUriTests(unittest.TestCase):
         self.assertIn("flow_key", remember_step["payload"])
         self.assertIn("routes", remember_step["payload"])
 
+    def test_build_thin_plan_uses_route_node_for_remote_kvm_host_uri(self):
+        from urirun.node.flow import _build_thin_plan
+        steps = [{"id": "capture", "uri": "kvm://host/screen/query/capture"}]
+        routes = [{"uri": "kvm://host/screen/query/capture", "node": "lenovo"}]
+
+        plan = _build_thin_plan(steps, {"steps": steps}, execute=True, routes=routes)
+
+        self.assertIn("twin:drift:lenovo", [s["id"] for s in plan])
+        remember = next(s for s in plan if s["id"] == "memory:remember")
+        self.assertEqual(remember["payload"]["nodes"], ["lenovo"])
+
     def test_build_thin_plan_no_kvm_targets_skips_memory_steps(self):
         """No kvm:// steps → no drift or remember injected."""
         from urirun.node.flow import _build_thin_plan

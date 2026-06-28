@@ -532,8 +532,17 @@ def _thin_remember_record(flow: dict, nodes: list[str]) -> dict:
             "nodes": list(nodes), "ok": True}
 
 
-def _kvm_step_targets(steps: list[dict]) -> list[str]:
-    targets = {route_target(str(s.get("uri") or ""))
+def _route_node_for_uri(uri: str, routes: list[dict] | None) -> str:
+    for route in routes or []:
+        if str(route.get("uri") or "") == uri:
+            node = str(route.get("node") or "").strip()
+            if node:
+                return node
+    return route_target(uri)
+
+
+def _kvm_step_targets(steps: list[dict], routes: list[dict] | None = None) -> list[str]:
+    targets = {_route_node_for_uri(str(s.get("uri") or ""), routes)
                for s in steps if str(s.get("uri") or "").startswith("kvm://")}
     return [t for t in sorted(targets) if t]
 
@@ -564,10 +573,10 @@ def _build_thin_plan(steps: list[dict], flow: dict, *, execute: bool,
     plan = _plan_with_preflight(steps, execute=execute)
     if not execute:
         return plan
-    kvm_targets = _kvm_step_targets(steps)
+    routes_list = routes or []
+    kvm_targets = _kvm_step_targets(steps, routes_list)
     if not kvm_targets:
         return plan
-    routes_list = routes or []
     flow_key = _flow_key(flow)
     remember_step = {
         "id": "memory:remember",

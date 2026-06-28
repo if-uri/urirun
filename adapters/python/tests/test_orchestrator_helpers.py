@@ -5,6 +5,7 @@ from urirun.host.chat_orchestrator import (
     _is_selected_remote_node,
     _flag_remote_capture_inline,
     _suggest_recall_for_memory,
+    _filter_mesh_for_targets,
 )
 
 
@@ -88,6 +89,35 @@ def test_empty_flow_steps_is_noop():
     flow = {"steps": []}
     disc = _discovered([_node("lenovo", "http://192.168.1.10:8765")])
     _flag_remote_capture_inline(flow, disc, ["lenovo"])  # no error
+
+
+def test_filter_mesh_host_only_drops_remote_routes_with_host_authority():
+    discovered = {
+        "nodes": [{**_node("lenovo", "http://192.168.1.10:8765"), "reachable": True}],
+        "routes": [
+            {"uri": "kvm://host/screen/query/capture", "node": "lenovo"},
+            {"uri": "twin://host/flow/query/recall", "node": "host"},
+        ],
+        "serviceMap": {"kvm": "http://192.168.1.10:8765", "twin": "local"},
+    }
+
+    filtered = _filter_mesh_for_targets(discovered, ["host"])
+
+    assert [r["uri"] for r in filtered["routes"]] == ["twin://host/flow/query/recall"]
+    assert filtered["serviceMap"] == {"twin": "local"}
+
+
+def test_filter_mesh_keeps_selected_remote_routes_even_when_uri_target_is_host():
+    discovered = {
+        "nodes": [{**_node("lenovo", "http://192.168.1.10:8765"), "reachable": True}],
+        "routes": [{"uri": "kvm://host/screen/query/capture", "node": "lenovo"}],
+        "serviceMap": {"kvm": "http://192.168.1.10:8765"},
+    }
+
+    filtered = _filter_mesh_for_targets(discovered, ["node:lenovo"])
+
+    assert filtered["routes"] == discovered["routes"]
+    assert filtered["serviceMap"] == discovered["serviceMap"]
 
 
 # ── _suggest_recall_for_memory ────────────────────────────────────────────────

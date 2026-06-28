@@ -24,14 +24,7 @@ class TestHostDefault(unittest.TestCase):
         return _apply_host_default_when_no_node_in_prompt(
             prompt, selected_nodes, selected_targets, None, None, deps)
 
-    def test_no_node_in_prompt_strips_remote(self):
-        nodes, targets = self._call(
-            "opublikuj post na LinkedIn",
-            ["lenovo"], ["host", "node:lenovo"])
-        self.assertEqual(targets, ["host"])
-        self.assertEqual(nodes, [])
-
-    def test_chat_ask_preserves_explicit_dashboard_node_selection(self):
+    def _chat_ask_selection(self, payload):
         messages = []
         deps = co.ChatDeps(
             host_db_fn=MagicMock(),
@@ -48,20 +41,61 @@ class TestHostDefault(unittest.TestCase):
                          prompt, execute, no_llm, selected_nodes, selected_targets, deps):
             return {"ok": True, "selectedNodes": selected_nodes, "selectedTargets": selected_targets}
 
+        with patch.object(co, "_chat_insert_twin_preview", lambda *a, **k: None), \
+             patch.object(co, "_chat_ask_general", fake_general):
+            result = co.chat_ask("proj", "db", None, payload, [], None, None, deps)
+        return result, messages
+
+    def test_no_node_in_prompt_strips_remote(self):
+        nodes, targets = self._call(
+            "opublikuj post na LinkedIn",
+            ["lenovo"], ["host", "node:lenovo"])
+        self.assertEqual(targets, ["host"])
+        self.assertEqual(nodes, [])
+
+    def test_chat_ask_preserves_explicit_dashboard_node_selection(self):
         payload = {
             "prompt": "opublikuj post na LinkedIn",
             "nodes": ["lenovo"],
             "targets": ["host", "node:lenovo"],
             "execute": True,
         }
-        with patch.object(co, "_chat_insert_twin_preview", lambda *a, **k: None), \
-             patch.object(co, "_chat_ask_general", fake_general):
-            result = co.chat_ask("proj", "db", None, payload, [], None, None, deps)
+        result, messages = self._chat_ask_selection(payload)
 
         self.assertEqual(result["selectedNodes"], ["lenovo"])
         self.assertEqual(result["selectedTargets"], ["host", "node:lenovo"])
         self.assertEqual(messages[0]["detail"]["resolvedNodes"], ["lenovo"])
         self.assertEqual(messages[0]["detail"]["resolvedTargets"], ["host", "node:lenovo"])
+
+    def test_chat_ask_url_tab_autorun_defaults_to_host_when_prompt_omits_node(self):
+        payload = {
+            "prompt": "opublikuj post na LinkedIn",
+            "nodes": ["lenovo"],
+            "targets": ["host", "node:lenovo"],
+            "target_explicit": False,
+            "execute": True,
+        }
+        result, messages = self._chat_ask_selection(payload)
+
+        self.assertEqual(result["selectedNodes"], [])
+        self.assertEqual(result["selectedTargets"], ["host"])
+        self.assertEqual(messages[0]["detail"]["resolvedNodes"], [])
+        self.assertEqual(messages[0]["detail"]["resolvedTargets"], ["host"])
+
+    def test_chat_ask_url_tab_autorun_infers_node_from_prompt_not_stale_url(self):
+        payload = {
+            "prompt": "opublikuj post na LinkedIn na lenovo",
+            "nodes": ["old-node"],
+            "targets": ["host", "node:old-node"],
+            "target_explicit": False,
+            "execute": True,
+        }
+        result, messages = self._chat_ask_selection(payload)
+
+        self.assertEqual(result["selectedNodes"], ["lenovo"])
+        self.assertEqual(result["selectedTargets"], ["node:lenovo"])
+        self.assertEqual(messages[0]["detail"]["resolvedNodes"], ["lenovo"])
+        self.assertEqual(messages[0]["detail"]["resolvedTargets"], ["node:lenovo"])
 
     def test_node_name_in_prompt_keeps_remote(self):
         nodes, targets = self._call(

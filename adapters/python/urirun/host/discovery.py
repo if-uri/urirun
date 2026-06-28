@@ -294,6 +294,8 @@ def classify_route_run(envelope: Any, value: Any) -> tuple[str, str]:
     if isinstance(value, dict):
         if value.get("ok") is False:
             return "handler-error", str(value.get("error") or "")[:_ROUTE_DETAIL_MAX]
+        if value.get("degraded") is True:
+            return "degraded", str(value.get("degradedReason") or "degraded result")[:_ROUTE_DETAIL_MAX]
         return "ok", ""
     if isinstance(value, str):
         return "ok", value.strip()[:_ROUTE_VALUE_MAX]
@@ -327,7 +329,7 @@ def _probe_route(client: Any, uri: str, route: dict, missing_sel: set[str]) -> d
 
 def _node_test_summary(node: str, node_url: str, mode: str, results: list[dict]) -> dict:
     """Tally a node's route-probe results into the response summary."""
-    reachable = sum(1 for r in results if r["status"] in ("ok", "handler-error"))
+    reachable = sum(1 for r in results if r["status"] in ("ok", "handler-error", "degraded"))
     return {
         "ok": True,
         "node": node,
@@ -335,6 +337,7 @@ def _node_test_summary(node: str, node_url: str, mode: str, results: list[dict])
         "mode": mode,
         "tested": len(results),
         "okCount": sum(1 for r in results if r["ok"]),
+        "degraded": sum(1 for r in results if r["status"] == "degraded"),
         "reachable": reachable,
         "broken": len(results) - reachable,
         "results": results,

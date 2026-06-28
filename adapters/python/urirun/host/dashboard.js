@@ -1276,7 +1276,7 @@
         return;
       }
       if (summaryEl) summaryEl.textContent = `${res.okCount}/${res.tested} ok · ${res.reachable} reachable · ${res.broken} broken (${esc(res.mode)})`;
-      const badge = { 'ok': '✅', 'handler-error': '⚠️', 'not-found': '⛔', 'unreachable': '🚫' };
+      const badge = { 'ok': '✅', 'degraded': '⚠️', 'handler-error': '⚠️', 'not-found': '⛔', 'unreachable': '🚫' };
       const byUri = {};
       (res.results || []).forEach((r) => { byUri[r.uri] = r; });
       document.querySelectorAll('#routesList .item[data-rt]').forEach((el) => {
@@ -2642,10 +2642,16 @@
       await load();
     }
 
-    async function askChat(event) {
+    async function askChat(event, options = {}) {
       if (event && event.preventDefault) event.preventDefault();
       const prompt = $('chatPrompt').value.trim();
       if (!prompt) return;
+      const targetExplicit = options.targetExplicit !== false;
+      if (!targetExplicit) {
+        document.querySelectorAll('input[name="chatTarget"]').forEach((item) => {
+          item.checked = item.value === 'host';
+        });
+      }
       state.selectedTargets = selectedTargets();
       const nodes = selectedNodeNames();
       const execute = $('chatExecute').checked;
@@ -2664,6 +2670,7 @@
             prompt,
             nodes,
             targets: explicitTargets,
+            target_explicit: targetExplicit,
             execute,
             no_llm: $('chatNoLlm').checked,
           }),
@@ -2707,10 +2714,13 @@
       if (!chatAutoRunEnabled(search)) return;
       const key = chatAutoRunKey(search);
       if (chatAutoRunAlreadySeen(key)) return;
+      const targetExplicit = (search.get('action') || '') !== 'tab:chat';
       state.view = 'chat';
       applyView('chat');
       $('chatStatus').textContent = 'running from URL...';
-      await askChat();
+      await askChat(null, { targetExplicit });
+      const normalizedKey = chatAutoRunKey(new URLSearchParams(window.location.search));
+      if (normalizedKey !== key) chatAutoRunAlreadySeen(normalizedKey);
     }
 
     // Re-run a previous user command: resend its prompt with the same nodes/targets/execute

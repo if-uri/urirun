@@ -972,18 +972,28 @@ def _filter_mesh_for_targets(discovered: dict, selected_targets: list[str]) -> d
     """Return a copy of discovered with serviceMap filtered to only route to selected nodes.
 
     When selected_targets is ["host"] (no remote node), removes all serviceMap entries that
-    point to remote node URLs — so kvm://host/... stays local instead of being forwarded."""
+    point to remote node URLs and drops remote-node routes — so kvm://host/... stays local
+    instead of being treated as a remote node capability during execution/memory capture."""
     active_names = {t.split(":", 1)[1] for t in selected_targets if t.startswith("node:")}
+    include_host = not selected_targets or "host" in selected_targets
+
+    def _keep_route(route: dict) -> bool:
+        node = str(route.get("node") or "").strip()
+        if node and node != "host":
+            return node in active_names
+        return include_host
+
     full_map = discovered.get("serviceMap") or {}
     nodes = discovered.get("nodes") or []
     inactive_urls = {
         n["url"] for n in nodes
         if n.get("reachable") and n.get("name") not in active_names and n.get("url")
     }
-    if not inactive_urls:
+    routes = [r for r in (discovered.get("routes") or []) if _keep_route(r)]
+    service_map = {k: v for k, v in full_map.items() if v not in inactive_urls}
+    if routes == (discovered.get("routes") or []) and service_map == full_map:
         return discovered
-    return {**discovered, "serviceMap": {k: v for k, v in full_map.items()
-                                         if v not in inactive_urls}}
+    return {**discovered, "routes": routes, "serviceMap": service_map}
 
 
 def _sync_targets_from_flow(
@@ -1331,8 +1341,20 @@ def _apply_host_default_when_no_node_in_prompt(
     return [], ["host"]
 
 
-def _has_explicit_remote_selection(requested_nodes: list[str], requested_targets: list[str]) -> bool:
+def _target_selection_explicit(payload: dict) -> bool:
+    if "target_explicit" not in payload and "targetExplicit" not in payload:
+        return True
+    raw = payload.get("target_explicit", payload.get("targetExplicit"))
+    if isinstance(raw, str):
+        return raw.strip().lower() not in {"0", "false", "no", "off"}
+    return bool(raw)
+
+
+def _has_explicit_remote_selection(requested_nodes: list[str], requested_targets: list[str],
+                                   target_explicit: bool = True) -> bool:
     """True when the request already contains a deliberate remote node selection from the UI/API."""
+    if not target_explicit:
+        return False
     if any(str(node).strip() for node in requested_nodes or []):
         return True
     return any(str(target).strip().startswith("node:") for target in requested_targets or [])
@@ -1341,6 +1363,8 @@ def _has_explicit_remote_selection(requested_nodes: list[str], requested_targets
 def _apply_explicit_target_sync(payload, flow, discovered, selected_nodes, selected_targets):
     """Sync targets from flow when the user did not explicitly choose them; flag remote capture."""
     explicit = [str(t).strip() for t in (payload.get("targets") or []) if str(t).strip()]
+    if not _target_selection_explicit(payload):
+        explicit = []
     if not explicit:
         selected_nodes, selected_targets = _sync_targets_from_flow(
             flow, discovered, selected_nodes, selected_targets)
@@ -1411,8 +1435,10 @@ def _chat_ask_general(
         _run_mode = "execute" if execute else "dry-run"
         selected_nodes, selected_targets, _local_first = _apply_local_nl_override(
             prompt, selected_nodes, selected_targets)
-        _dispatch = make_local_dispatch_uri(registry, _run_mode, local_first=_local_first)
-        execution = mesh.execute_flow(flow, discovered, registry, execute=execute, memory=twin_memory,
+        execution_mesh = _filter_mesh_for_targets(discovered, selected_targets)
+        execution_registry = mesh.registry_from_routes(execution_mesh.get("routes") or [])
+        _dispatch = make_local_dispatch_uri(execution_registry, _run_mode, local_first=_local_first)
+        execution = mesh.execute_flow(flow, execution_mesh, execution_registry, execute=execute, memory=twin_memory,
                                       dispatch_uri=_dispatch)
     finally:
         _restore_run_credentials(old_token, old_identity)
@@ -1510,18 +1536,22 @@ def chat_ask(project: str, db: str | None, config: str | None, payload: dict, no
     if not prompt:
         raise ValueError("prompt is required")
     requested_nodes, requested_targets = _parse_chat_nodes_targets(payload)
+    target_explicit = _target_selection_explicit(payload)
     selected_targets = _init_selected_targets(requested_nodes, requested_targets)
-    inferred = _infer_node_targets(prompt, requested_nodes, requested_targets, config, node_urls, deps)
+    inferred = _infer_node_targets(
+        prompt,
+        requested_nodes if target_explicit else [],
+        requested_targets if target_explicit else [],
+        config, node_urls, deps)
     if inferred is not None:
         selected_targets = inferred
-    selected_nodes = selected_nodes_from_targets(list(requested_nodes), selected_targets)
+    selected_nodes = selected_nodes_from_targets(list(requested_nodes) if target_explicit else [], selected_targets)
     execute = bool(payload.get("execute"))
     no_llm = bool(payload.get("no_llm") or payload.get("noLlm"))
     # Rule: if the prompt doesn't mention which node to use, default to host.
-    # But do not override an explicit UI/API node target. The URL/query payload is part of the
-    # command contract: nodes=lenovo or targets=node:lenovo must win even when the natural-language
-    # prompt says only "publish to LinkedIn".
-    if not _has_explicit_remote_selection(requested_nodes, requested_targets):
+    # But do not override an explicit UI/API node target. URL tab autorun can mark targets as
+    # non-explicit because those params are copied UI state, not a routing command.
+    if not _has_explicit_remote_selection(requested_nodes, requested_targets, target_explicit):
         selected_nodes, selected_targets = _apply_host_default_when_no_node_in_prompt(
             prompt, selected_nodes, selected_targets, config, node_urls, deps)
     _add_chat_user_message(
