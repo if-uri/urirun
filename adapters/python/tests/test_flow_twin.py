@@ -192,7 +192,7 @@ def test_fetch_planner_environments_threads_memory_into_planner_context(monkeypa
         received_memory.append(memory)
         return {"facts": {}, "guidance": [], "confidence": {"level": "auto", "score": 1.0, "reason": ""}}
 
-    import urirun.node.flow_planner as _flow_planner_mod
+    import urirun_flow.flow_planner as _flow_planner_mod
     import urirun.node.reversible as _rev
     monkeypatch.setattr(_flow_planner_mod, "_fetch_kvm_query", lambda step, reg, route, key: _profile() if route == "env/query/profile" else {"kind": "desktop"})
     monkeypatch.setattr(_rev, "planner_context", _fake_planner_context)

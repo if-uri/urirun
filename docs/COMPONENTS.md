@@ -316,6 +316,14 @@ scanner://page/camera/command/autonomous
 Service różni się od connectora tym, że żyje jako proces. Connector zwykle
 wykonuje pojedynczą operację i kończy pracę.
 
+Decyzja refaktoryzacyjna: `urirun-service-chat` ma być **real-source** ownerem
+dashboardu/chatu, ale nie przez przeniesienie całego `urirun.host`. Do service
+trafia aplikacja operatora (`host_dashboard`, `chat_orchestrator`, API/UI
+dashboardu, decision loop). Widget render ma być konsumowany z
+`urirun-widgets`, node/mesh z przyszłego `urirun-node`, a store/artifact/log
+powinny iść przez connector/service właściciela danych. Inaczej service-chat
+stałby się tym samym monolitem pod nową nazwą.
+
 ## Connector
 
 Connector to paczka dostarczająca zdolności URI. Powinna być mała i domenowa.
@@ -385,6 +393,12 @@ Rekomendowany descriptor:
 Najważniejsza zasada: widget jest żywy. Nie jest plikiem i nie powinien pojawiać
 się na liście artifactów. Jeśli podgląd kamery zapisze finalny PDF, to PDF jest
 artifactem, ale sam podgląd kamery jest widgetem.
+
+`urirun-widgets` jest źródłem prawdy dla renderu widgetów: JS bundle
+`widget://host/bundle/query/js`, server-side `render.py`, HTML i SVG widgetu.
+Host/dashboard może wybierać dane i sterować aplikacją operatora, ale nie powinien
+utrzymywać własnych kopii `render*ServiceView`, `service_widget_html` ani
+`service_widget_svg`.
 
 ## Artifact
 
@@ -495,6 +509,15 @@ Runtime jest rozbity na pakiety instalowane osobno: `urirun_node` (mesh/CLI/rout
 `urirun_cdp` (CDP/Chrome), `urirun_scanner`, `urirun_connectors_toolkit` (fasada kontraktów).
 Flota ~40 connectorów i kernel kontraktu (`urirun-contract`) to osobne repozytoria
 `if-uri/urirun-connector-*`. Plan i stan podziału: [Podział paczek](URIRUN_PACKAGE_SPLIT_PLAN.md).
+
+**Decyzja per-paczka (meta vs real-source).** `runtime/cdp/connectors-toolkit` zostają **meta-paczkami**
+(źródło w monorepo, sibling = wrapper PyPI). **Real-source** (własne źródło, monorepo shimuje):
+`contract`, `connector-router`, `twin`, `declarative`, `widgets`, `artifacts` oraz — od ekstrakcji
+2026-06-28 — `flow` (`urirun.node.flow` → shim do `urirun-flow/urirun_flow/flow.py`; standalone
+owner potwierdzony collision-smoke). `runtime` jest następny w kolejce do real-source (po opóźnieniu
+top-level importów). Reguła: paczka jest ALBO meta ALBO real-source, nigdy w pół — `dev-install.sh
+--check` + slim-core import-smoke pilnują, że każda ekstrakcja nie zostawia cofki ani połowicznego
+właściciela.
 
 ## Relacje między komponentami
 

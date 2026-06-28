@@ -1880,287 +1880,41 @@
       </div>`;
     }
 
-    function renderScannerArtifactFrame(item) {
-      const label = [item.type, item.date, item.contractor || item.supplier || item.category, item.amount].filter(Boolean).join(' · ')
-        || item.label || basename(item.path || item.uri || '');
-      const preview = item.previewUrl
-        ? `<img src="${esc(item.previewUrl)}" alt="${esc(label)}" loading="lazy">`
-        : '';
-      const href = item.filePreviewUrl || item.previewUrl || '';
-      return `<div class="stream-frame">
-        ${preview}
-        <div class="mono">${esc(item.kind || 'artifact')}</div>
-        <div class="subtle">${esc(label)}</div>
-        ${href ? `<a href="${esc(href)}" target="_blank" rel="noreferrer">open</a>` : ''}
-      </div>`;
-    }
-
-    function scannerServiceItem(service) {
-      return `<div class="item">
-            <strong>service</strong>
-            <div><span class="pill ${service.reachable ? 'up' : 'down'}">${esc(service.status || 'unknown')}</span></div>
-            <div class="mono">${esc(service.url || '')}</div>
-          </div>`;
-    }
-
-    function scannerCameraItem(camera, track) {
-      const ready = camera.ready ? 'ready' : (camera.ok === false ? 'error' : 'not ready');
-      return `<div class="item">
-            <strong>browser camera</strong>
-            <div><span class="pill ${camera.ready ? 'up' : 'down'}">${esc(ready)}</span></div>
-            <div class="subtle">${esc(camera.width || 0)}x${esc(camera.height || 0)} · ${esc(track.readyState || '')}</div>
-            <div class="mono">${esc(track.label || camera.uri || '')}</div>
-            ${camera.error ? `<div class="subtle">${esc(camera.error)}</div>` : ''}
-          </div>`;
-    }
-
-    function renderScannerStatusServiceView(view) {
-      const data = view.data || {};
-      const service = data.service || {};
-      const camera = data.cameraStatus || {};
-      const recent = Array.isArray(data.recentArtifacts) ? data.recentArtifacts : [];
-      const track = camera.track || {};
-      const recentHtml = recent.length
-        ? `<div class="stream-frames">${recent.map(renderScannerArtifactFrame).join('')}</div>`
-        : '<div class="subtle">No scanner artifacts yet</div>';
-      const body = `<div class="service-graph">${scannerServiceItem(service)}${scannerCameraItem(camera, track)}</div>
-        ${recentHtml}`;
-      return renderServiceViewShell(view, body);
-    }
-
-    function renderGenericServiceView(view) {
-      const data = view.data || {};
-      return `<div class="stream-card">
-        <div class="stream-head">
-          <strong>${esc(view.title || view.id || 'service view')}</strong>
-          <span class="pill ${streamStatusClass(view.status || 'running')}">${esc(view.status || view.kind || 'live')}</span>
-        </div>
-        <div class="stream-meta">
-          <span class="subtle">${esc(view.target || view.serviceId || '')}</span>
-          <span class="subtle">${esc(view.updatedAt || '')}</span>
-        </div>
-        <details open><summary>service data</summary><pre>${esc(JSON.stringify(data, null, 2))}</pre></details>
-      </div>`;
-    }
-
-    function renderTableServiceView(view) {
-      const data = view.data || {};
-      const rows = Array.isArray(data.rows) ? data.rows : [];
-      const explicitColumns = Array.isArray(data.columns) ? data.columns : [];
-      const columns = explicitColumns.length
-        ? explicitColumns.map((column) => typeof column === 'string' ? column : column.key || column.name || column.label).filter(Boolean)
-        : [...new Set(rows.flatMap((row) => Object.keys(row || {})))];
-      const table = columns.length
-        ? `<div class="service-table-wrap"><table>
-            <thead><tr>${columns.map((column) => `<th>${esc(column)}</th>`).join('')}</tr></thead>
-            <tbody>${rows.map((row) => `<tr>${columns.map((column) => `<td>${esc(text(row && row[column]))}</td>`).join('')}</tr>`).join('')}</tbody>
-          </table></div>`
-        : `<div class="subtle">no rows</div>`;
-      return renderServiceViewShell(view, table);
-    }
-
-    function renderImageServiceView(view) {
-      const data = view.data || {};
-      const images = Array.isArray(data.images) ? data.images : [data.url || data.previewUrl || data.src].filter(Boolean);
-      const body = images.length
-        ? `<div class="stream-frames">${images.map((image) => {
-            const item = typeof image === 'string' ? { url: image } : image;
-            return `<div class="stream-frame">
-              <img src="${esc(item.url || item.previewUrl || item.src || '')}" alt="${esc(item.label || view.title || 'service image')}" loading="lazy">
-              ${item.label ? `<div class="subtle">${esc(item.label)}</div>` : ''}
-            </div>`;
-          }).join('')}</div>`
-        : `<div class="subtle">no image</div>`;
-      return renderServiceViewShell(view, body);
-    }
-
-    function renderVideoServiceView(view) {
-      const data = view.data || {};
-      const url = data.url || data.src || data.streamUrl;
-      const body = url
-        ? `<video class="service-media" src="${esc(url)}" controls muted playsinline></video>`
-        : `<div class="subtle">no video stream</div>`;
-      return renderServiceViewShell(view, body);
-    }
-
-    function renderIframeServiceView(view) {
-      const data = view.data || {};
-      const url = data.url || data.src || data.href;
-      const body = url
-        ? `<iframe class="service-frame" src="${esc(url)}" title="${esc(view.title || 'service page')}" loading="lazy"></iframe>`
-        : `<div class="subtle">no page url</div>`;
-      return renderServiceViewShell(view, body);
-    }
-
-    function serviceFormField(field) {
-      const name = field.name || field.key || field.label || 'field';
-      const type = field.type || 'text';
-      const value = field.value || field.default || '';
-      const checked = type === 'checkbox' && (field.checked || value === true || value === 'true') ? 'checked' : '';
-      return `<label class="stack">
-            <span class="subtle">${esc(field.label || name)}</span>
-            <input type="${esc(type)}" name="${esc(name)}" value="${esc(value)}" ${checked} ${field.readonly ? 'readonly' : ''}>
-          </label>`;
-    }
-
-    function renderFormServiceView(view) {
-      const data = view.data || {};
-      const fields = Array.isArray(data.fields) ? data.fields : [];
-      const actionUri = data.actionUri || data.uri || view.actionUri || '';
-      const fieldsHtml = fields.map(serviceFormField).join('') || '<div class="subtle">no fields</div>';
-      const actionHtml = actionUri
-        ? `<div class="mono">${esc(actionUri)}</div><button type="submit">Run URI</button>`
-        : '<div class="subtle">no action URI</div>';
-      const body = `<form class="service-form-preview" data-service-form data-action-uri="${esc(actionUri)}">
-        ${fieldsHtml}
-        ${actionHtml}
-      </form>`;
-      return renderServiceViewShell(view, body);
-    }
-
-    function renderGraphServiceView(view) {
-      const data = view.data || {};
-      const nodes = Array.isArray(data.nodes) ? data.nodes : [];
-      const edges = Array.isArray(data.edges) ? data.edges : [];
-      const body = `<div class="service-graph">
-        <div class="item"><strong>nodes</strong>${nodes.map((node) => `<div class="mono">${esc(node.id || node.name || JSON.stringify(node))}</div>`).join('') || '<div class="subtle">none</div>'}</div>
-        <div class="item"><strong>edges</strong>${edges.map((edge) => `<div class="mono">${esc(edge.from || edge.source || '')} -> ${esc(edge.to || edge.target || '')}</div>`).join('') || '<div class="subtle">none</div>'}</div>
-      </div>`;
-      return renderServiceViewShell(view, body);
-    }
-
-    function renderServiceViewShell(view, body) {
-      return `<div class="stream-card">
-        <div class="stream-head">
-          <strong>${esc(view.title || view.id || 'service view')}</strong>
-          <span class="pill ${streamStatusClass(view.status || 'running')}">${esc(view.status || view.kind || 'live')}</span>
-        </div>
-        <div class="stream-meta">
-          <span class="subtle">${esc(view.target || view.serviceId || '')}</span>
-          <span class="subtle">${esc(view.updatedAt || '')}</span>
-        </div>
-        ${body}
-        <details><summary>URI / JSON</summary><pre>${esc(JSON.stringify(view, null, 2))}</pre></details>
-      </div>`;
-    }
-
-    const SERVICE_VIEW_RENDERERS = {
-      table: renderTableServiceView,
-      image: renderImageServiceView,
-      'image-list': renderImageServiceView,
-      video: renderVideoServiceView,
-      iframe: renderIframeServiceView,
-      page: renderIframeServiceView,
-      web: renderIframeServiceView,
-      form: renderFormServiceView,
-      graph: renderGraphServiceView,
-    };
-
-    function renderServiceView(view) {
-      if (view.view === 'scanner-status') return renderScannerStatusServiceView(view);
-      if (view.view === 'scanner-stream') {
-        const streams = view.data && Array.isArray(view.data.streams) ? view.data.streams : [];
-        return streams.map((stream) => renderScannerStream(stream, view.title || 'phone scanner stream')).join('');
-      }
-      const renderer = SERVICE_VIEW_RENDERERS[view.view];
-      return renderer ? renderer(view) : renderGenericServiceView(view);
-    }
-
-    function serviceWidgetLinks(service, view) {
-      const target = service.id || view.target || view.serviceId || '';
-      const links = [];
-      if (target) {
-        links.push(`<a href="/services/view?target=${encodeURIComponent(target)}" target="_blank" rel="noreferrer">HTML widget</a>`);
-        links.push(`<a href="/services/view.svg?target=${encodeURIComponent(target)}" target="_blank" rel="noreferrer">SVG</a>`);
-      }
-      if (service.url) links.push(`<a href="${esc(service.url)}" target="_blank" rel="noreferrer">open service</a>`);
-      return links.length ? `<div class="artifact-actions">${links.join('')}</div>` : '';
-    }
-
-    function widgetPreviewHtml(view, fallbackView) {
-      if (view) return renderServiceView(view);
-      if (fallbackView) return renderIframeServiceView(fallbackView);
-      return `<div class="stream-card"><div class="subtle">No live view published yet for this service.</div></div>`;
-    }
-
-    function widgetStatusPill(status) {
-      const cls = status === 'running' || status === 'up' || status === 'live' ? 'up' : 'down';
-      return `<span class="pill ${cls}">${esc(status)}</span>`;
-    }
-
-    function widgetCardTitle(service, safeView, target) {
-      return service.label || service.name || safeView.title || target || 'service';
-    }
-
-    function widgetQrUrl(service, target) {
-      return service.url || service.bindUrl || ('/services/view?target=' + encodeURIComponent(target));
-    }
-
-    function widgetFallbackView(service, target, status) {
-      if (!service.url) return null;
-      return {title: `${service.name || target || 'service'} page`, target, status, view: 'page', data: {url: service.url}};
-    }
-
-    function renderWidgetCard(service, view) {
-      const safeView = view || {};
-      const status = service.status || safeView.status || 'live';
-      const target = service.id || safeView.target || safeView.serviceId || '';
-      const preview = widgetPreviewHtml(view, widgetFallbackView(service, target, status));
-      const metaLine = service.url || service.bindUrl || safeView.updatedAt || '';
-      return `<div class="widget-card">
-        <div class="stream-head">
-          <div>
-            <strong>${esc(widgetCardTitle(service, safeView, target))}</strong>
-            <div class="mono">${esc(target)}</div>
-          </div>
-          ${widgetStatusPill(status)}
-        </div>
-        <div class="subtle">${esc(metaLine)}</div>
-        ${serviceWidgetLinks(service, safeView)}
-        ${qrDetails(widgetQrUrl(service, target), service.name || target, 'widget')}
-        <div class="widget-preview">${preview}</div>
-      </div>`;
-    }
-
-    function findServiceView(views, service) {
-      return views.find((item) => item.target === service.id || item.serviceId === service.id || item.serviceId === service.name || item.target === service.name);
-    }
-
-    function orphanWidgetCard(view) {
-      return renderWidgetCard({id: view.target || view.serviceId, label: view.title || view.serviceId || view.target, status: view.status || view.kind || 'live'}, view);
-    }
-
-    function renderWidgetDashboard() {
-      const services = state.summary && Array.isArray(state.summary.services) ? state.summary.services : [];
-      const views = state.serviceViews || [];
-      const used = new Set();
-      const cards = services.map((service) => {
-        const view = findServiceView(views, service);
-        if (view) used.add(view.id || view.target || view.serviceId);
-        return renderWidgetCard(service, view);
-      });
-      views.forEach((view) => {
-        const key = view.id || view.target || view.serviceId;
-        if (used.has(key)) return;
-        cards.push(orphanWidgetCard(view));
-      });
-      $('widgetCount').textContent = `${cards.length} widget(s)`;
-      $('widgetGrid').innerHTML = cards.join('') || empty('No services or widgets available');
-    }
-
-    function renderServiceViews() {
+    function updateServiceViews() {
       const active = state.selectedTargets.length ? state.selectedTargets : ['host'];
       const visible = state.serviceViews.filter((view) => active.includes(view.target) || active.includes(view.serviceId));
-      // Prefer the widget catalogue loaded over widget://host/bundle/query/js; fall back to the
-      // inline renderers if that URI request hasn't resolved (or failed).
-      const render = state.widgetRender || renderServiceView;
-      $('chatStreamList').innerHTML = visible.map(render).join('');
-      renderWidgetDashboard();
+      const render = state.widgetRender;
+      $('chatStreamList').innerHTML = render
+        ? visible.map(render).join('')
+        : empty('Widget renderer bundle is loading');
+      if (state.dashboardWidgets && typeof state.dashboardWidgets.renderDashboardWidget === 'function') {
+        const services = state.summary && Array.isArray(state.summary.services) ? state.summary.services : [];
+        const views = state.serviceViews || [];
+        const used = new Set();
+        const cards = services.map((service) => {
+          const view = views.find((item) => item.target === service.id || item.serviceId === service.id || item.serviceId === service.name || item.target === service.name);
+          if (view) used.add(view.id || view.target || view.serviceId);
+          return state.dashboardWidgets.renderDashboardWidget('widget-card', { service, view });
+        });
+        views.forEach((view) => {
+          const key = view.id || view.target || view.serviceId;
+          if (used.has(key)) return;
+          cards.push(state.dashboardWidgets.renderDashboardWidget('widget-card', {
+            service: { id: view.target || view.serviceId, label: view.title || view.serviceId || view.target, status: view.status || view.kind || 'live' },
+            view,
+          }));
+        });
+        $('widgetCount').textContent = `${cards.length} widget(s)`;
+        $('widgetGrid').innerHTML = cards.join('') || empty('No services or widgets available');
+      } else {
+        $('widgetCount').textContent = '0 widget(s)';
+        $('widgetGrid').innerHTML = empty('Widget renderer bundle is loading');
+      }
     }
 
     // Load the chat-stream widgets from the widget:// connector over a URI request, so the page
-    // renders chatStreamList from the published catalogue instead of its inline copy. Best-effort:
-    // any failure leaves state.widgetRender null and the inline renderers keep working.
+    // renders chatStreamList from the published catalogue instead of vendoring widget renderers
+    // in the dashboard controller.
     function applyWidgetJsBundle(js) {
       if (!js) return;
       // The bundle is a single concatenated module (imports/exports stripped); evaluate it in
@@ -2199,14 +1953,13 @@
           body: JSON.stringify({ uri: 'widget://host/bundle/query/css', mode: 'execute', payload: {}, source: 'widget-bundle' }),
         });
         applyWidgetCss(cssRes && cssRes.result && cssRes.result.css);
-        if (state.widgetRender) renderServiceViews();
+        if (state.widgetRender) updateServiceViews();
         if (state.dashboardWidgets && typeof state.dashboardWidgets.renderDashboardWidget === 'function') {
           renderArtifacts(state.artifacts, { force: true });
           renderChatHistory({ force: true });
         }
       } catch (error) {
-        // keep the inline renderers (state.widgetRender stays null)
-        if (window.console) console.warn('widget bundle load failed, using inline renderers:', error.message);
+        if (window.console) console.warn('widget bundle load failed:', error.message);
       }
     }
 
@@ -2217,7 +1970,7 @@
       try {
         const data = await api('/api/services/live?limit=8');
         state.serviceViews = data.views || [];
-        renderServiceViews();
+        updateServiceViews();
         renderChatHistory();
       } finally {
         _loadServiceViewsInflight = false;
@@ -2678,7 +2431,7 @@
       renderHost(summary);
       renderChatContacts(summary);
       renderDiscovery(summary);
-      renderServiceViews();
+      updateServiceViews();
       renderRoutes(summary.routes || []);
       renderChecks(summary.checks || []);
       renderLogs(summary.logs || []);
@@ -2874,7 +2627,7 @@
         if (!state.selectedTargets.length) state.selectedTargets = ['host'];
         updateTargetSummary();
         renderChatHistory();
-        renderServiceViews();
+        updateServiceViews();
         writeUrlState({ action: 'contacts:select', targets: state.selectedTargets.join(',') }, { replace: true });
       }
       if (event.target && event.target.name === 'chatMessageSelect') {

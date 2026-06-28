@@ -16,6 +16,7 @@ import sys
 _FORBIDDEN = (
     "urirun.host", "urirun_node", "urirun.node", "urirun_scanner",
     "urirun.connectors", "urirun_connector_", "urirun_flow", "urirun_twin",
+    "urirun_widgets",
 )
 
 _PROBE = (

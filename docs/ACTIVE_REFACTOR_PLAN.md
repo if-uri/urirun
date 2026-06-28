@@ -18,16 +18,44 @@ Checked against the repo on 2026-06-28:
 - Reversibility is no longer a parallel declaration: `urirun_twin.reversible`
   exposes `schema_from_contracts` and `schema_from_bindings`, both delegating to
   `urirun_contract.contract_reversible`.
-- Fleet coverage is ratcheted, not strict: `24/38` connectors have a contract,
-  there are no mutating connectors without any contract, but `1` connector is
-  still partial with mutating routes missing route-level contract entries:
-  `twin`. The baseline is tightened to that single known partial.
+- Fleet coverage is strict-green at route level for mutating routes: `24/38`
+  connectors have a contract, there are no mutating connectors without a
+  contract, and there are no partial mutating route gaps. The only baseline
+  exception is `urirun-connector-scanner`, which has no detected URI surface.
 - `urirun-connector-kvm` is route-complete for mutating routes: `27` contracts,
   `3` wires, full xlang proof active under `URIRUN_CONTRACT_CHECK=1`.
+- `urirun-connector-twin` is route-complete for its autonomous surface: `23`
+  route contracts cover plan, mock, sandbox, proof, flow, recall, diagnostics,
+  browser and monitor boundaries.
 - `urirun-contract` JSON Schema export now preserves `?T` as optional and
   nullable, matching the Python gate and the JS/Go/Rust xlang readers.
 - `urirun-connector-router` is a real-source package with install/test/smoke,
   single-source, build checks and package CI.
+- `urirun-flow` is now a real-source package: it owns the `urirun_flow` import
+  package and `urirun-flow` console script. The hub package depends on
+  `urirun-flow>=0.2.2`, excludes `urirun_flow*` from its wheel, and collision
+  smoke verifies `urirun_flow -> ['urirun-flow']`. The old hub copy of
+  `adapters/python/urirun_flow/*` has been removed.
+- `urirun-flow` pure helpers now import routing from `urirun-connector-router`
+  directly and have a light-import regression: `_util`, `envelope`,
+  `flow_thin`, and `flow_verify` do not import the hub `urirun` runtime or
+  `urirun_node`.
+- Example flow/scenario YAML files are now pre-dispatch checked by
+  `tests/test_examples_router_diagnosis.py`: `37` curated example files / `143`
+  URI steps diagnose through `urirun-connector-router`; the only accepted
+  safety blocks are explicit install flows.
+- `python scripts/extraction_audit.py` reports green boundaries for runtime,
+  flow, scanner/documents, cdp-surface, connectors toolkit, pure node substrate,
+  twin, and event schema. The full `node` layer is red only because
+  `urirun.node.node_cli` and `urirun.node.task_cli` still re-export host CLIs.
+- `import urirun` stays light: it does not import `urirun.host`, `urirun_node`,
+  `urirun_scanner`, `urirun_flow`, or `urirun_widgets`.
+- `urirun-widgets` is the Python source of truth for standalone widget HTML/SVG
+  and service-view selection/summary. The host now imports those helpers instead
+  of defining `service_widget_html`, `service_widget_svg`,
+  `select_service_view`, `service_widget_summary`, or the JS
+  `render*ServiceView`/`renderWidget*` family; the render single-source gate is
+  strict-green with `0` host-vendored renderers.
 - `project.toon.yaml` in `urirun` still points at large owner modules
   (`host/dashboard.js`, `host/host_dashboard.py`, `host/chat_orchestrator.py`,
   `host/object_registry.py`, `urirun_node/server.py`). Those are extraction
@@ -99,24 +127,27 @@ assert "router://host/plan/query/diagnose" in urirun_bindings()["bindings"]
 PY
 ```
 
-## Phase 1 - Make Fleet Contracts Route-Complete
+## Phase 1 - Make Fleet Contracts Route-Complete (Closed For Current Fleet)
 
 Goal: move from ratchet coverage to strict route-level coverage for every
 mutating connector route.
 
-Tasks:
+Closed:
 
 - Keep `urirun-contract make check` as the default contract gate; it is already
   the proof point for single-source, regen-check and compatibility.
-- Burn down known partials in `ci/fleet_coverage.baseline.json`:
-  `twin`.
+- Burn down known partials in `ci/fleet_coverage.baseline.json`: `twin` is no
+  longer listed.
 - Keep fleet coverage strict about route identity: full URI and `route_key`
   match, but not bare `command/<verb>` suffixes.
 - Generate skeleton route contracts from `connector.manifest.json`,
   decorators and `urirun_bindings()`; humans/LLM fill effect, examples and
   reversibility.
-- Turn `python ci/fleet_coverage.py .. --baseline ... --strict` green and then
-  make strict the default.
+- Turn `python ci/fleet_coverage.py .. --baseline ... --strict` green.
+
+Remaining follow-up:
+
+- Make strict fleet coverage the default non-baseline CI mode where appropriate.
 - Export JSON Schema and TypeScript artifacts beside each package
   `contracts.json`; validate them in package CI.
 - Add shared golden examples for Python and Go consumers where a connector has a
@@ -135,13 +166,26 @@ python ci/fleet_coverage.py .. --baseline ci/fleet_coverage.baseline.json --stri
 Goal: `urirun-flow` owns flow documents, thin driver, recovery, reversible
 ledger, rollback and verification integration.
 
+Current decision:
+
+- `urirun-flow` is a real-source package. The next work is reducing its top-level
+  imports of hub runtime modules so pure planning/model imports stay light.
+- Keep `urirun.node.flow*` and historical import paths as re-export shims.
+
 Tasks:
 
-- Turn `urirun-flow` from meta-wrapper into real-source package or explicitly
-  keep it meta and document why.
-- Move `urirun_flow/*` source to `urirun-flow` if choosing real-source.
+- Move `urirun_flow/*` source to `urirun-flow`. (closed)
+- Keep `urirun` wheel from shipping `urirun_flow*`; `urirun-flow` owns that
+  import name. (closed)
+- Remove the old in-hub `adapters/python/urirun_flow/*` source copy so the repo
+  also has one real owner, not just the wheel. (closed)
 - Keep `urirun.node.flow` and historical paths as shims.
-- Move flow tests that do not need host/dashboard into `urirun-flow/tests`.
+- Move remaining flow tests that do not need host/dashboard into
+  `urirun-flow/tests`.
+- Move more runtime-only imports behind call sites (`flow.py`, `flow_planner.py`,
+  `diagnostics.py`, `recovery.py`) so static DSL/planning imports do not require
+  the full hub runtime. (partially closed for `_util`, `envelope`,
+  `flow_thin`/`flow_verify` and routing imports)
 - Keep host chat as a consumer: it builds flow, asks router, calls flow engine.
 
 Acceptance:
@@ -160,6 +204,20 @@ PYTHONPATH=urirun-flow:urirun-connector-router:urirun-contract:urirun/adapters/p
 Goal: `urirun host ...` and `urirun node ...` become shims to service packages,
 not core implementation.
 
+Current decision:
+
+- Extract `urirun-node` before host services. The pure node substrate is green;
+  the only blocking edges in the full node namespace are host CLI compatibility
+  shims (`node_cli`, `task_cli`).
+- `urirun-service-chat`, `urirun-service-scanner`, and
+  `urirun-service-android-node` already exist, but still depend on `urirun[host]`
+  rather than owning all service code. They should become real service owners,
+  with `urirun host ...` commands delegating to them.
+- `urirun-service-chat` should be real-source, not a permanent wrapper, but it
+  must not absorb all of `urirun.host`. Widget render is consumed from
+  `urirun-widgets`; node/mesh belongs to `urirun-node`; service-chat owns only
+  the operator chat/dashboard application.
+
 Tasks:
 
 - Create or finalize `urirun-node` as owner of node server, mesh, transport,
@@ -169,8 +227,8 @@ Tasks:
 - Move scanner runtime into `urirun-service-scanner`; keep document processing
   in connectors.
 - Keep only CLI forwarding commands in `urirun`.
-- Add top-level import smoke: `python -c "import urirun"` must not import host,
-  node, dashboard, scanner or connector implementation modules.
+- Keep top-level import smoke green: `python -c "import urirun"` must not import
+  host, node, dashboard, scanner, widgets or connector implementation modules.
 
 Acceptance:
 
@@ -229,19 +287,24 @@ Acceptance:
 
 ## Immediate Next Tasks
 
-1. Add an examples test that diagnoses all `examples/*/flow*.json|yaml` through
-   `urirun-connector-router`.
-2. Reduce fleet partial coverage by finishing the remaining mutating gaps in
-   `twin`: plan/mock/sandbox/proof/flow command routes.
-3. Wire `urirun-contract` JSON Schema validation into connector/example CI,
+1. Move remaining pure flow tests out of `urirun/adapters/python/tests` and into
+   `urirun-flow/tests`, keeping host/dashboard-specific tests in the hub.
+2. Continue reducing `urirun-flow` top-level imports of hub runtime modules:
+   remaining heavy edges are `flow.py`, `flow_planner.py`, `diagnostics.py`
+   optional URI registration, and `recovery.py` error taxonomy.
+3. Convert `urirun-runtime` from meta-package to real-source package only after
+   `urirun-flow` is stable; runtime is green but broader and should move second.
+4. Convert `urirun-cdp` from meta-package to real-source package or fold it into
+   `urirun-connector-webnode`/browser-control if the CDP surface is only used
+   by browser connectors.
+5. Wire `urirun-contract` JSON Schema validation into connector/example CI,
    using the KVM xlang proof as the reference shape.
-4. Audit `project/map.toon.yaml` for remaining large owners inside `urirun`:
+6. Extract `urirun-node` real source, excluding `node_cli` and `task_cli` host
+   compatibility shims until host services own those commands.
+7. Audit `project/map.toon.yaml` for remaining large owners inside `urirun`:
    `host/chat_orchestrator.py`, `host/dashboard.js`, `host/host_dashboard.py`,
    `host/object_registry.py`, `urirun_node/server.py`.
-5. Choose whether `urirun-flow`, `urirun-runtime`, `urirun-cdp` stay
-   meta-wrappers or become real-source packages; document one decision per
-   package.
-6. Create a top-level smoke suite for host/node/local/remote scenarios:
+8. Create a top-level smoke suite for host/node/local/remote scenarios:
    host-only, explicit node, inferred node, stale URL target, route.node override,
    missing route, unreachable node, unsafe command.
 
@@ -256,4 +319,5 @@ Do not move another package before these are true:
 - fresh install path can import `urirun` without sibling checkout assumptions,
 - examples still validate through `urirun-contract` and diagnose through
   `urirun-connector-router`,
-- fleet strict coverage has a deliberate burn-down plan for every known partial.
+- fleet strict coverage stays green or any new partial has an explicit baseline
+  burn-down entry.

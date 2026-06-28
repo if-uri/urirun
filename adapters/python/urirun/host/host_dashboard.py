@@ -193,8 +193,11 @@ from .artifacts_admin import (
 from .html_templates import (
     INDEX_HTML, NODE_TYPES_DOC_HTML, SCANNER_HTML,
     docs_nodes_html as _docs_nodes_html_impl,
+)
+from urirun_widgets.render import (
+    render_svg as _service_widget_svg_impl,
+    select_service_view as _select_service_view_impl,
     service_widget_html as _service_widget_html_impl,
-    service_widget_svg as _service_widget_svg_impl,
 )
 from .scanner_bridge import (
     PAGE_ACTION_LOCK as _SCANNER_PAGE_ACTION_LOCK,
@@ -292,8 +295,6 @@ from .service_control import (
 from .widgets import (
     query_value as _widget_query_value,
     scanner_stream_summary as _scanner_stream_summary_impl,
-    select_service_view as _select_service_view_impl,
-    service_widget_summary as _service_widget_summary_impl,
 )
 
 try:
@@ -364,10 +365,9 @@ def _service_widget_html(project: str, query: dict[str, list[str]]) -> str:
 
 def _service_widget_svg(project: str, query: dict[str, list[str]]) -> str:
     view = _service_view_from_query(project, query)
-    summary = _service_widget_summary_impl(view)
     width = max(320, min(1200, int(_first(query, "width", "720") or 720)))
     height = max(120, min(600, int(_first(query, "height", "180") or 180)))
-    return _service_widget_svg_impl(view, summary, width=width, height=height)
+    return _service_widget_svg_impl(view, width=width, height=height)
 
 
 def _chat_message(role: str, content: str, *, detail: dict | None = None, attachments: list[dict] | None = None) -> dict:
