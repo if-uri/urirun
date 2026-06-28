@@ -22,7 +22,7 @@ help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: test
-test: version-check test-js test-python test-c conformance test-v1 test-v2 ## Run all runtime checks.
+test: version-check slim-import test-js test-python test-c conformance test-v1 test-v2 ## Run all runtime checks.
 
 .PHONY: version-check
 version-check: ## Verify root, Python and npm (urirun) package versions match. (urirun-js / adapters/js versions independently.)
@@ -64,6 +64,10 @@ lint: ## Ruff-lint the Python package (keeps main green; gated in CI).
 .PHONY: complexity
 complexity: ## Fail if any Python function exceeds the cyclomatic-complexity limit (CC>15).
 	$(PYTHON) scripts/cc_gate.py
+
+.PHONY: slim-import
+slim-import: ## Slim-core ratchet: `import urirun` must NOT load host/node/flow/widgets/scanner (runtime kernel is allowed).
+	$(PYTHON) -c "import sys; sys.path.insert(0, 'adapters/python/tests'); import test_core_import_smoke as t; t.test_bare_import_urirun_stays_slim(); print('slim-core OK: import urirun stays slim')"
 
 .PHONY: docs-check
 docs-check: ## Docs↔source gate (semcod/docval): FAIL if any doc references a dead symbol/import/CLI (chunks_invalid>0); empty/TODO sections are advisory. Needs: pip install docval
