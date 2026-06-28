@@ -51,6 +51,18 @@ def test_timeline_entry_green_on_full_success() -> None:
     assert "error" not in entry
 
 
+def test_thin_step_entry_uses_transport_service_as_target() -> None:
+    from urirun_flow.flow_thin import _thin_step_entry
+
+    entry = _thin_step_entry(
+        "capture",
+        "kvm://host/screen/query/capture",
+        {"ok": True, "service": "lenovo"},
+    )
+
+    assert entry["target"] == "lenovo"
+
+
 def test_execute_flow_aborts_on_inner_action_failure(monkeypatch) -> None:
     """End-to-end guard for the LinkedIn case: a flow whose first action fails (transport
     200, inner ok False) must ABORT — report ok False AND not dispatch the dependent step.
@@ -280,3 +292,79 @@ def test_fetch_planner_environments_builds_context(monkeypatch) -> None:
     assert envs[0]["facts"]["bestSurface"] == "cdp"
     assert envs[0]["facts"]["foreground"]["url"] == "https://linkedin.com/feed"
     assert any("do not translate" in g.lower() for g in envs[0]["guidance"])
+
+
+def test_fetch_planner_environments_uses_registry_node_metadata_for_host_uri(monkeypatch) -> None:
+    """A remote node can advertise local KVM as kvm://host/... with meta.node=lenovo.
+    Asking for the lenovo environment must call the advertised URI, not kvm://lenovo/..."""
+    calls = []
+
+    def fake_call(uri, payload, registry, mode):
+        calls.append(uri)
+        if uri == "kvm://host/env/query/profile":
+            return {"ok": True, "result": {"value": {
+                "controlStrategies": {"cdp": True}, "best": "cdp", "controllable": True}}}
+        if uri == "kvm://host/surface/query/current":
+            return {"ok": True, "result": {"value": {"kind": "desktop"}}}
+        return {"ok": False, "result": {"value": {}}}
+
+    registry = {
+        "index": {
+            "env": {"uri": "kvm://host/env/query/profile", "meta": {"node": "lenovo"}},
+            "surface": {"uri": "kvm://host/surface/query/current", "meta": {"node": "lenovo"}},
+        }
+    }
+    monkeypatch.setattr(flow.v2_service, "call", fake_call)
+
+    envs = flow.fetch_planner_environments(["lenovo"], registry=registry, mesh={"serviceMap": {}})
+
+    assert len(envs) == 1
+    assert envs[0]["facts"]["bestSurface"] == "cdp"
+    assert "kvm://host/env/query/profile" in calls
+    assert "kvm://lenovo/env/query/profile" in calls  # tried direct first, then registry metadata fallback
+
+
+def test_autonomous_linkedin_execute_rolls_back_on_login_gate(monkeypatch) -> None:
+    """Execute-mode autonomy for the real LinkedIn login-gate dump: the CDP navigate is reversible,
+    the ui/query/verify login gate fails (result.value.ok False under a 200 envelope, exactly how
+    kvm reports it) -> the engine folds the inner failure, fails the flow, and ROLLS BACK the
+    navigation, leaving no half-open page. (The gate-failure DIAGNOSIS is covered in test_diagnostics;
+    here we prove the execute+rollback safety behavior.)"""
+    inverses_fired = []
+
+    def fake_call(uri, payload, registry, mode):
+        if uri.endswith("/cdp/session/command/ensure"):
+            return {"uri": uri, "ok": True, "result": {"value": {"ok": True, "launching": True}}}
+        if uri.endswith("/cdp/session/query/ready"):
+            return {"uri": uri, "ok": True, "result": {"value": {"ok": True, "ready": True}}}
+        if uri.endswith("/cdp/page/command/navigate"):
+            if str(payload.get("url", "")).startswith("chrome://"):   # the inverse the rollback fires
+                inverses_fired.append(uri)
+                return {"uri": uri, "ok": True, "result": {"value": {"ok": True}}}
+            return {"uri": uri, "ok": True, "result": {"value": {                # reversible forward nav
+                "ok": True,
+                "inverse": {"uri": "kvm://host/cdp/page/command/navigate",
+                            "args": {"url": "chrome://new-tab-page/"}}}}}
+        if uri.endswith("/ui/query/verify"):                          # login gate FAILS (inner ok=False)
+            return {"uri": uri, "ok": True, "result": {"value": {
+                "ok": False, "present": False,
+                "error": "required text not found on screen: 'Zacznij publikację'"}}}
+        return {"uri": uri, "ok": True, "result": {"value": {"ok": True}}}
+
+    monkeypatch.setattr(flow.v2_service, "call", fake_call)
+    flow_doc = {"steps": [
+        {"id": "ensure", "uri": "kvm://host/cdp/session/command/ensure",
+         "payload": {"copy_from": "~/.config/google-chrome"}},
+        {"id": "ready", "uri": "kvm://host/cdp/session/query/ready", "payload": {}, "depends_on": ["ensure"]},
+        {"id": "nav", "uri": "kvm://host/cdp/page/command/navigate",
+         "payload": {"url": "https://www.linkedin.com/feed/"}, "depends_on": ["ready"]},
+        {"id": "verify", "uri": "kvm://host/ui/query/verify",
+         "payload": {"expect": "Zacznij publikację", "required": True}, "depends_on": ["nav"]},
+    ]}
+    res = flow.execute_flow(flow_doc, mesh={}, registry={}, execute=True, recover=False)
+
+    assert res["ok"] is False                                          # login gate failed the flow
+    assert any(u.endswith("/cdp/page/command/navigate") for u in inverses_fired)  # navigation undone
+    assert any(e.get("action") == "rollback" for e in res["timeline"])
+    verify = next(e for e in res["timeline"] if e.get("id") == "verify")
+    assert verify["ok"] is False                                       # inner failure folded, not green
