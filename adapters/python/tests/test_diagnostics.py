@@ -1354,6 +1354,33 @@ class FlowUriHandlerTests(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertEqual(result["next"]["kind"], "done")
 
+    def test_goal_verify_non_contract_goal_returns_done(self):
+        """A task title/string is metadata, not a goal assertion contract."""
+        from urirun.node.flow import _uri_goal_verify
+        result = _uri_goal_verify({"goal": "zrob zrzut ekranu na lenovo", "results": {}})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["next"]["kind"], "done")
+        self.assertIn("note", result)
+
+    def test_execute_flow_string_task_does_not_goal_fail(self):
+        """Recalled/generated flows may carry a plain task string; it must not trigger rollback."""
+        from urirun.node.flow import execute_flow
+
+        calls = []
+
+        def dispatch(uri, payload=None):
+            calls.append(uri)
+            return {"ok": True, "next": {"kind": "continue"}}
+
+        flow = {"task": "zrob zrzut ekranu na lenovo",
+                "steps": [{"id": "shot", "uri": "kvm://host/screen/query/capture"}]}
+        result = execute_flow(flow, {"routes": [], "serviceMap": {}}, {}, execute=True,
+                              dispatch_uri=dispatch)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["next"]["kind"], "done")
+        self.assertTrue(any("goal/query/verify" in uri for uri in calls))
+
     def test_goal_verify_thin_driver_calls_handler(self):
         """_thin_driver routes goal verify through dispatch_uri — the handler is called."""
         from urirun.node.flow import FlowEnvelope, execute_flow

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from urirun.host import chat_orchestrator as co
 from urirun.host.chat_orchestrator import _apply_host_default_when_no_node_in_prompt
 from urirun.node.reversible import TwinMemory
+from urirun_flow.env_selection import resolve_flow_env_enums
 
 
 def _deps(alias_map: dict) -> MagicMock:
@@ -284,15 +285,15 @@ class TestHostDefault(unittest.TestCase):
             }}}},
         }]
 
-        with patch("urirun_flow.flow._build_env_inventory", return_value={
+        inventory = {
             "node": "host",
             "fingerprint": "env-two",
             "domains": {"env:monitors.id": [
                 {"value": 1, "label": "HDMI-1"},
                 {"value": 2, "label": "DP-2"},
             ]},
-        }):
-            selection = co._resolve_env_enum_flow(flow, {}, routes, TwinMemory())
+        }
+        selection = resolve_flow_env_enums(flow, routes, memory=TwinMemory(), inventories={"host": inventory})
 
         self.assertFalse(selection["ok"])
         self.assertEqual(selection["kind"], "needs-selection")
@@ -310,16 +311,17 @@ class TestHostDefault(unittest.TestCase):
             }}}},
         }]
 
-        with patch("urirun_flow.flow._build_env_inventory", return_value={
+        inventory = {
             "node": "host",
             "fingerprint": "env-two",
             "domains": {"env:monitors.id": [
                 {"value": 1, "label": "HDMI-1", "primary": True},
                 {"value": 2, "label": "DP-2", "primary": False},
             ]},
-        }):
-            selection = co._resolve_env_enum_flow(
-                flow, {}, routes, TwinMemory(), prompt="zrob zrzut monitora glownego")
+        }
+        selection = resolve_flow_env_enums(
+            flow, routes, memory=TwinMemory(), inventories={"host": inventory},
+            prompt="zrob zrzut monitora glownego")
 
         self.assertTrue(selection["ok"])
         self.assertEqual(selection["flow"]["steps"][0]["payload"]["monitor"], 1)
