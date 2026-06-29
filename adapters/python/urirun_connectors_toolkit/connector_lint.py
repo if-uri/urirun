@@ -324,27 +324,50 @@ def _uses_resolve_secret(py_files: list[Path]) -> bool:
     return False
 
 
-def lint_connector(pkg_dir: str | Path) -> dict:
-    """Analyse a connector package directory and return a structured lint report."""
-    root = Path(pkg_dir)
+def _lint_gather_data(root: Path) -> tuple:
+    """Collect raw scanning data: py files, code routes, manifest data, CLI subcommands."""
     manifests = list(root.rglob("connector.manifest.json"))
     py_files = _connector_py_files(root)
-
     objs, code_routes = _scan_code_routes(py_files)
     manifest, manifest_routes = _load_manifest_routes(manifests)
-
-    code_uris = {r["uri"] for r in code_routes}
-    manifest_uris = set(manifest_routes)
     cli_subs = _cli_subcommands(py_files)
     manifest_declares_routes = "routes" in manifest
+    return objs, code_routes, manifest, manifest_routes, cli_subs, manifest_declares_routes, py_files
 
+
+def _lint_route_analysis(
+    code_routes: list, manifest: dict, manifest_routes: list,
+    cli_subs: set, manifest_declares_routes: bool,
+) -> tuple:
+    """Compute drift, adapter drift, placements and route-kind counts."""
+    code_uris = {r["uri"] for r in code_routes}
+    manifest_uris = set(manifest_routes)
     drift = _compute_drift(code_uris, manifest_uris, code_routes, manifest_declares_routes)
     adapter_drift = _adapter_drift(code_routes, manifest)
     placements = _route_placements(code_routes, manifest_uris, cli_subs)
     handler_routes, argv_routes = _route_kind_counts(code_routes)
+    return drift, adapter_drift, placements, handler_routes, argv_routes
+
+
+def _lint_secret_report(py_files: list) -> dict:
+    """Scan for secret env reads and build the secretEnvReads sub-report."""
     secret_reads = _scan_secret_env_reads(py_files)
     uses_resolver = _uses_resolve_secret(py_files)
+    return {
+        "count": len(secret_reads),
+        "usesResolveSecret": uses_resolver,
+        # A read with no resolve_secret anywhere is a likely ambient-secret bypass.
+        "bypass": bool(secret_reads) and not uses_resolver,
+        "findings": secret_reads,
+    }
 
+
+def _lint_build_report(
+    root: Path, objs: dict, code_routes: list, manifest_routes: list, manifest: dict,
+    manifest_declares_routes: bool, cli_subs: set, drift: dict, adapter_drift: dict,
+    placements: list, handler_routes: int, argv_routes: int, secret_env_reads: dict,
+) -> dict:
+    """Assemble and return the structured lint report dict."""
     return {
         "package": str(root),
         "pattern": "decorator" if code_routes else "declarative-or-unrecognized",
@@ -362,14 +385,24 @@ def lint_connector(pkg_dir: str | Path) -> dict:
         },
         "handlerRoutes": handler_routes,
         "argvRoutes": argv_routes,
-        "secretEnvReads": {
-            "count": len(secret_reads),
-            "usesResolveSecret": uses_resolver,
-            # A read with no resolve_secret anywhere is a likely ambient-secret bypass.
-            "bypass": bool(secret_reads) and not uses_resolver,
-            "findings": secret_reads,
-        },
+        "secretEnvReads": secret_env_reads,
     }
+
+
+def lint_connector(pkg_dir: str | Path) -> dict:
+    """Analyse a connector package directory and return a structured lint report."""
+    root = Path(pkg_dir)
+    objs, code_routes, manifest, manifest_routes, cli_subs, manifest_declares_routes, py_files = \
+        _lint_gather_data(root)
+    drift, adapter_drift, placements, handler_routes, argv_routes = _lint_route_analysis(
+        code_routes, manifest, manifest_routes, cli_subs, manifest_declares_routes,
+    )
+    secret_env_reads = _lint_secret_report(py_files)
+    return _lint_build_report(
+        root, objs, code_routes, manifest_routes, manifest,
+        manifest_declares_routes, cli_subs, drift, adapter_drift,
+        placements, handler_routes, argv_routes, secret_env_reads,
+    )
 
 
 # ─── Kernel symbol contract ──────────────────────────────────────────────────
