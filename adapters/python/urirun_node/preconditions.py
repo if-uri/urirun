@@ -73,6 +73,26 @@ def _acquire_item(precondition: str, providers: list[Provider]) -> dict:
             "humanGated": p.human_gated}
 
 
+def _try_auto_satisfy(precondition: str, providers: list, ctx: dict) -> tuple[dict | None, list[str]]:
+    """Try each auto provider's satisfy(); return (success_dict, errors) or (None, errors)."""
+    errors: list[str] = []
+    for p in providers:
+        if not p.can_auto():
+            continue
+        try:
+            p.satisfy(ctx)  # type: ignore[misc]
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{p.name}: {exc}")
+            continue
+        try:
+            if p.check(ctx):
+                return {"ok": True, "satisfied": True, "acquired": True,
+                        "precondition": precondition, "provider": p.name}, errors
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{p.name} recheck: {exc}")
+    return None, errors
+
+
 def ensure(precondition: str, ctx: dict | None = None, *, auto: bool = True) -> dict:
     """Make ``precondition`` true, or report exactly what's needed.
 
@@ -87,28 +107,14 @@ def ensure(precondition: str, ctx: dict | None = None, *, auto: bool = True) -> 
     if not providers:
         return {"ok": False, "satisfied": False, "precondition": precondition,
                 "reason": f"no provider registered for {precondition!r}"}
-
     hit = _satisfied_by(providers, ctx)
     if hit is not None:
         return {"ok": True, "satisfied": True, "precondition": precondition, "provider": hit.name}
-
     errors: list[str] = []
     if auto:
-        for p in providers:
-            if not p.can_auto():
-                continue
-            try:
-                p.satisfy(ctx)  # type: ignore[misc]
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"{p.name}: {exc}")
-                continue
-            try:
-                if p.check(ctx):
-                    return {"ok": True, "satisfied": True, "acquired": True,
-                            "precondition": precondition, "provider": p.name}
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"{p.name} recheck: {exc}")
-
+        success, errors = _try_auto_satisfy(precondition, providers, ctx)
+        if success:
+            return success
     result = {"ok": False, "satisfied": False, "precondition": precondition,
               "next": {"kind": "acquire"}, "acquire": _acquire_item(precondition, providers)}
     if errors:
