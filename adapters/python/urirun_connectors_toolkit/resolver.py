@@ -61,6 +61,50 @@ def _candidate_dirs(base: Path) -> list[Path]:
     return list(base.glob("urirun-connector-*")) + list(base.glob("*/urirun-connector-*"))
 
 
+def _iter_connector_dirs(roots: list[str] | tuple[str, ...]) -> list[Path]:
+    """Return unique, validated connector directories found under *roots*.
+
+    Applies deduplication via resolved paths and filters to directories whose
+    name starts with ``urirun-connector-``.
+    """
+    seen: set[Path] = set()
+    dirs: list[Path] = []
+    for root in roots:
+        base = Path(root).expanduser()
+        if not base.exists():
+            continue
+        for connector_dir in sorted(_candidate_dirs(base)):
+            if not connector_dir.is_dir():
+                continue
+            resolved = connector_dir.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            if connector_dir.name.startswith("urirun-connector-"):
+                dirs.append(connector_dir)
+    return dirs
+
+
+def _build_connector_entry(connector_dir: Path, git_org: str) -> dict[str, Any]:
+    """Build the index-entry dict for a single connector directory."""
+    package = connector_dir.name
+    connector_id = package.replace("urirun-connector-", "", 1)
+    manifest = _read_manifest(connector_dir)
+    schemes = _schemes_from_manifest(manifest) or _schemes_from_code(connector_dir)
+    return {
+        "id": connector_id,
+        "package": package,
+        "schemes": schemes or [connector_id.replace("-", "")],
+        "source": str(connector_dir),
+        "install": {
+            "local": str(connector_dir),
+            "git": f"git+https://github.com/{git_org}/{package}.git",
+            "pypi": package,
+        },
+        "summary": str(manifest.get("summary") or manifest.get("description") or ""),
+    }
+
+
 def index_local(roots: list[str] | tuple[str, ...] | None = None, git_org: str = "if-uri") -> list[dict[str, Any]]:
     """Index local connector projects.
 
@@ -68,35 +112,7 @@ def index_local(roots: list[str] | tuple[str, ...] | None = None, git_org: str =
     ``local`` for editable path installs, ``git`` for GitHub fallback, and ``pypi``
     for package-name installs.
     """
-    out: list[dict[str, Any]] = []
-    seen: set[Path] = set()
-    for root in roots or DEFAULT_ROOTS:
-        base = Path(root).expanduser()
-        if not base.exists():
-            continue
-        for connector_dir in sorted(_candidate_dirs(base)):
-            resolved = connector_dir.resolve()
-            if not connector_dir.is_dir() or resolved in seen:
-                continue
-            seen.add(resolved)
-            package = connector_dir.name
-            if not package.startswith("urirun-connector-"):
-                continue
-            connector_id = package.replace("urirun-connector-", "", 1)
-            manifest = _read_manifest(connector_dir)
-            schemes = _schemes_from_manifest(manifest) or _schemes_from_code(connector_dir)
-            out.append({
-                "id": connector_id,
-                "package": package,
-                "schemes": schemes or [connector_id.replace("-", "")],
-                "source": str(connector_dir),
-                "install": {
-                    "local": str(connector_dir),
-                    "git": f"git+https://github.com/{git_org}/{package}.git",
-                    "pypi": package,
-                },
-                "summary": str(manifest.get("summary") or manifest.get("description") or ""),
-            })
+    out = [_build_connector_entry(d, git_org) for d in _iter_connector_dirs(roots or DEFAULT_ROOTS)]
     return sorted(out, key=lambda item: item["package"])
 
 
