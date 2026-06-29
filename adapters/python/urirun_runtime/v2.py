@@ -647,20 +647,47 @@ def register_executor(name: str, fn) -> None:
     _EXTRA_EXECUTORS[name] = fn
 
 
+def _subprocess_resolve_ref(ctx: dict) -> tuple[dict, str]:
+    """Extract the python descriptor from ctx and return (py, ref), or raise PolicyError."""
+    py = ctx["routeEntry"].get("python") or {}
+    module, export = py.get("module"), py.get("export")
+    if not module or not export:
+        raise runtime.PolicyError("local-function-subprocess needs a python:{module,export} descriptor")
+    return py, f"{module}:{export}"
+
+
+def _subprocess_resolve_cwd(py: dict, config: dict) -> str:
+    """Resolve the working directory for a local-function-subprocess execution."""
+    import os
+    import tempfile
+    return (
+        py.get("cwd")
+        or config.get("cwd")
+        or os.environ.get("URIRUN_EXEC_CWD")
+        or tempfile.gettempdir()
+    )
+
+
+def _subprocess_parse_output(proc) -> object:
+    """Parse subprocess stdout into a result value, recovering from noisy output.
+
+    A pre-redirect runner (older node) or a stray print can prepend noise to the result
+    JSON. Recover the handler's result by parsing the LAST balanced {...} on stdout rather
+    than surfacing {stdout: …} (which has no `ok` and breaks every caller's contract).
+    """
+    try:
+        return json.loads(proc.stdout) if proc.stdout.strip() else {}
+    except json.JSONDecodeError:
+        return _last_json_object(proc.stdout)
+
+
 def run_local_function_subprocess(ctx: dict, policy: dict, execute: bool) -> dict:
     """Run a ``local-function`` handler in a fresh process via the shared
     ``python -m urirun.exec`` runner — for routes that want isolation (untrusted
     code, crash containment, a heavy import kept off the host). No per-connector
     ``_exec.py``: the handler is found from its ``python: {module, export}``."""
-    import os
     import subprocess
-    import tempfile
-
-    py = ctx["routeEntry"].get("python") or {}
-    module, export = py.get("module"), py.get("export")
-    if not module or not export:
-        raise runtime.PolicyError("local-function-subprocess needs a python:{module,export} descriptor")
-    ref = f"{module}:{export}"
+    py, ref = _subprocess_resolve_ref(ctx)
     if not execute:
         return {
             "simulated": True,
@@ -672,22 +699,13 @@ def run_local_function_subprocess(ctx: dict, policy: dict, execute: bool) -> dic
     payload = ctx.get("payload") if isinstance(ctx.get("payload"), dict) else {}
     route_entry = ctx.get("routeEntry") if isinstance(ctx.get("routeEntry"), dict) else {}
     config = route_entry.get("config") if isinstance(route_entry.get("config"), dict) else {}
-    runner_cwd = (
-        py.get("cwd")
-        or config.get("cwd")
-        or os.environ.get("URIRUN_EXEC_CWD")
-        or tempfile.gettempdir()
+    runner_cwd = _subprocess_resolve_cwd(py, config)
+    proc = subprocess.run(
+        [sys.executable, "-m", "urirun.exec", ref],
+        input=json.dumps(payload), capture_output=True, text=True,
+        timeout=policy.get("timeout", 30), cwd=str(runner_cwd),
     )
-    proc = subprocess.run([sys.executable, "-m", "urirun.exec", ref], input=json.dumps(payload),
-                          capture_output=True, text=True, timeout=policy.get("timeout", 30),
-                          cwd=str(runner_cwd))
-    try:
-        value = json.loads(proc.stdout) if proc.stdout.strip() else {}
-    except json.JSONDecodeError:
-        # A pre-redirect runner (older node) or a stray print can prepend noise to the result
-        # JSON. Recover the handler's result by parsing the LAST balanced {...} on stdout rather
-        # than surfacing {stdout: …} (which has no `ok` and breaks every caller's contract).
-        value = _last_json_object(proc.stdout)
+    value = _subprocess_parse_output(proc)
     return {"type": "function-subprocess", "ref": ref, "isolated": True,
             "exitCode": proc.returncode, "value": value, "stderr": proc.stderr[-2000:]}
 
@@ -1946,6 +1964,32 @@ def _registry_from_module(path: str):
     return canonical.compile_registry({"version": canonical.VERSION, "bindings": added})
 
 
+def _registry_file_from_args(args) -> str | None:
+    """Return the registry file path from args if it exists on disk, else None."""
+    if getattr(args, "registry", None) and Path(args.registry).exists():
+        return args.registry
+    return None
+
+
+def _discover_registry(args, group: str):
+    """Build a registry via entry-point discovery for the ``list``/``run`` commands.
+
+    ``run`` resolves a single URI: import only the connector that owns its
+    scheme (scheme-indexed cache), not every installed connector.
+    """
+    if getattr(args, "command", None) == "run" and getattr(args, "uri", None):
+        from urirun_runtime import discovery
+        return discovery.registry_for_uri(args.uri, group)
+    registry_file = _registry_file_from_args(args)
+    sources = [args.source] if args.source else ([registry_file] if registry_file else [])
+    if not sources:  # pure entry-point discovery -> cached full registry
+        from urirun_runtime import discovery
+        return discovery.full_registry(group)
+    bindings = _load_many(sources, include_entry_points=True, entry_point_group=group)
+    bindings.extend(_builtin_binding_items())
+    return compile_registry(build_binding_document(bindings))
+
+
 def _resolve_list_registry(args):
     """Build the registry for list/run.
 
@@ -1959,22 +2003,11 @@ def _resolve_list_registry(args):
     module_path = getattr(args, "module", None)
     if module_path:
         return _registry_from_module(module_path)
-    registry_file = args.registry if getattr(args, "registry", None) and Path(args.registry).exists() else None
+    registry_file = _registry_file_from_args(args)
     discover = getattr(args, "entry_points", False) or (not args.source and not registry_file)
     if discover:
         group = getattr(args, "entry_point_group", ENTRY_POINT_GROUP)
-        # `run` resolves a single URI: import only the connector that owns its
-        # scheme (scheme-indexed cache), not every installed connector.
-        if getattr(args, "command", None) == "run" and getattr(args, "uri", None):
-            from urirun_runtime import discovery
-            return discovery.registry_for_uri(args.uri, group)
-        sources = [args.source] if args.source else ([registry_file] if registry_file else [])
-        if not sources:                  # pure entry-point discovery -> cached full registry
-            from urirun_runtime import discovery
-            return discovery.full_registry(group)
-        bindings = _load_many(sources, include_entry_points=True, entry_point_group=group)
-        bindings.extend(_builtin_binding_items())
-        return compile_registry(build_binding_document(bindings))
+        return _discover_registry(args, group)
     return load_registry_arg(args.source or args.registry)
 
 

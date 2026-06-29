@@ -485,19 +485,28 @@ def load_registry_arg(arg: str, openapi_base_url: str = "") -> dict:
     return scan.compile_registry_document(data)
 
 
+def _merge_execute_lists(raw_execute: dict, allow: list | None, deny: list | None) -> dict:
+    """Merge file-level execute allow/deny with CLI overrides."""
+    return {
+        "allow": list(raw_execute.get("allow") or []) + list(allow or []),
+        "deny": list(raw_execute.get("deny") or []) + list(deny or []),
+    }
+
+
+def _merge_secret_allow(raw: dict, secret_allow: list | None) -> list:
+    """Merge file-level secretAllow with CLI --secret-allow overrides."""
+    return list(raw.get("secretAllow") or []) + list(secret_allow or [])
+
+
 def build_policy(policy_file: str | None, allow: list[str] | None = None, deny: list[str] | None = None,
                  secret_allow: list[str] | None = None) -> dict | None:
     """Combine an optional policy file with inline --allow / --deny / --secret-allow globs."""
     raw = reglib.load_json(policy_file) if policy_file else {}
     if not (allow or deny or secret_allow) and not policy_file:
         return None
-    execute = dict(raw.get("execute") or {})
     merged = dict(raw)
-    merged["execute"] = {
-        "allow": list(execute.get("allow") or []) + list(allow or []),
-        "deny": list(execute.get("deny") or []) + list(deny or []),
-    }
-    merged["secretAllow"] = list(raw.get("secretAllow") or []) + list(secret_allow or [])
+    merged["execute"] = _merge_execute_lists(dict(raw.get("execute") or {}), allow, deny)
+    merged["secretAllow"] = _merge_secret_allow(raw, secret_allow)
     return merged
 
 
@@ -532,15 +541,31 @@ def list_routes(registry: dict, policy: dict | None = None) -> list[dict]:
     return items
 
 
+def _build_route_rows(items: list[dict], show_decision: bool) -> list[dict]:
+    """Build the list of row dicts for the route table."""
+    return [
+        {
+            "uri": i["uri"],
+            "kind": i.get("kind") or "",
+            "adapter": i.get("adapter") or "",
+            "run": ("allow" if i.get("decision", {}).get("allowed") else "deny") if show_decision else "",
+        }
+        for i in items
+    ]
+
+
+def _compute_column_widths(headers: dict, columns: list, rows: list[dict]) -> dict:
+    """Return the max display width for each column."""
+    return {c: max(len(headers[c]), *(len(r[c]) for r in rows)) for c in columns}
+
+
 def format_route_table(items: list[dict], show_decision: bool = False) -> str:
     if not items:
         return "(no routes)"
-    rows = [{"uri": i["uri"], "kind": i.get("kind") or "", "adapter": i.get("adapter") or "",
-             "run": ("allow" if i.get("decision", {}).get("allowed") else "deny") if show_decision else ""}
-            for i in items]
+    rows = _build_route_rows(items, show_decision)
     headers = {"uri": "URI", "kind": "KIND", "adapter": "ADAPTER", "run": "EXECUTE"}
     columns = ["uri", "kind", "adapter"] + (["run"] if show_decision else [])
-    widths = {c: max(len(headers[c]), *(len(r[c]) for r in rows)) for c in columns}
+    widths = _compute_column_widths(headers, columns, rows)
     line = lambda r: "  ".join(r[c].ljust(widths[c]) for c in columns).rstrip()
     out = [line(headers), line({c: "-" * widths[c] for c in columns})]
     out.extend(line(r) for r in rows)
