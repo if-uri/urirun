@@ -160,9 +160,9 @@ def list_routes(target: str, timeout: float = 5.0) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# CLI
+# CLI helpers
 # --------------------------------------------------------------------------- #
-def main(argv: list[str] | None = None) -> int:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="urirun-v2-grpc")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -180,26 +180,40 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--payload", default="{}")
     c.add_argument("--execute", action="store_true")
 
-    args = parser.parse_args(argv)
+    return parser
+
+
+def _cmd_serve(args, registry: dict) -> int:
+    policy = reglib.load_json(args.policy) if args.policy else None
+    _, port = serve(registry, host=args.host, port=args.port, policy=policy,
+                    mode="execute" if args.execute else "dry-run", block=False)
+    print(f"urirun gRPC serving {SERVICE} on {args.host}:{port}", flush=True)
+    try:
+        while True:
+            __import__("time").sleep(3600)
+    except KeyboardInterrupt:
+        return 0
+    return 0
+
+
+def _cmd_call(args, registry: dict) -> int:
+    result = call(args.uri, json.loads(args.payload), registry, target=args.target,
+                  mode="execute" if args.execute else "dry-run")
+    reglib._emit_json(result, "-")
+    return 0 if result.get("ok") else 1
+
+
+# --------------------------------------------------------------------------- #
+# CLI
+# --------------------------------------------------------------------------- #
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
     registry = v2.load_registry_arg(args.source)
 
     if args.command == "serve":
-        policy = reglib.load_json(args.policy) if args.policy else None
-        _, port = serve(registry, host=args.host, port=args.port, policy=policy,
-                        mode="execute" if args.execute else "dry-run", block=False)
-        print(f"urirun gRPC serving {SERVICE} on {args.host}:{port}", flush=True)
-        try:
-            while True:
-                __import__("time").sleep(3600)
-        except KeyboardInterrupt:
-            return 0
-
+        return _cmd_serve(args, registry)
     if args.command == "call":
-        result = call(args.uri, json.loads(args.payload), registry, target=args.target,
-                      mode="execute" if args.execute else "dry-run")
-        reglib._emit_json(result, "-")
-        return 0 if result.get("ok") else 1
-
+        return _cmd_call(args, registry)
     return 1
 
 

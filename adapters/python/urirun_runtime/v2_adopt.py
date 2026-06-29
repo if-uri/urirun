@@ -143,7 +143,7 @@ def merge_into(out: str, bindings: list[dict]) -> dict:
     return document
 
 
-def main(argv: list[str] | None = None) -> int:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="urirun-v2-adopt")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -166,26 +166,46 @@ def main(argv: list[str] | None = None) -> int:
     init.add_argument("--out", default="urirun.bindings.v2.json")
     init.add_argument("--registry-out", default=".urirun/reglib.merged.json")
 
-    args = parser.parse_args(argv)
+    return parser
+
+
+def _cmd_add_python(args) -> int:
+    merge_into(args.out, python_package_bindings(args.name))
+    return 0
+
+
+def _cmd_add_npm(args) -> int:
+    merge_into(args.out, npm_package_bindings(args.name, args.project))
+    return 0
+
+
+def _cmd_adopt_python(args) -> int:
+    bindings = installed_python_bindings() if args.all else []
+    for name in args.names:
+        bindings.extend(python_package_bindings(name))
+    merge_into(args.out, bindings)
+    return 0
+
+
+def _cmd_init(args) -> int:
+    document = init_project(args.path)
+    reglib.write_json(args.out, document)
+    reglib.write_json(args.registry_out, v2.compile_registry(document))
+    reglib._emit_json({"bindings": args.out, "registry": args.registry_out, "bindingCount": document["bindingCount"]}, "-")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
 
     if args.command == "add-python-package":
-        merge_into(args.out, python_package_bindings(args.name))
-        return 0
+        return _cmd_add_python(args)
     if args.command == "add-npm-package":
-        merge_into(args.out, npm_package_bindings(args.name, args.project))
-        return 0
+        return _cmd_add_npm(args)
     if args.command == "adopt-python":
-        bindings = installed_python_bindings() if args.all else []
-        for name in args.names:
-            bindings.extend(python_package_bindings(name))
-        merge_into(args.out, bindings)
-        return 0
+        return _cmd_adopt_python(args)
     if args.command == "init":
-        document = init_project(args.path)
-        reglib.write_json(args.out, document)
-        reglib.write_json(args.registry_out, v2.compile_registry(document))
-        reglib._emit_json({"bindings": args.out, "registry": args.registry_out, "bindingCount": document["bindingCount"]}, "-")
-        return 0
+        return _cmd_init(args)
     return 1
 
 
