@@ -1019,23 +1019,44 @@ def serve_node(name: str, registry: dict, host: str, port: int, execute: bool, p
     return server
 
 
-def _serve_opts_merged(args: argparse.Namespace, node: dict, *,
-                       admin_token: str | None, key_auth: bool, manage: bool) -> dict:
-    """The serve_node option dict, merging CLI args over node config (CLI wins)."""
+def _merge_network_bind(args: argparse.Namespace, node: dict) -> dict:
+    """Resolve host/port from CLI args with node config fallback."""
     return {
         # localhost default: exposing the node (its unauthenticated /run) is an explicit choice.
         "host": args.host or node.get("host") or "127.0.0.1",
         "port": args.port or int(node.get("port") or 8765),
+    }
+
+
+def _merge_exec_flags(args: argparse.Namespace, node: dict) -> dict:
+    """Resolve execution/security flags from CLI args with node config fallback."""
+    return {
         "execute": bool(args.execute or node.get("execute")),
         "allow_secrets": bool(getattr(args, "allow_secrets", False) or node.get("allowSecrets")),
         "allow": list(getattr(args, "allow", None) or node.get("allow") or []),
         "pool": bool(getattr(args, "pool", False) or node.get("pool")),
-        "admin_token": admin_token, "key_auth": key_auth, "manage": manage,
         "require_run_auth": bool(getattr(args, "require_run_auth", False) or node.get("requireRunAuth")),
+    }
+
+
+def _merge_node_model(node: dict) -> dict:
+    """Resolve URI Node model fields from node config."""
+    return {
         # URI Node model: how this node is hosted + the long-running services it manages.
         "kind": node.get("kind") or "node",
         "runtime": node.get("runtime") or {"type": "bare"},
         "services": list(node.get("services") or []),
+    }
+
+
+def _serve_opts_merged(args: argparse.Namespace, node: dict, *,
+                       admin_token: str | None, key_auth: bool, manage: bool) -> dict:
+    """The serve_node option dict, merging CLI args over node config (CLI wins)."""
+    return {
+        **_merge_network_bind(args, node),
+        **_merge_exec_flags(args, node),
+        "admin_token": admin_token, "key_auth": key_auth, "manage": manage,
+        **_merge_node_model(node),
     }
 
 
