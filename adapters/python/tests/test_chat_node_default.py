@@ -217,6 +217,35 @@ class TestHostDefault(unittest.TestCase):
         self.assertEqual(captured["nodes"], ["host"])
         self.assertIsInstance(captured["memory"], TwinMemory)
 
+    def test_planner_environment_fetch_runs_for_dry_run_preview(self):
+        captured = {}
+
+        class FakeMesh:
+            def fetch_planner_environments(self, nodes, registry, discovered, **kwargs):
+                captured["nodes"] = nodes
+                captured["memory"] = kwargs.get("memory")
+                captured["prompt"] = kwargs.get("prompt")
+                return [{"node": "host", "windows": [{"app": "Google Chrome", "monitor": 2}]}]
+
+        discovered = {
+            "nodes": [],
+            "routes": [{"uri": "kvm://host/window/query/list", "node": "host"}],
+        }
+        envs = co._fetch_planner_environments_for_nodes(
+            FakeMesh(),
+            ["host"],
+            False,
+            {},
+            discovered,
+            memory=None,
+            prompt="zrob zrzut monitora z chrome",
+        )
+
+        self.assertEqual(envs[0]["windows"][0]["monitor"], 2)
+        self.assertEqual(captured["nodes"], ["host"])
+        self.assertIsNone(captured["memory"])
+        self.assertEqual(captured["prompt"], "zrob zrzut monitora z chrome")
+
     def test_capture_preference_applies_only_to_ambiguous_capture(self):
         mem = TwinMemory()
         fp = mem.remember("host", {"platform": "linux", "display": {"width": 1, "height": 1}})["fingerprint"]

@@ -588,12 +588,17 @@ def _fetch_planner_environments_for_nodes(
     memory: Any = None,
     prompt: str = "",
 ) -> list:
-    """Fetch grounded env/surface contexts for reachable selected nodes (only when executing).
+    """Fetch grounded env/surface contexts for reachable selected nodes.
+
+    Planner environment queries are read-only and must also run for preview/dry-run. Otherwise
+    the LLM and no-LLM fallback plan without Digital Twin inventory, so prompts anchored on
+    current state ("the monitor with Chrome") incorrectly degrade to needs-selection.
+
     ``memory`` threads the durable TwinMemory into planner_context so drift guidance is live."""
     execute, registry, discovered = _compat_normalize_args(execute, registry, discovered)
     reachable = _build_reachable_set(discovered)
     ground = [n for n in (selected_nodes or []) if n in reachable]
-    return mesh.fetch_planner_environments(ground, registry, discovered, memory=memory, prompt=prompt) if (execute and ground) else []
+    return mesh.fetch_planner_environments(ground, registry, discovered, memory=memory, prompt=prompt) if ground else []
 
 
 def _find_human_node(discovered: dict) -> tuple[str, str] | tuple[None, None]:

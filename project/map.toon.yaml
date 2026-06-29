@@ -19,7 +19,7 @@ M[290]:
   adapters/csharp/obj/Debug/net8.0/urirun-connector.csproj.FileListAbsolute.txt,15
   adapters/csharp/obj/Debug/net8.0/urirun-connector.sourcelink.json,1
   adapters/csharp/obj/project.assets.json,71
-  adapters/csharp/obj/urirun-connector.csproj.nuget.dgspec.json,66
+  adapters/csharp/obj/urirun-connector.csproj.nuget.dgspec.json,66    
   adapters/go/example/hash-connector/main.go,24
   adapters/go/urirun.go,80
   adapters/java/Urirun.java,38
