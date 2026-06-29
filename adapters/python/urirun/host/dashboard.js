@@ -738,25 +738,32 @@
 
     // Poll the android/webpage-node service for browsers/phones that opened the page.
     // auto-registered server-side; here we just surface them and offer one-click "save as node".
+    // Shared rendering for connected webpage/phone devices (used by both polling loops).
+    function _deviceSaveArgs(d) {
+      return [d.id, d.name || d.id, d.nodeUrl || '', d.pageUrl || '', d.clientIp || '',
+              d.clientUrl || '', d.relayUrl || '', d.platform || ''].map((v) => JSON.stringify(v)).join(',');
+    }
+    function _deviceRow(d, icon, saveFn, label) {
+      return '<div class="device" style="margin:4px 0">' + icon + ' <code>' + esc(d.name || d.id) + '</code> '
+        + '<span class="subtle">' + esc(d.platform || '') + ' \u00b7 ' + (d.online ? 'online' : 'offline') + '</span> '
+        + '<button type="button" onclick="' + saveFn + '(' + _deviceSaveArgs(d) + ')">' + label + '</button></div>';
+    }
+    function _renderWebDevices(box, devs, heading, emptyMsg, icon, saveFn, label) {
+      if (!devs.length) { box.innerHTML = emptyMsg; return; }
+      box.innerHTML = '<strong>' + heading + '</strong>' + devs.map((d) => _deviceRow(d, icon, saveFn, label)).join('');
+    }
     let _webNodeTimer = null;
     function startWebNodePolling() {
       if (_webNodeTimer) return;
       const tick = async () => {
+        const box = $('phoneWebNodes');
+        if (!box) return;
         try {
           const res = await api('/api/nodes/phone-web');
-          const box = $('phoneWebNodes');
-          if (!box) return;
-          const devs = (res && res.devices) || [];
-          if (!devs.length) {
-            box.innerHTML = 'Brak podłączonych przeglądarek/telefonów (webpage node) — otwórz URL.';
-            return;
-          }
-          box.innerHTML = '<strong>Podłączone przeglądarki/telefony (webpage node):</strong>' + devs.map((d) =>
-            '<div class="device" style="margin:4px 0">📱 <code>' + esc(d.name || d.id) + '</code> '
-            + '<span class="subtle">' + esc(d.platform || '') + ' · ' + (d.online ? 'online' : 'offline') + '</span> '
-            + '<button type="button" onclick="saveWebNode(' + JSON.stringify(d.id) + ',' + JSON.stringify(d.name || d.id) + ',' + JSON.stringify(d.nodeUrl || '') + ',' + JSON.stringify(d.pageUrl || '') + ',' + JSON.stringify(d.clientIp || '') + ',' + JSON.stringify(d.clientUrl || '') + ',' + JSON.stringify(d.relayUrl || '') + ',' + JSON.stringify(d.platform || '') + ')">💾 zapisz jako node</button>'
-            + '</div>'
-          ).join('');
+          _renderWebDevices(box, (res && res.devices) || [],
+            'Pod\u0142\u0105czone przegl\u0105darki/telefony (webpage node):',
+            'Brak pod\u0142\u0105czonych przegl\u0105darek/telefon\u00f3w (webpage node) \u2014 otw\u00f3rz URL.',
+            '\ud83d\udcf1', 'saveWebNode', '\ud83d\udcbe zapisz jako node');
         } catch (e) { /* service may be down; ignore */ }
       };
       tick();
@@ -846,13 +853,10 @@
         if (!box) return;
         try {
           const res = await api('/api/nodes/phone-web');
-          const devs = (res && res.devices) || [];
-          if (!devs.length) { box.innerHTML = 'Brak podłączonych stron — otwórz QR na urządzeniu (telefon/przeglądarka).'; return; }
-          box.innerHTML = '<strong>Podłączone strony (webpage node):</strong>' + devs.map((d) =>
-            '<div class="device" style="margin:4px 0">📄 <code>' + esc(d.name || d.id) + '</code> '
-            + '<span class="subtle">' + esc(d.platform || '') + ' · ' + (d.online ? 'online' : 'offline') + '</span> '
-            + '<button type="button" onclick="saveOneWebpageNode(' + JSON.stringify(d.id) + ',' + JSON.stringify(d.name || d.id) + ',' + JSON.stringify(d.nodeUrl || '') + ',' + JSON.stringify(d.pageUrl || '') + ',' + JSON.stringify(d.clientIp || '') + ',' + JSON.stringify(d.clientUrl || '') + ',' + JSON.stringify(d.relayUrl || '') + ',' + JSON.stringify(d.platform || '') + ')">💾 zapisz</button>'
-            + '</div>').join('');
+          _renderWebDevices(box, (res && res.devices) || [],
+            'Pod\u0142\u0105czone strony (webpage node):',
+            'Brak pod\u0142\u0105czonych stron \u2014 otw\u00f3rz QR na urz\u0105dzeniu (telefon/przegl\u0105darka).',
+            '\ud83d\udcc4', 'saveOneWebpageNode', '\ud83d\udcbe zapisz');
         } catch (e) { /* service down */ }
       };
       tick();
@@ -871,20 +875,20 @@
 
     // Save the first connected page under the typed name (when you just want one webpage node).
     async function saveWebpageNode() {
-      const name = ((document.getElementById('webName') || {}).value || '').trim();
+      const name = inputValue('webName');
       const status = document.getElementById('webStatus');
-      if (!name) { if (status) status.textContent = 'podaj nazwę'; return; }
+      if (!name) { setStatusText(status, 'podaj nazw\u0119'); return; }
       try {
         const res = await api('/api/nodes/phone-web');
         const dev = ((res && res.devices) || [])[0];
-        if (!dev) { if (status) status.textContent = 'najpierw otwórz QR na urządzeniu (brak podłączonych stron)'; return; }
+        if (!dev) { setStatusText(status, 'najpierw otw\u00f3rz QR na urz\u0105dzeniu (brak pod\u0142\u0105czonych stron)'); return; }
         await api('/api/nodes/add', { method: 'POST', body: JSON.stringify({
           name, url: dev.nodeUrl, kind: 'webpage',
           meta: webpageNodeMeta(dev.id, dev.pageUrl, dev.clientIp, dev.clientUrl, dev.relayUrl || dev.nodeUrl, dev.platform)
         }) });
-        if (status) status.textContent = 'zapisano: ' + name + ' → ' + dev.nodeUrl;
+        setStatusText(status, 'zapisano: ' + name + ' \u2192 ' + dev.nodeUrl);
         if (typeof load === 'function') load().catch(() => {});
-      } catch (e) { if (status) status.textContent = 'błąd: ' + e.message; }
+      } catch (e) { setStatusText(status, 'b\u0142\u0105d: ' + e.message); }
     }
 
     // Option B (CDP page-scope): live QR encoding the endpoint URL the user types, so the
