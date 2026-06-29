@@ -1,4 +1,4 @@
-# code2llm/evolution | 2663 func | 131f | 2026-06-29
+# code2llm/evolution | 2665 func | 133f | 2026-06-29
 # generated in 0.01s
 
 NEXT[3] (ranked by impact):
@@ -10,20 +10,20 @@ NEXT[3] (ranked by impact):
       WHY: 1733L, 0 classes, max CC=12
       EFFORT: ~4h  IMPACT: 20796
 
-  [3] !! SPLIT           adapters/python/urirun_runtime/v2.py
-      WHY: 1657L, 3 classes, max CC=12
-      EFFORT: ~4h  IMPACT: 19884
+  [3] !! SPLIT           planfile.yaml
+      WHY: 1319L, 0 classes, max CC=0
+      EFFORT: ~4h  IMPACT: 0
 
 
 RISKS[3]:
   ⚠ Splitting adapters/python/urirun/host/dashboard.js may break 452 import paths
   ⚠ Splitting adapters/python/urirun/host/host_dashboard.py may break 92 import paths
-  ⚠ Splitting adapters/python/urirun_runtime/v2.py may break 102 import paths
+  ⚠ Splitting planfile.yaml may break 0 import paths
 
 METRICS-TARGET:
   CC̄:          4.2 → ≤2.9
   max-CC:      14 → ≤7
-  god-modules: 29 → 0
+  god-modules: 25 → 0
   high-CC(≥15): 0 → ≤0
   hub-types:   0 → ≤0
 

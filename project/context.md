@@ -5,12 +5,12 @@
 
 - **Project**: /home/tom/github/if-uri/urirun
 - **Primary Language**: python
-- **Languages**: python: 225, json: 15, shell: 15, yaml: 5, javascript: 5
+- **Languages**: python: 227, json: 15, shell: 15, yaml: 5, javascript: 5
 - **Analysis Mode**: static
-- **Total Functions**: 2709
+- **Total Functions**: 2711
 - **Total Classes**: 61
-- **Modules**: 296
-- **Entry Points**: 1087
+- **Modules**: 298
+- **Entry Points**: 1086
 
 ## Architecture by Module
 
@@ -22,14 +22,14 @@
 - **Functions**: 142
 - **File**: `scanner.js`
 
-### adapters.python.urirun_runtime.v2
-- **Functions**: 102
-- **Classes**: 3
-- **File**: `v2.py`
-
 ### adapters.python.urirun.host.host_dashboard
 - **Functions**: 92
 - **File**: `host_dashboard.py`
+
+### adapters.python.urirun_runtime.v2
+- **Functions**: 81
+- **Classes**: 3
+- **File**: `v2.py`
 
 ### adapters.python.urirun_node.server
 - **Functions**: 75
@@ -132,12 +132,6 @@ Main execution flows into the system:
 ### adapters.python.urirun_connectors_toolkit.connect_catalog._cmd_show
 - **Calls**: adapters.python.urirun_connectors_toolkit.connect_catalog.fetch_connector, scripts.test_pypi_install.print, scripts.test_pypi_install.print, scripts.test_pypi_install.print, scripts.test_pypi_install.print, scripts.test_pypi_install.print, document.get, adapters.python.urirun_connectors_toolkit.connect_catalog._emit_json
 
-### adapters.python.urirun_runtime.v2.run_local_function_subprocess
-> Run a ``local-function`` handler in a fresh process via the shared
-``python -m urirun.exec`` runner — for routes that want isolation (untrusted
-code, 
-- **Calls**: adapters.python.urirun_runtime.v2._subprocess_resolve_ref, adapters.python.urirun_runtime.v2._subprocess_resolve_cwd, None.strip, subprocess.run, adapters.python.urirun_runtime.v2._subprocess_parse_output, isinstance, ctx.get, isinstance
-
 ### adapters.python.urirun_runtime.secrets._provider_oauth
 > ``secret://oauth/<provider>/<account>`` — a cached OAuth access token, with
 refresh. The token bundle lives in the keyring under ``oauth:<provider>`` 
@@ -148,6 +142,15 @@ refresh. The token bundle lives in the keyring under ``oauth:<provider>``
 Reconnects automatically, replaying missed events via Last-Event-ID.
 - **Calls**: adapters.python.urirun_node.config.host_config_for_args, adapters.python.urirun_node.config.node_url, getattr, getattr, bool, bool, sys.stderr.write, sys.stderr.flush
 
+### adapters.python.urirun_runtime.v2_scan.validate_binding_document
+- **Calls**: adapters.python.urirun_runtime.v1.expand_bindings, binding.get, config.get, set, set, sorted, len, reglib.translate
+
+### adapters.python.urirun_runtime.v2.run_local_function_subprocess
+> Run a ``local-function`` handler in a fresh process via the shared
+``python -m urirun.exec`` runner — for routes that want isolation (untrusted
+code, 
+- **Calls**: adapters.python.urirun_runtime.v2._subprocess_resolve_ref, adapters.python.urirun_runtime.v2._subprocess_resolve_cwd, None.strip, subprocess.run, adapters.python.urirun_runtime.v2._subprocess_parse_output, isinstance, ctx.get, isinstance
+
 ### adapters.python.urirun_node.server.NodeHandler._handle_enroll
 - **Calls**: adapters.python.urirun_node.server.read_raw, keyauth.verify_request, keyauth.token_matches, scripts.test_pypi_install.print, adapters.python.urirun_node.server.send_json, adapters.python.urirun_node.server.send_json, keyauth.available, adapters.python.urirun_node.server.send_json
 
@@ -156,7 +159,7 @@ Reconnects automatically, replaying missed events via Last-Event-ID.
 - **Calls**: dict, adapters.python.urirun_runtime.errors.category_meta, err.get, adapters.python.urirun_runtime.errors.classify, err.get, adapters.python.urirun_runtime.errors.error_code, err.get, err.get
 
 ### examples.matrix.verify.main
-- **Calls**: contracts.get, sorted, None.removesuffix, adapters.python.urirun_runtime.v2.validate_binding_document, examples.matrix.verify.essential, contracts.items, json.load, scripts.test_pypi_install.print
+- **Calls**: contracts.get, sorted, None.removesuffix, adapters.python.urirun.validate_binding_document, examples.matrix.verify.essential, contracts.items, json.load, scripts.test_pypi_install.print
 
 ### adapters.python.urirun_node.transport.discover_node
 - **Calls**: None.rstrip, adapters.python.urirun_node.transport._configured_node_kind, node.get, adapters.python.urirun_node.transport._configured_api_routes, info.update, adapters.python.urirun_node.transport.http_json, None.get, adapters.python.urirun_node.transport.http_json
@@ -167,16 +170,16 @@ Reconnects automatically, replaying missed events via Last-Event-ID.
 ### adapters.python.urirun_runtime.codegen.gen_command
 - **Calls**: v2.load_registry_arg, getattr, scripts.test_pypi_install.print, adapters.python.urirun_runtime.codegen.proto_from_registry, getattr, None.write_text, None.write_text, scripts.test_pypi_install.print
 
+### adapters.python.urirun.host.node_cli.run_command
+> `urirun host run <node> <uri> [--payload JSON] [--stream]` — dispatch a URI to a
+node; with --stream, start it async and print the node's live progres
+- **Calls**: adapters.python.urirun_node.config.host_config_for_args, adapters.python.urirun_node.config.node_url, NodeClient, client.concretize, float, adapters.python.urirun.host.node_cli._maybe_ensure_scheme, adapters.python.urirun.host.node_cli._run_streamed, getattr
+
 ### adapters.python.urirun.host.contracts.file_transfer_verification
 > Return the standard verification contract for file-copy style URI flows.
 
 `uploaded` means the remote write acknowledged the file. `verified` means th
 - **Calls**: adapters.python.urirun.host.dashboard.list, set, set, adapters.python.urirun.host.contracts.verification_check, adapters.python.urirun.host.contracts.verification_check, all, len, len
-
-### adapters.python.urirun.host.node_cli.run_command
-> `urirun host run <node> <uri> [--payload JSON] [--stream]` — dispatch a URI to a
-node; with --stream, start it async and print the node's live progres
-- **Calls**: adapters.python.urirun_node.config.host_config_for_args, adapters.python.urirun_node.config.node_url, NodeClient, client.concretize, float, adapters.python.urirun.host.node_cli._maybe_ensure_scheme, adapters.python.urirun.host.node_cli._run_streamed, getattr
 
 ### adapters.python.urirun_connectors_toolkit.connector_lint.lint_kernel_symbols
 > Static-scan a connector package for calls to kernel symbols absent from the contract.
@@ -201,6 +204,9 @@ Falls back to full discovery (and refreshes the index) when the schem
 health — the fastest way to diagnose a version split (stale binary on PATH)
 - **Calls**: getattr, scripts.test_pypi_install.print, scripts.test_pypi_install.print, scripts.test_pypi_install.print, scripts.test_pypi_install.print, adapters.python.urirun_runtime.v2.connector_health, adapters.python.urirun_runtime.v2_cmds._package_version, reglib._emit_json
 
+### adapters.python.urirun.host.node_cli.node_command
+- **Calls**: adapters.python.urirun_node.config.load_node_config, dict, adapters.python.urirun.host.node_cli._resolve_registry_source, v2.load_registry_arg, reglib._emit_json, adapters.python.urirun.host.node_cli.node_list_command, adapters.python.urirun.host.node_cli.node_stop_command, reglib._emit_json
+
 ### adapters.python.urirun.host.android_node.restart_android_node_service
 - **Calls**: adapters.python.urirun.host.host_dashboard._service_restart_argv, meta.setdefault, int, adapters.python.urirun.host.android_node.start_android_node_service, isinstance, None.lower, _schedule_restart_command, free_port_fn
 
@@ -212,14 +218,6 @@ health — the fastest way to diagnose a version split (stale binary on PATH)
 
 ### xlang.gate.main
 - **Calls**: xlang.gate.Abs, xlang.gate.Dir, xlang.gate.Getenv, xlang.gate.ReadFile, xlang.gate.Join, xlang.gate.Fprintln, xlang.gate.Exit, xlang.gate.Unmarshal
-
-### adapters.python.urirun.host.node_cli.node_command
-- **Calls**: adapters.python.urirun_node.config.load_node_config, dict, adapters.python.urirun.host.node_cli._resolve_registry_source, v2.load_registry_arg, reglib._emit_json, adapters.python.urirun.host.node_cli.node_list_command, adapters.python.urirun.host.node_cli.node_stop_command, reglib._emit_json
-
-### adapters.python.urirun_node.client.NodeClient.push_folder
-> Host-side: find a folder (abs path, or a dir named `name_or_path` under roots /
-~/github) and push its text files to the node's deploy dir (flat, by b
-- **Calls**: os.path.expanduser, os.path.isdir, self._read_folder_files, self.deploy, str, dep.get, sorted, dep.get
 
 ## Process Flows
 
@@ -266,19 +264,12 @@ _cmd_show [adapters.python.urirun_connectors_toolkit.connect_catalog]
   └─ →> print
 ```
 
-### Flow 7: run_local_function_subprocess
-```
-run_local_function_subprocess [adapters.python.urirun_runtime.v2]
-  └─> _subprocess_resolve_ref
-  └─> _subprocess_resolve_cwd
-```
-
-### Flow 8: _provider_oauth
+### Flow 7: _provider_oauth
 ```
 _provider_oauth [adapters.python.urirun_runtime.secrets]
 ```
 
-### Flow 9: watch_command
+### Flow 8: watch_command
 ```
 watch_command [adapters.python.urirun.host.node_cli]
   └─ →> host_config_for_args
@@ -288,12 +279,19 @@ watch_command [adapters.python.urirun.host.node_cli]
   └─ →> node_url
 ```
 
-### Flow 10: _handle_enroll
+### Flow 9: validate_binding_document
 ```
-_handle_enroll [adapters.python.urirun_node.server.NodeHandler]
-  └─ →> read_raw
-  └─ →> send_json
-  └─ →> print
+validate_binding_document [adapters.python.urirun_runtime.v2_scan]
+  └─ →> expand_bindings
+      └─> expand_binding
+      └─> _binding_pairs
+```
+
+### Flow 10: run_local_function_subprocess
+```
+run_local_function_subprocess [adapters.python.urirun_runtime.v2]
+  └─> _subprocess_resolve_ref
+  └─> _subprocess_resolve_cwd
 ```
 
 ## Key Classes
@@ -500,21 +498,6 @@ concurrency (If-Registry-
 
 ## Behavioral Patterns
 
-### recursion__schema_allows_null
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_runtime.v2._schema_allows_null
-
-### recursion__apply_defaults
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_runtime.v2._apply_defaults
-
-### recursion__placeholders_in
-- **Type**: recursion
-- **Confidence**: 0.90
-- **Functions**: adapters.python.urirun_runtime.v2._placeholders_in
-
 ### recursion__fetch_render
 - **Type**: recursion
 - **Confidence**: 0.90
@@ -544,6 +527,21 @@ concurrency (If-Registry-
 - **Type**: recursion
 - **Confidence**: 0.90
 - **Functions**: adapters.python.urirun.host.fs_transfer.short_value
+
+### recursion__placeholders_in
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_runtime.v2_scan._placeholders_in
+
+### recursion__schema_allows_null
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_runtime.v2._schema_allows_null
+
+### recursion__apply_defaults
+- **Type**: recursion
+- **Confidence**: 0.90
+- **Functions**: adapters.python.urirun_runtime.v2._apply_defaults
 
 ### state_machine_Urirun
 - **Type**: state_machine
@@ -591,9 +589,9 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.host.node_api.execute_http_request` - 26 calls
 - `adapters.python.urirun_node.server.apply_deploy` - 25 calls
 - `adapters.python.urirun_connectors_toolkit.resolver.resolve` - 24 calls
-- `adapters.python.urirun_runtime.v2.run_local_function_subprocess` - 24 calls
-- `adapters.python.urirun_runtime.v2.validate_binding_document` - 24 calls
 - `adapters.python.urirun.host.node_cli.watch_command` - 24 calls
+- `adapters.python.urirun_runtime.v2_scan.validate_binding_document` - 24 calls
+- `adapters.python.urirun_runtime.v2.run_local_function_subprocess` - 24 calls
 - `adapters.python.urirun.testing.smoke` - 23 calls
 - `adapters.python.urirun.node.doctor.format_doctor_report` - 22 calls
 - `adapters.python.urirun_twin.twin_store.environment_fingerprint` - 22 calls
@@ -607,14 +605,14 @@ Functions exposed as public API (no underscore prefix):
 - `adapters.python.urirun.connectors.connector_smoke.smoke` - 20 calls
 - `adapters.python.urirun_runtime.codegen.gen_command` - 20 calls
 - `adapters.python.urirun_runtime.tree.collect_uris` - 20 calls
-- `adapters.python.urirun.host.contracts.file_transfer_verification` - 20 calls
 - `adapters.python.urirun.host.node_cli.run_command` - 20 calls
+- `adapters.python.urirun.host.contracts.file_transfer_verification` - 20 calls
 - `adapters.python.urirun_connectors_toolkit.connector_lint.lint_kernel_symbols` - 19 calls
-- `adapters.python.urirun_runtime.v2.scan_artifacts` - 19 calls
 - `adapters.python.urirun_runtime.discovery.build_index` - 19 calls
 - `adapters.python.urirun_runtime.discovery.registry_for_uri` - 19 calls
 - `adapters.python.urirun.host.twin_bridge.api_twin_state` - 19 calls
 - `adapters.python.urirun.host.node_dispatch.classify_error` - 19 calls
+- `adapters.python.urirun_runtime.v2_scan.scan_artifacts` - 19 calls
 - `examples.node-file-transfer.fs_transfer.write_b64` - 18 calls
 - `adapters.python.urirun_node.transport.copy_id` - 18 calls
 - `adapters.python.urirun_twin.reversible.ledger_from_execution` - 18 calls
@@ -652,10 +650,10 @@ graph TD
     resolve_refs --> sub
     _cmd_show --> fetch_connector
     _cmd_show --> print
-    run_local_function_s --> _subprocess_resolve_
-    run_local_function_s --> strip
-    run_local_function_s --> run
-    run_local_function_s --> _subprocess_parse_ou
+    _provider_oauth --> partition
+    _provider_oauth --> get_password
+    _provider_oauth --> loads
+    _provider_oauth --> Request
 ```
 
 ## Reverse Engineering Guidelines

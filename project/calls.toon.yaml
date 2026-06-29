@@ -1,5 +1,5 @@
 # code2llm call graph | /home/tom/github/if-uri/urirun
-# generated in 0.29s
+# generated in 0.24s
 # nodes: 467 | edges: 500 | modules: 54
 # CC̄=4.2
 
@@ -18,8 +18,6 @@ HUBS[20]:
     CC=6  in:1  out:27  total:28
   adapters.python.urirun_node.server.apply_deploy
     CC=12  in:2  out:25  total:27
-  adapters.python.urirun_runtime.v2.validate_binding_document
-    CC=12  in:3  out:24  total:27
   adapters.python.urirun_connectors_toolkit.resolver.resolve
     CC=12  in:1  out:24  total:25
   adapters.python.urirun_connectors_toolkit.connect_catalog._cmd_show
@@ -28,22 +26,24 @@ HUBS[20]:
     CC=9  in:2  out:22  total:24
   adapters.python.urirun_node.server.NodeHandler._get
     CC=12  in:4  out:19  total:23
-  adapters.python.urirun_node.transport.http_json
-    CC=8  in:11  out:11  total:22
   adapters.python.urirun_node.server.NodeHandler._handle_enroll
     CC=11  in:0  out:22  total:22
-  adapters.python.urirun.connectors.connector_smoke.smoke
-    CC=6  in:1  out:20  total:21
+  adapters.python.urirun_node.transport.http_json
+    CC=8  in:11  out:11  total:22
   adapters.python.urirun_runtime.v1._run_process_streaming
     CC=7  in:1  out:20  total:21
-  scripts.extraction_audit._selftest
-    CC=7  in:2  out:18  total:20
-  adapters.python.urirun_node.transport.discover_node
-    CC=12  in:0  out:20  total:20
-  adapters.python.urirun_connectors_toolkit.connect_catalog._cmd_list
-    CC=9  in:0  out:20  total:20
+  adapters.python.urirun.connectors.connector_smoke.smoke
+    CC=6  in:1  out:20  total:21
   examples.matrix.verify.main
     CC=9  in:0  out:20  total:20
+  adapters.python.urirun_node.transport.discover_node
+    CC=12  in:0  out:20  total:20
+  adapters.python.urirun_node.transport.copy_id
+    CC=8  in:2  out:18  total:20
+  adapters.python.urirun_connectors_toolkit.connect_catalog._cmd_list
+    CC=9  in:0  out:20  total:20
+  scripts.extraction_audit._selftest
+    CC=7  in:2  out:18  total:20
 
 MODULES:
   adapters.c.urirun  [4 funcs]
@@ -78,6 +78,8 @@ MODULES:
     _heal_file  CC=7  out:12
     heal  CC=6  out:7
     main  CC=5  out:9
+  adapters.python.urirun  [1 funcs]
+    validate_binding_document  CC=1  out:1
   adapters.python.urirun._connector  [2 funcs]
     handler  CC=1  out:5
     manifest  CC=11  out:13
@@ -289,8 +291,6 @@ MODULES:
     render_value  CC=1  out:5
     resolve_params  CC=11  out:13
     run_spawn  CC=6  out:7
-  adapters.python.urirun_runtime.v2  [1 funcs]
-    validate_binding_document  CC=12  out:24
   adapters.python.urirun_runtime.v2_service  [5 funcs]
     _post  CC=6  out:15
     _schema_error  CC=4  out:7
@@ -406,7 +406,7 @@ MODULES:
 EDGES:
   security.mesh-probe.probe.record → scripts.test_pypi_install.print
   examples.matrix.verify.essential → adapters.python.urirun.host.dashboard.list
-  examples.matrix.verify.main → adapters.python.urirun_runtime.v2.validate_binding_document
+  examples.matrix.verify.main → adapters.python.urirun.validate_binding_document
   examples.matrix.verify.main → examples.matrix.verify.essential
   examples.matrix.verify.main → scripts.test_pypi_install.print
   examples.node-file-transfer.fs_transfer.read_b64 → examples.node-file-transfer.fs_transfer._expand_path

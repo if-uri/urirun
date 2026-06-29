@@ -1,5 +1,5 @@
 flowchart TD
-%% generated in 0.02s
+%% generated in 0.01s
     subgraph adapters__bash
         adapters__bash__urirun__urirun_command["urirun_command"]
         adapters__bash__urirun__urirun_document["urirun_document"]
@@ -344,7 +344,7 @@ flowchart TD
     end
     security__mesh_probe__probe__record --> scripts__test_pypi_install__print
     examples__matrix__verify__essential --> adapters__python__urirun__host__dashboard__list
-    examples__matrix__verify__main --> adapters__python__urirun_runtime__v2__validate_binding_document
+    examples__matrix__verify__main --> adapters__python__urirun__validate_binding_document
     examples__matrix__verify__main --> examples__matrix__verify__essential
     examples__matrix__verify__main --> scripts__test_pypi_install__print
     examples__node_file_transfer__fs_transfer__read_b64 --> examples__node_file_transfer__fs_transfer___expand_path

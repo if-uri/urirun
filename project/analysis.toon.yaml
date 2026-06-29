@@ -1,12 +1,12 @@
-# code2llm | 300f 49451L | python:225,json:15,shell:15,yaml:5,javascript:5,txt:4,csharp:4,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-29
-# generated in 0.28s
-# CC̅=4.2 | critical:0/2709 | dups:0 | cycles:0
+# code2llm | 302f 44801L | python:227,json:15,shell:15,yaml:5,javascript:5,txt:4,csharp:4,go:3,yml:2,java:2,typescript:2,perl:2,toml:2,rust:2,php:2,ruby:2,c:1,cpp:1 | 2026-06-29
+# generated in 0.17s
+# CC̅=4.2 | critical:0/2711 | dups:0 | cycles:0
 
 HEALTH[0]: ok
 
 REFACTOR[0]: none needed
 
-PIPELINES[909]:
+PIPELINES[908]:
   [1] Src [http]: http
       PURITY: 100% pure
   [2] Src [_attacker_key]: _attacker_key
@@ -15,7 +15,7 @@ PIPELINES[909]:
       PURITY: 100% pure
   [4] Src [f]: f
       PURITY: 100% pure
-  [5] Src [main]: main → validate_binding_document → expand_bindings → expand_binding → ...(1 more)
+  [5] Src [main]: main → validate_binding_document
       PURITY: 100% pure
   [6] Src [read_b64]: read_b64 → _expand_path
       PURITY: 100% pure
@@ -138,36 +138,32 @@ LAYERS:
   adapters/                       CC̄=4.2    ←in:18  →out:12  !! split
   │ !! dashboard.js              3032L  0C  452m  CC=14     ←44
   │ !! host_dashboard            1733L  0C   92m  CC=12     ←1
-  │ !! v2                        1657L  3C  102m  CC=12     ←7
-  │ !! scanner_bridge            1635L  0C    0m  CC=0.0    ←0
-  │ !! document_sync             1528L  0C    0m  CC=0.0    ←0
+  │ !! v2                        1288L  3C   81m  CC=11     ←4
   │ !! chat_orchestrator         1252L  1C   53m  CC=11     ←0
   │ !! server                    1117L  3C   75m  CC=12     ←3
   │ !! node_cli                   928L  0C   60m  CC=12     ←1
   │ !! object_registry            873L  0C   45m  CC=12     ←1
   │ !! connector_lint             786L  0C   48m  CC=11     ←1
   │ !! cli                        739L  0C   13m  CC=2      ←1
-  │ !! _registry                  723L  0C   47m  CC=11     ←1
+  │ !! _registry                  723L  0C   47m  CC=11     ←2
   │ !! scanner.js                 681L  0C  121m  CC=14     ←0
-  │ !! _scan                      675L  0C   41m  CC=12     ←0
+  │ !! _scan                      675L  0C   41m  CC=12     ←2
   │ !! _runtime                   655L  1C   39m  CC=11     ←2
   │ !! twin_bridge                624L  0C   31m  CC=12     ←1
-  │ !! v2_cmds                    611L  0C   41m  CC=12     ←1
+  │ !! v2_cmds                    611L  0C   41m  CC=12     ←2
   │ !! manage                     608L  0C   37m  CC=11     ←0
   │ !! errors                     580L  0C   33m  CC=10     ←1
   │ !! transport                  570L  0C   28m  CC=12     ←3
   │ !! preconditions              559L  1C   28m  CC=11     ←0
   │ !! client                     558L  1C   35m  CC=12     ←2
   │ !! host_db                    527L  0C   33m  CC=11     ←0
-  │ !! document_metadata          515L  0C    0m  CC=0.0    ←0
-  │ !! v1                         510L  0C   34m  CC=11     ←3
-  │ !! artifacts_admin            510L  0C    0m  CC=0.0    ←0
+  │ !! v1                         510L  0C   34m  CC=11     ←4
   │ codegen                    481L  0C   26m  CC=10     ←0
   │ service_control            462L  0C   23m  CC=11     ←0
-  │ __init__                   460L  0C   34m  CC=9      ←2
-  │ scanner_service            440L  0C    0m  CC=0.0    ←0
+  │ __init__                   460L  0C   34m  CC=9      ←6
   │ discovery                  415L  0C   35m  CC=12     ←2
   │ connector_scaffold         413L  0C   11m  CC=3      ←0
+  │ v2_scan                    411L  0C   21m  CC=12     ←2
   │ reversible                 406L  8C   28m  CC=10     ←3
   │ twin_store                 401L  3C   45m  CC=9      ←0
   │ fs_transfer                392L  0C   19m  CC=11     ←5
@@ -214,7 +210,6 @@ LAYERS:
   │ v2_service                 166L  0C    6m  CC=10     ←0
   │ capability                 160L  0C    6m  CC=12     ←0
   │ _node_builder              153L  0C   10m  CC=9      ←1
-  │ scanner_net                153L  0C    0m  CC=0.0    ←0
   │ agent                      151L  0C    6m  CC=10     ←0
   │ daemon                     149L  0C    9m  CC=9      ←0
   │ decision_loop              143L  0C    7m  CC=11     ←2
@@ -251,6 +246,7 @@ LAYERS:
   │ lib.rs                      39L  1C    4m  CC=1      ←0
   │ urirun.rb                   39L  1C    4m  CC=4      ←0
   │ Urirun.java                 38L  1C    3m  CC=1      ←1
+  │ _shim                       35L  0C    2m  CC=5      ←0
   │ index.js                    33L  0C   11m  CC=8      ←11
   │ Urirun.cs                   32L  1C    3m  CC=1      ←0
   │ cdp                         31L  0C    0m  CC=0.0    ←0
@@ -299,6 +295,12 @@ LAYERS:
   │ _scan                       10L  0C    0m  CC=0.0    ←0
   │ secrets                     10L  0C    0m  CC=0.0    ←0
   │ hash-connector.sh            9L  0C    0m  CC=0.0    ←0
+  │ scanner_net                  9L  0C    0m  CC=0.0    ←0
+  │ document_metadata            9L  0C    0m  CC=0.0    ←0
+  │ document_sync                9L  0C    0m  CC=0.0    ←0
+  │ artifacts_admin              9L  0C    0m  CC=0.0    ←0
+  │ scanner_service              9L  0C    0m  CC=0.0    ←0
+  │ scanner_bridge               9L  0C    0m  CC=0.0    ←0
   │ package.json                 8L  0C    0m  CC=0.0    ←0
   │ v2_service                   8L  0C    0m  CC=0.0    ←0
   │ v1                           8L  0C    0m  CC=0.0    ←0
@@ -446,13 +448,13 @@ COUPLING:
   security.mesh-probe                                         1                                                                                                                                                 ──
   CYCLES: none
   HUB: v1.js/ (fan-in=6)
-  HUB: adapters/ (fan-in=18)
-  HUB: scripts/ (fan-in=160)
   HUB: adapters.python/ (fan-in=8)
+  HUB: scripts/ (fan-in=160)
+  HUB: adapters/ (fan-in=18)
+  SMELL: adapters.python/ fan-out=162 → split needed
   SMELL: xlang/ fan-out=8 → split needed
   SMELL: examples.matrix/ fan-out=9 → split needed
   SMELL: adapters/ fan-out=12 → split needed
-  SMELL: adapters.python/ fan-out=162 → split needed
 
 EXTERNAL:
   validation: run `vallm batch .` → validation.toon

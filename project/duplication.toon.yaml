@@ -6,7 +6,7 @@ SUMMARY:
   dup_groups:    14
   dup_fragments: 31
   saved_lines:   105
-  scan_ms:       47435
+  scan_ms:       40373
 
 HOTSPOTS[7] (files with most duplication):
   __init__.py  dup=38L  groups=1  frags=3  (0.2%)
