@@ -235,6 +235,141 @@ except ImportError:
         return {"ok": True, **meta, "qr": qr, "message": qr.get("message")}
 
 
+    def _pop_scanner_service(service_id: str) -> tuple:
+        """Pop the registered server and thread for service_id under the service lock."""
+        with _SERVICE_LOCK:
+            server = _SERVICE_SERVERS.pop(service_id, None)
+            thread = _SERVICE_THREADS.pop(service_id, None)
+        return server, thread
+
+
+    def _handle_inprocess_restart(
+        project: str,
+        db: "str | None",
+        config: "str | None",
+        node_urls: "list[str] | None",
+        token: "str | None",
+        identity: "str | None",
+        bind_host: str,
+        scanner_port: int,
+        server: "ThreadingHTTPServer | None",
+        thread: "threading.Thread | None",
+        ensure_fn: "Callable[..., dict]",
+    ) -> "dict | None":
+        """Schedule an in-process restart when the service is currently alive; return None otherwise."""
+        if server is None or thread is None or not thread.is_alive():
+            return None
+
+        def _restart() -> None:
+            try:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=3)
+            except Exception:  # noqa: BLE001
+                pass
+            ensure_fn(
+                project,
+                db,
+                config,
+                node_urls=node_urls,
+                token=token,
+                identity=identity,
+                host=bind_host,
+                port=scanner_port,
+            )
+
+        threading.Thread(target=_restart, name=f"urirun-phone-scanner-restart-{scanner_port}", daemon=True).start()
+        return {
+            "ok": True,
+            "scheduled": True,
+            "manager": "in-process",
+            "service": "phone-scanner",
+            "port": scanner_port,
+            "url": _phone_scanner_url(scanner_port),
+        }
+
+
+    def _handle_port_free_restart(
+        scanner_port: int,
+        force_port_kill: bool,
+        meta: dict,
+        free_port_fn: "Callable[..., dict]",
+        ensure_fn: "Callable[..., dict]",
+        project: str,
+        db: "str | None",
+        config: "str | None",
+        node_urls: "list[str] | None",
+        token: "str | None",
+        identity: "str | None",
+        bind_host: str,
+    ) -> "dict | None":
+        """Free the port if occupied; return a result dict if handled, None if no holders."""
+        replaced = free_port_fn(scanner_port, force=force_port_kill)
+        if not replaced.get("holders"):
+            return None
+        if not replaced.get("ok") or replaced.get("remaining"):
+            return {
+                "ok": False,
+                **meta,
+                "replace": replaced,
+                "reason": "port is owned by a process that was not safely replaceable; use forcePortKill only in a controlled environment",
+            }
+        started = ensure_fn(
+            project,
+            db,
+            config,
+            node_urls=node_urls,
+            token=token,
+            identity=identity,
+            host=bind_host,
+            port=scanner_port,
+        )
+        return {"ok": True, "manager": "port-replace", "restart": True, "replace": replaced, **started}
+
+
+    def _handle_external_status_restart(
+        scanner_port: int,
+        meta: dict,
+        external_status_fn: "Callable[..., dict] | None",
+        ensure_fn: "Callable[..., dict]",
+        project: str,
+        db: "str | None",
+        config: "str | None",
+        node_urls: "list[str] | None",
+        token: "str | None",
+        identity: "str | None",
+        bind_host: str,
+    ) -> dict:
+        """Check external reachability; start the service if stopped, or report unmanaged."""
+        _ext_status = external_status_fn if external_status_fn is not None else _phone_scanner_external_status
+        status = _ext_status(scanner_port)
+        if not status.get("reachable"):
+            started = ensure_fn(
+                project,
+                db,
+                config,
+                node_urls=node_urls,
+                token=token,
+                identity=identity,
+                host=bind_host,
+                port=scanner_port,
+            )
+            return {"ok": True, "manager": "start-if-stopped", "restart": False, **started}
+        return {
+            "ok": False,
+            **meta,
+            "status": status,
+            "reason": "scanner is reachable but is not managed by this dashboard process; configure a supervisor restart command",
+        }
+
+
+    def _resolve_scanner_bind_params(payload: dict) -> tuple:
+        """Resolve bind host and port from payload or environment."""
+        bind_host = str(payload.get("host") or os.environ.get("URIRUN_PHONE_SCANNER_HOST", "0.0.0.0"))
+        scanner_port = int(payload.get("port") or os.environ.get("URIRUN_PHONE_SCANNER_PORT", "8196"))
+        return bind_host, scanner_port
+
+
     def restart_phone_scanner_service(
         project: str,
         db: "str | None",
@@ -262,81 +397,25 @@ except ImportError:
         if argv:
             return schedule_restart_fn(argv, payload, meta)
 
-        bind_host = str(payload.get("host") or os.environ.get("URIRUN_PHONE_SCANNER_HOST", "0.0.0.0"))
-        scanner_port = int(payload.get("port") or os.environ.get("URIRUN_PHONE_SCANNER_PORT", "8196"))
+        bind_host, scanner_port = _resolve_scanner_bind_params(payload)
         service_id = phone_scanner_service_id(bind_host, scanner_port)
-        with _SERVICE_LOCK:
-            server = _SERVICE_SERVERS.pop(service_id, None)
-            thread = _SERVICE_THREADS.pop(service_id, None)
+        server, thread = _pop_scanner_service(service_id)
 
-        if server is not None and thread is not None and thread.is_alive():
-            def _restart() -> None:
-                try:
-                    server.shutdown()
-                    server.server_close()
-                    thread.join(timeout=3)
-                except Exception:  # noqa: BLE001
-                    pass
-                ensure_fn(
-                    project,
-                    db,
-                    config,
-                    node_urls=node_urls,
-                    token=token,
-                    identity=identity,
-                    host=bind_host,
-                    port=scanner_port,
-                )
+        result = _handle_inprocess_restart(
+            project, db, config, node_urls, token, identity,
+            bind_host, scanner_port, server, thread, ensure_fn,
+        )
+        if result is not None:
+            return result
 
-            threading.Thread(target=_restart, name=f"urirun-phone-scanner-restart-{scanner_port}", daemon=True).start()
-            return {
-                "ok": True,
-                "scheduled": True,
-                "manager": "in-process",
-                "service": "phone-scanner",
-                "port": scanner_port,
-                "url": _phone_scanner_url(scanner_port),
-            }
+        result = _handle_port_free_restart(
+            scanner_port, force_port_kill, meta, free_port_fn, ensure_fn,
+            project, db, config, node_urls, token, identity, bind_host,
+        )
+        if result is not None:
+            return result
 
-        replaced = free_port_fn(scanner_port, force=force_port_kill)
-        if replaced.get("holders"):
-            if not replaced.get("ok") or replaced.get("remaining"):
-                return {
-                    "ok": False,
-                    **meta,
-                    "replace": replaced,
-                    "reason": "port is owned by a process that was not safely replaceable; use forcePortKill only in a controlled environment",
-                }
-            started = ensure_fn(
-                project,
-                db,
-                config,
-                node_urls=node_urls,
-                token=token,
-                identity=identity,
-                host=bind_host,
-                port=scanner_port,
-            )
-            return {"ok": True, "manager": "port-replace", "restart": True, "replace": replaced, **started}
-
-        _ext_status = external_status_fn if external_status_fn is not None else _phone_scanner_external_status
-        status = _ext_status(scanner_port)
-        if not status.get("reachable"):
-            started = ensure_fn(
-                project,
-                db,
-                config,
-                node_urls=node_urls,
-                token=token,
-                identity=identity,
-                host=bind_host,
-                port=scanner_port,
-            )
-            return {"ok": True, "manager": "start-if-stopped", "restart": False, **started}
-
-        return {
-            "ok": False,
-            **meta,
-            "status": status,
-            "reason": "scanner is reachable but is not managed by this dashboard process; configure a supervisor restart command",
-        }
+        return _handle_external_status_restart(
+            scanner_port, meta, external_status_fn, ensure_fn,
+            project, db, config, node_urls, token, identity, bind_host,
+        )
