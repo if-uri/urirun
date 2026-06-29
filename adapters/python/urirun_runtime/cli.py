@@ -16,36 +16,8 @@ DEFAULT_NODE_PORT = 8765  # kept in sync with node.config.DEFAULT_NODE_PORT
 _CLI_PAGE_SIZE = 20
 
 
-def _add_connectors_subparser(subparsers) -> None:
-    """The `connectors` command tree (list/show/install/index/resolve/check/lint/
-    verify/new/smoke/from-spec/doctor). Extracted from _build_parser to cut its fan-out."""
-    connectors_parser = subparsers.add_parser("connectors", help="Browse and install connectors from connect.ifuri.com")
-    connectors_sub = connectors_parser.add_subparsers(dest="connectors_command", required=True)
-    connectors_common = argparse.ArgumentParser(add_help=False)
-    connectors_common.add_argument("--catalog", default="https://connect.ifuri.com", help="Catalog base URL")
-    connectors_list = connectors_sub.add_parser("list", parents=[connectors_common], help="List catalog connectors")
-    connectors_list.add_argument("--available", action="store_true", help="Only show installable connectors")
-    connectors_list.add_argument("--json", action="store_true")
-    connectors_show = connectors_sub.add_parser("show", parents=[connectors_common], help="Show one connector contract")
-    connectors_show.add_argument("id")
-    connectors_show.add_argument("--json", action="store_true")
-    connectors_install = connectors_sub.add_parser("install", parents=[connectors_common], help="Install connector packages with pip")
-    connectors_install.add_argument("ids", nargs="+")
-    connectors_install.add_argument("--execute", action="store_true", help="Actually run pip (default: dry-run)")
-    connectors_install.add_argument("--json", action="store_true")
-    connectors_index = connectors_sub.add_parser("index", help="Index local urirun-connector-* projects")
-    connectors_index.add_argument("--root", action="append", default=None,
-                                  help="Root to scan; repeatable. Default: ~/github")
-    connectors_index.add_argument("--org", default="if-uri", help="GitHub org for fallback git install specs")
-    connectors_index.add_argument("--json", action="store_true")
-    connectors_resolve = connectors_sub.add_parser("resolve", help="Resolve a needed capability to connector install candidates")
-    connectors_resolve.add_argument("capability", help="scheme, URI, or short phrase, e.g. browser, browser://..., 'send email'")
-    connectors_resolve.add_argument("--root", action="append", default=None,
-                                    help="Root to scan; repeatable. Default: ~/github")
-    connectors_resolve.add_argument("--org", default="if-uri", help="GitHub org for fallback git install specs")
-    connectors_resolve.add_argument("--limit", type=int, default=5)
-    connectors_resolve.add_argument("--json", action="store_true")
-
+def _add_package_mgmt_parsers(subparsers) -> None:
+    """Top-level package management commands: install / version / upgrade / outdated."""
     install_parser = subparsers.add_parser("install", help="Install a connector (alias for 'connectors install', runs pip by default)")
     install_parser.add_argument("ids", nargs="+", help="connector ids or package names")
     install_parser.add_argument("--catalog", default="https://connect.ifuri.com",
@@ -78,6 +50,40 @@ def _add_connectors_subparser(subparsers) -> None:
     outdated_parser = subparsers.add_parser("outdated", help="Report installed connectors with a newer version in the catalog")
     outdated_parser.add_argument("--catalog", default="https://connect.ifuri.com", help="catalog base URL (on-prem override)")
     outdated_parser.add_argument("--json", action="store_true")
+
+
+def _add_connectors_subparser(subparsers) -> None:
+    """The `connectors` command tree (list/show/install/index/resolve/check/lint/
+    verify/new/smoke/from-spec/doctor). Extracted from _build_parser to cut its fan-out."""
+    connectors_parser = subparsers.add_parser("connectors", help="Browse and install connectors from connect.ifuri.com")
+    connectors_sub = connectors_parser.add_subparsers(dest="connectors_command", required=True)
+    connectors_common = argparse.ArgumentParser(add_help=False)
+    connectors_common.add_argument("--catalog", default="https://connect.ifuri.com", help="Catalog base URL")
+    connectors_list = connectors_sub.add_parser("list", parents=[connectors_common], help="List catalog connectors")
+    connectors_list.add_argument("--available", action="store_true", help="Only show installable connectors")
+    connectors_list.add_argument("--json", action="store_true")
+    connectors_show = connectors_sub.add_parser("show", parents=[connectors_common], help="Show one connector contract")
+    connectors_show.add_argument("id")
+    connectors_show.add_argument("--json", action="store_true")
+    connectors_install = connectors_sub.add_parser("install", parents=[connectors_common], help="Install connector packages with pip")
+    connectors_install.add_argument("ids", nargs="+")
+    connectors_install.add_argument("--execute", action="store_true", help="Actually run pip (default: dry-run)")
+    connectors_install.add_argument("--json", action="store_true")
+    connectors_index = connectors_sub.add_parser("index", help="Index local urirun-connector-* projects")
+    connectors_index.add_argument("--root", action="append", default=None,
+                                  help="Root to scan; repeatable. Default: ~/github")
+    connectors_index.add_argument("--org", default="if-uri", help="GitHub org for fallback git install specs")
+    connectors_index.add_argument("--json", action="store_true")
+    connectors_resolve = connectors_sub.add_parser("resolve", help="Resolve a needed capability to connector install candidates")
+    connectors_resolve.add_argument("capability", help="scheme, URI, or short phrase, e.g. browser, browser://..., 'send email'")
+    connectors_resolve.add_argument("--root", action="append", default=None,
+                                    help="Root to scan; repeatable. Default: ~/github")
+    connectors_resolve.add_argument("--org", default="if-uri", help="GitHub org for fallback git install specs")
+    connectors_resolve.add_argument("--limit", type=int, default=5)
+    connectors_resolve.add_argument("--json", action="store_true")
+
+    _add_package_mgmt_parsers(subparsers)
+
     connectors_check = connectors_sub.add_parser("check", parents=[connectors_common], help="Check a local connector manifest against the hub catalog")
     connectors_check.add_argument("manifest", help="Path to a connector.manifest.json")
     connectors_check.add_argument("--json", action="store_true")
@@ -110,6 +116,55 @@ def _add_connectors_subparser(subparsers) -> None:
     connectors_doctor = connectors_sub.add_parser("doctor", help="Load every installed connector and report per-connector load/validate health")
     connectors_doctor.add_argument("--entry-point-group", default=ENTRY_POINT_GROUP)
     connectors_doctor.add_argument("--json", action="store_true")
+
+
+def _add_source_args(p, with_uri=True) -> None:
+    """Add source/registry/policy arguments shared by the top-level `run` and `list` commands."""
+    if with_uri:
+        p.add_argument("uri")
+    p.add_argument("source", nargs="?", help="project directory, registry, or bindings file")
+    p.add_argument("--registry", default=".urirun/reglib.merged.json")
+    p.add_argument("--policy")
+    p.add_argument("--allow", action="append", default=[], metavar="GLOB")
+    p.add_argument("--deny", action="append", default=[], metavar="GLOB")
+    p.add_argument("--secret-allow", action="append", default=[], metavar="GLOB",
+                   help="permit a secret:// reference to resolve (deny-by-default)")
+    p.add_argument("--module", default=None,
+                   help="dispatch from a Python file's @handler/@command routes, no packaging")
+
+
+def _add_node_serve_parser(node_sub, node_common) -> None:
+    """Add the `node serve` subparser."""
+    node_serve = node_sub.add_parser("serve", parents=[node_common], help="Serve this node over HTTP")
+    node_serve.add_argument("--name")
+    node_serve.add_argument("--registry")
+    node_serve.add_argument("--host")
+    node_serve.add_argument("--port", type=int)
+    node_serve.add_argument("--execute", action="store_true")
+    node_serve.add_argument("--public-url")
+    node_serve.add_argument("--allow", action="append", default=[], metavar="GLOB",
+                            help="permit served routes matching this glob to execute (repeatable; the node's security boundary)")
+    node_serve.add_argument("--allow-secrets", action="store_true",
+                            help="permit secret:// resolution on this node (off by default; a remote /run must not read the host's local secrets)")
+    node_serve.add_argument("--pool", action="store_true",
+                            help="keep warm worker processes per connector so argv-template routes skip the cold start on every /run")
+    node_serve.add_argument("--admin-token", default=None, metavar="TOKEN",
+                            help="enable POST /deploy (remote provisioning) gated by this token; "
+                                 "also read from URIRUN_NODE_TOKEN. Pass 'auto' to generate+persist one. "
+                                 "Off by default — it can add executable routes.")
+    node_serve.add_argument("--generate-token", action="store_true",
+                            help="if no token is given, mint one and persist it to ~/.urirun-node/admin-token "
+                                 "(reused across restarts); enables POST /deploy")
+    node_serve.add_argument("--key-auth", action="store_true",
+                            help="enable SSH-key admin auth: accept ssh-copy-id enrollment and ed25519-signed "
+                                 "/deploy (no shared token). First key on a fresh node is trust-on-first-use.")
+    node_serve.add_argument("--manage", action="store_true",
+                            help="expose admin-gated node:// self-management URIs (pip install into the node's "
+                                 "venv, list packages, runtime info, connector install). Requires admin auth.")
+    node_serve.add_argument("--require-run-auth", action="store_true",
+                            help="require the same token/signature as /deploy on POST /run too "
+                                 "(needs --admin-token or --key-auth). Strongly recommended for any node "
+                                 "exposed beyond localhost, so /run is not an open execution endpoint.")
 
 
 def _add_node_subparser(subparsers) -> None:
@@ -147,52 +202,10 @@ def _add_node_subparser(subparsers) -> None:
     node_routes.add_argument("--name")
     node_routes.add_argument("--json", action="store_true")
 
-    node_serve = node_sub.add_parser("serve", parents=[node_common], help="Serve this node over HTTP")
-    node_serve.add_argument("--name")
-    node_serve.add_argument("--registry")
-    node_serve.add_argument("--host")
-    node_serve.add_argument("--port", type=int)
-    node_serve.add_argument("--execute", action="store_true")
-    node_serve.add_argument("--public-url")
-    node_serve.add_argument("--allow", action="append", default=[], metavar="GLOB",
-                            help="permit served routes matching this glob to execute (repeatable; the node's security boundary)")
-    node_serve.add_argument("--allow-secrets", action="store_true",
-                            help="permit secret:// resolution on this node (off by default; a remote /run must not read the host's local secrets)")
-    node_serve.add_argument("--pool", action="store_true",
-                            help="keep warm worker processes per connector so argv-template routes skip the cold start on every /run")
-    node_serve.add_argument("--admin-token", default=None, metavar="TOKEN",
-                            help="enable POST /deploy (remote provisioning) gated by this token; "
-                                 "also read from URIRUN_NODE_TOKEN. Pass 'auto' to generate+persist one. "
-                                 "Off by default — it can add executable routes.")
-    node_serve.add_argument("--generate-token", action="store_true",
-                            help="if no token is given, mint one and persist it to ~/.urirun-node/admin-token "
-                                 "(reused across restarts); enables POST /deploy")
-    node_serve.add_argument("--key-auth", action="store_true",
-                            help="enable SSH-key admin auth: accept ssh-copy-id enrollment and ed25519-signed "
-                                 "/deploy (no shared token). First key on a fresh node is trust-on-first-use.")
-    node_serve.add_argument("--manage", action="store_true",
-                            help="expose admin-gated node:// self-management URIs (pip install into the node's "
-                                 "venv, list packages, runtime info, connector install). Requires admin auth.")
-    node_serve.add_argument("--require-run-auth", action="store_true",
-                            help="require the same token/signature as /deploy on POST /run too "
-                                 "(needs --admin-token or --key-auth). Strongly recommended for any node "
-                                 "exposed beyond localhost, so /run is not an open execution endpoint.")
-
-    def add_source(p, with_uri=True):
-        if with_uri:
-            p.add_argument("uri")
-        p.add_argument("source", nargs="?", help="project directory, registry, or bindings file")
-        p.add_argument("--registry", default=".urirun/reglib.merged.json")
-        p.add_argument("--policy")
-        p.add_argument("--allow", action="append", default=[], metavar="GLOB")
-        p.add_argument("--deny", action="append", default=[], metavar="GLOB")
-        p.add_argument("--secret-allow", action="append", default=[], metavar="GLOB",
-                       help="permit a secret:// reference to resolve (deny-by-default)")
-        p.add_argument("--module", default=None,
-                       help="dispatch from a Python file's @handler/@command routes, no packaging")
+    _add_node_serve_parser(node_sub, node_common)
 
     run_parser = subparsers.add_parser("run", help="Validate input and run a URI")
-    add_source(run_parser)
+    _add_source_args(run_parser)
     run_parser.add_argument("--payload", default="null")
     run_parser.add_argument("--execute", action="store_true")
     run_parser.add_argument("--confirm", action="store_true")
@@ -201,7 +214,7 @@ def _add_node_subparser(subparsers) -> None:
     run_parser.add_argument("--entry-point-group", default=ENTRY_POINT_GROUP)
 
     list_parser = subparsers.add_parser("list", help="List available URIs")
-    add_source(list_parser, with_uri=False)
+    _add_source_args(list_parser, with_uri=False)
     list_parser.add_argument("--entry-points", action="store_true", help="Include installed connector bindings")
     list_parser.add_argument("--entry-point-group", default=ENTRY_POINT_GROUP)
     list_parser.add_argument("--json", action="store_true")
@@ -432,69 +445,8 @@ def _add_host_monitor_subparser(host_sub) -> None:
     monitor_daily.add_argument("--execute", action="store_true", help="write checks/artifacts/tickets; default only observes")
 
 
-def _add_host_subparser(subparsers) -> None:
-    """The `host` command tree (init/add-node/config/nodes/routes/agents/watch/dashboard/data/monitor/task/run/...). Extracted from _build_parser to cut fan-out;
-    host_common and the nested data/monitor/task/dashboard commons live inside."""
-    host_parser = subparsers.add_parser("host", help="Configure a host that controls URI nodes")
-    host_sub = host_parser.add_subparsers(dest="host_command", required=True)
-    host_common = argparse.ArgumentParser(add_help=False)
-    host_common.add_argument("--config", default=None, help="host mesh config path; default .urirun/mesh.json")
-    host_common.add_argument("--env-file", default=None, metavar="PATH",
-                             help="load KEY=VALUE from a .env (LLM_MODEL / OPENROUTER_API_KEY etc.) before running; "
-                                  "./.env is auto-loaded when URIRUN_DOTENV=1. Already-set vars win.")
-    host_common.add_argument("--node-url", action="append", default=[], metavar="[NAME=]URL",
-                             help="temporarily add a node URL for this command without editing the mesh config; repeatable")
-
-    host_init = host_sub.add_parser("init", parents=[host_common], help="Create host mesh config")
-    host_init.add_argument("--name")
-
-    host_add = host_sub.add_parser("add-node", parents=[host_common], help="Add or update a node endpoint")
-    host_add.add_argument("name")
-    host_add.add_argument("url")
-    host_add.add_argument("--tag", action="append", default=[])
-    host_add.add_argument("--kind", choices=[
-        "server", "pc", "rdp", "smartphone",
-        "browser", "browser-debug", "browser-chrome-plugin", "browser-firefox-plugin",
-        "web", "webpage", "api", "device",
-    ],
-                          help="operational node type; stored as kind:<type> tag and shown by the dashboard")
-    host_add.add_argument("--api", action="append", default=[],
-                          help="configured API/interface JSON; repeatable, e.g. '{\"id\":\"main\",\"kind\":\"rest\",\"url\":\"https://api.example/v1\"}'")
-    host_add.add_argument("--api-id", default=None, help="shortcut for one configured API/interface id")
-    host_add.add_argument("--api-kind", default=None, help="shortcut for one configured API/interface kind/protocol")
-    host_add.add_argument("--api-url", default=None, help="shortcut for one configured API/interface URL; default is node URL")
-    host_add.add_argument("--auth-type", default=None, help="auth type for shortcut API, e.g. bearer, api-key, basic")
-    host_add.add_argument("--auth-token", default=None,
-                          help="token/password/API key for shortcut API; stored in keyring when possible")
-    host_add.add_argument("--auth-header", default=None, help="header name for api-key/custom-header auth")
-    host_add.add_argument("--auth-username", default=None, help="username for basic auth")
-    host_add.add_argument("--capability", action="append", default=[],
-                          help="extra capability tag for api/device nodes, e.g. camera, files, shell")
-
-    host_sub.add_parser("config", parents=[host_common], help="Print host mesh config")
-
-    host_nodes = host_sub.add_parser("nodes", parents=[host_common], help="List configured nodes and agent counts")
-    host_nodes.add_argument("--json", action="store_true")
-
-    host_routes = host_sub.add_parser("routes", parents=[host_common], help="List URI processes exposed by nodes")
-    host_routes.add_argument("--json", action="store_true")
-
-    host_sub.add_parser("agents", parents=[host_common], help="List A2A cards, MCP tools and URI processes")
-
-    host_watch = host_sub.add_parser("watch", parents=[host_common],
-                                     help="Stream a node's live events (run/error) as URIs over SSE")
-    host_watch.add_argument("node", help="configured node name or a node URL")
-    host_watch.add_argument("--scheme", help="only events whose URI scheme is in this comma list (e.g. kvm,him,error)")
-    host_watch.add_argument("--run", help="only the progress/result events of this run id")
-    host_watch.add_argument("--follow", action="store_true", help="reconnect on drop, replaying missed events")
-    host_watch.add_argument("--token", help="admin token if the node gates /events (--require-run-auth)")
-    host_watch.add_argument("--identity", help="SSH key to sign with if the node gates /events")
-    host_watch.add_argument("--mqtt-broker", metavar="HOST[:PORT]",
-                            help="also republish each event to this MQTT broker (fan-out to many subscribers)")
-    host_watch.add_argument("--mqtt-topic", default="urirun/events",
-                            help="MQTT topic prefix; events go to <prefix>/<node>/<event>/<scheme> (default urirun/events)")
-    host_watch.add_argument("--json", action="store_true")
-
+def _add_host_dashboard_parser(host_sub, host_common) -> None:
+    """Add the `host dashboard` subparser (serve / url)."""
     host_dashboard = host_sub.add_parser("dashboard", parents=[host_common], help="Serve a local operator dashboard")
     dashboard_sub = host_dashboard.add_subparsers(dest="dashboard_command", required=True)
     dashboard_serve = dashboard_sub.add_parser("serve", parents=[host_common], help="Serve the host dashboard over HTTP")
@@ -513,10 +465,9 @@ def _add_host_subparser(subparsers) -> None:
     dashboard_url.add_argument("--host", default="127.0.0.1")
     dashboard_url.add_argument("--port", type=int, default=8194)
 
-    _add_host_data_subparser(host_sub)
 
-    _add_host_monitor_subparser(host_sub)
-
+def _add_host_deploy_copy_parsers(host_sub, host_common) -> None:
+    """Add the `host deploy` and `host copy-id` subparsers."""
     host_deploy = host_sub.add_parser("deploy", parents=[host_common],
                                       help="Push a registry (+ optional handler code) onto a running node over the mesh (no SSH)")
     host_deploy.add_argument("node", help="configured node name or a node URL")
@@ -551,6 +502,9 @@ def _add_host_subparser(subparsers) -> None:
     host_copyid.add_argument("--enroll-token", default=None,
                              help="the node's console TOKEN (shown in red at its startup) authorizing this enrollment")
 
+
+def _add_host_execution_parsers(host_sub, host_common) -> None:
+    """Add `host` execution subparsers: probe / run / ensure / supply / ask / flow / doctor."""
     host_probe = host_sub.add_parser("probe", parents=[host_common],
                                      help="Snapshot a node's surface and test every route pinned to it; detects a churning/hot-swapped registry")
     host_probe.add_argument("node", help="configured node name or a node URL")
@@ -614,6 +568,75 @@ def _add_host_subparser(subparsers) -> None:
     host_doctor.add_argument("--timeout", type=float, default=2.0, help="per-endpoint probe timeout in seconds")
     host_doctor.add_argument("--json", action="store_true", help="emit JSON report")
 
+
+def _add_host_subparser(subparsers) -> None:
+    """The `host` command tree (init/add-node/config/nodes/routes/agents/watch/dashboard/data/monitor/task/run/...). Extracted from _build_parser to cut fan-out;
+    host_common and the nested data/monitor/task/dashboard commons live inside."""
+    host_parser = subparsers.add_parser("host", help="Configure a host that controls URI nodes")
+    host_sub = host_parser.add_subparsers(dest="host_command", required=True)
+    host_common = argparse.ArgumentParser(add_help=False)
+    host_common.add_argument("--config", default=None, help="host mesh config path; default .urirun/mesh.json")
+    host_common.add_argument("--env-file", default=None, metavar="PATH",
+                             help="load KEY=VALUE from a .env (LLM_MODEL / OPENROUTER_API_KEY etc.) before running; "
+                                  "./.env is auto-loaded when URIRUN_DOTENV=1. Already-set vars win.")
+    host_common.add_argument("--node-url", action="append", default=[], metavar="[NAME=]URL",
+                             help="temporarily add a node URL for this command without editing the mesh config; repeatable")
+
+    host_init = host_sub.add_parser("init", parents=[host_common], help="Create host mesh config")
+    host_init.add_argument("--name")
+
+    host_add = host_sub.add_parser("add-node", parents=[host_common], help="Add or update a node endpoint")
+    host_add.add_argument("name")
+    host_add.add_argument("url")
+    host_add.add_argument("--tag", action="append", default=[])
+    host_add.add_argument("--kind", choices=[
+        "server", "pc", "rdp", "smartphone",
+        "browser", "browser-debug", "browser-chrome-plugin", "browser-firefox-plugin",
+        "web", "webpage", "api", "device",
+    ],
+                          help="operational node type; stored as kind:<type> tag and shown by the dashboard")
+    host_add.add_argument("--api", action="append", default=[],
+                          help="configured API/interface JSON; repeatable, e.g. '{\"id\":\"main\",\"kind\":\"rest\",\"url\":\"https://api.example/v1\"}'")
+    host_add.add_argument("--api-id", default=None, help="shortcut for one configured API/interface id")
+    host_add.add_argument("--api-kind", default=None, help="shortcut for one configured API/interface kind/protocol")
+    host_add.add_argument("--api-url", default=None, help="shortcut for one configured API/interface URL; default is node URL")
+    host_add.add_argument("--auth-type", default=None, help="auth type for shortcut API, e.g. bearer, api-key, basic")
+    host_add.add_argument("--auth-token", default=None,
+                          help="token/password/API key for shortcut API; stored in keyring when possible")
+    host_add.add_argument("--auth-header", default=None, help="header name for api-key/custom-header auth")
+    host_add.add_argument("--auth-username", default=None, help="username for basic auth")
+    host_add.add_argument("--capability", action="append", default=[],
+                          help="extra capability tag for api/device nodes, e.g. camera, files, shell")
+
+    host_sub.add_parser("config", parents=[host_common], help="Print host mesh config")
+
+    host_nodes = host_sub.add_parser("nodes", parents=[host_common], help="List configured nodes and agent counts")
+    host_nodes.add_argument("--json", action="store_true")
+
+    host_routes = host_sub.add_parser("routes", parents=[host_common], help="List URI processes exposed by nodes")
+    host_routes.add_argument("--json", action="store_true")
+
+    host_sub.add_parser("agents", parents=[host_common], help="List A2A cards, MCP tools and URI processes")
+
+    host_watch = host_sub.add_parser("watch", parents=[host_common],
+                                     help="Stream a node's live events (run/error) as URIs over SSE")
+    host_watch.add_argument("node", help="configured node name or a node URL")
+    host_watch.add_argument("--scheme", help="only events whose URI scheme is in this comma list (e.g. kvm,him,error)")
+    host_watch.add_argument("--run", help="only the progress/result events of this run id")
+    host_watch.add_argument("--follow", action="store_true", help="reconnect on drop, replaying missed events")
+    host_watch.add_argument("--token", help="admin token if the node gates /events (--require-run-auth)")
+    host_watch.add_argument("--identity", help="SSH key to sign with if the node gates /events")
+    host_watch.add_argument("--mqtt-broker", metavar="HOST[:PORT]",
+                            help="also republish each event to this MQTT broker (fan-out to many subscribers)")
+    host_watch.add_argument("--mqtt-topic", default="urirun/events",
+                            help="MQTT topic prefix; events go to <prefix>/<node>/<event>/<scheme> (default urirun/events)")
+    host_watch.add_argument("--json", action="store_true")
+
+    _add_host_dashboard_parser(host_sub, host_common)
+    _add_host_data_subparser(host_sub)
+    _add_host_monitor_subparser(host_sub)
+    _add_host_deploy_copy_parsers(host_sub, host_common)
+    _add_host_execution_parsers(host_sub, host_common)
     _add_host_task_subparser(host_sub)
 
 def _build_parser(prog: str) -> argparse.ArgumentParser:
