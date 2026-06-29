@@ -1559,22 +1559,17 @@ def _handle_get_services(handler, parsed, project) -> bool:
     return False
 
 
-def _handle_get_api(handler, parsed, project, db) -> bool:
-    query = parse_qs(parsed.query)
+def _handle_get_api_nodes(handler, parsed, query) -> bool:
     if parsed.path == "/api/nodes/phone-web":
         _json_response(handler, 200, phone_web_nodes(query))
         return True
     if parsed.path == "/api/nodes/qr":
         _handle_get_nodes_qr(handler, parsed)
         return True
-    if parsed.path == "/api/uri/event":
-        _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))
-        return True
-    if parsed.path == "/api/page/actions/poll":
-        _json_response(handler, 200,
-                       _page_action_poll_impl(_first(query, "target", "scanner") or "scanner",
-                                              int(_first(query, "limit", "4") or 4)))
-        return True
+    return False
+
+
+def _handle_get_file_api(handler, parsed, query, project) -> bool:
     if parsed.path == "/api/file":
         path = _first(query, "path")
         if not path:
@@ -1589,6 +1584,23 @@ def _handle_get_api(handler, parsed, project, db) -> bool:
             _json_response(handler, 400, {"ok": False, "error": "nodeUrl and path are required"})
             return True
         _remote_file_response(handler, node_url, path)
+        return True
+    return False
+
+
+def _handle_get_api(handler, parsed, project, db) -> bool:
+    query = parse_qs(parsed.query)
+    if _handle_get_api_nodes(handler, parsed, query):
+        return True
+    if parsed.path == "/api/uri/event":
+        _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))
+        return True
+    if parsed.path == "/api/page/actions/poll":
+        _json_response(handler, 200,
+                       _page_action_poll_impl(_first(query, "target", "scanner") or "scanner",
+                                              int(_first(query, "limit", "4") or 4)))
+        return True
+    if _handle_get_file_api(handler, parsed, query, project):
         return True
     return False
 

@@ -150,15 +150,17 @@ def node_alias_map_from_config_doc(config_doc: dict | None) -> dict[str, str]:
     return node_alias_map_from_value(config_doc.get("nodes") or [])
 
 
-def node_alias_map_from_env(*, default_node: str = "") -> dict[str, str]:
-    out: dict[str, str] = {}
-    if default_node:
-        out.setdefault(default_node.casefold(), default_node)
+def _collect_url_key_aliases(out: dict[str, str]) -> None:
+    """Populate *out* from URIRUN_NODE_URL_<NAME> environment variables."""
     for key in os.environ:
         if key.startswith("URIRUN_NODE_URL_"):
             node = key.removeprefix("URIRUN_NODE_URL_").lower().replace("_", "-")
             if node:
                 out.setdefault(node.casefold(), node)
+
+
+def _collect_nodes_env_aliases(out: dict[str, str]) -> None:
+    """Populate *out* from the URIRUN_NODES environment variable."""
     for item in os.environ.get("URIRUN_NODES", "").replace(";", ",").split(","):
         text = item.strip()
         if not text:
@@ -166,6 +168,10 @@ def node_alias_map_from_env(*, default_node: str = "") -> dict[str, str]:
         name = text.split("=", 1)[0].strip() if "=" in text else ""
         if name:
             out.setdefault(name.casefold(), name)
+
+
+def _collect_alias_env_entries(out: dict[str, str]) -> None:
+    """Populate *out* from the URIRUN_NODE_ALIASES environment variable."""
     for item in os.environ.get("URIRUN_NODE_ALIASES", "").split(","):
         text = item.strip()
         if not text or "=" not in text:
@@ -177,6 +183,15 @@ def node_alias_map_from_env(*, default_node: str = "") -> dict[str, str]:
         out.setdefault(clean_name.casefold(), clean_name)
         for alias in iter_node_alias_values(aliases):
             out.setdefault(alias.casefold(), clean_name)
+
+
+def node_alias_map_from_env(*, default_node: str = "") -> dict[str, str]:
+    out: dict[str, str] = {}
+    if default_node:
+        out.setdefault(default_node.casefold(), default_node)
+    _collect_url_key_aliases(out)
+    _collect_nodes_env_aliases(out)
+    _collect_alias_env_entries(out)
     return out
 
 
@@ -348,6 +363,36 @@ def _node_test_summary(node: str, node_url: str, mode: str, results: list[dict])
     }
 
 
+def _resolve_node_endpoint(
+    payload: dict,
+    node_url_from_config: Callable[[str], str | None],
+) -> tuple[str, str, dict | None]:
+    """Return (node, node_url, error) from *payload*; error is None on success."""
+    node = str((payload or {}).get("node") or "").strip()
+    if not node:
+        return "", "", {"ok": False, "error": "node is required"}
+    node_url = node_url_from_config(node) or ""
+    if not node_url:
+        return node, "", {"ok": False, "error": f"no node_url resolvable for '{node}'", "node": node}
+    return node, node_url, None
+
+
+def _fetch_node_routemap(
+    node_url: str,
+    tok: str | None,
+    identity: str | None,
+    node_client: Callable[..., Any],
+    node: str,
+) -> tuple[Any, dict, dict | None]:
+    """Connect to a node and return (client, routemap, error); error is None on success."""
+    try:
+        client = node_client(node_url, token=tok, identity=identity)
+        routemap = {str(r.get("uri", "")): r for r in client.routes()}
+        return client, routemap, None
+    except Exception as exc:  # noqa: BLE001
+        return None, {}, {"ok": False, "error": f"cannot reach node: {exc}", "node": node, "nodeUrl": node_url}
+
+
 def node_test_routes(
     payload: dict,
     *,
@@ -358,22 +403,13 @@ def node_test_routes(
     identity: str | None = None,
 ) -> dict:
     """Probe a node's URIs and report which respond."""
-    node = str((payload or {}).get("node") or "").strip()
-    if not node:
-        return {"ok": False, "error": "node is required"}
-    selected = [str(u).strip() for u in ((payload or {}).get("uris") or []) if str(u).strip()]
-    node_url = node_url_from_config(node)
-    if not node_url:
-        return {"ok": False, "error": f"no node_url resolvable for '{node}'", "node": node}
+    node, node_url, err = _resolve_node_endpoint(payload, node_url_from_config)
+    if err is not None:
+        return err
     tok = node_token_for(node) or token
-    try:
-        client = node_client(node_url, token=tok, identity=identity)
-        routemap = {str(r.get("uri", "")): r for r in client.routes()}
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": f"cannot reach node: {exc}", "node": node, "nodeUrl": node_url}
+    client, routemap, err = _fetch_node_routemap(node_url, tok, identity, node_client, node)
+    if err is not None:
+        return err
     targets, missing_sel, mode = _route_targets(payload, routemap)
-    results = [
-        _probe_route(client, uri, routemap.get(uri, {}), missing_sel)
-        for uri in targets
-    ]
+    results = [_probe_route(client, uri, routemap.get(uri, {}), missing_sel) for uri in targets]
     return _node_test_summary(node, node_url, mode, results)
