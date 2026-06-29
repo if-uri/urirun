@@ -161,6 +161,33 @@ def deploy_fs_file_transfer_fallback(client: Any, required_uris: list[str], *, t
     }
 
 
+def _ensure_missing_scheme_routes(client: Any, missing: list[str], roots: Any) -> list[dict]:
+    """Attempt to ensure each missing route scheme on the node, deduplicating by route key."""
+    ensured: list[dict] = []
+    attempted_route_keys: set[tuple[str, str]] = set()
+    for uri in missing:
+        key = route_key(uri)
+        if key in attempted_route_keys:
+            continue
+        attempted_route_keys.add(key)
+        scheme = uri.split("://", 1)[0] if "://" in uri else uri
+        ensured.append(client.ensure_scheme(scheme, roots=roots, install=True, route=uri))
+    return ensured
+
+
+def _apply_fs_fallback_if_needed(
+    client: Any, required_uris: list[str], after: list[dict], timeout: float
+) -> tuple[Any, list[dict], list[str]]:
+    """Deploy fs file-transfer fallback when only fs:// routes remain missing."""
+    remaining = [uri for uri in required_uris if not node_has_route(after, uri)]
+    fallback = None
+    if remaining and all(str(uri).startswith("fs://") for uri in remaining):
+        fallback = deploy_fs_file_transfer_fallback(client, remaining, timeout=timeout)
+        after = client.routes()
+        remaining = [uri for uri in required_uris if not node_has_route(after, uri)]
+    return fallback, after, remaining
+
+
 def ensure_node_uri_routes(
     node_url: str,
     required_uris: list[str],
@@ -180,22 +207,9 @@ def ensure_node_uri_routes(
     client = node_client(node_url, token=token, identity=identity)
     before = client.routes()
     missing = [uri for uri in required_uris if not node_has_route(before, uri)]
-    ensured: list[dict] = []
-    attempted_route_keys: set[tuple[str, str]] = set()
-    for uri in missing:
-        key = route_key(uri)
-        if key in attempted_route_keys:
-            continue
-        attempted_route_keys.add(key)
-        scheme = uri.split("://", 1)[0] if "://" in uri else uri
-        ensured.append(client.ensure_scheme(scheme, roots=roots, install=True, route=uri))
+    ensured = _ensure_missing_scheme_routes(client, missing, roots)
     after = client.routes() if missing else before
-    remaining = [uri for uri in required_uris if not node_has_route(after, uri)]
-    fallback = None
-    if remaining and all(str(uri).startswith("fs://") for uri in remaining):
-        fallback = deploy_fs_file_transfer_fallback(client, remaining, timeout=timeout)
-        after = client.routes()
-        remaining = [uri for uri in required_uris if not node_has_route(after, uri)]
+    fallback, after, remaining = _apply_fs_fallback_if_needed(client, required_uris, after, timeout)
     return {
         "ok": not remaining,
         "node": node,
@@ -265,25 +279,41 @@ def envelope_error_message(error: Any) -> str | None:
 
 
 
-def remote_write_error(run: dict, value: Any, *, expected_sha: str, remote_sha: str | None) -> str:
-    envelope = run.get("envelope") if isinstance(run.get("envelope"), dict) else {}
+def _remedy_for_write(envelope: dict, value: Any) -> str:
+    """Collect any route-not-found remedy from envelope or value error fields."""
     # A route/transport NOT_FOUND means the call never reached the write handler, so `value` is
     # empty and "no sha256" would be misleading — surface the connector-outdated remedy first.
-    remedy = route_not_found_remedy(envelope.get("error")) or route_not_found_remedy(
-        value.get("error") if isinstance(value, dict) else None) or route_not_found_remedy(
-        value if isinstance(value, dict) else None)
+    return (
+        route_not_found_remedy(envelope.get("error"))
+        or route_not_found_remedy(value.get("error") if isinstance(value, dict) else None)
+        or route_not_found_remedy(value if isinstance(value, dict) else None)
+    )
+
+
+def _value_dict_write_check(value: Any, remote_sha: str | None, expected_sha: str) -> str | None:
+    """Validate write result dict; returns an error string or None if all checks pass."""
+    if not isinstance(value, dict):
+        return None
+    msg = envelope_error_message(value.get("error"))
+    if msg is not None:
+        return msg
+    if value.get("ok") is False:
+        return "remote write returned ok=false"
+    if not remote_sha:
+        return "remote write returned no sha256"
+    if remote_sha != expected_sha:
+        return f"sha256 mismatch: expected {expected_sha}, got {remote_sha}"
+    return None
+
+
+def remote_write_error(run: dict, value: Any, *, expected_sha: str, remote_sha: str | None) -> str:
+    envelope = run.get("envelope") if isinstance(run.get("envelope"), dict) else {}
+    remedy = _remedy_for_write(envelope, value)
     if remedy:
         return remedy
-    if isinstance(value, dict):
-        msg = envelope_error_message(value.get("error"))
-        if msg is not None:
-            return msg
-        if value.get("ok") is False:
-            return "remote write returned ok=false"
-        if not remote_sha:
-            return "remote write returned no sha256"
-        if remote_sha != expected_sha:
-            return f"sha256 mismatch: expected {expected_sha}, got {remote_sha}"
+    value_err = _value_dict_write_check(value, remote_sha, expected_sha)
+    if value_err is not None:
+        return value_err
     msg = envelope_error_message(envelope.get("error"))
     if msg is not None:
         return msg

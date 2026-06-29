@@ -206,17 +206,9 @@ def _annotate_deploy_allow_compat(result: dict, *, merge: bool, before: dict | N
     return result
 
 
-def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | None = None,
-                   allow: list[str] | None = None, code: dict | None = None,
-                   env: dict | None = None, name: str | None = None,
-                   token: str | None = None, identity: str | None = None,
-                   merge: bool = False, persist: bool = False, timeout: float = 30.0) -> dict:
-    """Push a registry (+ optional handler code/env) onto a running node's POST /deploy.
-    Authenticate with either a shared `token` or an SSH `identity` (ed25519 private key
-    enrolled on the node via copy_id). The node must have /deploy enabled. With
-    `merge`, the deployed routes are added to the node's existing surface instead of
-    replacing it. With `persist`, the node writes the merged surface back to its startup
-    registry file so the routes survive a restart."""
+def _build_deploy_body(bindings: dict | None, registry: dict | None, merge: bool, persist: bool,
+                       allow: list[str] | None, code: dict | None, env: dict | None,
+                       name: str | None) -> dict:
     body: dict = {}
     if registry is not None:
         body["registry"] = registry
@@ -234,18 +226,41 @@ def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | N
         body["env"] = env
     if name:
         body["name"] = name
-    raw = json.dumps(body).encode("utf-8")
-    headers: dict = {}
+    return body
+
+
+def _build_deploy_headers(identity: str | None, token: str | None, raw: bytes) -> dict:
     if identity:
-        headers = keyauth.sign(identity, keyauth.PURPOSE_DEPLOY, raw)
-    elif token:
-        headers = {"X-Urirun-Token": token}
-    before = None
-    if merge and allow:
-        try:
-            before = http_json("GET", f"{url.rstrip('/')}/health", timeout=min(timeout, 8.0))
-        except Exception:
-            before = None
+        return keyauth.sign(identity, keyauth.PURPOSE_DEPLOY, raw)
+    if token:
+        return {"X-Urirun-Token": token}
+    return {}
+
+
+def _fetch_before_health(url: str, merge: bool, allow: list[str] | None, timeout: float) -> dict | None:
+    if not (merge and allow):
+        return None
+    try:
+        return http_json("GET", f"{url.rstrip('/')}/health", timeout=min(timeout, 8.0))
+    except Exception:
+        return None
+
+
+def deploy_to_node(url: str, *, bindings: dict | None = None, registry: dict | None = None,
+                   allow: list[str] | None = None, code: dict | None = None,
+                   env: dict | None = None, name: str | None = None,
+                   token: str | None = None, identity: str | None = None,
+                   merge: bool = False, persist: bool = False, timeout: float = 30.0) -> dict:
+    """Push a registry (+ optional handler code/env) onto a running node's POST /deploy.
+    Authenticate with either a shared `token` or an SSH `identity` (ed25519 private key
+    enrolled on the node via copy_id). The node must have /deploy enabled. With
+    `merge`, the deployed routes are added to the node's existing surface instead of
+    replacing it. With `persist`, the node writes the merged surface back to its startup
+    registry file so the routes survive a restart."""
+    body = _build_deploy_body(bindings, registry, merge, persist, allow, code, env, name)
+    raw = json.dumps(body).encode("utf-8")
+    headers = _build_deploy_headers(identity, token, raw)
+    before = _fetch_before_health(url, merge, allow, timeout)
     result = http_json("POST", f"{url.rstrip('/')}/deploy", raw=raw, timeout=timeout, headers=headers)
     return _annotate_deploy_allow_compat(result, merge=merge, before=before, requested_allow=allow)
 
@@ -413,6 +428,65 @@ def _configured_api_kind(api: dict) -> str:
     return str(api.get("kind") or api.get("protocol") or api.get("transport") or "http").strip().lower()
 
 
+def _api_routes_for_one(name: str, scheme: str, api_id: str, api_kind: str, title: str,
+                        api: dict) -> list[dict]:
+    """Build all routes for a single configured API entry."""
+    routes: list[dict] = [{
+        "uri": f"{scheme}://{name}/{api_id}/query/status",
+        "kind": "query",
+        "adapter": "configured-api",
+        "title": f"{title} status",
+        "apiId": api_id,
+        "apiKind": api_kind,
+    }]
+    if api_kind in {"http", "https", "rest", "openapi", "web", "panel"}:
+        routes.append({
+            "uri": f"api://{name}/{api_id}/command/request",
+            "kind": "command",
+            "adapter": "configured-api",
+            "title": f"{title} request",
+            "apiId": api_id,
+            "apiKind": api_kind,
+        })
+    if api_kind in {"rtsp", "rtmp", "rtmps", "hls"}:
+        routes.append({
+            "uri": f"media://{name}/{api_id}/query/stream",
+            "kind": "query",
+            "adapter": "configured-media",
+            "title": f"{title} stream",
+            "apiId": api_id,
+            "apiKind": api_kind,
+        })
+    if api_kind in {"rtsp", "camera", "onvif"} or str(api.get("role") or "").strip().lower() == "camera":
+        routes.append({
+            "uri": f"camera://{name}/{api_id}/query/snapshot",
+            "kind": "query",
+            "adapter": "configured-camera",
+            "title": f"{title} snapshot",
+            "apiId": api_id,
+            "apiKind": api_kind,
+        })
+    if api_kind in {"ssh", "sftp"}:
+        routes.append({
+            "uri": f"ssh://{name}/{api_id}/command/run",
+            "kind": "command",
+            "adapter": "configured-ssh",
+            "title": f"{title} shell",
+            "apiId": api_id,
+            "apiKind": api_kind,
+        })
+    if api_kind in {"smb", "nfs", "nas", "sftp"}:
+        routes.append({
+            "uri": f"fs://{name}/{api_id}/query/list",
+            "kind": "query",
+            "adapter": "configured-files",
+            "title": f"{title} files",
+            "apiId": api_id,
+            "apiKind": api_kind,
+        })
+    return routes
+
+
 def _configured_api_routes(name: str, node: dict) -> list[dict]:
     routes: list[dict] = []
     node_kind = _configured_node_kind(node)
@@ -423,59 +497,7 @@ def _configured_api_routes(name: str, node: dict) -> list[dict]:
         api_id = _configured_api_id(api, index)
         api_kind = _configured_api_kind(api)
         title = str(api.get("label") or api.get("name") or api_id)
-        routes.append({
-            "uri": f"{scheme}://{name}/{api_id}/query/status",
-            "kind": "query",
-            "adapter": "configured-api",
-            "title": f"{title} status",
-            "apiId": api_id,
-            "apiKind": api_kind,
-        })
-        if api_kind in {"http", "https", "rest", "openapi", "web", "panel"}:
-            routes.append({
-                "uri": f"api://{name}/{api_id}/command/request",
-                "kind": "command",
-                "adapter": "configured-api",
-                "title": f"{title} request",
-                "apiId": api_id,
-                "apiKind": api_kind,
-            })
-        if api_kind in {"rtsp", "rtmp", "rtmps", "hls"}:
-            routes.append({
-                "uri": f"media://{name}/{api_id}/query/stream",
-                "kind": "query",
-                "adapter": "configured-media",
-                "title": f"{title} stream",
-                "apiId": api_id,
-                "apiKind": api_kind,
-            })
-        if api_kind in {"rtsp", "camera", "onvif"} or str(api.get("role") or "").strip().lower() == "camera":
-            routes.append({
-                "uri": f"camera://{name}/{api_id}/query/snapshot",
-                "kind": "query",
-                "adapter": "configured-camera",
-                "title": f"{title} snapshot",
-                "apiId": api_id,
-                "apiKind": api_kind,
-            })
-        if api_kind in {"ssh", "sftp"}:
-            routes.append({
-                "uri": f"ssh://{name}/{api_id}/command/run",
-                "kind": "command",
-                "adapter": "configured-ssh",
-                "title": f"{title} shell",
-                "apiId": api_id,
-                "apiKind": api_kind,
-            })
-        if api_kind in {"smb", "nfs", "nas", "sftp"}:
-            routes.append({
-                "uri": f"fs://{name}/{api_id}/query/list",
-                "kind": "query",
-                "adapter": "configured-files",
-                "title": f"{title} files",
-                "apiId": api_id,
-                "apiKind": api_kind,
-            })
+        routes.extend(_api_routes_for_one(name, scheme, api_id, api_kind, title, api))
     return routes
 
 

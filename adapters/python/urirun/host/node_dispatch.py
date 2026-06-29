@@ -212,6 +212,41 @@ def classify_error(error: Any, *, node: str, uri: str = "") -> Remediation:
 # Dispatch
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _run_uri_on_node(client: Any, uri: str, payload: dict, timeout: float) -> dict:
+    """Execute a URI on a node client, returning the envelope or an error dict."""
+    try:
+        return client.run(uri, payload, timeout=timeout)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": {"type": type(exc).__name__, "message": str(exc)}, "uri": uri}
+
+
+def _build_error_remediation(
+    error: dict, node: str, uri: str, payload: dict, dashboard_base: str
+) -> Remediation:
+    """Classify a node error and attach retry context to the Remediation."""
+    r = classify_error(error, node=node, uri=uri)
+    if dashboard_base:
+        r.dashboard_url = f"{dashboard_base}?node={node}&fix={r.cls.value}"
+    r.retry_uri = uri
+    r.retry_payload = payload
+    return r
+
+
+def _handle_node_repair(
+    auto_repair: bool, execute: bool, r: Remediation,
+    client: Any, uri: str, payload: dict, timeout: float, env: dict
+) -> tuple[dict | None, dict]:
+    """Attempt auto-repair if requested; returns (repair_result, env)."""
+    if not auto_repair or not r.auto_fix_uri:
+        return None, env
+    if not execute:
+        return {"dryRun": True, "wouldCall": r.auto_fix_uri, "wouldPayload": r.auto_fix_payload}, env
+    if r.cls == RemediationClass.ROUTE_MISSING:
+        repair_result, new_env = _try_route_repair(client, r, uri, payload, timeout)
+        return repair_result, new_env or env
+    return None, env
+
+
 def run_node_uri(
     node_url: str,
     uri: str,
@@ -239,38 +274,26 @@ def run_node_uri(
     from urirun.host.fs_transfer import node_client as _node_client
 
     node = node_name or _node_from_url(node_url)
+    payload = payload or {}
 
     if not node_url:
         r = Remediation(
             cls=RemediationClass.NO_NODE_URL, node=node,
             human_action=f"Brak URL dla node '{node}'.",
-            retry_uri=uri, retry_payload=payload or {},
+            retry_uri=uri, retry_payload=payload,
         )
         return {"ok": False, "remediation": r.to_dict(),
                 "error": {"type": "NoNodeUrl", "message": r.human_action}}
 
     client = _node_client(node_url, token=token, identity=identity)
-    try:
-        env = client.run(uri, payload or {}, timeout=timeout)
-    except Exception as exc:  # noqa: BLE001
-        env = {"ok": False, "error": {"type": type(exc).__name__, "message": str(exc)}, "uri": uri}
+    env = _run_uri_on_node(client, uri, payload, timeout)
 
     if env.get("ok"):
         return env
 
     error = _extract_error(env)
-    r = classify_error(error, node=node, uri=uri)
-    if dashboard_base:
-        r.dashboard_url = f"{dashboard_base}?node={node}&fix={r.cls.value}"
-    r.retry_uri = uri
-    r.retry_payload = payload or {}
-
-    repair_result: dict[str, Any] | None = None
-    if auto_repair and r.auto_fix_uri:
-        if not execute:
-            repair_result = {"dryRun": True, "wouldCall": r.auto_fix_uri, "wouldPayload": r.auto_fix_payload}
-        elif r.cls == RemediationClass.ROUTE_MISSING:
-            repair_result, env = _try_route_repair(client, r, uri, payload, timeout)
+    r = _build_error_remediation(error, node, uri, payload, dashboard_base)
+    repair_result, env = _handle_node_repair(auto_repair, execute, r, client, uri, payload, timeout, env)
 
     env["remediation"] = r.to_dict()
     if repair_result is not None:
