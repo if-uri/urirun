@@ -523,6 +523,9 @@ urirun host dashboard serve \
 
 # Wypisz URL dashboardu
 urirun host dashboard url --host 0.0.0.0 --port 8194
+
+# Sprawdź, czy na porcie działa właściwy dashboard
+curl http://127.0.0.1:8194/api/health
 ```
 
 ### Node — pozostałe komendy
@@ -611,6 +614,17 @@ urirun node serve --execute --port 8765 --key-auth
 | `--identity FILE` | (brak) | Klucz SSH do podpisywania wywołań do nodów |
 | `--token TOKEN` | (brak) | Token do nodów z `--require-run-auth` |
 | `--node-url NAME=URL` | (brak) | Transient node bez edytowania mesh.json |
+
+Troubleshooting portu: poprawny dashboard zwraca z `/api/health` JSON z
+`service: "urirun-host-dashboard"` i wersją pakietu. Jeśli `/dashboard.js` lub
+`/api/summary` zwraca 404, albo `/api/health` pokazuje inną nazwę usługi, na
+porcie `8194` działa stary/obcy proces. Zatrzymaj go albo uruchom dashboard na
+wolnym porcie przez `--port`.
+
+Zrzuty ekranu hosta są częścią aplikacji: dashboard publikuje wbudowaną trasę
+`kvm://host/screen/query/capture`. Komunikat dla operatora nie powinien wymagać
+ręcznego `urirun install kvm`; brak tej trasy w `/api/summary` oznacza problem
+katalogu tras albo niewłaściwy proces dashboardu.
 
 ## Planfile-backed host tasks
 

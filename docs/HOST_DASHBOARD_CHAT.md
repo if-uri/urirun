@@ -13,6 +13,23 @@ The chat dashboard is the human-facing control plane. It is currently served by
 `urirun.host.host_dashboard`. The service package is the process boundary; the
 URI contracts below are the stable behavior.
 
+Operational health contract:
+
+```bash
+curl http://127.0.0.1:8194/api/health
+```
+
+A current dashboard returns `ok: true`, `service: "urirun-host-dashboard"` and
+the `urirun` package version. If `/dashboard.js` or `/api/summary` returns 404,
+or health reports a different service name, port `8194` is occupied by an old or
+different process; stop it or start the dashboard on another `--port`.
+
+Host screenshot contract: the dashboard app bundles a local host route at
+`kvm://host/screen/query/capture`. A host-only prompt such as "wykonaj zrzut
+ekranu" must not tell the operator to install `urirun-connector-kvm` manually.
+If this route is missing from `/api/summary`, treat it as an application/catalog
+bug and refresh or restart the dashboard process.
+
 ## Main Roles
 
 | Role | Responsibility |

@@ -197,6 +197,9 @@ def local_entry_point_host_routes(group: str = "urirun.bindings") -> list[dict]:
     except Exception:  # noqa: BLE001 - broken optional connector must not break dashboard summary
         return []
     out = [entry for entry in (_host_entry_point_route(route) for route in routes) if entry is not None]
+    from .screen_capture import route as _screen_capture_route  # noqa: PLC0415
+    if not any(route.get("uri") == "kvm://host/screen/query/capture" for route in out):
+        out.append(_screen_capture_route())
     return dedupe_routes(out)
 
 

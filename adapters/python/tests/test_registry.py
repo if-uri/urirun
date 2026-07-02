@@ -5,6 +5,7 @@ import urirun
 from urirun.runtime._registry import (
     default_adapter,
     hash_uri,
+    load_json,
     normalize_route_entry,
     parse_uri,
     translate,
@@ -116,6 +117,13 @@ def test_normalize_route_entry_config_dict():
 def test_normalize_route_entry_none_safe():
     entry = normalize_route_entry(None)
     assert entry["kind"] == "function"
+
+
+def test_load_json_accepts_utf8_bom(tmp_path):
+    path = tmp_path / "bindings.v2.json"
+    path.write_text('{"version":"urirun.bindings.v2","bindings":{}}', encoding="utf-8-sig")
+
+    assert load_json(path) == {"version": "urirun.bindings.v2", "bindings": {}}
 
 
 def test_list_routes_preserves_meta_contract_domains():

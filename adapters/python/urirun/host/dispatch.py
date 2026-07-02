@@ -10,6 +10,8 @@ from __future__ import annotations
 
 _INPROCESS_BINDINGS_GROUP = "urirun.bindings"
 
+from . import screen_capture as _screen_capture  # noqa: E402,F401
+
 
 def _flow_scheme_query(name: str, ep, skill, skill_steps: list, episode_id: str, uri: str) -> "dict | None":
     """Resolve flow://…/query/get or /query/plan — return the stored plan or None if unknown."""
@@ -166,6 +168,8 @@ def _call_fallback(fallback, uri: str, payload: dict | None, run_mode: str) -> "
 def _local_scheme_installed(uri: str) -> bool:
     """Return True when the URI's scheme has an installed connector in this Python env."""
     try:
+        if uri == _screen_capture.SCREEN_CAPTURE_URI:
+            return True
         scheme = uri.split("://")[0] if "://" in uri else ""
         if not scheme:
             return False

@@ -298,6 +298,12 @@ def test_make_local_dispatch_uri_local_first_preserves_dry_run_mode(monkeypatch)
     assert calls == [{"uri": "kvm://host/screen/query/capture", "mode": "dry-run"}]
 
 
+def test_bundled_host_screen_capture_counts_as_local_scheme():
+    from urirun.host import dispatch as D
+
+    assert D._local_scheme_installed("kvm://host/screen/query/capture") is True
+
+
 def test_inprocess_fallback_reaches_twin_preflight():
     """Full end-to-end: make_local_dispatch_uri with an empty mesh registry must route
     twin://host/flow/command/preflight through inprocess_fallback to the registered

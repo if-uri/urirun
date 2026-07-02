@@ -15,8 +15,7 @@ that live there. Everything else is stateless and imported directly.
 from __future__ import annotations
 
 import os
-
-from .twin_bridge import api_twin_state as _api_twin_state_impl
+from importlib import metadata
 
 
 # ─── stateless helpers ────────────────────────────────────────────────────────
@@ -85,6 +84,13 @@ def llm_runtime_config() -> dict:
     return {"ok": True, "configured": bool(model), "model": model, "source": source}
 
 
+def _package_version() -> str:
+    try:
+        return metadata.version("urirun")
+    except metadata.PackageNotFoundError:
+        return "unknown"
+
+
 # ─── chat_history (stateless, only needs host_db + artifacts_admin) ───────────
 
 def chat_history(db: str | None, project: str, limit: int = 80) -> dict:
@@ -115,6 +121,21 @@ def _api_summary(
 ) -> tuple[int, dict]:
     from .host_dashboard import summary as _summary  # noqa: PLC0415 — needs service-state globals
     return 200, _summary(project, db, config, node_urls=node_urls)
+
+
+def _api_health(
+    project: str, db: str | None, config: str | None,
+    query: dict, node_urls: list[str] | None,
+) -> tuple[int, dict]:
+    return 200, {
+        "ok": True,
+        "service": "urirun-host-dashboard",
+        "version": _package_version(),
+        "project": project,
+        "db": db,
+        "config": config,
+        "nodeUrls": list(node_urls or []),
+    }
 
 
 def _api_objects(
@@ -243,12 +264,14 @@ def _api_twin_state(
     project: str, db: str | None, config: str | None,
     query: dict, node_urls: list[str] | None = None,
 ) -> tuple[int, dict]:
+    from .twin_bridge import api_twin_state as _api_twin_state_impl  # noqa: PLC0415
     return _api_twin_state_impl(project, db, config, query, node_urls)
 
 
 # ─── routing ──────────────────────────────────────────────────────────────────
 
 _API_ROUTES: dict = {
+    "/api/health": _api_health,
     "/api/summary": _api_summary,
     "/api/objects": _api_objects,
     "/api/node-types": _api_node_types,

@@ -608,7 +608,7 @@ def dispatch_generated(uri: str, registry: dict, payload=None, runtime_cache: di
 
 
 def load_json(path: str | Path):
-    with Path(path).open("r", encoding="utf-8") as f:
+    with Path(path).open("r", encoding="utf-8-sig") as f:
         return json.load(f)
 
 

@@ -916,6 +916,14 @@ def _warn_unauthenticated_node(name: str, host: str, port: int, execute: bool, r
 ENROLL_TOKEN_TTL = 600  # seconds (10 min)
 
 
+def _console_text(text: str) -> str:
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        return str(text).encode(encoding, errors="replace").decode(encoding, errors="replace")
+    except LookupError:  # pragma: no cover - defensive for unusual embedded runtimes.
+        return str(text)
+
+
 def _start_enroll_token_rotation(ctx: "NodeContext", public_url: str, *,
                                  interval: int = ENROLL_TOKEN_TTL,
                                  stop: "threading.Event | None" = None) -> "threading.Event":
@@ -931,8 +939,10 @@ def _start_enroll_token_rotation(ctx: "NodeContext", public_url: str, *,
         while not stop.wait(interval):  # waits `interval`; True only when stopped
             new = keyauth.new_enroll_token()
             ctx.enroll_token = new  # old PIN stops working immediately
-            print(f"\033[1;32mTOKEN: {new}\033[0m  (rotacja · poprzedni wygasł · ważny {interval // 60} min)"
-                  f"  →  uri-copy-id {public_url} --enroll-token {new}", flush=True)
+            print(_console_text(
+                f"\033[1;32mTOKEN: {new}\033[0m  (rotacja - poprzedni wygasl - wazny {interval // 60} min)"
+                f"  ->  uri-copy-id {public_url} --enroll-token {new}"
+            ), flush=True)
 
     threading.Thread(target=_rotate, name="urirun-enroll-rotate", daemon=True).start()
     return stop
@@ -946,16 +956,22 @@ def _announce_node_started(name: str, host: str, port: int, state: dict, execute
     vstatus = version_status()  # cached PyPI check; best-effort
     # Line 1: version. Line 2: the short (≤7-char) enrollment TOKEN — or how to get the
     # credential when there is no rotating PIN. Both on stdout so the token is captured there.
-    print(f"[urirun] {version_line()} · node '{name}' · {public_url}", flush=True)
+    print(_console_text(f"[urirun] {version_line()} · node '{name}' · {public_url}"), flush=True)
     if enroll_token:
         # Bold green, isolated, so it stands out in the console scrollback.
-        print(f"\033[1;32mTOKEN: {enroll_token}\033[0m  (≤7 znaków · ważny {ENROLL_TOKEN_TTL // 60} min, "
-              f"potem rotacja i nowy TOKEN tutaj)  →  uri-copy-id {public_url} --enroll-token {enroll_token}",
-              flush=True)
+        print(_console_text(
+            f"\033[1;32mTOKEN: {enroll_token}\033[0m  (<=7 znakow - wazny {ENROLL_TOKEN_TTL // 60} min, "
+            f"potem rotacja i nowy TOKEN tutaj)  ->  uri-copy-id {public_url} --enroll-token {enroll_token}"
+        ), flush=True)
     else:
-        print("[urirun] TOKEN: " + ("admin token w ~/.urirun-node/admin-token (odczytaj: cat ~/.urirun-node/admin-token)"
-                                    if deploy_enabled else "brak auth — uruchom z --key-auth (PIN) lub --admin-token"),
-              flush=True)
+        print(_console_text(
+            "[urirun] TOKEN: "
+            + (
+                "admin token w ~/.urirun-node/admin-token (odczytaj: cat ~/.urirun-node/admin-token)"
+                if deploy_enabled
+                else "brak auth - uruchom z --key-auth (PIN) lub --admin-token"
+            )
+        ), flush=True)
     if vstatus["status"] == "update-available":
         sys.stderr.write(f"[urirun] a newer version is available: {vstatus['latest']} "
                          f"(pip install -U 'urirun[keyauth]')\n")

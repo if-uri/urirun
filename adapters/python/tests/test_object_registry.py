@@ -173,3 +173,19 @@ def test_phone_scanner_contact_fields():
     assert contact["status"] == "running"
     assert contact["reachable"] is True
     assert isinstance(contact["routes"], list)
+
+
+def test_local_entry_point_host_routes_includes_bundled_screen_capture(monkeypatch):
+    import urirun
+    from urirun.runtime import discovery
+
+    monkeypatch.setattr(discovery, "full_registry", lambda group: {"version": "test"})
+    monkeypatch.setattr(urirun, "list_routes", lambda registry: [])
+
+    routes = local_entry_point_host_routes()
+
+    by_uri = {route["uri"]: route for route in routes}
+    route = by_uri["kvm://host/screen/query/capture"]
+    assert route["source"] == "urirun host built-in"
+    assert route["node"] == "host"
+    assert route["safe"] is True

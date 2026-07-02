@@ -38,9 +38,9 @@ def _connector_hint_for_nodes(selected_nodes: list[str], selected_targets: list[
     if not selected_targets or "host" in selected_targets:
         return {
             "scheme": "kvm",
-            "package": "urirun-connector-kvm",
-            "installCommand": "urirun install kvm",
-            "description": "Local KVM/Wayland screen-capture connector for the host",
+            "package": "urirun-host",
+            "installCommand": "",
+            "description": "Built-in local screen-capture route bundled with the host app",
         }
     return {
         "scheme": "kvm",
@@ -207,8 +207,8 @@ def _capability_gap_message(nodes: list[str], offline: list[str],
         return (f"Node '{n}' nie ma trasy zrzutu ekranu (kvm://, screen://, browser://). "
                 f"Zainstaluj connector: urirun host ensure {n} kvm"), "screen-capture"
     if not selected_targets or "host" in selected_targets:
-        return ("Host nie ma lokalnej trasy zrzutu ekranu (kvm://, screen://, browser://). "
-                "Zainstaluj lokalny connector: urirun install kvm"), "screen-capture"
+        return ("Host nie ma lokalnej trasy zrzutu ekranu mimo wbudowanego fallbacku aplikacji. "
+                "Sprawdz /api/health i odswiez katalog tras hosta."), "screen-capture"
     return ("Brakuje trasy URI do zrzutow ekranu. Zainstaluj connector kvm: urirun host ensure <node> kvm",
             "screen-capture")
 

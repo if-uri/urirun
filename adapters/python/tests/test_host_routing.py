@@ -213,7 +213,7 @@ def test_gap_returned_for_screenshot_only_prompt():
     assert result["missing"] == "screen-capture"
     assert "connectorHint" in result
     hint = result["connectorHint"]
-    assert "kvm" in hint["package"]
+    assert hint["package"] == "urirun-host"
     assert "installCommand" in hint
 
 
@@ -257,8 +257,22 @@ def test_gap_connector_hint_for_host_is_local_install():
         [], ["host"],
     )
     assert result is not None
-    assert "Host nie ma lokalnej trasy" in result["message"]
-    assert result["connectorHint"]["installCommand"] == "urirun install kvm"
+    assert "wbudowanego fallbacku" in result["message"]
+    assert result["connectorHint"]["package"] == "urirun-host"
+    assert result["connectorHint"]["installCommand"] == ""
+    assert "urirun install kvm" not in result["message"]
+
+
+def test_bundled_host_screen_route_satisfies_capture_gap():
+    from urirun.host.screen_capture import route as screen_route
+
+    result = screen_document_capability_gap(
+        _SCREEN_ONLY_PROMPT,
+        {"routes": [screen_route()]},
+        [], ["host"],
+    )
+
+    assert result is None
 
 
 def test_gap_includes_related_routes():

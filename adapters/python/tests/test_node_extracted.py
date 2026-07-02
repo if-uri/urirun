@@ -39,6 +39,20 @@ def test_enroll_token_rotation_replaces_pin_and_reprints(capsys):
         stop.set()  # halt the rotation thread so it doesn't spam later test output
 
 
+def test_console_text_handles_windows_cp1250_stdout(monkeypatch):
+    from urirun_node import server as node_server
+
+    class Stdout:
+        encoding = "cp1250"
+
+    monkeypatch.setattr(node_server.sys, "stdout", Stdout())
+
+    text = node_server._console_text("TOKEN: ABC (≤7 znaków) → uri-copy-id")
+
+    text.encode("cp1250")
+    assert "TOKEN: ABC" in text
+
+
 # --- flow: NL-planner route availability (templated routes) -------------------
 
 def test_uri_is_available_matches_concrete_against_templated_route():
