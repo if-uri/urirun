@@ -124,6 +124,7 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 - external examples: [github.com/if-uri/examples](https://github.com/if-uri/examples)
 - connector hub: [connect.ifuri.com](https://connect.ifuri.com)
 - host/app integration: [github.com/if-uri/app](https://github.com/if-uri/app)
+- multiplatform black-box E2E tests: [github.com/if-uri/urirun-multiplatform-test](https://github.com/if-uri/urirun-multiplatform-test)
 - installer site: [get.ifuri.com](https://get.ifuri.com) / `curl get.ifuri.com/node.sh | bash`
 - `www/` - PHP project site and documentation viewer using generated urirun logo assets
 - `logo/` - generated SVG logo family for icon, wordmark, horizontal and stacked marks
@@ -132,6 +133,13 @@ Then adapt that descriptor to existing functions, methods, classes, MQTT topics,
 
 Current cross-repository status:
 `https://github.com/if-uri/docs/blob/main/work-summary-2026-06-20.md`
+
+## Test ownership
+
+Developer tests for `urirun` stay in this repository. External black-box
+multiplatform E2E tests live in
+[if-uri/urirun-multiplatform-test](https://github.com/if-uri/urirun-multiplatform-test).
+See [docs/testing.md](docs/testing.md) for the ownership split.
 
 ## Install
 
