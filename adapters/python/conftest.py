@@ -33,7 +33,21 @@ for _sibling in [
 ]:
     _path = os.path.join(_MONOREPO, _sibling)
     if os.path.isdir(_path) and _path not in sys.path:
-        sys.path.insert(1, _path)
+        # BEFORE _PKG (position 0): this adapters dir still carries stale snapshots of
+        # externally-owned packages (urirun_flow, urirun_connector_router); the owning
+        # sibling repo must win or tests exercise dead code. Editable finders can't help
+        # here — they sit at the END of sys.meta_path, after the PathFinder that walks
+        # these entries. None of the siblings contains a `urirun` package, so _PKG still
+        # resolves `urirun` itself.
+        sys.path.insert(0, _path)
+
+# Purge externally-owned packages already imported from the stale adapters snapshots,
+# so pytest re-imports them from the sibling repos that own them.
+for _owned in ("urirun_flow", "urirun_connector_router"):
+    _omod = sys.modules.get(_owned)
+    if _omod is not None and _PKG in str(getattr(_omod, "__file__", "")):
+        for _name in [n for n in list(sys.modules) if n == _owned or n.startswith(_owned + ".")]:
+            del sys.modules[_name]
 
 
 # Auto-heal the recurring extraction bug where a bundled-fallback `try/except ImportError` traps

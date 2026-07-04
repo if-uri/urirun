@@ -696,7 +696,8 @@ def _unwrap_recall(recalled) -> dict | None:
     return recalled if (recalled.get("steps") or []) else None
 
 
-def _recall_routes_replan_required(flow: dict, routes: list[dict], registry: dict) -> bool:
+def _recall_routes_replan_required(flow: dict, routes: list[dict], registry: dict) -> dict:
+    """Return the env-enum replan verdict ({required, reason, ...}) for a recalled flow."""
     from urirun_flow import env_selection as _env_selection  # noqa: PLC0415
     from urirun_flow.flow import _build_env_inventory  # noqa: PLC0415
     inventories = _env_selection.build_env_enum_inventories(
@@ -704,20 +705,33 @@ def _recall_routes_replan_required(flow: dict, routes: list[dict], registry: dic
         routes,
         inventory_builder=lambda node: _build_env_inventory(node, registry),
     )
-    return bool(_env_selection.recall_env_enum_replan_required(flow, routes, inventories).get("required"))
+    verdict = _env_selection.recall_env_enum_replan_required(flow, routes, inventories)
+    return verdict if isinstance(verdict, dict) else {"required": bool(verdict)}
 
 
-def _recalled_to_flow(recalled: dict, prompt: str, routes: list[dict] | None, registry: dict) -> dict | None:
-    """Build a recalled flow dict; return None if routes require replanning."""
-    from urirun_flow.flow_planner import prepare_screenshot_capture_flow  # noqa: PLC0415
+def _recalled_to_flow(recalled: dict, prompt: str, routes: list[dict] | None, registry: dict,
+                      *, env_validated: bool = False) -> dict | None:
+    """Build a recalled flow dict; return None if routes require replanning.
+
+    ``env_validated`` — the recall hit is an Episode matched on intent x CURRENT env
+    fingerprint, i.e. this exact flow already ran to an accepted outcome in this
+    environment. Then a ``skip-when`` enum bypass (e.g. capture scope:all skipping the
+    monitor enum) is NOT grounds for an LLM replan: the episode is the proof that the
+    bypass was the accepted answer. ``unresolved``/``invalid`` still replan."""
     _rec_steps = recalled.get("steps") or []
     flow = {"steps": _rec_steps,
             "task": {"id": "recall", "source": recalled.get("source", "recall"), "title": prompt}}
     allowed_uris = {str(s.get("uri") or "") for s in _rec_steps if isinstance(s, dict)}
     allowed_uris.update(str(r.get("uri") or "") for r in (routes or []) if isinstance(r, dict))
-    flow = prepare_screenshot_capture_flow(flow, prompt, allowed_uris)
-    if routes and _recall_routes_replan_required(flow, routes, registry):
-        return None
+    try:
+        from urirun_flow.flow_planner import prepare_screenshot_capture_flow  # noqa: PLC0415
+        flow = prepare_screenshot_capture_flow(flow, prompt, allowed_uris)
+    except ImportError:  # optional enhancement; a raw recalled flow is still a valid shortcut
+        pass
+    if routes:
+        replan = _recall_routes_replan_required(flow, routes, registry)
+        if replan.get("required") and not (env_validated and replan.get("reason") == "skip-when"):
+            return None
     return flow
 
 
@@ -741,7 +755,10 @@ def _try_recall_gate(twin_memory, selected_nodes: list, prompt: str,
                                       {"prompt": prompt, "env_fp": _env_fp, "node": _node}))
     if _recalled is None:
         return None, None
-    flow = _recalled_to_flow(_recalled, prompt, routes, registry or {})
+    # Episode hits are keyed on intent x env fingerprint — with a non-empty fingerprint the
+    # recalled flow was already accepted in THIS environment, so skip-when bypasses replay.
+    _env_validated = bool(_env_fp) and str(_recalled.get("source") or "") == "episode"
+    flow = _recalled_to_flow(_recalled, prompt, routes, registry or {}, env_validated=_env_validated)
     if flow is None:
         return None, None
     return flow, _build_recall_generator(_recalled)
@@ -938,10 +955,25 @@ def _chat_ask_general_env_block(selection: dict, db: str | None, prompt: str, ex
     }
 
 
+def _phase_timer(timings: dict) -> "Callable[[str], None]":
+    """Return a lap(phase) callback that records elapsed ms since the previous lap
+    into ``timings``. Keys accumulate, so repeated laps of one phase sum up."""
+    import time  # noqa: PLC0415
+    last = [time.perf_counter()]
+
+    def lap(phase: str) -> None:
+        now = time.perf_counter()
+        timings[phase] = round(timings.get(phase, 0.0) + (now - last[0]) * 1000.0, 1)
+        last[0] = now
+
+    return lap
+
+
 def _chat_ask_general_plan_step(
     mesh, twin_memory, planner_nodes, no_llm,
     selected_nodes, selected_targets, prompt, _routes, registry,
     discovered, db, execute, payload, deps, llm_model,
+    lap: "Callable[[str], None] | None" = None,
 ) -> tuple:
     """Inner planning try/except block for _chat_ask_general.
 
@@ -955,17 +987,22 @@ def _chat_ask_general_plan_step(
     The flow_store fallback fires even when env_fp is empty -- new install, offline node --
     closing the loop that the episode gate alone left open.
     """
+    lap = lap or (lambda phase: None)
     try:
         environments = _fetch_planner_environments_for_nodes(
             mesh, planner_nodes, execute, registry, discovered, memory=twin_memory, prompt=prompt)
+        lap("planEnvironments")
         flow, generator = _try_recall_gate(twin_memory, selected_nodes, prompt, _routes, registry)
+        lap("planRecall")
         if flow is None:
             retrieval = _retrieve_experience_context(twin_memory, selected_nodes, prompt, _routes)
             flow, generator = _make_flow_with_retrieval(
                 mesh, prompt, discovered, planner_nodes, no_llm, environments, retrieval,
                 llm_model=llm_model)
+            lap("planGenerate")
         flow = _apply_capture_preferences(flow, twin_memory)
         selection = resolve_flow_env_enums_with_registry(flow, _routes, registry, memory=twin_memory, prompt=prompt)
+        lap("planResolve")
         if not selection.get("ok"):
             early = _chat_ask_general_needs_selection(
                 selection, db, prompt, execute, selected_nodes, selected_targets, deps,
@@ -1001,6 +1038,10 @@ def _chat_ask_general(
     llm_model = _payload_llm_model(payload)
     mesh = deps.mesh_fn()
     old_token, old_identity = _apply_run_credentials(token, identity)
+    # Phase timings (ms) surfaced in the result as "timings" — the data for answering
+    # "where does a prompt's wall-clock go?" (discovery vs LLM planning vs execution).
+    timings: dict = {}
+    lap = _phase_timer(timings)
     try:
         full_discovered = mesh.discover_mesh(deps.host_config_fn(config, node_urls))
         offline_fail = _chat_ask_general_check_offline(
@@ -1022,11 +1063,13 @@ def _chat_ask_general(
         from urirun.node.twin_store import durable_memory as _durable_memory  # noqa: PLC0415
         twin_memory = _durable_memory() if execute else None
         planner_nodes = _planner_nodes_for_targets(selected_nodes, selected_targets)
+        lap("discover")
         early_resp, flow, generator, env_inventories, selected_nodes, selected_targets = \
             _chat_ask_general_plan_step(
                 mesh, twin_memory, planner_nodes, no_llm,
                 selected_nodes, selected_targets, prompt, _routes, registry,
-                discovered, db, execute, payload, deps, llm_model)
+                discovered, db, execute, payload, deps, llm_model, lap=lap)
+        lap("planTargetSync")
         if early_resp is not None:
             return early_resp
         _recall = _suggest_recall_for_memory(flow, twin_memory)
@@ -1039,10 +1082,14 @@ def _chat_ask_general(
         execution_registry = mesh.registry_from_routes(execution_mesh.get("routes") or [])
         _dispatch = make_local_dispatch_uri(execution_registry, _run_mode, local_first=_local_first)
         routing_report = _chat_insert_routing_preview(db, flow, execution_mesh, selected_targets, execute, deps)
+        lap("routingPreview")
         _chat_insert_twin_flow_preview(db, prompt, flow, selected_targets, routing_report, deps)
+        lap("twinPreview")
         execution = mesh.execute_flow(flow, execution_mesh, execution_registry, execute=execute, memory=twin_memory,
                                       dispatch_uri=_dispatch, router_guard=execute)
+        lap("execute")
         _remember_capture_preferences(flow, execution, twin_memory)
+        execution = {**execution, "timings": timings}
     finally:
         _restore_run_credentials(old_token, old_identity)
     result = _chat_ask_general_build_result(
@@ -1050,6 +1097,11 @@ def _chat_ask_general(
         selected_nodes, selected_targets,
         prompt, execute, no_llm, payload, project, db, deps,
     )
+    lap("buildResult")
+    timings["total"] = round(sum(v for k, v in timings.items() if k != "total"), 1)
+    # Reattach the authoritative dict: compaction inside build_result may have deep-copied
+    # the earlier snapshot, which would freeze timings before buildResult/total existed.
+    result["timings"] = timings
     return _attach_known_good_recall(result, _recall)
 
 

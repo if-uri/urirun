@@ -176,43 +176,68 @@ class RecallGateShortCircuitsLLMTests(unittest.TestCase):
         self.assertEqual(flow["steps"][1]["uri"], "kvm://host/window/command/focus")
         self.assertEqual(flow["steps"][2]["depends_on"], ["focus_list_chrome_windows", "list_chrome_windows"])
 
-    def test_recall_with_ambiguous_env_enum_does_not_short_circuit_planner(self):
+    _ENUM_ROUTES = [{
+        "uri": "kvm://host/screen/query/capture",
+        "meta": {"contract": {"domains": {"monitor": {
+            "type": "enum",
+            "domain": "env:monitors.id",
+            "optional": True,
+            "emptyValues": [0, ""],
+            "skipWhen": {"scope": ["all", "all-monitors", "desktop"]},
+        }}}},
+    }]
+    _THREE_MONITOR_INV = {"host": {"node": "host", "fingerprint": "env-three",
+                                   "domains": {"env:monitors.id": [
+                                       {"value": 1, "label": "HDMI-1"},
+                                       {"value": 2, "label": "DP-2"},
+                                       {"value": 3, "label": "DP-1"},
+                                   ]}}}
+
+    def _gate_with(self, recalled, prompt="zrob zrzut ekranu", env_fp="env-x"):
         import urirun.host.chat_orchestrator as CO
         import urirun.host.dispatch as D
         import urirun_flow.env_selection as ES
-
-        recalled = {"ok": True, "found": True, "source": "episode", "episode_id": "ep-1", "steps": [
-            {"id": "cap", "uri": "kvm://host/screen/query/capture",
-             "payload": {"monitor": -1, "scope": "all"}, "depends_on": []},
-        ]}
-        routes = [{
-            "uri": "kvm://host/screen/query/capture",
-            "meta": {"contract": {"domains": {"monitor": {
-                "type": "enum",
-                "domain": "env:monitors.id",
-                "optional": True,
-                "emptyValues": [0, ""],
-                "skipWhen": {"scope": ["all", "all-monitors", "desktop"]},
-            }}}},
-        }]
-        inventories = {"host": {"node": "host", "fingerprint": "env-three",
-                                "domains": {"env:monitors.id": [
-                                    {"value": 1, "label": "HDMI-1"},
-                                    {"value": 2, "label": "DP-2"},
-                                    {"value": 3, "label": "DP-1"},
-                                ]}}}
-
         d_orig = D.inprocess_fallback
         inv_orig = ES.build_env_enum_inventories
         D.inprocess_fallback = lambda uri, payload=None: recalled
-        ES.build_env_enum_inventories = lambda flow, route_list, **kwargs: inventories
+        ES.build_env_enum_inventories = lambda flow, route_list, **kwargs: self._THREE_MONITOR_INV
         try:
-            mem = type("M", (), {"known_good": lambda self, n: {"fingerprint": "env-x"}})()
-            flow, gen = CO._try_recall_gate(mem, ["host"], "zrob zrzut 3 monitora", routes, {})
+            mem = type("M", (), {"known_good": lambda self, n: {"fingerprint": env_fp}})()
+            return CO._try_recall_gate(mem, ["host"], prompt, self._ENUM_ROUTES, {})
         finally:
             D.inprocess_fallback = d_orig
             ES.build_env_enum_inventories = inv_orig
 
+    def test_env_validated_episode_with_skip_when_short_circuits(self):
+        # Episode hits are keyed on intent x CURRENT env fingerprint — this exact flow
+        # already ran to an accepted outcome here, so a scope:all skip-when bypass is the
+        # accepted answer, not ambiguity. The gate must skip the LLM (~20s planGenerate).
+        recalled = {"ok": True, "found": True, "source": "episode", "episode_id": "ep-1", "steps": [
+            {"id": "cap", "uri": "kvm://host/screen/query/capture",
+             "payload": {"monitor": -1, "scope": "all"}, "depends_on": []},
+        ]}
+        flow, gen = self._gate_with(recalled)
+        self.assertIsNotNone(flow)
+        self.assertEqual(gen["provider"], "recall")
+
+    def test_non_episode_recall_with_skip_when_still_replans(self):
+        # A flow-store (intent-only) hit was NOT validated in this environment — the
+        # skip-when demotion stays: the LLM gets it as retrieval context only.
+        recalled = {"ok": True, "found": True, "source": "flow", "steps": [
+            {"id": "cap", "uri": "kvm://host/screen/query/capture",
+             "payload": {"monitor": -1, "scope": "all"}, "depends_on": []},
+        ]}
+        flow, gen = self._gate_with(recalled)
+        self.assertEqual((flow, gen), (None, None))
+
+    def test_episode_recall_with_unresolved_enum_still_replans(self):
+        # skip-when is the only demotion an episode overrides; a genuinely unresolved
+        # enum (no monitor, no skip-scope) still needs the resolver/planner.
+        recalled = {"ok": True, "found": True, "source": "episode", "episode_id": "ep-2", "steps": [
+            {"id": "cap", "uri": "kvm://host/screen/query/capture",
+             "payload": {}, "depends_on": []},
+        ]}
+        flow, gen = self._gate_with(recalled)
         self.assertEqual((flow, gen), (None, None))
 
     def test_make_flow_is_not_called_on_hit(self):

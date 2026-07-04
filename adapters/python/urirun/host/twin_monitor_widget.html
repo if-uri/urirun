@@ -413,6 +413,9 @@
             Digital Twin Monitor
         </div>
         <div class="controls">
+            <div class="mode-switch" id="promptIndicatorWrap" style="display:none; max-width:340px; overflow:hidden;">
+                PROMPT: <span id="promptIndicator" style="color:var(--amber-forward); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+            </div>
             <div class="mode-switch">
                 SOURCE: <select id="sourceSelect" style="background:transparent; color:var(--cyan-inverse); border:1px solid var(--panel-border); padding:2px 5px;">
                     <option value="demo">DEMO</option>
@@ -777,6 +780,113 @@
         let _twinPollTimer = null;
         let _twinPollAbort = null;
 
+        // ─── Prompt-scoped mode (chat attachment iframe) ────────────────────────
+        // When embedded from a chat message the URL carries the run's prompt + target
+        // node. In that mode the widget replays THAT run (its step events, or its
+        // durable Episode after a restart) instead of mirroring the latest global event.
+        const PAGE_PARAMS = new URLSearchParams(window.location.search);
+        const FOCUS_PROMPT = (PAGE_PARAMS.get('prompt') || '').trim();
+        const FOCUS_NODE = ((PAGE_PARAMS.get('targets') || PAGE_PARAMS.get('node') || 'host')
+            .split(',')[0] || 'host').replace(/^node:/, '');
+        let _focusKey = '';
+
+        if (FOCUS_PROMPT) {
+            document.getElementById('promptIndicatorWrap').style.display = '';
+            const pi = document.getElementById('promptIndicator');
+            pi.innerText = FOCUS_PROMPT;
+            pi.title = FOCUS_PROMPT;
+        }
+
+        const INFRA_STEP = id => /^(preflight|twin:drift:|twin:inventory:)/.test(id) || id === 'memory:remember';
+
+        function widgetMonitorsFromNodes(nodes, nodeName) {
+            // Same mapping as the server's _widget_monitors: logical geometry so
+            // mixed-scale layouts line up.
+            const snap = ((nodes || {})[nodeName] || {}).snapshot || {};
+            return (snap.monitors || []).map(m => ({
+                id: m.connector || m.displayName || ('mon' + (m.index ?? '?')),
+                x: m.x || 0, y: m.y || 0,
+                width: m.logicalWidth || m.width || 0,
+                height: m.logicalHeight || m.height || 0,
+                scale: m.scale || 1,
+            }));
+        }
+
+        function stepResultValue(results, id) {
+            const r = (results || {})[id];
+            if (!r || typeof r !== 'object') return {};
+            const res = r.result;
+            if (res && typeof res === 'object') {
+                return (res.value && typeof res.value === 'object') ? res.value : res;
+            }
+            return r;
+        }
+
+        function eventsFromEpisode(ep, monitors) {
+            // Rebuild TwinEvents from the run's durable Episode (execution.timeline +
+            // results) — the in-memory event ring is gone after a server restart.
+            const exec = ep.execution || {};
+            const results = exec.results || {};
+            const fp = (ep.reality || {}).fingerprint || '';
+            const steps = (exec.timeline || []).filter(s => !INFRA_STEP(String(s.id || '')));
+            return steps.map((s, i) => {
+                const val = stepResultValue(results, s.id);
+                const degraded = !!val.degraded;
+                const status = s.ok === false ? 'blocked' : (degraded ? 'degraded' : 'applied');
+                const uri = s.uri || '?';
+                const state = {
+                    node: s.target || FOCUS_NODE, os: 'linux',
+                    surface: /cdp|browser/.test(uri) ? 'cdp' : 'kvm',
+                    fingerprint: fp || ('step-' + (i + 1)), stateSig: 'ep-' + (i + 1),
+                    url: val.url || null, monitors: monitors, window: null,
+                };
+                let narration = `[${s.id || '?'}] ${uri}`;
+                if (status === 'degraded') narration += ' ⚠ degraded' + (val.degradedReason ? ': ' + val.degradedReason : '');
+                else if (status === 'applied' && s.reversible === false) narration += ' ⚠ irreversible';
+                const invRaw = val.inverse;
+                const inverse = invRaw ? (typeof invRaw === 'object' ? (invRaw.uri || null) : String(invRaw)) : null;
+                return {
+                    status: status,
+                    narration: narration,
+                    transition: {
+                        before: state,
+                        forward: uri,
+                        inverse: inverse,
+                        after: {...state, stateSig: 'ep-' + (i + 1) + '-done'},
+                        reversible: s.reversible !== false,
+                    },
+                };
+            });
+        }
+
+        function renderFocus(data) {
+            const focus = data.focus || {};
+            const monitors = widgetMonitorsFromNodes(data.nodes, FOCUS_NODE);
+            let events = (focus.events || []).filter(e => e && e.transition);
+            // Backfill the real monitor layout into events published before it was known.
+            const fillMonitors = st => (st && (!st.monitors || !st.monitors.length)) ? {...st, monitors} : st;
+            events = events.map(e => ({...e, transition: {...e.transition,
+                before: fillMonitors(e.transition.before), after: fillMonitors(e.transition.after)}}));
+            if (!events.length && focus.episode) events = eventsFromEpisode(focus.episode, monitors);
+            if (!events.length) {
+                document.getElementById('sayLead').innerText = `Brak zapisanego przebiegu dla: "${focus.prompt || FOCUS_PROMPT}"`;
+                return;
+            }
+            const key = events.length + ':' + ((focus.episode || {}).ts || '');
+            if (key === _focusKey) return;  // don't reset the slider while the user scrubs
+            _focusKey = key;
+            demoHistory = events;
+            currentStep = events.length - 1;
+            rollbackMode ? showRollbackStep(currentStep) : applyEvent(demoHistory[currentStep]);
+            updateSlider();
+            const outcome = ((focus.episode || {}).outcome || {}).status;
+            if (outcome) {
+                const sv = document.getElementById('statusVal');
+                sv.innerText = String(outcome).toUpperCase();
+                sv.style.color = outcome === 'failed' ? 'var(--red-blocked)' : 'var(--amber-forward)';
+            }
+        }
+
         const slider = document.getElementById('timelineSlider');
         const timelinePos = document.getElementById('timelinePos');
         const sourceSelect = document.getElementById('sourceSelect');
@@ -898,7 +1008,9 @@
             async function poll() {
                 _twinPollAbort = new AbortController();
                 try {
-                    const res = await fetch('/api/twin/state?limit=20', {
+                    const url = '/api/twin/state?limit=20'
+                        + (FOCUS_PROMPT ? '&prompt=' + encodeURIComponent(FOCUS_PROMPT) : '');
+                    const res = await fetch(url, {
                         cache: 'no-store',
                         signal: _twinPollAbort.signal,
                     });
@@ -907,19 +1019,25 @@
                     backoffMs = 2000;
                     if (data.flows) renderFlows(data.flows);
                     renderTwinExtras(data);
-                    // Drive the NOW/NEXT monitors + FINGERPRINT/URL/STATUS from the latest live step
-                    // event. The poll already returns the event ring buffer, and the demo path feeds
-                    // applyEvent — but live never did, so those single fields stayed '--' while the
-                    // aggregate panels (flows/episodes/proofs) filled.
-                    const _latestEvent = (data.events || []).filter(e => e && e.transition).slice(-1)[0];
-                    if (_latestEvent) applyEvent(_latestEvent);
-                    // FINGERPRINT shows the ENVIRONMENT identity (the stable env-… the twin
-                    // tracks), not the per-step state-sig that applyEvent set above.
-                    const _node = Object.values(data.nodes || {})[0];
-                    if (_node && _node.fingerprint)
-                        document.getElementById('fingerprintVal').innerText = _node.fingerprint;
-                    document.getElementById('sayLead').innerText =
-                        `Zsynchronizowano ${new Date().toLocaleTimeString()} · ${data.total ?? 0} znanych przepływów`;
+                    if (FOCUS_PROMPT && data.focus) {
+                        // Chat-attachment mode: replay THIS run's steps (events or its
+                        // durable Episode), not the latest global event.
+                        renderFocus(data);
+                    } else {
+                        // Drive the NOW/NEXT monitors + FINGERPRINT/URL/STATUS from the latest live step
+                        // event. The poll already returns the event ring buffer, and the demo path feeds
+                        // applyEvent — but live never did, so those single fields stayed '--' while the
+                        // aggregate panels (flows/episodes/proofs) filled.
+                        const _latestEvent = (data.events || []).filter(e => e && e.transition).slice(-1)[0];
+                        if (_latestEvent) applyEvent(_latestEvent);
+                        // FINGERPRINT shows the ENVIRONMENT identity (the stable env-… the twin
+                        // tracks), not the per-step state-sig that applyEvent set above.
+                        const _node = Object.values(data.nodes || {})[0];
+                        if (_node && _node.fingerprint)
+                            document.getElementById('fingerprintVal').innerText = _node.fingerprint;
+                        document.getElementById('sayLead').innerText =
+                            `Zsynchronizowano ${new Date().toLocaleTimeString()} · ${data.total ?? 0} znanych przepływów`;
+                    }
                 } catch (err) {
                     if (err.name === 'AbortError') return;
                     backoffMs = Math.min(backoffMs * 2, 30000);

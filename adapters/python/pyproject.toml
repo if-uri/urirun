@@ -46,7 +46,9 @@ ready = "urirun.node.preconditions:ready_bindings"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["urirun*"]
-exclude = ["urirun_flow*"]
+# urirun_flow and urirun_connector_router are OWNED by sibling repos (urirun-flow,
+# urirun-connector-router); the local dirs are stale snapshots and must never ship.
+exclude = ["urirun_flow*", "urirun_connector_router*"]
 
 [tool.setuptools.package-data]
 # Static assets served by the dashboard from their package dir (read fresh per request):

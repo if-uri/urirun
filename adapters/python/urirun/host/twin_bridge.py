@@ -26,6 +26,7 @@ def _is_infra_step(step: dict) -> bool:
         step.get("type") == "preflight"
         or step_id.startswith("preflight")
         or step_id.startswith("twin:drift:")
+        or step_id.startswith("twin:inventory:")
         or step_id == "memory:remember"
     )
 
@@ -128,6 +129,7 @@ def _publish_step_event(
     degraded: bool = False, degraded_reason: str | None = None,
     episode_id: str = "", experience_id: str = "", intent_sig: str = "",
     env_fingerprint: str = "", url: "str | None" = None,
+    monitors: "list | None" = None,
 ) -> None:
     """Emit a StepEvent to TWIN_EVENT_HUB.
 
@@ -150,7 +152,7 @@ def _publish_step_event(
     _before: dict = {
         "node": step.get("target") or node, "os": "linux", "surface": surface,
         "fingerprint": env_fingerprint or sig, "stateSig": sig, "url": url,
-        "monitors": [], "window": None,
+        "monitors": monitors or [], "window": None,
     }
     status = _step_status(step_ok, degraded)
     narration = _step_narration(step, step_uri, status, degraded_reason, reversible)
@@ -316,18 +318,41 @@ def capture_episode(*, execute: bool, flow: dict, prompt: str, selected_targets:
             "next_intent": ep.outcome.next_intent}
 
 
-def _node_env_fingerprint(node: str) -> str:
-    """Look up the node's known-good env fingerprint; return "" on any failure."""
+def _widget_monitors(snapshot_monitors: list) -> "list[dict]":
+    """Map inventory monitor records to the widget's MonitorState contract
+    ({id,x,y,width,height,scale}), preferring logical geometry so mixed-scale
+    layouts (1.25x laptop + 1x external) line up in the NOW/NEXT maps."""
+    out: list[dict] = []
+    for m in snapshot_monitors or []:
+        if not isinstance(m, dict):
+            continue
+        out.append({
+            "id": m.get("connector") or m.get("displayName") or f"mon{m.get('index', '?')}",
+            "x": m.get("x") or 0,
+            "y": m.get("y") or 0,
+            "width": m.get("logicalWidth") or m.get("width") or 0,
+            "height": m.get("logicalHeight") or m.get("height") or 0,
+            "scale": m.get("scale") or 1,
+        })
+    return out
+
+
+def _node_env_profile(node: str) -> "tuple[str, list[dict]]":
+    """(env fingerprint, widget-shaped monitors) from the node's known-good record;
+    ("", []) on any failure."""
     try:
         from urirun.node.twin_store import durable_memory as _dm  # noqa: PLC0415
-        return (_dm().known_good(node) or {}).get("fingerprint") or ""
+        rec = _dm().known_good(node) or {}
+        snapshot = rec.get("snapshot") or {}
+        return rec.get("fingerprint") or "", _widget_monitors(snapshot.get("monitors") or [])
     except Exception:  # noqa: BLE001
-        return ""
+        return "", []
 
 
 def _publish_timeline_events(timeline: list, node: str, results: dict,
                               episode_id: str, experience_id: str,
-                              intent_sig: str, env_fp: str) -> None:
+                              intent_sig: str, env_fp: str,
+                              monitors: "list | None" = None) -> None:
     """Fire a StepEvent for every non-infra step in timeline."""
     for step in timeline:
         if not _is_infra_step(step):
@@ -338,7 +363,8 @@ def _publish_timeline_events(timeline: list, node: str, results: dict,
                                 degraded=deg, degraded_reason=deg_reason,
                                 episode_id=episode_id, experience_id=experience_id,
                                 intent_sig=intent_sig, env_fingerprint=env_fp,
-                                url=_url_from_results(results, step_id))
+                                url=_url_from_results(results, step_id),
+                                monitors=monitors)
 
 
 def append_twin_widget(execute: bool, flow: dict, attachments: list,
@@ -370,9 +396,9 @@ def append_twin_widget(execute: bool, flow: dict, attachments: list,
     if not execute:
         return
     node = (selected_targets[0] if selected_targets else None) or "host"
-    env_fp = _node_env_fingerprint(node)
+    env_fp, monitors = _node_env_profile(node)
     _publish_timeline_events(timeline, node, results or {}, episode_id, experience_id,
-                             intent_sig, env_fp)
+                             intent_sig, env_fp, monitors=monitors)
     TWIN_EVENT_HUB.publish({
         "flowCompleted": True,
         "prompt": prompt,
@@ -610,6 +636,21 @@ def api_twin_state(project: str, db: "str | None", config: "str | None", query: 
     proofs = list(proof_store.values()) if hasattr(proof_store, "values") else []
     all_episodes = mem.known_good_episodes() if hasattr(mem, "known_good_episodes") else []
     episodes_ok, episodes_failed, health_episodes = _split_episodes(all_episodes)
+    # Prompt-scoped focus for an embedded chat widget: the run's own step events (in-memory
+    # ring buffer) plus its durable Episode, so the widget replays what THAT chat message
+    # actually executed — surviving server restarts — instead of the latest global event.
+    prompt = str((query.get("prompt") or [""])[0] or "").strip()
+    focus = None
+    if prompt:
+        from urirun.node.episode import intent_signature  # noqa: PLC0415
+        isig = intent_signature(prompt)
+        focus_episodes = [ep for ep in all_episodes if ep.get("intent_sig") == isig]
+        focus = {
+            "prompt": prompt,
+            "intentSig": isig,
+            "events": [e for e in step_events if e.get("intent_sig") == isig],
+            "episode": focus_episodes[0] if focus_episodes else None,  # newest-first
+        }
     return 200, {
         "ok": True,
         "nodes": nodes,
@@ -621,4 +662,5 @@ def api_twin_state(project: str, db: "str | None", config: "str | None", query: 
         "episodes": (episodes_ok + health_episodes)[:limit],
         "failedEpisodes": episodes_failed[:limit],
         "events": step_events,
+        "focus": focus,
     }
