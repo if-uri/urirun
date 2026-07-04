@@ -136,9 +136,12 @@ kształt = osobny return interceptora; (c) moja optymalizacja Z6 (env_stable) tr
 którego żywa ścieżka nie używa. FIX: interceptor deleguje per-node do współdzielonego
 `_remember_node_profile(env_stable=)` + zwraca nodes/profileSources — jedno źródło prawdy.
 DOWÓD live: remember 660ms→180ms, profileSources={'host':'cache'} (env_stable reużywa drift-cache).
-Suity: urirun-flow 148, flow_twin+diagnostics 149. POZOSTAJE (drobne): _uri_memory_remember
-(ścieżka mesh/fallback) i interceptor to nadal DWA return-kształty — docelowo wydzielić wspólny
-builder; oraz named-kwargs dla in-core handlerów (fallback tier2b) jak w notatce skill+session.
+Suity: urirun-flow 148, flow_twin+diagnostics 149. ZROBIONE 2026-07-04 (named-kwargs): wszystkie 5 in-core handlerów flow connectora
+(_uri_memory_remember/env_drift/env_inventory/preflight/goal_verify) przyjmują teraz named
+kwargs ORAZ pozycyjny payload dict — kompilowany schemat nie wymaga już literalnego 'payload',
+więc ścieżka fallback (tier2b) działa (zweryfikowane: dispatch ok:True, pełny kształt
+nodes+profileSources). Strażnik: test_flow_handlers_accept_named_kwargs. POZOSTAJE (kosmetyka):
+_uri_memory_remember i interceptor to nadal dwa return-kształty — docelowo wspólny builder.
 
 #### (archiwum diagnozy Z11 — jak doszliśmy)
 ### Z11. [NOWE, KLUCZOWE dla Z6] Kroki twin:// wykonują się POZA procesem serwisu (stary kod!)
