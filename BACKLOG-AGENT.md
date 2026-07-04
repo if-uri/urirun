@@ -127,6 +127,20 @@ TYMCZASEM: `semcod/2026`, `semcod/rebuild` i `maskservice/archive` są wykluczon
 skanowania local.dev.sh przez `~/github/local.dev.ignore`, więc fork już nie zaśmieca
 manifestów ani indeksu duplikatów.
 
+### Z11. [ROZWIĄZANE 2026-07-04] — przyczyna: DUPLIKACJA logiki twin (interceptor vs URI-handler)
+ROZWIĄZANE. NIE był to obcy proces/stary kod. `_make_memory_dispatch` (flow.py ~595) owija
+dispatch gdy jest `memory` i PRZECHWYTUJE remember/drift/inventory WŁASNĄ inline
+implementacją — nigdy nie woła URI-handlerów (_uri_memory_remember itd.). Stąd: (a) dispatch
+nie szedł przez make_dispatch/inprocess_fallback (sondy w obu = ABSENT); (b) stary 5-kluczowy
+kształt = osobny return interceptora; (c) moja optymalizacja Z6 (env_stable) trafiła w URI-handler,
+którego żywa ścieżka nie używa. FIX: interceptor deleguje per-node do współdzielonego
+`_remember_node_profile(env_stable=)` + zwraca nodes/profileSources — jedno źródło prawdy.
+DOWÓD live: remember 660ms→180ms, profileSources={'host':'cache'} (env_stable reużywa drift-cache).
+Suity: urirun-flow 148, flow_twin+diagnostics 149. POZOSTAJE (drobne): _uri_memory_remember
+(ścieżka mesh/fallback) i interceptor to nadal DWA return-kształty — docelowo wydzielić wspólny
+builder; oraz named-kwargs dla in-core handlerów (fallback tier2b) jak w notatce skill+session.
+
+#### (archiwum diagnozy Z11 — jak doszliśmy)
 ### Z11. [NOWE, KLUCZOWE dla Z6] Kroki twin:// wykonują się POZA procesem serwisu (stary kod!)
 Odkryte 2026-07-04 przy wdrażaniu cięcia Z6: wynik kroku `memory:remember` w odpowiedzi
 chatu ma kształt {ok,remembered,degraded,degradedReason,flowKey} — BEZ `nodes`, które
