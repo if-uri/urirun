@@ -63,7 +63,15 @@ Weryfikacja: pełna suita urirun zielona; `dev_deps_doctor.py` bez SHADOW;
 `test_dev_deps_doctor.py` przechodzi. Potem można UPROŚCIĆ conftesty (usunąć
 czyszczenie cieni), ale dopiero PO usunięciu katalogów.
 
-### Z2. Zdecydować i wykonać: wydmuszki urirun-cdp / urirun-connectors-toolkit / urirun-runtime
+### Z2. [CZĘŚĆ AGENTOWA WYKONANA 2026-07-04] Wydmuszki urirun-cdp / urirun-connectors-toolkit / urirun-runtime
+WYKONANO wariant (b) w zakresie venv: `pip uninstall` trzech NON-EDITABLE dystrybucji
+z urirun/venv, if-uri/venv i urirun/.venv; moduły rozwiązują się teraz do źródeł w
+adapters/python (editable). Zweryfikowano: doctor exit 0 bez sekcji NON-EDITABLE,
+suita urirun 1715 passed, urirun-flow 139 passed. POZOSTAŁO (Tom): decyzja o kasacie
+pustych katalogów repo. UWAGA sprzeczna z rekomendacją (b): urirun-runtime 0.2.0 i
+urirun-connectors-toolkit 0.2.0 SĄ opublikowane na PyPI i harness multiplatform ich
+używa w publicznej instalacji (PUBLIC_RUNTIME_DEPS) — przed kasatą katalogów sprawdzić,
+skąd CI buduje te wydania.
 Stan: trzy repo w `~/github/if-uri/` bez źródeł pakietu (tylko build/egg-info/testy),
 zainstalowane NON-EDITABLE 0.2.0 w venv; prawdziwy kod żyje w `adapters/python/…`
 i wygrywa przez finder dystrybucji urirun. Opcje:
@@ -83,17 +91,26 @@ feedback loop, goal-verify. Punkty zaczepienia: `urirun-flow/urirun_flow/flow_th
 `~/.claude/.../memory/self-heal-flow-engine.md` — jeśli niedostępne, od testów
 `tests/test_diagnostics.py` (klasa ThinDriverMemoryTests).
 
-### Z4. Naprawić detekcję statusu instalacji w ~/github/local.dev.sh
-Bug potwierdzony 2026-07-04: manifest raportuje `planfile 0.1.103 non-editable
-STALE-INSTALL`, podczas gdy venv ma JEDNĄ instalację `planfile 0.1.106 editable`
-(pip show + dist-info zgodne). Skrypt czyta stan skądś indziej (stary indeks? zły venv?).
-Napraw w `~/github/local.dev.sh` (dokumentacja: `~/github/local.dev.md`), potem
-`bash ~/github/local.dev.sh if-uri` i porównaj z sekcją live doktora — muszą się zgadzać.
+### Z4. [WYKONANE 2026-07-04] Naprawić detekcję statusu instalacji w ~/github/local.dev.sh
+ROZWIĄZANE — raport nie kłamał, tylko mówił o INNYM venv niż doktor: local.dev.sh bierze
+najbliższy venv w górę drzewa, więc dla adapters/python trafiał w pakietowy
+`adapters/python/.venv`, który był (a) MARTWY (pip "required file not found" — zniknął
+bazowy interpreter) i (b) miał stary planfile 0.1.103; doktor patrzy na urirun/venv.
+Naprawy: martwy .venv odtworzony (editable urirun+contract/router/flow+planfile+radon+
+pytest); local.dev.sh dopisuje teraz POCHODZENIE stanu instalacji do każdego wiersza
+(`0.1.106 editable @if-uri/urirun/adapters/python/.venv`) — raport i doktor są jednoznacznie
+porównywalne. Zweryfikowano: manifest zgodny z sekcją live doktora; `--check if-uri` OK.
+Przy okazji local.dev.sh dostał tryby bramkowe `--check` / `--check-release`
+(pytest lane tests/test_dep_health.py w urirun+kvm+ocr+camera; `make publish|release`
+blokowane przy niespełnialnych zależnościach) — patrz ~/github/local.dev.md.
 
-### Z5. Porządek w planfile (fork-widmo)
+### Z5. Porządek w planfile (fork-widmo) — [ZŁAGODZONE 2026-07-04, kasata u Toma]
 `~/github/semcod/2026/planfile` (0.1.48) to stary fork zaśmiecający manifesty;
 żywe źródło to `~/github/semcod/planfile` (0.1.106, editable w venv urirun).
 Zarchiwizować/skasować fork — decyzja i wykonanie po stronie Toma (poza if-uri).
+TYMCZASEM: `semcod/2026`, `semcod/rebuild` i `maskservice/archive` są wykluczone ze
+skanowania local.dev.sh przez `~/github/local.dev.ignore`, więc fork już nie zaśmieca
+manifestów ani indeksu duplikatów.
 
 ### Z6. Latencja — dalsze cięcia (po pomiarach, nie na ślepo)
 Dane per-faza są w `timings` każdej odpowiedzi chatu; per-krok w `timeline[].ms`.
@@ -112,11 +129,32 @@ Staged validation flow gotowy; czeka na powrót węzła 192.168.188.201:8766.
 Deploy przez `--identity`; szczegóły w pamięci projektu (`kvm-connector-consolidation`,
 `lenovo-node-201`).
 
-### Z9. Odświeżyć snapshot urirun-multiplatform-test/.work
-`.work/urirun-src` to kopia urirun sprzed refaktoryzacji z 2026-07-04 (m.in. stary
-pyproject bez exclude urirun_connector_router). Harness ma własne skrypty w
-`urirun-multiplatform-test/scripts/` — użyj ich zamiast ręcznego kopiowania.
-Własność testów multiplatform jest zewnętrzna (commit b3783ef w urirun).
+### Z9. [WYKONANE 2026-07-04] Odświeżyć snapshot urirun-multiplatform-test/.work
+Odświeżone przez `URIRUN_SOURCE_DIR=~/github/if-uri/urirun python3 scripts/install_urirun.py`
+(bez env skrypt klonuje z GitHuba — UWAGA: `run_tests.py` też re-instaluje, więc pełny
+przebieg z lokalnymi, niezacommitowanymi poprawkami wymaga eksportu URIRUN_SOURCE_DIR).
+Świeży snapshot ujawnił i pozwolił naprawić PRODUKTOWY bug publicznej instalacji:
+`urirun host add-node` (ścieżka advanced) importował `urirun.host_dashboard`, który
+przy imporcie ciągnie shim skanera → ModuleNotFoundError bez urirun-connector-scanner.
+Fix w `urirun/host/node_cli.py`: add-node używa lekkich `object_registry.node_add` +
+`node_types` zamiast całego dashboardu. Dodatkowo `scripts/install_urirun.py`
+PUBLIC_RUNTIME_DEPS += urirun-runtime>=0.2.0, urirun-connectors-toolkit>=0.2.0
+(bez nich `host add-node` = "mesh not available"). Wynik: harness 49 passed / 0 failed
+(było 2 failed / 47 passed); XFAIL test_host_mesh_works_without_source_pythonpath
+potwierdza niezależnie warunek publikacyjny z Z-nowego niżej.
+
+### Z10. [NOWE — CZEKA NA TOMA] Publikacja 8 pod-pakietów przed kolejnym wydaniem urirun
+`local.dev.sh --check-release if-uri/urirun/adapters/python` (i XFAIL harnessu) pokazują:
+następne wydanie urirun będzie NIEINSTALOWALNE, bo deklarowane zależności nie istnieją na
+PyPI: urirun-contract, urirun-connector-router, urirun-flow>=0.2.2, urirun-connector-scanner,
+urirun-declarative, urirun-openapi-import, urirun-uinput, urirun-widgets. Dystrybucje
+wszystkich 8 są zbudowane + `twine check` PASSED w `dist/` ich repo; upload zablokowany
+agentowi przez klasyfikator uprawnień (akcja publiczna). Komenda dla Toma:
+`for r in urirun-contract urirun-connector-router urirun-flow urirun-connector-scanner \
+   urirun-declarative urirun-openapi-import urirun-uinput urirun-widgets; do \
+   (cd ~/github/if-uri/$r && ~/github/if-uri/urirun/venv/bin/python -m twine upload --skip-existing dist/*); done`
+Po publikacji: `make release` w urirun samo potwierdzi gotowość (bramka dep-health-release),
+a XFAIL w harnessie zacznie przechodzić (zdjąć marker).
 
 ## Weryfikacja końcowa po każdej sesji pracy
 

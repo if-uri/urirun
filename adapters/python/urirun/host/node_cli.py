@@ -237,7 +237,11 @@ def _build_implicit_api(args: argparse.Namespace) -> dict:
 
 def _handle_add_node_advanced(args: argparse.Namespace) -> int:
     """Handle the advanced ``add-node`` path (kind/api/auth flags present)."""
-    from urirun import host_dashboard
+    # object_registry + node_types, NOT urirun.host_dashboard: the dashboard module pulls
+    # the scanner shim at import, so a scanner-less install (public pip, no
+    # urirun-connector-scanner) crashed on plain `urirun host add-node`
+    from urirun.host.node_types import node_type_tags, normalize_node_type
+    from urirun.host.object_registry import node_add as _node_add
 
     apis, error_rc = _parse_api_json_args(args)
     if error_rc is not None:
@@ -255,7 +259,8 @@ def _handle_add_node_advanced(args: argparse.Namespace) -> int:
         "apis": apis,
         "capabilities": args.capability,
     }
-    result = host_dashboard.node_add(args.config, payload)
+    result = _node_add(args.config, payload,
+                       normalize_node_type=normalize_node_type, node_type_tags=node_type_tags)
     reglib._emit_json(result, "-")
     return 0 if result.get("ok") else 1
 
