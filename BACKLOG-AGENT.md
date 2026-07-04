@@ -82,14 +82,29 @@ i wygrywa przez finder dystrybucji urirun. Opcje:
 Rekomendacja z sesji: (b), chyba że planowane są osobne wydania (wtedy (a) dla cdp).
 Weryfikacja: doctor bez wpisów NON-EDITABLE dla tych nazw; suita zielona.
 
-### Z3. Self-heal flow engine — dokończenie (największy wątek merytoryczny)
-Z pamięci projektu, pozostałe elementy: reguła eskalacji surface, preflight,
-feedback loop, goal-verify. Punkty zaczepienia: `urirun-flow/urirun_flow/flow_thin.py`
-(_thin_driver, _thin_goal_verify, preflight), `urirun_flow/recovery.py`,
-`urirun/host/decision_loop.py`. Wykonawca diagnose→remediate→retry już działa
-(kind-guard + circuit-breaker gotowe). Zacznij od przeczytania
-`~/.claude/.../memory/self-heal-flow-engine.md` — jeśli niedostępne, od testów
-`tests/test_diagnostics.py` (klasa ThinDriverMemoryTests).
+### Z3. [WYKONANE 2026-07-04] Self-heal flow engine — dokończenie
+STAN FAKTYCZNY po lekturze `self-heal-flow-engine.md` (jest w
+`~/.claude/projects/-home-tom-github-if-uri-urirun/memory/`): preflight
+(_plan_with_preflight), goal-verify (_thin_goal_verify), eskalacja surface
+(diagnostics._maybe_escalate_surface w fit_to_environment) i feedback nierozpoznanych
+sygnatur (recovery_plan unrecognized+signature) JUŻ ISTNIAŁY. Prawdziwa luka: THIN
+driver (żywa ścieżka chatu) na syntetyzowanej porażce kroku (ok=False bez next.kind)
+szedł prosto w rollback — bez diagnose→remediate→retry, które miał tylko stary silnik.
+WYKONANO: `_thin_self_heal` w flow_thin.py — cienki bliźniak _attempt_self_heal:
+jedna próba na krok (marker w timeline), tylko remediacje automatic z kind∈
+{provision,precondition,retry,discovery} (payload/auth/diagnostic = human-gated),
+diagnoza env-fitted (best-effort kvm://{node}/env/query/profile przez dispatch_uri →
+eskalacja surface działa też w thin), retry księguje healed=True → globalne capy
+circuit-breakera obowiązują. Jawny next.kind="rollback" NIE jest leczony.
+PRZY OKAZJI naprawiony realny bug: `execute_flow(recover=False)` przyjmował flagę,
+ale NIE przekazywał jej do _thin_driver (recover nie docierał nigdzie) — teraz
+przewleczona przez _thin_driver→_thin_dispatch_step→_thin_handle_non_continue
+i bramkuje self-heal (testy rollup, które to złapały: test_flow_rollup 24 passed).
+Testy: urirun-flow/tests/test_thin_self_heal.py (4: heal→retry→zielony na regule
+cdp-debugger-down; heal-once potem rollback; explicit-rollback nietykany;
+nierozpoznana sygnatura → rollback). Suity: urirun-flow 143, urirun 1715, smoke
+`True recall 9963 ms`. UWAGA: import recovery/diagnostics w flow_thin musi być LAZY
+(wewnątrz _thin_self_heal) — top-level łamie test_light_imports.
 
 ### Z4. [WYKONANE 2026-07-04] Naprawić detekcję statusu instalacji w ~/github/local.dev.sh
 ROZWIĄZANE — raport nie kłamał, tylko mówił o INNYM venv niż doktor: local.dev.sh bierze
