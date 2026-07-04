@@ -71,3 +71,18 @@ try:
             print("[conftest] auto-healed misplaced __future__ imports:", _healed)
 except Exception as _heal_exc:  # noqa: BLE001 - healing is best-effort, never fatal to tests
     print("[conftest] __future__ auto-heal skipped:", _heal_exc)
+
+
+# Isolate urirun_flow's short-TTL env-probe cache between tests: within one test module,
+# one test's probe (or memory-path refresh) must not feed a stale profile to the next.
+import pytest as _pytest
+
+
+@_pytest.fixture(autouse=True)
+def _clear_env_probe_cache():
+    try:
+        from urirun_flow import _env_probe_cache
+        _env_probe_cache.clear()
+    except ImportError:
+        pass
+    yield

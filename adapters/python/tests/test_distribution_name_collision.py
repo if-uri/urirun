@@ -49,9 +49,14 @@ def _repo_root() -> Path:
 
 
 def _iter_pyprojects(root: Path):
-    """Every pyproject.toml under root, skipping build/cache/VCS directories."""
+    """Every pyproject.toml under root, skipping build/cache/VCS directories.
+
+    Hidden directories are skipped wholesale: they hold working snapshots, not sources —
+    e.g. ``urirun-multiplatform-test/.work/urirun-src`` is a copy of the urirun repo and
+    would re-report every collision the real repo already fixed."""
     for path in root.rglob("pyproject.toml"):
-        if any(part in _SKIP_DIRS for part in path.relative_to(root).parts):
+        parts = path.relative_to(root).parts
+        if any(part in _SKIP_DIRS or part.startswith(".") for part in parts):
             continue
         yield path
 

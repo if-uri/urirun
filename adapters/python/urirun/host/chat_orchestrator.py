@@ -348,6 +348,7 @@ def _emit_general_chat_message(
             "results": result.get("results") or {},
             "error": result.get("error"),
             "recovery": result.get("recovery") or [],
+            "timings": result.get("timings") or {},
         },
         attachments=attachments,
     ))
@@ -363,6 +364,8 @@ def _emit_general_chat_message(
             "routing": result.get("routing"),
             "timeline": result.get("timeline") or [],
             "recovery": result.get("recovery") or [],
+            # Phase timings (ms) — lets Activity/log queries trend where prompt latency goes.
+            "timings": result.get("timings") or {},
         })
     except Exception:  # noqa: BLE001
         pass

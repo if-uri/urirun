@@ -1113,7 +1113,7 @@ class ThinDriverMemoryTests(unittest.TestCase):
         memory.remember("host", known_good_profile)
 
         orig = flow_mod._fetch_env_profile
-        flow_mod._fetch_env_profile = lambda step, reg: drifted_profile
+        flow_mod._fetch_env_profile = lambda step, reg, **kw: drifted_profile
         try:
             flow = {"steps": [{"id": "s1", "uri": "kvm://host/ui/command/click"}]}
             envelope = FlowEnvelope(flow_id="drift-test")
