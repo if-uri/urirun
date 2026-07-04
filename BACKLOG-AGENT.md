@@ -127,22 +127,93 @@ TYMCZASEM: `semcod/2026`, `semcod/rebuild` i `maskservice/archive` są wykluczon
 skanowania local.dev.sh przez `~/github/local.dev.ignore`, więc fork już nie zaśmieca
 manifestów ani indeksu duplikatów.
 
+### Z11. [NOWE, KLUCZOWE dla Z6] Kroki twin:// wykonują się POZA procesem serwisu (stary kod!)
+Odkryte 2026-07-04 przy wdrażaniu cięcia Z6: wynik kroku `memory:remember` w odpowiedzi
+chatu ma kształt {ok,remembered,degraded,degradedReason,flowKey} — BEZ `nodes`, które
+zwraca każda wersja `_uri_memory_remember` z tego repo. DOWÓD twardy: marker-plik
+(`~/.urirun/remember_marker.json` pisany na wejściu handlera) NIE powstaje przy smoke,
+mimo restartu serwisu i braku jakichkolwiek cieni urirun_flow na dysku (snapshoty Z1
+usunięte, jedyna instalacja = editable; świeży interpreter zwraca komplet kluczy).
+Wniosek: dispatch kroków twin:// (drift/inventory/remember, ~660 ms każdy) ląduje w
+INNYM, długo żyjącym procesie ze STARYM kodem. Kandydaci widoczni w ps:
+(a) node przykładu 25 (pid 527825, start 10:18, `--allow kvm:// ocr:// llm://`),
+(b) flota kontenerów pc1-* (`/opt/urirun`, PyPI urirun → urirun_flow 0.2.0 bez `nodes`
+    w return — KSZTAŁT PASUJE; pc1-api zatrzymany na próbę — bez zmiany, ale jest też
+    pc1-desktop/phone/bank...; proces host-ps `--name pc1 --port 8765` z 12:02).
+ŚLEDZTWO DOCIŚNIĘTE (2026-07-04, druga runda — sondy w driverze serwisu):
+FAKTY TWARDE: (a) driver thin w serwisie wykonuje BIEŻĄCY kod (sonda pisze,
+payload remember ZAWIERA env_stable ✓, Z3 self-heal live ✓); (b) serwisowy
+`urirun_flow.flow.__file__` = editable źródło, a `inspect.getsource(_uri_memory_remember)`
+ZAWIERA profileSources; (c) mimo to surowy wynik dispatchu = goły dict
+{ok,remembered,degraded,degradedReason,flowKey} — bez `nodes` i `profileSources`;
+(d) `grep -rln 'remembered=remembered'` po CAŁYM $HOME + /opt = JEDEN plik (bieżący);
+build/lib (stara kopia z 27.06) ma jeszcze `nodes=` → to nie build/lib; (e) brak
+`invokedUri` w wyniku → to NIE inprocess_fallback (jego _env_to_result by go dodał);
+(f) offline fallback tier2b pada schematem `'payload' is a required property`
+(in-core handlery `def h(payload: dict)` — patrz notatka skill+session: handler params
+muszą być named kwargs!), tier2a NOT_FOUND (registry_for_uri = tylko connector-twin,
+bez remember); (g) vdisplay-agent trzyma 127.0.0.1:8765 (node 'local' w nodes.json —
+0 tras, nie on); pc1-api stop nie zmienia wyniku; jedyna kopia funkcji na dysku = bieżąca.
+WNIOSEK: `make_dispatch` Tier1 ZNAJDUJE wpis trasy w rejestrze wykonania serwisu
+(reglib.resolve_route) i wykonuje COŚ, co zwraca stary kształt — a moja offline'owa
+reprodukcja mesha tego wpisu nie widzi (filtr targetów/inny compose rejestru).
+NASTĘPNY KROK (jeden, rozstrzygający): w serwisie zrzucić wpis
+`reglib.resolve_route(translation, execution_registry)` dla
+twin://host/memory/command/remember (albo dump całego execution_registry dla twin://)
+— jednorazowa sonda w chat_orchestrator przy budowie execution_registry; wpis pokaże
+adapter/module/nod i zakończy zgadywanie. POWIĄZANE do naprawy przy okazji: in-core
+handlery flow connectora (remember/drift/inventory/preflight/goal-verify) przepisać
+na named-kwargs (fix schematu z (f)) — wtedy fallback też zacznie działać poprawnie.
+
 ### Z6. Latencja — dalsze cięcia (po pomiarach, nie na ślepo)
 Dane per-faza są w `timings` każdej odpowiedzi chatu; per-krok w `timeline[].ms`.
-Kandydaci wg pomiarów z sesji: `discover` ~0,95 s na zimno (cache discovery mesh
-z krótkim TTL — uwaga na wykrywanie offline węzłów), `twinPreview` 0,4–0,6 s
-(plan_generate sonduje własną ścieżką — rozważ podpięcie do _env_probe_cache),
-capture 4 s przy 7360×3611 (parametr `max_width` w kontrakcie kvm capture —
-preferencja użytkownika, nie zmieniaj domyślnie).
+POMIAR 2026-07-04 (warm, „zrob zrzut ekranu", provider=recall, total 8964 ms):
+```
+execute 6174 (w tym: capture_screen 4507 [preferencja usera — NIE ruszać max_width],
+              memory:remember 741, twin:drift 474 + twin:inventory 401)
+planResolve 911 · planRecall 630 · planEnvironments 479 · twinPreview 414
+discover 167 (warm; ~950 zimno) · buildResult 173 · routingPreview 15
+```
+Ranking kandydatów (poza capture): (1) **memory:remember 741 ms** — zapis known-good
+po sukcesie; sprawdzić czy JsonFileStore nie robi pełnego rewrite dużego pliku /
+sondowania env drugi raz; (2) **twin drift+inventory ~875 ms** — czy drift-probe
+korzysta z _env_probe_cache (ścieżki pamięci Twin mają use_cache=False ŚWIADOMIE —
+patrz stan zastany; nie zmieniać bez testów test_flow_twin); (3) **planResolve 911 +
+planEnvironments 479** — łącznie ~1,4 s planowania mimo recall; (4) twinPreview 414 =
+`_chat_insert_twin_flow_preview` (chat_orchestrator.py ~1089) — plan_generate sonduje
+własną ścieżką; podpięcie do _env_probe_cache wykonalne, zysk umiarkowany.
+Suma nie-capture ≈ 4,4 s → realny cel: total ~6 s przy zachowaniu capture.
 
 ### Z7. Deploy hygiene (roadmapa)
 Rozdzielenie auth od registry przy deploy, footgun `--merge`. Kontekst w pamięci
 projektu (`urirun-optimization-plan`). Wymaga doprecyzowania zakresu z Tomem.
 
-### Z8. [ZABLOKOWANE: node .201 offline] Konsolidacja kvm + walidacja na lenovo
-Staged validation flow gotowy; czeka na powrót węzła 192.168.188.201:8766.
-Deploy przez `--identity`; szczegóły w pamięci projektu (`kvm-connector-consolidation`,
-`lenovo-node-201`).
+### Z8. [ODBLOKOWANE 2026-07-04 — deploy czeka na Toma] Konsolidacja kvm + walidacja na lenovo
+Node .201 WRÓCIŁ: `http://192.168.188.201:8766` zdrowy (name=laptop, v0.4.190,
+keyCount=1), ale po resecie — tylko 7 tras (shell/log/env/proc), polityka pusta.
+PRZYGOTOWANE do deploya (klasyfikator blokuje agentowi modyfikację współdzielonego
+node'a — uruchom sam): staging w
+`/tmp/claude-1000/-home-tom-github-if-uri/*/scratchpad/kvm-deploy/` — 13 modułów flat
+(backends.py z przepisanymi importami `._backends_*`→flat; vnc.py/contracts.py mają
+guardy więc degradują czysto) + `bindings.json` (48 tras, host→laptop, module→core):
+```bash
+cd /tmp/claude-1000/-home-tom-github-if-uri/*/scratchpad/kvm-deploy && \
+~/github/if-uri/urirun/venv/bin/urirun host deploy http://192.168.188.201:8766 \
+  --bindings bindings.json \
+  --code core.py --code backends.py --code _backends_uinput.py --code _backends_surface.py \
+  --code launch_backends.py --code control.py --code cdp.py --code _cdp_impl.py \
+  --code strategies.py --code environment.py --code surface.py --code contracts.py --code vnc.py \
+  --allow 'kvm://**' --allow 'app://**' --merge --identity ~/.ssh/id_ed25519
+```
+(Jeśli /tmp wyczyszczony: staging odtwarza się z urirun-connector-kvm/urirun_connector_kvm/
+— skopiuj wymienione pliki, w backends.py zamień `from ._backends_X import` na
+`from _backends_X import`, bindings przez `PYTHONPATH=<connector> python -c
+"...urirun_bindings()..."` z podmianą `://host/`→`://laptop/` i
+`urirun_connector_kvm.core`→`core`.)
+Po deployu walidacja: `urirun/.urirun/flows/lenovo-kvm-fixes-validation.yaml`
+z --execute (doctor→capture-portal→launch-chrome→cdp-status; patrz nagłówek YAML
+z oczekiwaniami). Ten deploy zawiera dzisiejsze fixy locate (multi-pass OCR + fuzzy +
+uczciwy imgl) i trasy vnc/* z kontraktami.
 
 ### Z9. [WYKONANE 2026-07-04] Odświeżyć snapshot urirun-multiplatform-test/.work
 Odświeżone przez `URIRUN_SOURCE_DIR=~/github/if-uri/urirun python3 scripts/install_urirun.py`
