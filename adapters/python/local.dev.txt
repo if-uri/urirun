@@ -1,11 +1,10 @@
 # local.dev.txt — locally developed dependencies of this project (generated 2026-07-04)
 # by ~/github/local.dev.sh — DO NOT EDIT; see ~/github/local.dev.md
 # project: urirun 0.4.190 (python) at /home/tom/github/if-uri/urirun/adapters/python
-# deps declared: 20 | with local source: 13
+# deps declared: 20 | with local source: 12
 
 ## LOCAL DEPS  (dep | required | local source (version) | installed | status)
 docid | >=0.1.9 | /home/tom/github/ksefin/docid (0.1.13) | 0.1.13 editable | OK-EDITABLE  [pyproject.toml[host]]
-planfile | >=0.1.103 | /home/tom/github/semcod/2026/planfile (0.1.48) | 0.1.103 non-editable | STALE-INSTALL (local 0.1.48) -> fix: pip install -e /home/tom/github/semcod/2026/planfile  [pyproject.toml[planfile]]
 planfile | >=0.1.103 | /home/tom/github/semcod/planfile (0.1.106) | 0.1.103 non-editable | STALE-INSTALL (local 0.1.106) -> fix: pip install -e /home/tom/github/semcod/planfile  [pyproject.toml[planfile]]
 urirun-cdp | >=0.1.0 | /home/tom/github/if-uri/urirun-cdp (0.2.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[cdp]]
 urirun-connector-router | >=0.2.0 | /home/tom/github/if-uri/urirun-connector-router (0.2.0) | 0.2.0 editable | OK-EDITABLE  [pyproject.toml]

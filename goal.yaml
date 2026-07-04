@@ -245,7 +245,9 @@ publishing:
       asset_glob: adapters/python/dist/*
 strategies:
   python:
-    test: cd adapters/python && python -m pytest -q
+    # dev_deps_doctor gates the test phase: exit 1 on shadowed imports or stale local
+    # installs (the "old library version" class) stops the pipeline before pytest.
+    test: cd adapters/python && python scripts/dev_deps_doctor.py && python -m pytest -q
     build: cd adapters/python && python -m build
     publish: twine upload --skip-existing adapters/python/dist/urirun-{version}*
     publish_enabled: false

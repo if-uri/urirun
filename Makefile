@@ -144,8 +144,14 @@ build: ## Build the Python adapter (wheel + sdist) into adapters/python/dist/. N
 	rm -rf adapters/python/dist adapters/python/build
 	cd adapters/python && $(PYTHON) -m build
 
+.PHONY: dep-health-release
+dep-health-release: ## Block publish/release while declared deps are unsatisfiable on PyPI (a release nobody can pip-install). Skips gracefully where local.dev.sh is absent (CI).
+	@if [ -f "$(HOME)/github/local.dev.sh" ]; then \
+	  bash "$(HOME)/github/local.dev.sh" --check-release "$(CURDIR)/adapters/python"; \
+	else echo "local.dev.sh absent — skipping dep-health (CI)"; fi
+
 .PHONY: publish
-publish: test-local sync-versions version-check build ## Manual fallback upload to PyPI (CI release.yml auto-publishes on main). Needs: pip install twine; TWINE_USERNAME=__token__ TWINE_PASSWORD=$$PYPI_API_TOKEN (or ~/.pypirc). Runs test-local gate first.
+publish: test-local sync-versions version-check dep-health-release build ## Manual fallback upload to PyPI (CI release.yml auto-publishes on main). Needs: pip install twine; TWINE_USERNAME=__token__ TWINE_PASSWORD=$$PYPI_API_TOKEN (or ~/.pypirc). Runs test-local gate first.
 	cd adapters/python && $(PYTHON) -m twine upload --skip-existing dist/*
 
 MONO ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))..
@@ -165,7 +171,7 @@ publish-meta: ## Build and publish the 4 meta-packages to PyPI. Run AFTER `make 
 	done
 
 .PHONY: release
-release: sync-versions version-check ## Tag the current version and push it; CI (release.yml) then builds + publishes to PyPI.
+release: sync-versions version-check dep-health-release ## Tag the current version and push it; CI (release.yml) then builds + publishes to PyPI.
 	@v=$$(cat adapters/python/VERSION); \
 	if git rev-parse "v$$v" >/dev/null 2>&1; then echo "tag v$$v already exists"; exit 1; fi; \
 	remote=$$(git remote | grep -qx origin && echo origin || git remote | head -n1); \
