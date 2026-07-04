@@ -1366,7 +1366,46 @@ def serve(
         "qrUrl": qr.get("url") if qr else None,
         "project": str(Path(project).resolve()),
     }), flush=True)
+    _warn_stale_local_deps()
     return server
+
+
+def _warn_stale_local_deps() -> None:
+    """Surface dependency drift at EVERY service start (best-effort, never fatal).
+
+    Stale local installs bite silently — the service runs old library code while the
+    repo shows new sources (the recurring "works in repo, old behavior in service"
+    class). Emitting the doctor's live verdicts here makes every restart an audit:
+    the operator sees SHADOW/STALE lines in the startup log the moment drift appears,
+    instead of days later mid-debug. Fix: scripts/dev_deps_doctor.py --fix."""
+    try:
+        import importlib.util as _ilu  # noqa: PLC0415
+        doctor_path = Path(__file__).resolve().parents[2] / "scripts" / "dev_deps_doctor.py"
+        if not doctor_path.is_file():
+            return
+        spec = _ilu.spec_from_file_location("_dev_deps_doctor", doctor_path)
+        doctor = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(doctor)
+        site = doctor._site_packages()
+        if site is None:
+            return
+        stale = [h for h in doctor.local_install_health(site)
+                 if h["verdict"].startswith("STALE")]
+        owners = doctor.editable_owners(site)
+        shadowed = []
+        for name, owner in owners.items():
+            resolved = doctor.resolve(name)
+            if resolved is not None and resolved.resolve() != owner.resolve():
+                shadowed.append({"name": name, "owner": str(owner), "loads": str(resolved)})
+        if stale or shadowed:
+            print(json.dumps({
+                "event": "urirun.host_dashboard.stale_local_deps",
+                "stale": stale,
+                "shadowed": shadowed,
+                "fix": "venv/bin/python adapters/python/scripts/dev_deps_doctor.py --fix",
+            }), flush=True)
+    except Exception:  # noqa: BLE001 - startup audit must never block serving
+        pass
 
 
 def command(args) -> int:
