@@ -4,17 +4,17 @@
 # deps declared: 20 | with local source: 12
 
 ## LOCAL DEPS  (dep | required | local source (version) | installed | status)
-docid | >=0.1.9 | /home/tom/github/ksefin/docid (0.1.13) | 0.1.13 editable | OK-EDITABLE  [pyproject.toml[host]]
-planfile | >=0.1.103 | /home/tom/github/semcod/planfile (0.1.106) | 0.1.103 non-editable | STALE-INSTALL (local 0.1.106) -> fix: pip install -e /home/tom/github/semcod/planfile  [pyproject.toml[planfile]]
-urirun-cdp | >=0.1.0 | /home/tom/github/if-uri/urirun-cdp (0.2.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[cdp]]
-urirun-connector-router | >=0.2.0 | /home/tom/github/if-uri/urirun-connector-router (0.2.0) | 0.2.0 editable | OK-EDITABLE  [pyproject.toml]
-urirun-connector-scanner | >=0.1.0 | /home/tom/github/if-uri/urirun-connector-scanner (0.1.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[host]]
-urirun-connectors-toolkit | >=0.1.0 | /home/tom/github/if-uri/urirun-connectors-toolkit (0.2.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[openapi]]
-urirun-contract | >=0.1.0 | /home/tom/github/if-uri/urirun-contract (0.1.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml]
-urirun-declarative | >=0.1.0 | /home/tom/github/if-uri/urirun-declarative (0.1.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[declarative]]
-urirun-flow | >=0.2.2 | /home/tom/github/if-uri/urirun-flow (0.2.2) | 0.2.2 editable | OK-EDITABLE  [pyproject.toml]
-urirun-openapi-import | >=0.1.0 | /home/tom/github/if-uri/urirun-openapi-import (0.1.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[openapi]]
-urirun-uinput | >=0.1.0 | /home/tom/github/if-uri/urirun-uinput (0.1.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[uinput]]
-urirun-widgets | >=0.1.0 | /home/tom/github/if-uri/urirun-widgets (0.1.0) | 0.1.0 editable | OK-EDITABLE  [pyproject.toml[host]]
+docid | >=0.1.9 | /home/tom/github/ksefin/docid (0.1.13) | 0.1.13 editable @if-uri/urirun/venv | OK-EDITABLE  [pyproject.toml[host]]
+planfile | >=0.1.103 | /home/tom/github/semcod/planfile (0.1.106) | 0.1.106 editable @if-uri/urirun/adapters/python/.venv | OK-EDITABLE  [pyproject.toml[planfile]]
+urirun-cdp | >=0.1.0 | /home/tom/github/if-uri/urirun-cdp (0.2.0) | 0.1.0 editable @if-uri/urirun/.venv | OK-EDITABLE  [pyproject.toml[cdp]]
+urirun-connector-router | >=0.2.0 | /home/tom/github/if-uri/urirun-connector-router (0.2.0) | 0.2.0 editable @if-uri/urirun/adapters/python/.venv | OK-EDITABLE  [pyproject.toml]
+urirun-connector-scanner | >=0.1.0 | /home/tom/github/if-uri/urirun-connector-scanner (0.1.0) | 0.1.0 editable @if-uri/urirun/.venv | OK-EDITABLE  [pyproject.toml[host]]
+urirun-connectors-toolkit | >=0.1.0 | /home/tom/github/if-uri/urirun-connectors-toolkit (0.2.0) | 0.1.0 editable @if-uri/urirun/.venv | OK-EDITABLE  [pyproject.toml[openapi]]
+urirun-contract | >=0.1.0 | /home/tom/github/if-uri/urirun-contract (0.1.0) | 0.1.0 editable @if-uri/urirun/adapters/python/.venv | OK-EDITABLE  [pyproject.toml]
+urirun-declarative | >=0.1.0 | /home/tom/github/if-uri/urirun-declarative (0.1.0) | 0.1.0 editable @if-uri/urirun/.venv | OK-EDITABLE  [pyproject.toml[declarative]]
+urirun-flow | >=0.2.2 | /home/tom/github/if-uri/urirun-flow (0.2.2) | 0.2.2 editable @if-uri/urirun/adapters/python/.venv | OK-EDITABLE  [pyproject.toml]
+urirun-openapi-import | >=0.1.0 | /home/tom/github/if-uri/urirun-openapi-import (0.1.0) | 0.1.0 editable @if-uri/urirun/.venv | OK-EDITABLE  [pyproject.toml[openapi]]
+urirun-uinput | >=0.1.0 | /home/tom/github/if-uri/urirun-uinput (0.1.0) | 0.1.0 editable @if-uri/urirun/.venv | OK-EDITABLE  [pyproject.toml[uinput]]
+urirun-widgets | >=0.1.0 | /home/tom/github/if-uri/urirun-widgets (0.1.0) | 0.1.0 editable @if-uri/urirun/.venv | OK-EDITABLE  [pyproject.toml[host]]
 
 ## EXTERNAL DEPS (no local source, 8): cryptography, grpcio, jsonschema, litellm, pydantic, pytest, pyyaml, qrcode
