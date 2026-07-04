@@ -52,6 +52,65 @@ def _package_version() -> str:
     return _v2._package_version()
 
 
+DEFAULT_ENV_TEMPLATE = """# urirun workspace environment
+# Auto-loaded by `urirun host ...` when URIRUN_DOTENV=1.
+# Set secret values here or export them in your shell; already-set shell vars win.
+URIRUN_DOTENV=1
+
+# LLM model used by planners and chat (litellm format, e.g. openrouter/openai/gpt-4o)
+URIRUN_LLM_MODEL=
+# Alternative alias recognized by the host dashboard and planners:
+# LLM_MODEL=openrouter/openai/gpt-4o
+
+# Provider API keys -- uncomment the one you use:
+# OPENROUTER_API_KEY=
+# OPENAI_API_KEY=
+# ANTHROPIC_API_KEY=
+# GROQ_API_KEY=
+# OLLAMA_HOST=http://localhost:11434
+
+# Node security and identity
+# URIRUN_NODE_TOKEN=
+# URIRUN_RUN_TOKEN=
+# URIRUN_RUN_IDENTITY=~/.ssh/id_ed25519
+
+# Connector discovery (colon-separated list of directories)
+URIRUN_CONNECTOR_ROOTS=~/github
+
+# Logging and artifact storage
+URIRUN_ERROR_LOG=~/.urirun/errors.jsonl
+URIRUN_ARTIFACT_DIR=~/.urirun/artifacts
+
+# Dashboard / QR base URLs
+URIRUN_DASHBOARD_BASE=http://localhost:8194
+URIRUN_LAN_QR_BASE=http://localhost:8195
+"""
+
+
+def _cmd_init(args, parser) -> int:
+    """Create a fresh .env file with urirun default values."""
+    target = Path(args.out)
+    if target.exists() and not args.force:
+        print(f"urirun init: {target} already exists (use --force to overwrite)")
+        return 1
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(DEFAULT_ENV_TEMPLATE, encoding="utf-8")
+    print(f"urirun init: created {target}")
+    if args.mesh:
+        from urirun_node.config import init_host
+
+        mesh_path = args.mesh if args.mesh is not True else None
+        init_host(mesh_path, name=args.name)
+        print(f"urirun init: created host mesh config {mesh_path or '.urirun/mesh.json'}")
+    if args.node:
+        from urirun_node.config import init_node
+
+        node_path = args.node if args.node is not True else None
+        init_node(node_path, name=args.name)
+        print(f"urirun init: created node config {node_path or '.urirun/node.json'}")
+    return 0
+
+
 def _cmd_scan(args, parser) -> int:
     bindings = scan_artifacts(args.path)
     if args.entry_points:
@@ -573,6 +632,7 @@ def _cmd_version(args, parser) -> int:
 
 _COMMANDS = {
     "version": _cmd_version,
+    "init": _cmd_init,
     "scan": _cmd_scan,
     "compile": _cmd_compile,
     "discover": _cmd_discover,

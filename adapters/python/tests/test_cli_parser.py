@@ -23,7 +23,7 @@ def _commands(parser):
 def test_all_top_level_commands_present():
     parser = cli._build_parser("urirun")
     cmds = _commands(parser)
-    for expected in ("doctor", "scan", "compile", "validate", "gen", "connectors",
+    for expected in ("doctor", "init", "scan", "compile", "validate", "gen", "connectors",
                      "agent", "host", "node", "run", "list", "version"):
         assert expected in cmds, expected
 
@@ -32,6 +32,7 @@ def test_representative_subcommands_parse_to_right_dest():
     parser = cli._build_parser("urirun")
     cases = [
         (["doctor"], "command", "doctor"),
+        (["init"], "command", "init"),
         (["run", "x://a/b/c/d"], "command", "run"),
         (["host", "probe", "n"], "host_command", "probe"),
         (["host", "task", "list"], "task_command", "list"),

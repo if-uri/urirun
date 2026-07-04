@@ -647,6 +647,15 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
     doctor_parser = subparsers.add_parser("doctor", help="Diagnose this urirun install: resolved binary, version, interpreter, connectors")
     doctor_parser.add_argument("--json", action="store_true")
 
+    init_parser = subparsers.add_parser("init", help="Create a .env file with default urirun values")
+    init_parser.add_argument("--out", default=".env", help="output .env path (default: ./.env)")
+    init_parser.add_argument("--force", action="store_true", help="overwrite an existing .env")
+    init_parser.add_argument("--mesh", nargs="?", const=True, default=False, metavar="PATH",
+                             help="also create host mesh config (optional path, default .urirun/mesh.json)")
+    init_parser.add_argument("--node", nargs="?", const=True, default=False, metavar="PATH",
+                             help="also create node config (optional path, default .urirun/node.json)")
+    init_parser.add_argument("--name", default=None, help="host/node name (defaults to hostname)")
+
     scan_parser = subparsers.add_parser("scan", help="Adopt project artifacts and optionally installed connector bindings")
     scan_parser.add_argument("path", nargs="?", default=".")
     scan_parser.add_argument("--out", default="-")

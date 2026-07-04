@@ -1,14 +1,15 @@
-    const VALID_VIEWS = new Set(['overview', 'chat', 'artifacts', 'tasks', 'host', 'nodes', 'activity']);
+    const VALID_VIEWS = new Set(['chat', 'artifacts', 'tasks', 'host', 'nodes', 'activity']);
     const params = new URLSearchParams(window.location.search);
     function normalizeViewName(view) {
       if (view === 'twin') return 'chat';
       if (view === 'discovery') return 'nodes';  // Discovery folded into the Nodes view as a details panel
-      return VALID_VIEWS.has(view) ? view : 'overview';
+      if (view === 'overview') return 'chat';  // Overview removed; its panels all live in the other tabs
+      return VALID_VIEWS.has(view) ? view : 'chat';
     }
     function normalizeActionName(action) {
       return action === 'tab:twin' ? 'tab:chat' : action;
     }
-    const initialView = normalizeViewName(params.get('view') || params.get('tab') || 'overview');
+    const initialView = normalizeViewName(params.get('view') || params.get('tab') || 'chat');
     const initialChatFull = params.get('chat') === 'full' || params.get('fullscreen') === 'chat';
     const initialTargets = (urlTargetsAreImplicitAutorun(params) ? 'host' : (params.get('targets') || 'host'))
       .split(',').map((item) => item.trim()).filter(Boolean);
@@ -2636,7 +2637,7 @@
       state.view = view;
       document.body.dataset.view = view;
       document.querySelectorAll('.view-block').forEach((block) => {
-        block.classList.toggle('hidden', view !== 'overview' && block.dataset.section !== view);
+        block.classList.toggle('hidden', block.dataset.section !== view);
       });
       renderUrlState();
     }
@@ -3005,7 +3006,7 @@
     });
     window.addEventListener('popstate', () => {
       const search = new URLSearchParams(window.location.search);
-      const nextView = normalizeViewName(search.get('view') || search.get('tab') || 'overview');
+      const nextView = normalizeViewName(search.get('view') || search.get('tab') || 'chat');
       state.view = nextView;
       applyControlsFromUrl();
       setChatFullscreen(search.get('chat') === 'full' || search.get('fullscreen') === 'chat', { silent: true });
