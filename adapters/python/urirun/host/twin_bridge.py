@@ -252,23 +252,38 @@ def _node_from_step_uris(steps: list) -> "tuple[str | None, bool]":
     return None, found_host
 
 
+def _explicit_node_target(selected_targets: list) -> "str | None":
+    """The first EXPLICIT node target (``node:lenovo`` → ``lenovo``). The UI often sends
+    ``["host", "node:lenovo"]`` — 'host' is the operator's default, not the intent. A
+    named node always wins so env inventory / the twin widget reflect the RIGHT machine."""
+    for t in (selected_targets or []):
+        if isinstance(t, str) and t.startswith("node:"):
+            name = t.removeprefix("node:").strip()
+            if name and name != "host":
+                return name
+    return None
+
+
 def _infer_node_from_flow(flow: dict, selected_targets: list) -> str:
-    """Derive the actual node name from flow steps (URI authority), falling back to
-    flow['selectedNodes'][0], then selected_targets[0], then 'host'.
-    This avoids poisoning recall keys when the UI default 'host' selectedTarget is sent
-    but steps actually execute on a remote node (e.g. 'lenovo')."""
+    """Derive the node whose environment the twin should inventory. A step URI's ``host``
+    authority is a TEMPLATE ('run on the targeted node'), NOT the operator's machine — so
+    an explicit ``node:<name>`` target wins over a literal 'host'. This keeps the twin
+    monitor/window layout matching the ACTUAL target (e.g. lenovo's 2 monitors, not the
+    host's 3). Order: real remote authority in steps → explicit node target → host →
+    planner selectedNodes → first UI target → 'host'."""
     steps = (flow or {}).get("steps") or []
     remote_node, found_host = _node_from_step_uris(steps)
     if remote_node:
         return remote_node
+    explicit = _explicit_node_target(selected_targets)
+    if explicit:
+        return explicit
     if found_host:
         return "host"
-    # No step URIs found — fall back to planner's selectedNodes, then UI targets
     flow_nodes = (flow or {}).get("selectedNodes") or []
     if flow_nodes:
         return flow_nodes[0]
     target = (selected_targets[0] if selected_targets else None) or "host"
-    # strip "node:" prefix added by UI targeting (e.g. "node:lenovo" → "lenovo")
     return target.removeprefix("node:") if target.startswith("node:") else target
 
 
@@ -395,7 +410,12 @@ def append_twin_widget(execute: bool, flow: dict, attachments: list,
     attachments.append({"kind": "twin-monitor", "uri": f"/twin?{qs}", "path": "Digital Twin Widget"})
     if not execute:
         return
-    node = (selected_targets[0] if selected_targets else None) or "host"
+    # An explicit node target wins over the UI's default 'host' — so the env profile /
+    # monitor layout in the twin widget reflects the ACTUAL machine (e.g. lenovo's 2
+    # monitors), not the operator host's (3). Standardised via _explicit_node_target.
+    node = _explicit_node_target(selected_targets) \
+        or (selected_targets[0] if selected_targets else None) or "host"
+    node = node.removeprefix("node:") if isinstance(node, str) and node.startswith("node:") else node
     env_fp, monitors = _node_env_profile(node)
     _publish_timeline_events(timeline, node, results or {}, episode_id, experience_id,
                              intent_sig, env_fp, monitors=monitors)
