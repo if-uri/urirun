@@ -54,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix no-relative-imports issues (ticket-4de43b5c)
 - Fix ast-unused-imports issues (ticket-bf08772a)
 
+## [0.4.198] - 2026-07-06
+
+### Docs
+- Update README.md
+
 ## [0.4.197] - 2026-07-06
 
 ### Docs
