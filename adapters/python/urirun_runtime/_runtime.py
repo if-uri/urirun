@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -358,7 +359,77 @@ def run_local_function(ctx: dict, policy: dict) -> dict:
     if not callable(fn):
         raise PolicyError(f"local function ref is not callable (hydrate the registry first): {ctx['routeEntry'].get('ref')!r}")
     value = fn(ctx["target"], ctx["args"], ctx["payload"], ctx["descriptor"])
-    return {"type": "function", "ref": getattr(fn, "__name__", str(fn)), "value": value}
+    out = {"type": "function", "ref": getattr(fn, "__name__", str(fn)), "value": value}
+    meta = _provenance(getattr(fn, "__module__", None))
+    if meta:
+        out["_meta"] = meta
+    return out
+
+
+_PROV_CACHE: dict = {}
+
+
+def _provenance(module: str | None) -> dict | None:
+    """WHERE this handler came from: module, version, file, when-updated, git sha/source.
+
+    Stamped on every local-function response so a stale node (process serving old code
+    while the disk has a new version) is self-evident instead of invisible. Best-effort,
+    cached per module (immutable for a process's life), and never raises. Opt out with
+    URIRUN_NO_PROVENANCE=1."""
+    if not module or os.environ.get("URIRUN_NO_PROVENANCE") == "1":
+        return None
+    if module in _PROV_CACHE:
+        return _PROV_CACHE[module]
+    prov: dict = {"module": module}
+    try:
+        import importlib.metadata as _md
+        top = module.split(".", 1)[0]
+        for name in (top, top.replace("_", "-")):
+            try:
+                prov["version"] = _md.version(name)
+                break
+            except Exception:  # noqa: BLE001
+                continue
+        mod = sys.modules.get(module)
+        f = getattr(mod, "__file__", None)
+        if f:
+            prov["file"] = f
+            try:
+                prov["updatedAt"] = int(os.stat(f).st_mtime)
+            except OSError:
+                pass
+            prov.update(_git_provenance(f))
+        prov["ranOn"] = os.environ.get("URIRUN_NODE_NAME") or _prov_host()
+    except Exception as exc:  # noqa: BLE001 - provenance must never break a response
+        prov = {"module": module, "provenanceError": str(exc)}
+    _PROV_CACHE[module] = prov
+    return prov
+
+
+def _git_provenance(path: str) -> dict:
+    import subprocess
+    d = os.path.dirname(path)
+    try:
+        sha = subprocess.run(["git", "-C", d, "rev-parse", "--short", "HEAD"],
+                             capture_output=True, text=True, timeout=2).stdout.strip()
+        url = subprocess.run(["git", "-C", d, "config", "--get", "remote.origin.url"],
+                             capture_output=True, text=True, timeout=2).stdout.strip()
+    except Exception:  # noqa: BLE001
+        return {}
+    out: dict = {}
+    if sha:
+        out["sha"] = sha
+    if url:
+        out["source"] = url if url.startswith("git+") else f"git+{url}"
+    return out
+
+
+def _prov_host() -> str:
+    try:
+        import socket
+        return socket.gethostname()
+    except Exception:  # noqa: BLE001
+        return "?"
 
 
 def run_mqtt_publish(ctx: dict, policy: dict) -> dict:
