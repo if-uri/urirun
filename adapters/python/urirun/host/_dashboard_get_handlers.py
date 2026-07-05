@@ -159,7 +159,24 @@ def _handle_get_nodes_qr(handler, parsed) -> None:
         _json_response(handler, 500, {"ok": False, "error": str(exc)})
 
 
+def _work_view_html(project) -> str:
+    """Render the ONE view of autonomous work (view connector) — legible surface for background
+    goal/koru/nxdo activity. Graceful: a plain notice if the view connector isn't installed."""
+    try:
+        from urirun_connector_view.core import _state
+        from urirun_connector_view.render import render_html
+        return render_html(_state(str(project), 8))
+    except Exception as exc:  # noqa: BLE001 - view connector optional; never break the dashboard
+        return ("<!doctype html><meta charset=utf-8><title>Work view</title>"
+                "<body style='font:14px system-ui;padding:40px;color:#556'>"
+                "<h1>Work view unavailable</h1><p>Install <code>urirun-connector-view</code> to see "
+                f"the autonomous-work view here.</p><pre>{exc}</pre>")
+
+
 def _handle_get_services(handler, parsed, project) -> bool:
+    if parsed.path == "/work":
+        _html_response(handler, _work_view_html(project))
+        return True
     if parsed.path == "/services/view":
         _html_response(handler, _standalone_service_html(project, parse_qs(parsed.query)))
         return True

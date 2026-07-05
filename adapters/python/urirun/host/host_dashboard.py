@@ -1366,6 +1366,14 @@ def serve(
         "qrUrl": qr.get("url") if qr else None,
         "project": str(Path(project).resolve()),
     }), flush=True)
+    # Periodic QR panel in the shell: scannable QR for the LAN URL (phone) + clickable local URL.
+    # On with --startup-qr or URIRUN_QR_SHELL=1; cadence via URIRUN_QR_INTERVAL (default 300s).
+    if startup_qr or str(os.environ.get("URIRUN_QR_SHELL", "")).strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from urirun.host._shell_qr import start_qr_panel
+            start_qr_panel(scheme, int(server.server_address[1]), local_host=host or "127.0.0.1")
+        except Exception:  # noqa: BLE001 - the QR panel is a convenience; never block serving
+            pass
     _warn_stale_local_deps()
     return server
 

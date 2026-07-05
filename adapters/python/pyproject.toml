@@ -18,6 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+qr = ["qrcode>=7"]
 grpc = ["grpcio>=1.60"]
 planfile = ["planfile>=0.1.103"]
 llm = ["litellm>=1.60"]
