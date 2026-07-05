@@ -49,6 +49,45 @@ def load_manifest(package: str, name: str = "connector.manifest.json") -> dict[s
     return data
 
 
+# Command classes per URI_COMMAND_STANDARD.md §2, with the error categories each class can
+# plausibly return (drawn from the ONE catalog in ERROR_CODES.md — never ad-hoc strings).
+_CLASS_ERRORS: dict[str, list[str]] = {
+    "query":   ["INVALID_ARGUMENT", "NOT_FOUND", "UNAVAILABLE"],
+    "command": ["INVALID_ARGUMENT", "FAILED_PRECONDITION", "PERMISSION_DENIED", "UNAVAILABLE"],
+    "session": ["INVALID_ARGUMENT", "FAILED_PRECONDITION", "UNAVAILABLE", "DEADLINE_EXCEEDED"],
+    "event":   ["INVALID_ARGUMENT", "UNAVAILABLE"],
+}
+_KNOWN_CLASSES = tuple(_CLASS_ERRORS)
+
+
+def manifest_routes(bindings: dict) -> list[dict[str, Any]]:
+    """Generate the per-URI capability list for a connector manifest from its bindings —
+    applies URI_COMMAND_STANDARD.md so every route is self-describing (class/verb parsed from
+    the URI, summary from the handler ``meta.label``, ``mutates`` and plausible ``errors``
+    derived from the class). Generated, so it can never drift from the served routes.
+
+    Raises ValueError on a route whose class is not one of {query, command, session, event} —
+    a lint that keeps the naming standard enforced.
+    """
+    routes: list[dict[str, Any]] = []
+    for uri, binding in sorted((bindings.get("bindings") or {}).items()):
+        parts = uri.split("://", 1)[-1].split("/")
+        cls = parts[-2] if len(parts) >= 2 else ""
+        verb = parts[-1] if parts else ""
+        if cls not in _KNOWN_CLASSES:
+            raise ValueError(
+                f"route {uri!r} has class {cls!r}; must be one of {_KNOWN_CLASSES} "
+                "(see URI_COMMAND_STANDARD.md §2)")
+        summary = ((binding.get("meta") or {}).get("label")
+                   or (binding.get("meta") or {}).get("summary") or "")
+        routes.append({
+            "uri": uri, "class": cls, "verb": verb, "summary": summary,
+            "mutates": cls in ("command", "session"),
+            "errors": _CLASS_ERRORS[cls],
+        })
+    return routes
+
+
 def emit(payload: Any) -> None:
     """Print a payload as the stable, sorted JSON connectors emit on stdout."""
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
