@@ -396,9 +396,8 @@ def _work_approve(project, body: dict) -> dict:
 
     Generic: every blocked item in the work-plan may carry ``approve.cmd`` (a shell command) and
     ``approve.label``. The browser sends only the item's URI; the command is read SERVER-SIDE from
-    the plan (never from the request), so approving can't inject arbitrary commands. Works for any
-    blocked operation — a release publish, a deploy, a migration — whatever the plan declares."""
-    import subprocess  # noqa: PLC0415
+    the plan (never from the request), so approving can't inject arbitrary commands. The run gets
+    a durable record (meta + log + exit code) so the /work Runs panel can show its progress."""
     uri = str((body or {}).get("uri") or "").strip()
     if not uri:
         return {"ok": False, "error": "no item URI given"}
@@ -414,11 +413,10 @@ def _work_approve(project, body: dict) -> dict:
     cmd = action.get("cmd")
     if not cmd:
         return {"ok": False, "error": "this blocked item declares no approve action (add approve.cmd to the plan)"}
-    slug = "".join(c if c.isalnum() else "_" for c in uri)[:60]
-    log = f"/tmp/urirun_approve_{slug}.log"
     # Run in the DASHBOARD process (the user's, with their credentials) — human-in-the-loop.
-    subprocess.Popen(["bash", "-lc", f"cd {str(project)!r} && ({cmd}) > {log!r} 2>&1"])
-    return {"ok": True, "started": True, "uri": uri, "log": log,
+    from .work_runs import start_run
+    meta = start_run(project, uri, cmd, label=action.get("label") or "")
+    return {"ok": True, "started": True, "uri": uri, "run": meta["id"], "log": meta["log"],
             "message": action.get("label") or "Approved — running in the background."}
 
 

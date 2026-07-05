@@ -223,6 +223,11 @@ def _handle_get_api(handler, parsed, project, db) -> bool:
     query = parse_qs(parsed.query)
     if _handle_get_api_nodes(handler, parsed, query):
         return True
+    if parsed.path == "/api/work/runs":
+        from .work_runs import list_runs  # lazy, like the other optional surfaces
+        _json_response(handler, 200,
+                       {"ok": True, "runs": list_runs(tail_lines=int(_first(query, "tail", "120") or 120))})
+        return True
     if parsed.path == "/api/uri/event":
         from .scanner_bridge import uri_event as _uri_event_impl  # lazy: scanner off import chain
         _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))
