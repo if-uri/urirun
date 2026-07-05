@@ -6,7 +6,7 @@ SUMMARY:
   dup_groups:    49
   dup_fragments: 102
   saved_lines:   290
-  scan_ms:       332890
+  scan_ms:       319194
 
 HOTSPOTS[7] (files with most duplication):
   adapters/python/urirun_runtime/v2.py  dup=44L  groups=6  frags=7  (0.1%)
