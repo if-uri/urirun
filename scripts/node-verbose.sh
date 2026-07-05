@@ -20,7 +20,8 @@ NAME="${1:-laptop}"; shift || true
 PORT="${1:-8765}"; shift || true
 URIRUN="${URIRUN_BIN:-urirun}"
 
-export URIRUN_NODE_VERBOSE=1      # the transparency switch (read by urirun_node.server)
+export URIRUN_NODE_VERBOSE=1      # verbose per-URI logging
+export URIRUN_QR_SHELL=1          # scannable QR of the node URL in the shell (phone) + clickable local
 
 echo "[node-verbose] starting node '$NAME' on :$PORT with URI-process logging → this shell"
 echo "[node-verbose] every kvm://, vql://, vdisplay:// … call will print here. Ctrl-C to stop."

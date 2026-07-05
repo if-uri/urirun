@@ -1370,7 +1370,7 @@ def serve(
     # On with --startup-qr or URIRUN_QR_SHELL=1; cadence via URIRUN_QR_INTERVAL (default 300s).
     if startup_qr or str(os.environ.get("URIRUN_QR_SHELL", "")).strip().lower() in ("1", "true", "yes", "on"):
         try:
-            from urirun.host._shell_qr import start_qr_panel
+            from urirun._shell_qr import start_qr_panel
             start_qr_panel(scheme, int(server.server_address[1]), local_host=host or "127.0.0.1")
         except Exception:  # noqa: BLE001 - the QR panel is a convenience; never block serving
             pass

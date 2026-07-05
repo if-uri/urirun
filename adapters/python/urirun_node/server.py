@@ -1025,6 +1025,17 @@ def _announce_node_started(name: str, host: str, port: int, state: dict, execute
                       "deploy": deploy_enabled, "keyAuth": key_auth,
                       "version": vstatus["version"], "latest": vstatus["latest"],
                       "versionStatus": vstatus["status"]}), flush=True)
+    # Shell QR panel: scannable QR of the node URL (phone) + clickable local URL. On with
+    # URIRUN_QR_SHELL=1; cadence via URIRUN_QR_INTERVAL (default 300s). Same helper as the host.
+    if str(os.environ.get("URIRUN_QR_SHELL", "")).strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from urllib.parse import urlsplit
+            from urirun._shell_qr import start_qr_panel
+            parts = urlsplit(public_url)
+            start_qr_panel(parts.scheme or "http", int(parts.port or port),
+                           local_host=host or "127.0.0.1")
+        except Exception:  # noqa: BLE001 - QR is a convenience; never block the node
+            pass
 
 
 def _build_manage_bindings(manage: bool, name: str) -> "tuple[Any | None, Any | None]":
