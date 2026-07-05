@@ -235,6 +235,13 @@ def _handle_get_api(handler, parsed, project, db) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": f"debug surface unavailable: {exc}"})
         return True
+    if parsed.path == "/api/work/queue":
+        from .work_queue import queue_state  # koru loop status + planfile ticket queue
+        try:
+            _json_response(handler, 200, {"ok": True, **queue_state()})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
     if parsed.path == "/api/uri/event":
         from .scanner_bridge import uri_event as _uri_event_impl  # lazy: scanner off import chain
         _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))
