@@ -362,6 +362,47 @@ class NodeContext:
         self.__dict__.update(kw)
 
 
+def _verbose() -> bool:
+    """Console transparency: with URIRUN_NODE_VERBOSE=1 the node prints every URI process it
+    runs (incoming command + result + timing) to stderr, so it is clear in the shell what is
+    happening. Off by default — a busy node stays quiet unless asked."""
+    return str(os.environ.get("URIRUN_NODE_VERBOSE", "")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _short(value: Any, limit: int = 120) -> str:
+    try:
+        s = json.dumps(value, ensure_ascii=False, default=str)
+    except Exception:  # noqa: BLE001
+        s = str(value)
+    return s if len(s) <= limit else s[: limit - 1] + "…"
+
+
+def _verbose_run_start(uri: str, mode: str, payload: Any) -> None:
+    if not _verbose():
+        return
+    # redact obviously sensitive keys before echoing the payload to the console
+    p = payload if isinstance(payload, dict) else {}
+    safe = {k: ("***" if any(s in k.lower() for s in ("token", "secret", "password", "key"))
+                else v) for k, v in p.items()}
+    sys.stderr.write(f"[uri] → {uri}  [{mode}]  {_short(safe)}\n")
+    sys.stderr.flush()
+
+
+def _verbose_run_end(uri: str, result: dict, ms: float) -> None:
+    if not _verbose():
+        return
+    if result.get("ok"):
+        val = (result.get("result") or {}).get("value") if isinstance(result.get("result"), dict) else None
+        extra = _short({k: v for k, v in (val or {}).items() if k in ("via", "backend", "count",
+                        "window_count", "object_count", "recommended_surface")}, 80) if isinstance(val, dict) else ""
+        sys.stderr.write(f"[uri] ← ok  {ms:.0f}ms  {uri}  {extra}\n")
+    else:
+        err = result.get("error") or {}
+        sys.stderr.write(f"[uri] ← ERROR {err.get('category', '?')} {err.get('status', '')}  "
+                         f"{ms:.0f}ms  {uri}  {_short(err.get('message'), 90)}\n")
+    sys.stderr.flush()
+
+
 class NodeHandler(BaseHTTPRequestHandler):
     """The node's HTTP surface. State/config live on `self.server.ctx` (a NodeContext),
     so this is a normal module-level class instead of a 250-line closure."""
@@ -612,11 +653,14 @@ class NodeHandler(BaseHTTPRequestHandler):
         """Execute a URI via v2.run, record errors, stamp run metadata, and publish."""
         c = self.ctx
         token = progress.bind(ctrl)
+        t0 = time.monotonic()
+        _verbose_run_start(uri, mode, payload)
         try:
             result = v2.run(uri, target_reg, payload=payload, mode=mode, policy=run_policy,
                             executors=c.pool_executors, confirm=bool(body.get("confirm")))
         finally:
             progress.reset(token)
+        _verbose_run_end(uri, result, (time.monotonic() - t0) * 1000)
         if not result.get("ok"):
             uri_errors.record(result)  # stamp error:// address + record for /errors
         result["service"] = c.state["name"]
