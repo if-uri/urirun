@@ -391,7 +391,47 @@ def _handle_post_artifacts(handler, parsed, project, db) -> bool:
     return False
 
 
+def _work_approve(project, body: dict) -> dict:
+    """Approve a BLOCKED work item → run its declared action, right now, in the background.
+
+    Generic: every blocked item in the work-plan may carry ``approve.cmd`` (a shell command) and
+    ``approve.label``. The browser sends only the item's URI; the command is read SERVER-SIDE from
+    the plan (never from the request), so approving can't inject arbitrary commands. Works for any
+    blocked operation — a release publish, a deploy, a migration — whatever the plan declares."""
+    import subprocess  # noqa: PLC0415
+    uri = str((body or {}).get("uri") or "").strip()
+    if not uri:
+        return {"ok": False, "error": "no item URI given"}
+    try:
+        from urirun_connector_view.core import _load_plan
+        plan = _load_plan()
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"work view not installed: {exc}"}
+    item = next((b for b in (plan.get("blocked") or []) if b.get("uri") == uri), None)
+    if item is None:
+        return {"ok": False, "error": f"no blocked item matches {uri}"}
+    action = item.get("approve") or {}
+    cmd = action.get("cmd")
+    if not cmd:
+        return {"ok": False, "error": "this blocked item declares no approve action (add approve.cmd to the plan)"}
+    slug = "".join(c if c.isalnum() else "_" for c in uri)[:60]
+    log = f"/tmp/urirun_approve_{slug}.log"
+    # Run in the DASHBOARD process (the user's, with their credentials) — human-in-the-loop.
+    subprocess.Popen(["bash", "-lc", f"cd {str(project)!r} && ({cmd}) > {log!r} 2>&1"])
+    return {"ok": True, "started": True, "uri": uri, "log": log,
+            "message": action.get("label") or "Approved — running in the background."}
+
+
+def _handle_post_work(handler, parsed, project) -> bool:
+    if parsed.path == "/api/work/approve":
+        _json_response(handler, 200, _work_approve(project, _read_json(handler)))
+        return True
+    return False
+
+
 def _handle_post(handler, parsed, parts, project, db, config, node_urls, token, identity):
+    if _handle_post_work(handler, parsed, project):
+        return
     if _handle_post_tasks(handler, parsed, parts, project):
         return
     if _handle_post_artifacts(handler, parsed, project, db):
