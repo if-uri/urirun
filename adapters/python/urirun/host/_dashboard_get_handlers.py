@@ -24,12 +24,11 @@ from .dashboard_http import (
 )
 from .html_templates import SCANNER_HTML, NODE_TYPES_DOC_HTML
 from .android_node import phone_web_nodes
-from .scanner_net import _write_qr_png
 from .dashboard_api import _first
-from .scanner_bridge import (
-    page_action_poll as _page_action_poll_impl,
-    uri_event as _uri_event_impl,
-)
+# scanner_net / scanner_bridge are shims to urirun_scanner (needs the standalone
+# urirun-connector-scanner, not on PyPI). Import them LAZILY inside the two handlers that use
+# them so `import urirun.host.host_dashboard` stays clean on a fresh `pip install urirun`
+# (guarded by the release smoke-test).
 # Pulled from host_dashboard lazily — safe because this module is only imported
 # after host_dashboard is fully loaded (from inside _handle_get() at request time).
 from . import host_dashboard as _hd
@@ -153,6 +152,7 @@ def _handle_get_nodes_qr(handler, parsed) -> None:
         root = Path(os.environ.get("URIRUN_DASHBOARD_QR_DIR", "~/.urirun/host-dashboard/qr")).expanduser()
         qr_path = root / f"endpoint-{digest}.png"
         if not qr_path.exists():
+            from .scanner_net import _write_qr_png  # lazy: keep scanner out of the import chain
             _write_qr_png(target, qr_path)
         _asset_response(handler, qr_path.read_bytes(), "image/png")
     except Exception as exc:  # noqa: BLE001
@@ -224,9 +224,11 @@ def _handle_get_api(handler, parsed, project, db) -> bool:
     if _handle_get_api_nodes(handler, parsed, query):
         return True
     if parsed.path == "/api/uri/event":
+        from .scanner_bridge import uri_event as _uri_event_impl  # lazy: scanner off import chain
         _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))
         return True
     if parsed.path == "/api/page/actions/poll":
+        from .scanner_bridge import page_action_poll as _page_action_poll_impl  # lazy
         _json_response(handler, 200,
                        _page_action_poll_impl(_first(query, "target", "scanner") or "scanner",
                                               int(_first(query, "limit", "4") or 4)))
