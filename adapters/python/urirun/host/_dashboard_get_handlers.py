@@ -242,6 +242,13 @@ def _handle_get_api(handler, parsed, project, db) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
+    if parsed.path == "/api/work/status":
+        from .work_queue import work_status  # continuity verdict: OK / AT_RISK / STOPPED
+        try:
+            _json_response(handler, 200, {"ok": True, **work_status()})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
     if parsed.path == "/api/uri/event":
         from .scanner_bridge import uri_event as _uri_event_impl  # lazy: scanner off import chain
         _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))

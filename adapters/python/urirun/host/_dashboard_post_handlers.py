@@ -433,6 +433,14 @@ def _handle_post_work(handler, parsed, project) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": f"debug surface unavailable: {exc}"})
         return True
+    if parsed.path == "/api/work/koru":
+        body = _read_json(handler) or {}
+        from .work_queue import ensure_running
+        try:
+            _json_response(handler, 200, ensure_running(lane=str(body.get("lane") or "queue")))
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
     return False
 
 

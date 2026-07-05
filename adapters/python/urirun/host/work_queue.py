@@ -87,3 +87,89 @@ def queue_state() -> dict[str, Any]:
     for t in ts:
         counts[t.get("status") or "?"] = counts.get(t.get("status") or "?", 0) + 1
     return {"koru": koru_status(), "tickets": ts, "counts": counts, "total": len(ts)}
+
+
+def _koru_bin() -> str | None:
+    b = shutil.which("koru")
+    if b:
+        return b
+    for c in ("~/github/semcod/koru/.venv/bin/koru", "~/github/if-uri/venv/bin/koru"):
+        p = Path(c).expanduser()
+        if p.is_file():
+            return str(p)
+    return None
+
+
+def ensure_running(*, lane: str = "queue") -> dict[str, Any]:
+    """Start the koru autonomous loop against the project if it is not already running.
+    Idempotent — the /work 'Continue koru' button calls this; a running loop is a no-op."""
+    if koru_status().get("running"):
+        return {"ok": True, "already_running": True, "project": _project()}
+    binp = _koru_bin()
+    if not binp:
+        return {"ok": False, "error": "koru not found (install koru or set PATH)"}
+    project = _project()
+    log = Path(project) / ".planfile" / ".koru" / "queue.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    cmd = ["bash", "-lc",
+           f"nohup {binp!r} autonomous up --project {project!r} --ide claude "
+           f"--ticket-sources {lane} --allow-duplicate >> {str(log)!r} 2>&1 &"]
+    try:
+        subprocess.Popen(cmd, start_new_session=True)  # noqa: S603
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "started": True, "project": project, "cmd": " ".join(cmd[-1:])}
+
+
+def _log_age_seconds() -> float | None:
+    """Freshness of the loop's heartbeat — seconds since the queue/soak log last changed."""
+    import time
+    for name in ("queue.log", "soak.log"):
+        p = Path(_project()) / ".planfile" / ".koru" / name
+        if p.is_file():
+            try:
+                return max(0.0, time.time() - p.stat().st_mtime)
+            except OSError:
+                pass
+    return None
+
+
+_STALE_SECONDS = 1500   # ~25 min without a log tick while "running" → AT RISK
+
+
+def work_status() -> dict[str, Any]:
+    """The control-room verdict: is the autonomous loop actually continuing?
+
+    CONTINUITY = OK | AT_RISK | STOPPED, with the current ticket, the next step, and a
+    concrete suggested action — so the operator never has to guess whether it is alive."""
+    ku = koru_status()
+    ts = tickets()
+    counts: dict[str, int] = {}
+    for t in ts:
+        counts[t.get("status") or "?"] = counts.get(t.get("status") or "?", 0) + 1
+    open_next = [t for t in ts if t.get("status") in ("open", "waiting_input")]
+    in_progress = [t for t in ts if t.get("status") in ("in_progress", "claimed")]
+    age = _log_age_seconds()
+    running = ku.get("running")
+    queue_empty = not open_next and not in_progress
+
+    if not running:
+        cont, action = "STOPPED", ("koru autonomous up --project " + _project() +
+                                   " --ide claude --ticket-sources queue")
+    elif queue_empty:
+        cont, action = "AT_RISK", "queue empty — run inquiry/reflection to create the next ticket"
+    elif age is not None and age > _STALE_SECONDS:
+        cont, action = "AT_RISK", f"loop running but no heartbeat for {int(age // 60)} min — inspect logs"
+    else:
+        cont, action = "OK", None
+
+    return {
+        "continuity": cont,
+        "koru": {**ku, "last_seen_seconds": round(age) if age is not None else None},
+        "tickets": {"open": counts.get("open", 0), "in_progress": counts.get("in_progress", 0)
+                    + counts.get("claimed", 0), "blocked": counts.get("blocked", 0)
+                    + counts.get("waiting_input", 0), "done": counts.get("done", 0), "total": len(ts)},
+        "current": in_progress[0] if in_progress else None,
+        "next": open_next[:5],
+        "suggested_action": action,
+    }
