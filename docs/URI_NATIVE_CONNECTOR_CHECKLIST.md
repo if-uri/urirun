@@ -131,7 +131,7 @@ vdisplay: `windows/query/list`, `monitors/query/list`, `window/query/find`,
 | Biblioteka | Rola URI | Uwaga strukturalna |
 |---|---|---|
 | **vdisplay** | `vdisplay://` window/monitor/session (nl) | ✅ zrobione; TODO: playwright opcjonalny |
-| **vql** | `vql://image/query/analyze` (scena→struktura) | most `uri2vql` istnieje; dodać connector |
+| **vql** | `vql://image/query/{analyze,regions,diagnose}` | ✅ zrobione (2. connector — checklist zwalidowany); grounding po geometrii/kolorze, NIE tekst |
 | **urivision/VURI** | `view://…/decision-card` | już URI-first — sprawdzić entry point bindings |
 | OCR/paddle/easyocr | `ocr://` (już jest connector) | wzorzec lazy-import ciężkiego modelu |
 | smart-crop | `artifact://image/crop` | sprawdzić lazy PaddleOCR (mkldnn off) |
