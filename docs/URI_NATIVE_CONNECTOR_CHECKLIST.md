@@ -132,7 +132,7 @@ vdisplay: `windows/query/list`, `monitors/query/list`, `window/query/find`,
 |---|---|---|
 | **vdisplay** | `vdisplay://` window/monitor/session (nl) | ✅ zrobione; TODO: playwright opcjonalny |
 | **vql** | `vql://image/query/{analyze,regions,diagnose}` | ✅ zrobione (2. connector — checklist zwalidowany); grounding po geometrii/kolorze, NIE tekst |
-| **urivision/VURI** | `view://…/decision-card` | już URI-first — sprawdzić entry point bindings |
+| **urivision/VURI** | `urivision://process/{compile,run}` | ✅ zrobione (3. connector); miał DSL .vuri ale BRAK entry point bindings — owinięty |
 | OCR/paddle/easyocr | `ocr://` (już jest connector) | wzorzec lazy-import ciężkiego modelu |
 | smart-crop | `artifact://image/crop` | sprawdzić lazy PaddleOCR (mkldnn off) |
 
