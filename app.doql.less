@@ -163,6 +163,13 @@ workflow[name="build"] {
   step-4: run cmd=cd adapters/python && $(PYTHON) -m build;
 }
 
+workflow[name="dep-health-release"] {
+  trigger: manual;
+  step-1: run cmd=if [ -f "$(HOME)/github/local.dev.sh" ]; then \;
+  step-2: run cmd=bash "$(HOME)/github/local.dev.sh" --check-release "$(CURDIR)/adapters/python"; \;
+  step-3: run cmd=else echo "local.dev.sh absent — skipping dep-health (CI)"; fi;
+}
+
 workflow[name="publish"] {
   trigger: manual;
   step-1: run cmd=cd adapters/python && $(PYTHON) -m twine upload --skip-existing dist/*;
@@ -209,36 +216,73 @@ workflow[name="clean"] {
 
 tests {
   import: .claude/worktrees/agent-a0399c478743caf79/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a0a0ba9a614b7edea/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a0dacf4adceba1a5c/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a0e74720d5977d34a/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a0e9f76259d487c94/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a125f552bb991cc01/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a16cb19f6bcff43cf/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a26bbd6b5fd565094/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a285d5cb272046d20/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a3250ebc091006594/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a355fcdf0034d6b55/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a3d6c96d88beb1f1a/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a420143cd986cd276/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a4ac133586a0f296f/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a4af4bb0b0bc74e52/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a4c45cacc62ac8e54/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a4cae63dfd3e82f2a/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a513eb4c0685260a6/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a555612c5c420a446/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a588d5ecc717985ce/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a676b7b21b802a2da/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a681343def047bf07/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a6a95aea3d461c2d5/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a6f52e50cc8ebc3a7/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a700d03e40309d531/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a756818844e8cadbb/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a89e1161d2dc35bdf/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a8c44302c9f26e55c/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a91d5f3cdae8a81d2/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-a9a6b6c80216c6d8b/testql-scenarios/**/*.testql.toon.yaml;
-  import: .claude/worktrees/agent-aaea4872918ab9410/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-a9b73bc0826cc0050/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-aa01a99b8091b084c/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-aa0a23c3a1a8896d8/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-aae529c468daf2c5c/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-aaf101f8eea8a024f/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-ab94602a1e2bc885c/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-aba8a6512bbdaddc3/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-abac611f8fd81cc1e/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-abe9f054e82cbbccc/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-ac2883b942d10f087/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-ac4ae72a2b8247f60/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-ac4faa9996be76252/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-ac56434ca36fe18e3/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-aca2d3730b7c75c20/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-acb5dc53933d2880d/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-ad2cac505627d4e1d/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-ad62d9b5c4023f40e/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-ad964c3977bac9a8a/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-add8a12ebdfe870be/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-aeac5f10e27f22a14/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/agent-aec649e904565daff/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/agent-afe22aab2f6e35dd7/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/worktree-adopt-1782729623/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/worktree-chat-ask-1782728305/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/worktree-ensure-1782728245/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/worktree-ensure2-1782729735/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/worktree-nodecli-1782730186/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/worktree-orch-offline-1782733178/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/worktree-orchestrator2-cc-1782727595/testql-scenarios/**/*.testql.toon.yaml;
   import: .claude/worktrees/worktree-precond-cc-1782727504/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/worktree-scanner-svc-1782731877/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/worktree-server2-1782732626/testql-scenarios/**/*.testql.toon.yaml;
+  import: .claude/worktrees/worktree-worker2-1782730191/testql-scenarios/**/*.testql.toon.yaml;
   import: testql-scenarios/**/*.testql.toon.yaml;
 }
 
 env_vars {
-  keys: OPENROUTER_API_KEY, LLM_MODEL, PFIX_AUTO_APPLY, PFIX_AUTO_INSTALL_DEPS, PFIX_AUTO_RESTART, PFIX_MAX_RETRIES, PFIX_DRY_RUN, PFIX_ENABLED, PFIX_GIT_COMMIT, PFIX_GIT_PREFIX, PFIX_CREATE_BACKUPS, ANTHROPIC_API_KEY;
+  keys: OPENROUTER_API_KEY, LLM_MODEL, PFIX_AUTO_APPLY, PFIX_AUTO_INSTALL_DEPS, PFIX_AUTO_RESTART, PFIX_MAX_RETRIES, PFIX_DRY_RUN, PFIX_ENABLED, PFIX_GIT_COMMIT, PFIX_GIT_PREFIX, PFIX_CREATE_BACKUPS;
 }
 
 deploy {
@@ -248,8 +292,7 @@ deploy {
 environment[name="local"] {
   runtime: docker-compose;
   env_file: .env;
-  template_file: .env.example;
-  vars: ANTHROPIC_API_KEY, LLM_MODEL, OPENROUTER_API_KEY, PFIX_AUTO_APPLY, PFIX_AUTO_INSTALL_DEPS, PFIX_AUTO_RESTART, PFIX_CREATE_BACKUPS, PFIX_DRY_RUN, PFIX_ENABLED, PFIX_GIT_COMMIT, PFIX_GIT_PREFIX, PFIX_MAX_RETRIES;
+  vars: LLM_MODEL, OPENROUTER_API_KEY, PFIX_AUTO_APPLY, PFIX_AUTO_INSTALL_DEPS, PFIX_AUTO_RESTART, PFIX_CREATE_BACKUPS, PFIX_DRY_RUN, PFIX_ENABLED, PFIX_GIT_COMMIT, PFIX_GIT_PREFIX, PFIX_MAX_RETRIES;
   runtime_llm: OPENROUTER_API_KEY;
   runtime_pfix: PFIX_AUTO_APPLY, PFIX_AUTO_INSTALL_DEPS, PFIX_AUTO_RESTART, PFIX_CREATE_BACKUPS, PFIX_DRY_RUN, PFIX_ENABLED, PFIX_GIT_COMMIT, PFIX_GIT_PREFIX, PFIX_MAX_RETRIES;
 }

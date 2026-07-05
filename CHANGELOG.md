@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-05
+
+### Fixed
+- Fix ast-unused-imports issues (ticket-63e56112)
+- Fix ast-string-concat issues (ticket-effb1b7e)
+- Fix ast-print-statements issues (ticket-16d433f8)
+- Fix ruff-print-statements issues (ticket-a65034cf)
+- Fix string-concat-fstring issues (ticket-f46c5dd2)
+- Fix ai-boilerplate issues (ticket-37f1723b)
+- Fix import-optimization issues (ticket-6728e8ba)
+- Fix ast-print-statements issues (ticket-8676ee10)
+- Fix ast-missing-return-type issues (ticket-70bf2ec1)
+- Fix ruff-print-statements issues (ticket-ce113789)
+- Fix ruff-sorted-imports issues (ticket-adff71fc)
+- Fix import-optimization issues (ticket-6f71c194)
+- Fix ast-string-concat issues (ticket-e0cf9519)
+- Fix ast-print-statements issues (ticket-664a7738)
+- Fix ruff-print-statements issues (ticket-453ca1e1)
+- Fix string-concat-fstring issues (ticket-28dcc331)
+- Fix import-optimization issues (ticket-fa02f5d7)
+- Fix ast-unused-imports issues (ticket-895dde7d)
+- Fix ast-sorted-imports issues (ticket-07aa76dd)
+- Fix ast-string-concat issues (ticket-931eb85b)
+- Fix ast-print-statements issues (ticket-5d3508e0)
+- Fix ruff-unused-imports issues (ticket-1d0e6533)
+- Fix ruff-print-statements issues (ticket-1625a279)
+- Fix string-concat-fstring issues (ticket-e86b0aba)
+- Fix unused-imports issues (ticket-ed0c7c7e)
+- Fix ai-boilerplate issues (ticket-393acc20)
+- Fix import-optimization issues (ticket-45affc72)
+- Fix ast-unused-imports issues (ticket-bd859887)
+- Fix ast-sorted-imports issues (ticket-661a4a05)
+- Fix ast-print-statements issues (ticket-ed46e859)
+- Fix ruff-print-statements issues (ticket-02b1a8ef)
+- Fix ai-boilerplate issues (ticket-21f35a6e)
+- Fix import-optimization issues (ticket-e1b73cde)
+- Fix ruff-sorted-imports issues (ticket-afd4c350)
+- Fix import-optimization issues (ticket-5d55e1b9)
+- Fix relative-imports issues (ticket-1ef859a1)
+- Fix ast-unused-imports issues (ticket-3ae7c953)
+- Fix ast-sorted-imports issues (ticket-e19796d6)
+- Fix ast-missing-return-type issues (ticket-a8d64633)
+- Fix ruff-unused-imports issues (ticket-fa73b604)
+- Fix ruff-sorted-imports issues (ticket-c4b8d090)
+- Fix unused-imports issues (ticket-c7ce5eb6)
+- Fix import-optimization issues (ticket-b8db9d9e)
+- Fix no-relative-imports issues (ticket-4de43b5c)
+- Fix ast-unused-imports issues (ticket-bf08772a)
+
 ## [0.4.191]
 
 ### Added
