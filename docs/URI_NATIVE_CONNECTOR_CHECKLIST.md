@@ -88,18 +88,31 @@ vdisplay: wydzielić enumerację do ścieżki bez playwright.**
 
 ---
 
-## 3. Wdrożenie na węzeł — biblioteka MUSI być na węźle
+## 3. Wdrożenie na węzeł — ZWERYFIKOWANY mechanizm (lenovo 2026-07-05)
 
-kvm flat-deployuje się przez `host deploy --code *.py`, bo to jeden pakiet bez ciężkich deps.
-**Biblioteki nie da się flat-deployować** (wiele modułów + deps). Dwie drogi:
+kvm flat-deployuje się przez `host deploy --code *.py` (jeden pakiet, bez ciężkich deps).
+Biblioteki nie da się flat-deployować, ale connector owijający TAK — o ile biblioteka jest na
+węźle. Sprawdzona procedura (skrypt: `urirun/scripts/deploy_lib_connector.sh`):
 
-1. **pip install `<lib>` w środowisku węzła** (przez manage-install albo raz ręcznie) —
-   wtedy flat-deploy samego connectora (`core.py`) importuje zainstalowaną bibliotekę.
-2. **Publikacja connectora na PyPI** + `node://.../connector/command/install`.
+1. **Zainstaluj bibliotekę na węźle przez MESH** (bez SSH) — podpisaną trasą
+   `node://<name>/package/command/install` (`spec`: string|array pip-spec; węzeł musi mieć
+   `--manage` + key-auth). `urirun host run <url> node://<name>/package/command/install
+   --payload '{"spec":["vql","pillow"]}' --identity ~/.ssh/id_ed25519` → `installed`+`returncode`.
+   (vql 0.1.7 i vdisplay 0.1.53 SĄ na PyPI; instalacja bazowa nie ciąga playwright.)
+2. **Flat-deploy connectora pod UNIKALNĄ nazwą modułu.** ⚠️ PUŁAPKA: `--code` wypycha pliki po
+   BASENAME do jednego katalogu, więc każdy connector jako `core.py` KOLIDUJE — redeploy kvm
+   nadpisał `core.py` vql, ref `core:image_diagnose` wskazał moduł kvm → *„local function ref is
+   not callable"*. Lek: wypchnij `<id>_core.py` i przepisz `python.module` w bindings na
+   `<id>_core`. Skrypt robi to automatycznie.
 
-Konsekwencja projektowa: readiness/konsument **importuje connector opcjonalnie** i degraduje,
-gdy go nie ma (jak `_enumerate_windows()`: vdisplay → fallback atspi → none). Nigdy twardej
-zależności węzła od ciężkiej biblioteki.
+Konsekwencja: konsument node-side musi wołać connector przez TRASĘ (`vdisplay://…`), NIE przez
+import pakietu (na węźle żyje jako flat `<id>_core`, nie `urirun_connector_<id>` → import padnie,
+readiness degraduje do fallbacku).
+
+**Zweryfikowane na lenovo:** kvm capture → `vql://image/query/analyze` (130 obiektów, 65 ms) →
+`vql://image/query/regions` (klikalne center) — cały tor vision-grounding działa NA WĘŹLE.
+`vdisplay://monitors` działa; `vdisplay://windows` uczciwie `ok:false` („xdotool not found" +
+limit Wayland) — potwierdza, że vision (vql) jest właściwą ścieżką na Wayland, nie enumeracja okien.
 
 ---
 
