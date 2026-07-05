@@ -46,6 +46,13 @@ jobs:
         if: steps.gate.outputs.publish == 'true'
         run: make version-check
 
+      # SAFETY GATE: refuse to publish a urirun whose declared dependencies are not resolvable on
+      # PyPI. Without this, a VERSION bump auto-published a package that could not install its own
+      # deps (urirun-contract/flow/router… unpublished) and broke get.urirun.com installs.
+      - name: Dependency-health gate (deps must be on PyPI)
+        if: steps.gate.outputs.publish == 'true'
+        run: make dep-health-release
+
       - name: Check release tag matches package version
         if: steps.gate.outputs.publish == 'true' && startsWith(github.ref, 'refs/tags/')
         run: test "${GITHUB_REF_NAME}" = "v${{ steps.ver.outputs.version }}"
