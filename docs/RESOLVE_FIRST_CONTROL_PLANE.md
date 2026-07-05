@@ -96,6 +96,21 @@ User/Voice/Text → Intent →│      CURI process (.curi)    │
   NIE usuwa `window_enumeration_degraded` na GNOME-Wayland — patrz sekcja 3a. To OGRANICZENIE
   SYSTEMU, nie brak connectora; readiness reaguje na nie poprawnie (odmawia ślepego HID).
 
+### 3b. Warstwa kompozycji tras WEWNĄTRZ węzła — DODANA i zweryfikowana (2026-07-05)
+
+Brakująca warstwa wykryta w testach: readiness (handler kvm) KONSUMOWAŁ vdisplay/vql przez
+IMPORT PAKIETU — ale na węźle connectory żyją jako flat-moduły (`vdisplay_core`, `vql_core`), nie
+jako `urirun_connector_vdisplay` → import padał → cichy fallback do atspi. Kompozycja
+cross-connector musi iść przez TRASĘ, nie import.
+
+Rozwiązanie: `_call_node_route(uri, payload)` — handler self-callem woła siostrzaną trasę
+serwowaną na TYM SAMYM węźle, po loopbacku (`URIRUN_NODE_SELF_URL`, ustawiane przy deploy przez
+`--env`; węzeł to `ThreadingHTTPServer`, więc self-call nie deadlockuje). Forma wdrożenia (flat
+vs pakiet) staje się nieistotna — liczy się serwowany URI. Zweryfikowane na lenovo: readiness
+`window_backend = vdisplay:route(unavailable)` — trasa osiągnięta (kompozycja działa), enumeracja
+uczciwie niedostępna na Wayland. To wzorzec dla KAŻDej kompozycji na węźle (readiness→vql,
+flow→connector). Alternatywa (już działa): kompozycja po stronie KLIENTA przez CURI runner.
+
 ### 3a. Enumeracja okien na GNOME-Wayland — ZWERYFIKOWANE ograniczenie OS
 
 Hipoteza „vdisplay zobaczy okna Chrome tam, gdzie atspi zawiódł" została **przetestowana na
