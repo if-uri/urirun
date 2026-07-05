@@ -308,6 +308,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Docker desktop from an NL intent; the desktop driver is a *connector*, the schema in
   the action space is the only core change).
 
+## [0.4.192] - 2026-07-05
+
+### Docs
+- Update README.md
+
+### Other
+- Update adapters/python/pyproject.toml
+
 ## [0.4.191] - 2026-07-05
 
 ### Docs
