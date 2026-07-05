@@ -424,6 +424,15 @@ def _handle_post_work(handler, parsed, project) -> bool:
     if parsed.path == "/api/work/approve":
         _json_response(handler, 200, _work_approve(project, _read_json(handler)))
         return True
+    if parsed.path == "/api/work/debug/snapshot":
+        body = _read_json(handler)
+        try:
+            from urirun_connector_view.debug import snapshot_create  # optional
+            _json_response(handler, 200,
+                           snapshot_create(repo=str(project), label=str((body or {}).get("label") or "")))
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": f"debug surface unavailable: {exc}"})
+        return True
     return False
 
 

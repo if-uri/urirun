@@ -228,6 +228,13 @@ def _handle_get_api(handler, parsed, project, db) -> bool:
         _json_response(handler, 200,
                        {"ok": True, "runs": list_runs(tail_lines=int(_first(query, "tail", "120") or 120))})
         return True
+    if parsed.path == "/api/work/debug":
+        try:
+            from urirun_connector_view.debug import state_full  # optional, like the work view
+            _json_response(handler, 200, state_full(repo=str(project)))
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": f"debug surface unavailable: {exc}"})
+        return True
     if parsed.path == "/api/uri/event":
         from .scanner_bridge import uri_event as _uri_event_impl  # lazy: scanner off import chain
         _json_response(handler, 200, _uri_event_impl(_scanner_bridge_deps(), db, query))
