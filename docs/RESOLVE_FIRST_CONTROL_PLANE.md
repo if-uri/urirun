@@ -91,9 +91,28 @@ User/Voice/Text → Intent →│      CURI process (.curi)    │
 - **urivision / VURI** = warstwa decyzji: `view://…/decision-card` (już URI-first).
 - **kvm** = kurczy się do prymitywów: HID (`input/*`), capture (`screen/*`), CDP DOM (`cdp/page/*`).
   Enumeracja okien / sesje / policy wejścia → **przeniesione do vdisplay** (kvm je konsumuje).
-- **readiness kernel** = obecny MVP w kvm (`ready/query/resolve`); docelowo **konsumuje
-  vdisplay/vql/secret** zamiast ad-hoc atspi+browser_sessions. Po przełączeniu
-  `window_enumeration_degraded` znika (vdisplay ma vision-backend).
+- **readiness kernel** = obecny MVP w kvm (`ready/query/resolve`); konsumuje
+  vdisplay/browser_sessions/secret. UWAGA (zweryfikowane 2026-07-05): przełączenie na vdisplay
+  NIE usuwa `window_enumeration_degraded` na GNOME-Wayland — patrz sekcja 3a. To OGRANICZENIE
+  SYSTEMU, nie brak connectora; readiness reaguje na nie poprawnie (odmawia ślepego HID).
+
+### 3a. Enumeracja okien na GNOME-Wayland — ZWERYFIKOWANE ograniczenie OS
+
+Hipoteza „vdisplay zobaczy okna Chrome tam, gdzie atspi zawiódł" została **przetestowana na
+żywo i jest FAŁSZYWA na standardowym GNOME-Wayland**:
+- **x11/xdotool** (domyślny backend vdisplay) widzi tylko klientów **XWayland**, nie natywne
+  okna Wayland (dowód: Firefox-snap działał, 0 przeglądarek w liście okien).
+- **gnome_shell** backend vdisplay używa `org.gnome.Shell.Eval`, który GNOME **wyłącza domyślnie**
+  ze względów bezpieczeństwa (`Eval returned false`).
+- **atspi** widzi tylko gnome-shell/Terminal.
+
+Wniosek: enumeracja natywnych okien Wayland jest zablokowana na poziomie OS. Realne ścieżki
+(follow-up): (a) **rozszerzenie GNOME Shell** wystawiające okna po D-Bus (nie Eval); (b) wymuszenie
+**XWayland** dla przeglądarki (`--ozone-platform=x11`); (c) **backend vision** (detekcja okien ze
+zrzutu). Connector vdisplay raportuje to uczciwie polem `wayland_native_visible`; readiness ufa
+liście okien TYLKO gdy `wayland_native_visible` (lub sesja X11) — inaczej `window_enumeration_degraded`
+i NIE rekomenduje ślepego HID. To poprawne zachowanie: percepcja fokusu na Wayland idzie przez
+sygnały procesów/sesji (`browser_sessions`), nie przez listę okien.
 
 ---
 
