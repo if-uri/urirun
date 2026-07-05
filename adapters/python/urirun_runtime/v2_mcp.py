@@ -148,6 +148,38 @@ def to_a2a_card(registry: dict, name: str = "urirun-agent", url: str = "http://l
     }
 
 
+def to_openapi(registry: dict, title: str = "urirun", version: str = "0.1.0",
+               server: str = "http://localhost:8080") -> dict:
+    """Project the SAME routes to an OpenAPI 3 document — one POST operation per URI,
+    with the handler's inputSchema as the request body. So a connector declared once with
+    @conn.handler is also a REST/OpenAPI service, no extra code."""
+    paths: dict = {}
+    used: set[str] = set()
+    for route in reglib.flatten_registry_document(registry):
+        entry = route["routeEntry"]
+        uri = route["uri"]
+        meta = entry.get("meta") or {}
+        op_id = unique_tool_name(uri, used)
+        # a stable REST path from the URI path part (scheme://target/a/b → /a/b)
+        rest = "/" + uri.split("://", 1)[-1].split("/", 1)[-1] if "://" in uri else "/" + uri
+        op: dict = {
+            "operationId": op_id,
+            "summary": meta.get("label") or uri,
+            "tags": [reglib.parse_uri(uri)["package"]],
+            "x-uri": uri,
+            "requestBody": {"required": False, "content": {
+                "application/json": {"schema": _input_schema(entry)}}},
+            "responses": {"200": {"description": "urirun envelope",
+                                  "content": {"application/json": {"schema": {"type": "object"}}}}},
+        }
+        out_schema = _contract_output_schema(meta)
+        if out_schema:
+            op["responses"]["200"]["content"]["application/json"]["schema"] = out_schema
+        paths.setdefault(rest, {})["post"] = op
+    return {"openapi": "3.0.3", "info": {"title": title, "version": version},
+            "servers": [{"url": server}], "paths": paths}
+
+
 def build_tool_index(registry: dict) -> dict:
     return {tool["name"]: tool["_uri"] for tool in to_mcp_tools(registry)}
 

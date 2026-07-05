@@ -245,6 +245,14 @@ class Connector:
 
         return v2_mcp.to_a2a_card(self.registry(), name=name or self.id, url=url, version=version)
 
+    def openapi(self, *, title: str | None = None, version: str = "0.1.0",
+                server: str = "http://localhost:8080") -> dict:
+        """Project this connector's routes to an OpenAPI 3 document — one POST per URI.
+        One @conn.handler declaration → URI + MCP + A2A + OpenAPI + CLI, no extra code."""
+        from urirun.runtime import v2_mcp
+
+        return v2_mcp.to_openapi(self.registry(), title=title or self.id, version=version, server=server)
+
 
 def connector(
     connector_id: str,
