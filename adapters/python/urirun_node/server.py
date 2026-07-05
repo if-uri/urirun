@@ -362,6 +362,50 @@ class NodeContext:
         self.__dict__.update(kw)
 
 
+def _node_card_html(ctx: Any) -> str:
+    """A minimal, mobile-first, theme-aware node card (self-contained; no external resources).
+    Lists what the node serves so a phone that scanned the shell QR sees something useful."""
+    import html as _h
+    name = _h.escape(str(ctx.state.get("name") or "node"))
+    routes = ctx.state.get("routes") or []
+    schemes: dict[str, int] = {}
+    for r in routes:
+        s = str(r.get("uri", "")).split("://", 1)[0]
+        schemes[s] = schemes.get(s, 0) + 1
+    chips = "".join(f'<span class=chip>{_h.escape(s)}<b>{n}</b></span>'
+                    for s, n in sorted(schemes.items()))
+    ver = _h.escape(version_line())
+    mode = "execute" if getattr(ctx, "execute", False) else "dry-run"
+    return (
+        '<!doctype html><html lang=en><head><meta charset=utf-8>'
+        '<meta name=viewport content="width=device-width,initial-scale=1">'
+        f'<title>{name} · urirun node</title><style>'
+        ':root{--bg:#0e1417;--card:#151d21;--line:#26343a;--ink:#e7eef1;--dim:#8ea3ab;--accent:#4bb3a6}'
+        '@media(prefers-color-scheme:light){:root{--bg:#f5f4ef;--card:#fff;--line:#e3e1d8;--ink:#18211f;--dim:#54646b;--accent:#2f8f84}}'
+        '*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);'
+        'font:16px/1.5 -apple-system,system-ui,sans-serif;padding:24px}'
+        '.card{max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);'
+        'border-radius:14px;padding:22px 20px}'
+        'h1{margin:0 0 2px;font-size:22px}.sub{color:var(--dim);font-family:ui-monospace,monospace;font-size:12.5px;margin:0 0 16px}'
+        '.row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}'
+        '.chip{font-family:ui-monospace,monospace;font-size:12.5px;background:rgba(75,179,166,.14);'
+        'color:var(--accent);border-radius:8px;padding:6px 10px}.chip b{margin-left:6px;opacity:.7}'
+        'a.btn{display:inline-block;text-decoration:none;color:var(--ink);border:1px solid var(--line);'
+        'border-radius:9px;padding:10px 14px;margin:4px 6px 0 0;font-size:14px}'
+        'a.btn:hover{border-color:var(--accent);color:var(--accent)}'
+        '.k{color:var(--dim);font-size:13px;margin-top:16px}</style></head><body>'
+        f'<div class=card><h1>{name}</h1><p class=sub>{ver} · {mode} · {len(routes)} URI processes</p>'
+        f'<div class=k>served schemes</div><div class=row>{chips}</div>'
+        '<div class=k>explore</div>'
+        '<a class=btn href="/routes">URI processes (JSON)</a>'
+        '<a class=btn href="/health">health</a>'
+        '<a class=btn href="/errors">errors</a>'
+        '<p class=k style="margin-top:18px">This is a urirun node — an API server. Drive it with '
+        '<code>POST /run</code> or a curi/host client.</p>'
+        '</div></body></html>'
+    )
+
+
 def _verbose() -> bool:
     """Console transparency: with URIRUN_NODE_VERBOSE=1 the node prints every URI process it
     runs (incoming command + result + timing) to stderr, so it is clear in the shell what is
@@ -460,6 +504,17 @@ class NodeHandler(BaseHTTPRequestHandler):
 
     def _get(self):
         c = self.ctx
+        if self.path == "/" or self.path == "/index.html":
+            # A minimal, phone-friendly node card so scanning the shell QR (which points at the
+            # node's base URL) opens something useful — not a bare 404. Nodes are API servers;
+            # this is the human landing page listing what the node serves.
+            body = _node_card_html(c).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self.path == "/health":
             send_json(self, 200, self._health_payload())
             return
