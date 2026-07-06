@@ -51,6 +51,8 @@ def action(payload: dict) -> dict[str, Any]:
         return {"ok": False, "error": "install urirun-connector-watchdog"}
     if act == "unstick":
         return c.ticket_command_unstick(id=str(payload.get("id") or ""), project=_project())
+    if act == "circuit-break":
+        return c.loop_command_circuit_break(id=str(payload.get("id") or ""), project=_project())
     if act == "sweep":
         return c.loop_command_sweep(project=_project(), apply=bool(payload.get("apply")))
     return {"ok": False, "error": f"unknown action {act!r}"}

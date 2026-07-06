@@ -262,6 +262,14 @@ def _handle_get_work_cron(handler, parsed, query) -> bool:
                        id=_first(query, "id", "") or "", mode=_first(query, "mode", "rrule") or "rrule",
                        days=int(_first(query, "days", "30") or 30)))
         return True
+    if parsed.path == "/api/work/watchdog":
+        from . import watchdog_admin  # watch:// bridge: wykryte zapętlenia + rootcause
+        _json_response(handler, 200, watchdog_admin.detect())
+        return True
+    if parsed.path == "/api/work/agents":
+        from . import agent_admin  # agent:// bridge: dostępne narzędzia AI (executor)
+        _json_response(handler, 200, agent_admin.tools())
+        return True
     return False
 
 
