@@ -219,14 +219,25 @@ def _handle_get_file_api(handler, parsed, query, project) -> bool:
     return False
 
 
-def _handle_get_api(handler, parsed, project, db) -> bool:
-    query = parse_qs(parsed.query)
-    if _handle_get_api_nodes(handler, parsed, query):
-        return True
+def _handle_get_work(handler, parsed, project, query) -> bool:
+    """All /api/work/* read surfaces for the /work view (runs, confirm queue, URI activity,
+    koru queue/continuity, debug). Split out of _handle_get_api to keep each dispatcher small."""
     if parsed.path == "/api/work/runs":
         from .work_runs import list_runs  # lazy, like the other optional surfaces
         _json_response(handler, 200,
                        {"ok": True, "runs": list_runs(tail_lines=int(_first(query, "tail", "120") or 120))})
+        return True
+    if parsed.path == "/api/work/ops":
+        from .work_console import list_ops  # operations awaiting the operator's confirmation
+        try:
+            _json_response(handler, 200, {"ok": True, "ops": list_ops()})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
+    if parsed.path == "/api/work/uri-log":
+        from .work_console import uri_activity  # which URI processes urirun is running, live
+        _json_response(handler, 200,
+                       {"ok": True, "events": uri_activity(int(_first(query, "limit", "40") or 40))})
         return True
     if parsed.path == "/api/work/debug":
         try:
@@ -248,6 +259,15 @@ def _handle_get_api(handler, parsed, project, db) -> bool:
             _json_response(handler, 200, {"ok": True, **work_status()})
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
+    return False
+
+
+def _handle_get_api(handler, parsed, project, db) -> bool:
+    query = parse_qs(parsed.query)
+    if _handle_get_api_nodes(handler, parsed, query):
+        return True
+    if _handle_get_work(handler, parsed, project, query):
         return True
     if parsed.path == "/api/uri/event":
         from .scanner_bridge import uri_event as _uri_event_impl  # lazy: scanner off import chain
