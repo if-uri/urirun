@@ -68,8 +68,8 @@ def add_ops(items: list[dict]) -> dict[str, Any]:
         now = time.time()
         ops.append({"id": f"op-{int(now * 1000)}-{added}", "uri": it.get("uri") or "",
                     "title": it.get("title") or "", "desc": it.get("desc") or "",
-                    "cmd": it.get("cmd"), "status": "pending", "run": None,
-                    "created": now, "updated": now})
+                    "cmd": it.get("cmd"), "llm": it.get("llm") or "",  # który LLM uczestniczy
+                    "status": "pending", "run": None, "created": now, "updated": now})
         added += 1
     _save(ops)
     return {"ok": True, "added": added, "total": len(ops)}
