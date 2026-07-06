@@ -130,7 +130,41 @@ def queue_state() -> dict[str, Any]:
     counts: dict[str, int] = {}
     for t in ts:
         counts[t.get("status") or "?"] = counts.get(t.get("status") or "?", 0) + 1
+    try:
+        from . import ticket_meta  # LLM tags, real processes, node, allow/deny per ticket
+        ts = ticket_meta.enrich(ts, _project())
+    except Exception:  # noqa: BLE001 - enrichment is best-effort; the raw table still renders
+        pass
     return {"koru": koru_status(), "tickets": ts, "counts": counts, "total": len(ts)}
+
+
+def ticket_edit_full(ticket_id: str, *, name: str = "", description: str = "",
+                     llm: Any = None, node: Any = None, allow: Any = None, deny: Any = None) -> dict[str, Any]:
+    """Edit a not-done ticket: name/description go to planfile; LLM/node/allow/deny to the
+    side-store. Any subset may be given. Returns an envelope; never raises."""
+    tid = str(ticket_id or "").strip()
+    if not tid:
+        return {"ok": False, "error": "ticket id required"}
+    pf = _planfile()
+    upd: list[str] = []
+    if name:
+        upd += ["--name", str(name)]
+    if description:
+        upd += ["--description", str(description)]
+    if upd and pf:
+        try:
+            cp = subprocess.run([pf, "ticket", "update", tid, *upd], capture_output=True,
+                               text=True, timeout=20, cwd=_project())
+            if cp.returncode != 0:
+                return {"ok": False, "error": (cp.stderr or cp.stdout or "planfile error").strip()[-200:]}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc)}
+    try:
+        from . import ticket_meta
+        entry = ticket_meta.edit_meta(tid, llm=llm, node=node, allow=allow, deny=deny)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "ticket": tid, "meta": entry}
 
 
 def _koru_bin() -> str | None:
