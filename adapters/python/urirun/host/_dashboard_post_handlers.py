@@ -495,6 +495,28 @@ def _work_console_task_new(project, path, body) -> dict:
                          labels=b.get("labels"), criteria=b.get("criteria"))
 
 
+def _work_console_system(project, path, body) -> dict:
+    from .work_queue import _project
+    try:
+        from urirun_connector_watchdog import core as wd
+    except ImportError:
+        return {"ok": False, "error": "install urirun-connector-watchdog"}
+    return wd.system_remediate(project=_project())
+
+
+def _work_console_signal(project, path, body) -> dict:
+    """signal:// z panelu: send (reversible — inverse=delete) / delete."""
+    try:
+        from urirun_connector_signal import core as sig
+    except ImportError:
+        return {"ok": False, "error": "install urirun-connector-signal"}
+    b = body or {}
+    act = str(b.get("action") or "send")
+    if act == "delete":
+        return sig.message_command_delete(id=str(b.get("id") or ""))
+    return sig.message_command_send(to=str(b.get("to") or ""), message=str(b.get("message") or ""))
+
+
 def _work_console_verify(project, path, body) -> dict:
     """verify:// — seed/uruchom acceptance_criteria (done-validation) ticketu."""
     from .work_queue import _project
@@ -540,7 +562,7 @@ _WORK_CONSOLE_ROUTES = {
     "/api/work/ticket/edit": _work_console_ticket_edit, "/api/work/cron": _work_console_cron,
     "/api/work/watchdog": _work_console_watchdog, "/api/work/agents": _work_console_agents,
     "/api/work/loop": _work_console_loop, "/api/work/verify": _work_console_verify,
-    "/api/work/task/new": _work_console_task_new, "/api/work/action": _work_console_action,
+    "/api/work/task/new": _work_console_task_new, "/api/work/signal": _work_console_signal, "/api/work/system": _work_console_system, "/api/work/action": _work_console_action,
 }
 
 

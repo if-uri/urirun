@@ -122,7 +122,21 @@ def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str,
         ran.append({"cmd": " ".join(c[3:]), "rc": cp.returncode})
         if cp.returncode != 0:
             return {"ok": False, "error": (cp.stderr or cp.stdout or "planfile error").strip()[-200:], "ran": ran}
+    _emit_ticket_event(tid, action)  # edge-trigger: zmiana statusu → event na szynę → reconciler
     return {"ok": True, "ticket": tid, "action": (action or "note"), "ran": ran}
+
+
+def _emit_ticket_event(tid: str, action: str) -> None:
+    """Publikuj zmianę stanu ticketu na szynę (TWIN_EVENT_HUB) — edge-trigger dla reconcilera/agentów."""
+    if action in ("", "note"):
+        return
+    try:
+        from .twin_bridge import TWIN_EVENT_HUB
+        TWIN_EVENT_HUB.publish({"uri": "ticket://event", "step_uri": f"ticket://{tid}/{action}",
+                                "ticket": tid, "action": action, "narration": f"{tid} → {action}",
+                                "status": "ticket-change", "category": "ticket"})
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _parse_criteria(text: Any) -> list[dict]:

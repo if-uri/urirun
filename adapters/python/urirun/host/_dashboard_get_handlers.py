@@ -266,6 +266,14 @@ def _handle_get_work_cron(handler, parsed, query) -> bool:
         from . import watchdog_admin  # watch:// bridge: wykryte zapętlenia + rootcause
         _json_response(handler, 200, watchdog_admin.detect())
         return True
+    if parsed.path == "/api/work/system":
+        from .work_queue import _project as _wq_project  # zdrowie SYSTEMU (kontrolery/środowisko)
+        try:
+            from urirun_connector_watchdog import core as _wd
+            _json_response(handler, 200, {"ok": True, **_wd.system_analyze(_wq_project())})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc), "findings": []})
+        return True
     return _handle_get_work_diag(handler, parsed, query)
 
 
@@ -292,6 +300,14 @@ def _handle_get_work_diag(handler, parsed, query) -> bool:
         from . import agent_admin  # agent:// bridge: dostępne narzędzia AI (executor)
         _json_response(handler, 200, agent_admin.tools())
         return True
+    if parsed.path == "/api/work/assign":
+        from .work_queue import _project as _wq_project  # multi-agent: runnable→agent (node+capability)
+        try:
+            from urirun_connector_loop import core as _loop
+            _json_response(handler, 200, {"ok": True, **_loop.assign(_wq_project())})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc), "assignments": []})
+        return True
     if parsed.path == "/api/work/verify":
         from .work_queue import _project as _wq_project  # verify:// — done-validation postcondition
         try:
@@ -300,6 +316,13 @@ def _handle_get_work_diag(handler, parsed, query) -> bool:
                                                                cwd=str(_wq_project())))
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
+    if parsed.path == "/api/work/signal":
+        try:
+            from urirun_connector_signal import core as _sig  # signal:// outbox (mock gdy brak signal-cli)
+            _json_response(handler, 200, _sig.messages_query_list())
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc), "messages": []})
         return True
     if parsed.path == "/api/work/actions":
         from .work_api import catalog  # samodokumentujące API całej strony /work
