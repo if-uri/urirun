@@ -86,6 +86,61 @@ Panel `/work` + connectory URI-native (wszystkie editable, testy zielone):
 w standardzie URI-procesu i `acceptance_criteria` na ticketach**. To jest korzeń „dlaczego
 nadal nie działa w pełni autonomicznie".
 
+## Standard CECH/RELACJI (język formalny — nie hardkod)
+
+Proces URI to **RELACJA** między stanem-przed a stanem-po, opisana **CECHAMI (właściwościami)**,
+nie konkretnym obiektem. Dwie symetryczne cechy są deklaratywne i technika-agnostyczne:
+
+- **`verify` / postcondition** = asercja, że cechy stanu-PO zachodzą (czy cel osiągnięty).
+- **`inverse`** = odtworzenie cech stanu-PRZED — **dowolną strategią** (technika to szczegół).
+
+Kluczowa zasada (operatora): *jeśli umiemy odtworzyć CECHY relacji, konkretny obiekt przestaje
+mieć znaczenie — inverse dotyczy cech, a cechy odtwarzamy dowolnym sposobem* (delete; delete+
+create-korekta = kompensacja; move-back; git-revert; restore-from-backup). Dlatego „wysłano
+wiadomość" jest odwracalne (odtwórz cechę `msg.visible=false` przez delete-for-everyone), a
+autonomia ma szeroki zakres — nieodwracalne są tylko efekty, których CECH nie da się odtworzyć
+(płatność sfinalizowana, expunge bez backupu).
+
+**Deklaracja (jedno źródło prawdy):** connector deklaruje cechy w `meta` handlera — NIE ma
+centralnej mapy słów kluczowych. Rozbudowa = deklaracja w connectorze, nie edycja `safe://`:
+
+```python
+@conn.handler("message/command/move", meta={
+    "reversible": True,
+    "inverse": [{"technique": "move-back", "feature": "message.folder",
+                 "how": "odtwórz cechę 'folder' — przenieś z powrotem"}]})
+# delete: meta={"reversible": False, "reason": "expunge trwały — cechy 'exists' nie odtworzymy"}
+```
+
+`safe://` i `verify://` CZYTAJĄ te deklaracje (per-trasa: move≠delete), zamiast zgadywać.
+
+## Skala i pamięć: PRZEPIS ważniejszy niż DANE
+
+Reverse+verify potrzebują stanu-przed/po. Kopiowanie gigabajtów jest niemożliwe (pamięć).
+Rozwiązanie z modelu cech: **nie przechowuj OBIEKTÓW — przechowuj MAPĘ CECH (odciski) i REFERENCJE**
+(`envmap://`): GB danych = KB hashy (Merkle), duże pliki próbkowane (head+tail), snapshot = git-commit
+(0 kopii), inverse = przywróć TYLKO deltę (diff), verify = porównaj root-hashe.
+
+Głębsza zasada (operatora): **wiedza JAK odzyskać dane jest ważniejsza/równoważna niż zapisane dane.**
+Jeśli znasz odtwarzalną PROCEDURĘ (deterministyczny przepis), stan = *derivation recipe*, nie kopia:
+- **recovery = replay przepisu** (jak Nix/Bazel/Make: przechowuj JAK zbudować, regeneruj na żądanie),
+- inverse = re-run procedury odzysku (proces, nie kopia) — [[skill-session-uri-surfaces]] `skill://`
+  (episode→replayable flow), provenance envelope (jak powstało), reversible-process engine,
+- to skaluje bez limitu pamięci: przepis to kilobajty, nie gigabajty.
+
+Formalnie: `envmap://snapshot` zwraca **recovery-knowledge** (referencja+komenda `git reset` albo
+`skill://` przepis), nie dane. Stan = {fingerprint (do verify) + recipe/referencja (do recovery)}.
+
+## Silnik ZAUFANIA (`safe://`) — kiedy autonomia bez pytania o zgodę
+
+Brama „człowiek zatwierdza" to proxy dla „nie wiemy, czy bezpieczne". `safe://action/query/assess`
+liczy werdykt z mierzalnych cech: **izolacja** (worktree, blast radius=0) + **odwracalność**
+(deklarowany inverse — cechy odtwarzalne) + **weryfikowalność** (`verify://`) + **twin środowiska**
+(known-good?) + **twin zachowania** (mind). Reguła: **odwracalne + weryfikowalne + env known-good
+⇒ SAFE-AUTO** — działaj, a jeśli `verify` czerwony, wykonaj `inverse` (odtwórz cechy). Zwraca też
+**ranking STRATEGII wykonania** (autonomous-worktree → autonomous-inplace → dry-run-human →
+human-manual) i **strategii inverse** (fallback, gdy jedna technika zawiedzie).
+
 ## Następny krok
 
 Dodać `verify://` jako pierwszej klasy cechę procesu (symetryczną do `inverse`) + wymóg

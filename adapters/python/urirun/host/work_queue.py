@@ -289,6 +289,17 @@ def _log_age_seconds() -> float | None:
 _STALE_SECONDS = 1500   # ~25 min without a log tick while "running" → AT RISK
 
 
+def _loop_controller_active() -> bool:
+    """Czy loop:// jest zaplanowanym kontrolerem (cron woła /api/work/loop)?
+    Wtedy koru NIE jest kontrolerem — jego brak to stan zamierzony, nie awaria."""
+    import subprocess
+    try:
+        out = subprocess.run(["crontab", "-l"], capture_output=True, text=True, timeout=5).stdout
+        return any("work/loop" in ln and not ln.strip().startswith("#") for ln in out.splitlines())
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def work_status() -> dict[str, Any]:
     """The control-room verdict: is the autonomous loop actually continuing?
 
@@ -303,11 +314,16 @@ def work_status() -> dict[str, Any]:
     in_progress = [t for t in ts if t.get("status") in ("in_progress", "claimed")]
     age = _log_age_seconds()
     running = ku.get("running")
+    loop_ctrl = _loop_controller_active()
+    controller = "koru" if running else ("loop://" if loop_ctrl else None)
     queue_empty = not open_next and not in_progress
 
-    if not running:
-        cont, action = "STOPPED", ("koru autonomous up --project " + _project() +
-                                   " --ide claude --ticket-sources queue")
+    if not running and loop_ctrl:
+        # koru zatrzymany ZAMIERZONO — loop:// (cron) jest kontrolerem; NIE sugeruj restartu koru (odtworzyłby konflikt)
+        cont, action = ("AT_RISK" if queue_empty else "OK"), (
+            "kolejka pusta — inquiry/reflection utworzy następny ticket" if queue_empty else None)
+    elif not running:
+        cont, action = "STOPPED", "brak kontrolera — zaplanuj loop:// w cronie (*/10 /api/work/loop) lub uruchom cykl"
     elif queue_empty:
         cont, action = "AT_RISK", "queue empty — run inquiry/reflection to create the next ticket"
     elif age is not None and age > _STALE_SECONDS:
@@ -317,6 +333,7 @@ def work_status() -> dict[str, Any]:
 
     return {
         "continuity": cont,
+        "controller": controller,
         "koru": {**ku, "last_seen_seconds": round(age) if age is not None else None},
         "tickets": {"open": counts.get("open", 0), "in_progress": counts.get("in_progress", 0)
                     + counts.get("claimed", 0), "blocked": counts.get("blocked", 0)

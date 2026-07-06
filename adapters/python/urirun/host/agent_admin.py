@@ -71,7 +71,7 @@ def _running_agents() -> list[dict]:
     return [r for r in list_runs(tail_lines=1) if r.get("running") and "agent://" in (r.get("uri") or "")]
 
 
-def run_ticket(project, ticket_id: str, agent: str = "claude") -> dict[str, Any]:
+def run_ticket(project, ticket_id: str, agent: str = "claude", _autonomous: bool | None = None) -> dict[str, Any]:
     """Wykonaj ticket realnym agentem headless; bieg przez work_runs (widoczny w Runs).
 
     BLOKADA WSPÓŁBIEŻNOŚCI: wiele agentów na jednym repo koliduje (równoległe edycje/git).
@@ -98,7 +98,8 @@ def run_ticket(project, ticket_id: str, agent: str = "claude") -> dict[str, Any]
     # AUTO-WRITE (gap C): domyślnie claude -p PYTA o zgodę (planuje, nie stosuje). Z
     # URIRUN_AGENT_AUTONOMOUS=1 agent ZAPISUJE bez pytania — pełna autonomia, ale niebezpieczne
     # (agent może zrobić wszystko); produkcyjnie tylko w izolowanym worktree.
-    autonomous = str(os.environ.get("URIRUN_AGENT_AUTONOMOUS", "")).strip().lower() in ("1", "true", "yes", "on")
+    autonomous = _autonomous if _autonomous is not None else \
+        str(os.environ.get("URIRUN_AGENT_AUTONOMOUS", "")).strip().lower() in ("1", "true", "yes", "on")
     if agent in ("claude", "auto"):
         cmd = f"{shlex.quote(binp)} -p {shlex.quote(prompt)}"
         if autonomous:
@@ -113,5 +114,7 @@ def run_ticket(project, ticket_id: str, agent: str = "claude") -> dict[str, Any]
 def action(project, payload: dict) -> dict[str, Any]:
     act = str((payload or {}).get("action") or "").strip()
     if act == "run-ticket":
-        return run_ticket(project, str(payload.get("id") or ""), str(payload.get("agent") or "claude"))
+        auto = payload.get("autonomous")
+        return run_ticket(project, str(payload.get("id") or ""), str(payload.get("agent") or "claude"),
+                          _autonomous=bool(auto) if auto is not None else None)
     return {"ok": False, "error": f"unknown action {act!r}"}

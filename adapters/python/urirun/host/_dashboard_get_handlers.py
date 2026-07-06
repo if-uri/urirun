@@ -277,6 +277,32 @@ def _handle_get_work_cron(handler, parsed, query) -> bool:
     return _handle_get_work_diag(handler, parsed, query)
 
 
+def _handle_get_work_where(handler, parsed) -> bool:
+    """where:// (gdzie jestem) + registry (cross-node registry URI-procesów dla grounded orchestration)."""
+    if parsed.path == "/api/work/registry":
+        from . import registry_llm
+        need = (parse_qs(parsed.query).get("need") or [""])[0]
+        _json_response(handler, 200, registry_llm.find(need) if need else registry_llm.gather())
+        return True
+    from . import where_admin
+    if parsed.path == "/api/work/where":
+        node = (parse_qs(parsed.query).get("node") or ["laptop"])[0]
+        _json_response(handler, 200, where_admin.where_am_i(node))
+        return True
+    path = (parse_qs(parsed.query).get("path") or [""])[0]
+    got = where_admin.shot_bytes(path)
+    if not got:
+        _json_response(handler, 404, {"ok": False, "error": "shot not found"})
+        return True
+    data, ctype = got
+    handler.send_response(200)
+    handler.send_header("Content-Type", ctype)
+    handler.send_header("Content-Length", str(len(data)))
+    handler.end_headers()
+    handler.wfile.write(data)
+    return True
+
+
 def _handle_get_work_diag(handler, parsed, query) -> bool:
     """Warstwa diagnostyczno-autonomiczna: luki (gap://), pętla korekcyjna (loop://), executor
     (agent://) i samodokumentujące API. Wydzielone, by trzymać dispatcher pod bramką CC."""
@@ -317,6 +343,8 @@ def _handle_get_work_diag(handler, parsed, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
+    if parsed.path in ("/api/work/where", "/api/work/where/shot", "/api/work/registry"):
+        return _handle_get_work_where(handler, parsed)
     if parsed.path == "/api/work/signal":
         try:
             from urirun_connector_signal import core as _sig  # signal:// outbox (mock gdy brak signal-cli)
