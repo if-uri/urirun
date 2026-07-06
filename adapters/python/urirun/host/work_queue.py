@@ -138,8 +138,9 @@ def queue_state() -> dict[str, Any]:
     return {"koru": koru_status(), "tickets": ts, "counts": counts, "total": len(ts)}
 
 
-def ticket_edit_full(ticket_id: str, *, name: str = "", description: str = "",
-                     llm: Any = None, node: Any = None, allow: Any = None, deny: Any = None) -> dict[str, Any]:
+def ticket_edit_full(ticket_id: str, *, name: str = "", description: str = "", llm: Any = None,
+                     node: Any = None, allow: Any = None, deny: Any = None,
+                     schedule: Any = None) -> dict[str, Any]:
     """Edit a not-done ticket: name/description go to planfile; LLM/node/allow/deny to the
     side-store. Any subset may be given. Returns an envelope; never raises."""
     tid = str(ticket_id or "").strip()
@@ -161,7 +162,7 @@ def ticket_edit_full(ticket_id: str, *, name: str = "", description: str = "",
             return {"ok": False, "error": str(exc)}
     try:
         from . import ticket_meta
-        entry = ticket_meta.edit_meta(tid, llm=llm, node=node, allow=allow, deny=deny)
+        entry = ticket_meta.edit_meta(tid, llm=llm, node=node, allow=allow, deny=deny, schedule=schedule)
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc)}
     return {"ok": True, "ticket": tid, "meta": entry}
