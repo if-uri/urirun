@@ -65,10 +65,11 @@ def add_ops(items: list[dict]) -> dict[str, Any]:
         if key in seen or not it.get("cmd"):
             continue
         seen.add(key)
-        ops.append({"id": f"op-{int(time.time() * 1000)}-{added}", "uri": it.get("uri") or "",
+        now = time.time()
+        ops.append({"id": f"op-{int(now * 1000)}-{added}", "uri": it.get("uri") or "",
                     "title": it.get("title") or "", "desc": it.get("desc") or "",
                     "cmd": it.get("cmd"), "status": "pending", "run": None,
-                    "created": time.time()})
+                    "created": now, "updated": now})
         added += 1
     _save(ops)
     return {"ok": True, "added": added, "total": len(ops)}
@@ -82,22 +83,23 @@ def _runs_by_id() -> dict:
         return {}
 
 
-def _reflect(op: dict, runs: dict) -> dict:
-    """A confirmed op mirrors its run: running / exit 0 → done / else failed."""
-    r = runs.get(op.get("run"))
-    if op.get("status") == "running" and r is not None:
-        if r.get("running"):
-            return op
-        op = {**op, "status": "done" if r.get("exit") == 0 else "failed"}
-    return op
-
-
 def list_ops() -> list[dict]:
-    """The confirm queue, pending first, each confirmed op reflecting its run outcome."""
+    """The confirm queue, pending first. A running op whose run has finished is transitioned
+    to done/failed AND stamped ``updated`` here, so the panel shows when it last changed."""
     runs = _runs_by_id()
-    ops = [_reflect(o, runs) for o in _load()]
+    ops = _load()
+    changed = False
+    for o in ops:
+        if o.get("status") == "running":
+            r = runs.get(o.get("run"))
+            if r is not None and not r.get("running"):
+                o["status"] = "done" if r.get("exit") == 0 else "failed"
+                o["updated"] = time.time()
+                changed = True
+    if changed:
+        _save(ops)
     order = {"pending": 0, "running": 1, "failed": 2, "done": 3, "rejected": 4}
-    ops.sort(key=lambda o: (order.get(o.get("status"), 5), -(o.get("created") or 0)))
+    ops.sort(key=lambda o: (order.get(o.get("status"), 5), -(o.get("updated") or o.get("created") or 0)))
     return ops
 
 
@@ -106,7 +108,7 @@ def _set_status(op_id: str, **changes: Any) -> dict | None:
     hit = None
     for o in ops:
         if o.get("id") == op_id:
-            o.update(changes)
+            o.update(changes, updated=time.time())  # every status change is time-stamped
             hit = o
     if hit is not None:
         _save(ops)

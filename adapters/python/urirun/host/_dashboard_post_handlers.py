@@ -446,29 +446,41 @@ def _handle_post_work(handler, parsed, project) -> bool:
     return False
 
 
+def _work_console_ops(project, path, body) -> dict:
+    from .work_console import confirm_op, reject_op
+    op_id = str(body.get("id") or "").strip()
+    return confirm_op(project, op_id) if path.endswith("confirm") else reject_op(op_id)
+
+
+def _work_console_shell(project, path, body) -> dict:
+    from .work_console import run_shell
+    return run_shell(project, str(body.get("cmd") or ""))
+
+
+def _work_console_ticket(project, path, body) -> dict:
+    from .work_queue import ticket_action
+    return ticket_action(str(body.get("id") or ""), str(body.get("action") or ""),
+                         str(body.get("note") or ""))
+
+
+_WORK_CONSOLE_ROUTES = {
+    "/api/work/ops/confirm": _work_console_ops, "/api/work/ops/reject": _work_console_ops,
+    "/api/work/shell": _work_console_shell, "/api/work/ticket": _work_console_ticket,
+}
+
+
 def _handle_post_work_console(handler, parsed, project) -> bool:
-    """Operator-console POST surfaces: confirm/reject a proposed operation, or run a shell
-    command. Split out of _handle_post_work to keep the dispatcher under the CC gate."""
-    if parsed.path in ("/api/work/ops/confirm", "/api/work/ops/reject"):
-        body = _read_json(handler) or {}
-        from .work_console import confirm_op, reject_op
-        op_id = str(body.get("id") or "").strip()
-        try:
-            result = (confirm_op(project, op_id) if parsed.path.endswith("confirm")
-                      else reject_op(op_id))
-            _json_response(handler, 200, result)
-        except Exception as exc:  # noqa: BLE001
-            _json_response(handler, 200, {"ok": False, "error": str(exc)})
-        return True
-    if parsed.path == "/api/work/shell":
-        body = _read_json(handler) or {}
-        from .work_console import run_shell
-        try:
-            _json_response(handler, 200, run_shell(project, str(body.get("cmd") or "")))
-        except Exception as exc:  # noqa: BLE001
-            _json_response(handler, 200, {"ok": False, "error": str(exc)})
-        return True
-    return False
+    """Operator-console POST surfaces (confirm/reject an operation, run a shell command, act on a
+    ticket). Dispatch table keeps this under the CC gate; each handler returns an envelope."""
+    fn = _WORK_CONSOLE_ROUTES.get(parsed.path)
+    if fn is None:
+        return False
+    body = _read_json(handler) or {}
+    try:
+        _json_response(handler, 200, fn(project, parsed.path, body))
+    except Exception as exc:  # noqa: BLE001
+        _json_response(handler, 200, {"ok": False, "error": str(exc)})
+    return True
 
 
 def _handle_post(handler, parsed, parts, project, db, config, node_urls, token, identity):

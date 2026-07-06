@@ -75,10 +75,27 @@ def tickets(limit: int = 40) -> list[dict[str, Any]]:
         rows.append({"id": t.get("id"), "name": t.get("name"), "status": t.get("status"),
                      "priority": t.get("priority"),
                      "source": src.get("tool") if isinstance(src, dict) else src,
-                     "labels": t.get("labels") or t.get("label")})
+                     "labels": t.get("labels") or t.get("label"),
+                     "updated": t.get("updated_at") or t.get("updatedAt")})
     order = {"in_progress": 0, "claimed": 1, "waiting_input": 2, "open": 3, "done": 4, "blocked": 2}
     rows.sort(key=lambda r: order.get(r.get("status"), 5))
     return rows
+
+
+def _ticket_cmds(pf: str, tid: str, act: str, note: str) -> tuple[list[list[str]] | None, str]:
+    """Map a panel action to planfile CLI invocations (note first, then the status change)."""
+    cmds: list[list[str]] = []
+    if note:
+        cmds.append([pf, "ticket", "update", tid, "--note", str(note)])
+    if act == "unblock":
+        cmds.append([pf, "ticket", "update", tid, "--status", "open"])
+    elif act in ("ready", "done", "start", "block", "claim"):
+        cmds.append([pf, "ticket", act, tid])
+    elif act and act != "note":
+        return None, f"unknown action {act!r}"
+    if not cmds:
+        return None, "nothing to do (give an action or a note)"
+    return cmds, ""
 
 
 def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str, Any]:
@@ -93,20 +110,11 @@ def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str,
     tid = str(ticket_id or "").strip()
     if not tid:
         return {"ok": False, "error": "ticket id required"}
-    act = str(action or "").strip()
-    cmds: list[list[str]] = []
-    if note:
-        cmds.append([pf, "ticket", "update", tid, "--note", str(note)])
-    if act == "unblock":
-        cmds.append([pf, "ticket", "update", tid, "--status", "open"])
-    elif act in ("ready", "done", "start", "block", "claim"):
-        cmds.append([pf, "ticket", act, tid])
-    elif act and act != "note":
-        return {"ok": False, "error": f"unknown action {act!r}"}
-    if not cmds:
-        return {"ok": False, "error": "nothing to do (give an action or a note)"}
+    cmds, err = _ticket_cmds(pf, tid, str(action or "").strip(), note)
+    if err:
+        return {"ok": False, "error": err}
     ran = []
-    for c in cmds:
+    for c in cmds or []:
         try:
             cp = subprocess.run(c, capture_output=True, text=True, timeout=20, cwd=_project())
         except Exception as exc:  # noqa: BLE001
@@ -114,7 +122,7 @@ def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str,
         ran.append({"cmd": " ".join(c[3:]), "rc": cp.returncode})
         if cp.returncode != 0:
             return {"ok": False, "error": (cp.stderr or cp.stdout or "planfile error").strip()[-200:], "ran": ran}
-    return {"ok": True, "ticket": tid, "action": act or "note", "ran": ran}
+    return {"ok": True, "ticket": tid, "action": (action or "note"), "ran": ran}
 
 
 def queue_state() -> dict[str, Any]:
