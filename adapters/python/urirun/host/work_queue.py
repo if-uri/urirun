@@ -81,6 +81,42 @@ def tickets(limit: int = 40) -> list[dict[str, Any]]:
     return rows
 
 
+def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str, Any]:
+    """React to a queue ticket from the /work panel: change its status and/or append a note.
+
+    The human seam for BLOCKED tickets (e.g. one waiting on credentials): once the input is
+    provided out-of-band, ``unblock`` reopens it so koru retries; ``ready`` marks it recovered;
+    ``note`` records context. Maps to the planfile CLI; never raises, returns an envelope."""
+    pf = _planfile()
+    if not pf:
+        return {"ok": False, "error": "planfile not found (install planfile or set URIRUN_PLANFILE_BIN)"}
+    tid = str(ticket_id or "").strip()
+    if not tid:
+        return {"ok": False, "error": "ticket id required"}
+    act = str(action or "").strip()
+    cmds: list[list[str]] = []
+    if note:
+        cmds.append([pf, "ticket", "update", tid, "--note", str(note)])
+    if act == "unblock":
+        cmds.append([pf, "ticket", "update", tid, "--status", "open"])
+    elif act in ("ready", "done", "start", "block", "claim"):
+        cmds.append([pf, "ticket", act, tid])
+    elif act and act != "note":
+        return {"ok": False, "error": f"unknown action {act!r}"}
+    if not cmds:
+        return {"ok": False, "error": "nothing to do (give an action or a note)"}
+    ran = []
+    for c in cmds:
+        try:
+            cp = subprocess.run(c, capture_output=True, text=True, timeout=20, cwd=_project())
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc), "ran": ran}
+        ran.append({"cmd": " ".join(c[3:]), "rc": cp.returncode})
+        if cp.returncode != 0:
+            return {"ok": False, "error": (cp.stderr or cp.stdout or "planfile error").strip()[-200:], "ran": ran}
+    return {"ok": True, "ticket": tid, "action": act or "note", "ran": ran}
+
+
 def queue_state() -> dict[str, Any]:
     ts = tickets()
     counts: dict[str, int] = {}
