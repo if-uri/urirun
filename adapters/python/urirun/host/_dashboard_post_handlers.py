@@ -486,6 +486,39 @@ def _work_console_agents(project, path, body) -> dict:
     return agent_admin.action(project, body)
 
 
+def _work_console_task_new(project, path, body) -> dict:
+    """Człowiek dodaje zadanie z panelu: nazwa/opis/node/priorytet + acceptance_criteria."""
+    from .work_queue import create_ticket
+    b = body or {}
+    return create_ticket(name=str(b.get("name") or ""), description=str(b.get("description") or ""),
+                         priority=str(b.get("priority") or "normal"), node=str(b.get("node") or ""),
+                         labels=b.get("labels"), criteria=b.get("criteria"))
+
+
+def _work_console_verify(project, path, body) -> dict:
+    """verify:// — seed/uruchom acceptance_criteria (done-validation) ticketu."""
+    from .work_queue import _project
+    try:
+        from urirun_connector_verify import core as _vf
+    except ImportError:
+        return {"ok": False, "error": "install urirun-connector-verify"}
+    b = body or {}
+    if str(b.get("action")) == "seed":
+        return _vf.ticket_command_seed(id=str(b.get("id") or ""), checks=b.get("checks"))
+    return _vf.ticket_query_check(id=str(b.get("id") or ""), checks=b.get("checks"), cwd=str(_project()))
+
+
+def _work_console_loop(project, path, body) -> dict:
+    """Uruchom cykl pętli korekcyjnej. apply=True stosuje SAFE akcje; auto_agent=True odblokowuje run-agent."""
+    from .work_queue import _project
+    try:
+        from urirun_connector_loop import core as _loop
+    except ImportError:
+        return {"ok": False, "error": "install urirun-connector-loop"}
+    return _loop.cycle_command_run(project=_project(), apply=bool((body or {}).get("apply")),
+                                   auto_agent=bool((body or {}).get("auto_agent")))
+
+
 def _work_console_action(project, path, body) -> dict:
     """Unijny dispatcher: {op, ...params} → właściwy handler POST (sterowanie całą stroną przez 1 endpoint)."""
     from .work_api import op_path
@@ -506,7 +539,8 @@ _WORK_CONSOLE_ROUTES = {
     "/api/work/shell": _work_console_shell, "/api/work/ticket": _work_console_ticket,
     "/api/work/ticket/edit": _work_console_ticket_edit, "/api/work/cron": _work_console_cron,
     "/api/work/watchdog": _work_console_watchdog, "/api/work/agents": _work_console_agents,
-    "/api/work/action": _work_console_action,
+    "/api/work/loop": _work_console_loop, "/api/work/verify": _work_console_verify,
+    "/api/work/task/new": _work_console_task_new, "/api/work/action": _work_console_action,
 }
 
 

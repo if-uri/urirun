@@ -125,6 +125,65 @@ def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str,
     return {"ok": True, "ticket": tid, "action": (action or "note"), "ran": ran}
 
 
+def _parse_criteria(text: Any) -> list[dict]:
+    """Kryteria z formularza: linia 'label :: cmd' (cmd opcjonalny) → check verify://."""
+    if isinstance(text, list):
+        return [c for c in text if isinstance(c, dict)]
+    checks = []
+    for line in str(text or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if "::" in line:
+            lbl, cmd = line.split("::", 1)
+            checks.append({"label": lbl.strip(), "cmd": cmd.strip()})
+        else:
+            checks.append({"label": line})  # Definition of Done bez cmd (jeszcze niesprawdzalny)
+    return checks
+
+
+def create_ticket(name: str, description: str = "", priority: str = "normal", node: str = "",
+                  labels: Any = None, criteria: Any = None) -> dict[str, Any]:
+    """Człowiek dodaje zadanie z panelu: planfile create + node (meta) + acceptance_criteria (verify)."""
+    name = str(name or "").strip()
+    if not name:
+        return {"ok": False, "error": "nazwa zadania wymagana"}
+    pf = _planfile()
+    if not pf:
+        return {"ok": False, "error": "planfile niedostępny"}
+    cmd = [pf, "ticket", "create", name, "-p", str(priority or "normal"), "--source", "human"]
+    for lab in (labels or []):
+        cmd += ["-l", str(lab)]
+    if description:
+        cmd += ["-d", str(description)]
+    try:
+        cp = subprocess.run(cmd, capture_output=True, text=True, timeout=20, cwd=_project())
+        if cp.returncode != 0:
+            return {"ok": False, "error": (cp.stderr or cp.stdout or "create failed").strip()[-200:]}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    import re
+    m = re.search(r"[A-Z]+-\d+", cp.stdout or "")
+    tid = m.group(0) if m else ""
+    if tid and node:
+        try:
+            from . import ticket_meta
+            ticket_meta.edit_meta(tid, node=str(node))
+        except Exception:  # noqa: BLE001
+            pass
+    checks = _parse_criteria(criteria)
+    seeded = 0
+    if tid and checks:
+        try:
+            from urirun_connector_verify import core as vf
+            vf.ticket_command_seed(id=tid, checks=checks)
+            seeded = len(checks)
+        except Exception:  # noqa: BLE001
+            pass
+    return {"ok": True, "id": tid, "node": node, "criteria": seeded,
+            "verifiable": seeded > 0}
+
+
 def queue_state() -> dict[str, Any]:
     ts = tickets()
     counts: dict[str, int] = {}

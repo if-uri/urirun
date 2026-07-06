@@ -25,6 +25,10 @@ _CATALOG: list[dict[str, Any]] = [
     {"method": "GET", "path": f"{_BASE}/cron/export", "params": {"fmt": "ics|gcsv", "id": "str", "mode": "rrule|events"}, "desc": "Eksport harmonogramu (.ics / Google CSV)"},
     {"method": "GET", "path": f"{_BASE}/watchdog", "params": {}, "desc": "Wykryte zapętlenia + rootcause + dead_loop/cycles"},
     {"method": "GET", "path": f"{_BASE}/agents", "params": {}, "desc": "Dostępne narzędzia AI (executor agent://)"},
+    {"method": "GET", "path": f"{_BASE}/gaps", "params": {}, "desc": "gap:// — jawne luki per-ticket + systemowe"},
+    {"method": "GET", "path": f"{_BASE}/loop", "params": {}, "desc": "loop:// — plan pętli korekcyjnej (dry-run)"},
+    {"method": "GET", "path": f"{_BASE}/actions", "params": {}, "desc": "Ten katalog API"},
+    {"method": "POST", "path": f"{_BASE}/loop", "params": {"apply": "bool", "auto_agent": "bool"}, "desc": "Uruchom cykl pętli korekcyjnej (SAFE auto; run-agent za auto_agent)"},
     {"method": "POST", "path": f"{_BASE}/ops/confirm", "params": {"id": "str"}, "desc": "Zatwierdź operację → uruchom (Runs)"},
     {"method": "POST", "path": f"{_BASE}/ops/reject", "params": {"id": "str"}, "desc": "Odrzuć operację"},
     {"method": "POST", "path": f"{_BASE}/shell", "params": {"cmd": "str"}, "desc": "Konsola shell (gated URIRUN_WORK_SHELL)"},
@@ -42,7 +46,7 @@ _OPS = {
     "shell": ("POST", f"{_BASE}/shell"), "ticket": ("POST", f"{_BASE}/ticket"),
     "ticket.edit": ("POST", f"{_BASE}/ticket/edit"), "cron": ("POST", f"{_BASE}/cron"),
     "watchdog": ("POST", f"{_BASE}/watchdog"), "agents": ("POST", f"{_BASE}/agents"),
-    "koru": ("POST", f"{_BASE}/koru"),
+    "loop": ("POST", f"{_BASE}/loop"), "koru": ("POST", f"{_BASE}/koru"),
 }
 
 

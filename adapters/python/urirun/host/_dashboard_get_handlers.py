@@ -266,9 +266,40 @@ def _handle_get_work_cron(handler, parsed, query) -> bool:
         from . import watchdog_admin  # watch:// bridge: wykryte zapętlenia + rootcause
         _json_response(handler, 200, watchdog_admin.detect())
         return True
+    return _handle_get_work_diag(handler, parsed, query)
+
+
+def _handle_get_work_diag(handler, parsed, query) -> bool:
+    """Warstwa diagnostyczno-autonomiczna: luki (gap://), pętla korekcyjna (loop://), executor
+    (agent://) i samodokumentujące API. Wydzielone, by trzymać dispatcher pod bramką CC."""
+    if parsed.path == "/api/work/gaps":
+        from .work_queue import _project as _wq_project  # gap:// — jawne luki per-ticket + systemowe
+        try:
+            from urirun_connector_continuity import core as _gap
+            _json_response(handler, 200, {"ok": True, **_gap.scan(_wq_project())})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc), "tickets": []})
+        return True
+    if parsed.path == "/api/work/loop":
+        from .work_queue import _project as _wq_project  # loop:// — plan pętli korekcyjnej (dry-run)
+        try:
+            from urirun_connector_loop import core as _loop
+            _json_response(handler, 200, {"ok": True, **_loop.plan(_wq_project())})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc), "actions": []})
+        return True
     if parsed.path == "/api/work/agents":
         from . import agent_admin  # agent:// bridge: dostępne narzędzia AI (executor)
         _json_response(handler, 200, agent_admin.tools())
+        return True
+    if parsed.path == "/api/work/verify":
+        from .work_queue import _project as _wq_project  # verify:// — done-validation postcondition
+        try:
+            from urirun_connector_verify import core as _vf
+            _json_response(handler, 200, _vf.ticket_query_check(id=_first(query, "id", "") or "",
+                                                               cwd=str(_wq_project())))
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
     if parsed.path == "/api/work/actions":
         from .work_api import catalog  # samodokumentujące API całej strony /work
