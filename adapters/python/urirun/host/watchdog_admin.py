@@ -40,7 +40,9 @@ def detect() -> dict[str, Any]:
         stuck.append({"id": cl["id"], "category": cl["verdict"], "rootcause": cl["why"],
                       "action": "in_progress bez pokrycia — oznacz blocked + eskaluj albo wznów realnie",
                       "streak": ev.get("streak", 0), "drive_failed": ev.get("drive_failed", 0)})
-    return {"ok": True, "stuck": stuck, "count": len(stuck), "claims": v.get("claims", []), "project": _project()}
+    return {"ok": True, "stuck": stuck, "count": len(stuck),
+            "dead_loops": sum(1 for t in stuck if t.get("dead_loop")),
+            "claims": v.get("claims", []), "project": _project()}
 
 
 def action(payload: dict) -> dict[str, Any]:

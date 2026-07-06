@@ -486,11 +486,27 @@ def _work_console_agents(project, path, body) -> dict:
     return agent_admin.action(project, body)
 
 
+def _work_console_action(project, path, body) -> dict:
+    """Unijny dispatcher: {op, ...params} → właściwy handler POST (sterowanie całą stroną przez 1 endpoint)."""
+    from .work_api import op_path
+    op = str((body or {}).get("op") or "").strip()
+    target = op_path(op)
+    inner = {k: v for k, v in (body or {}).items() if k != "op"}
+    if op == "koru":
+        from .work_queue import ensure_running
+        return ensure_running(lane=str(inner.get("lane") or "queue"))
+    fn = _WORK_CONSOLE_ROUTES.get(target) if target else None
+    if not fn:
+        return {"ok": False, "error": f"unknown op {op!r}"}
+    return fn(project, target, inner)
+
+
 _WORK_CONSOLE_ROUTES = {
     "/api/work/ops/confirm": _work_console_ops, "/api/work/ops/reject": _work_console_ops,
     "/api/work/shell": _work_console_shell, "/api/work/ticket": _work_console_ticket,
     "/api/work/ticket/edit": _work_console_ticket_edit, "/api/work/cron": _work_console_cron,
     "/api/work/watchdog": _work_console_watchdog, "/api/work/agents": _work_console_agents,
+    "/api/work/action": _work_console_action,
 }
 
 
