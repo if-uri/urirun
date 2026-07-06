@@ -270,6 +270,10 @@ def _handle_get_work_cron(handler, parsed, query) -> bool:
         from . import agent_admin  # agent:// bridge: dostępne narzędzia AI (executor)
         _json_response(handler, 200, agent_admin.tools())
         return True
+    if parsed.path == "/api/work/actions":
+        from .work_api import catalog  # samodokumentujące API całej strony /work
+        _json_response(handler, 200, catalog())
+        return True
     return False
 
 
