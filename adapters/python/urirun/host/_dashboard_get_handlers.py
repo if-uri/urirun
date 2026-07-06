@@ -319,6 +319,20 @@ def _handle_get_work_where(handler, parsed) -> bool:
     return True
 
 
+def _loop_plan_grounded() -> dict:
+    """Plan pętli korekcyjnej + RELACYJNY GROUNDING (triple) per decyzja — nie płaska lista."""
+    from .work_queue import _project as _wq_project
+    try:
+        from urirun_connector_loop import core as _loop
+        from . import meta_graph
+        plan = _loop.plan(_wq_project())
+        for a in plan.get("actions", []):
+            a["grounding"] = meta_graph.grounding_for(a.get("ticket", ""))
+        return {"ok": True, **plan}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "actions": []}
+
+
 def _handle_get_work_diag(handler, parsed, query) -> bool:
     """Warstwa diagnostyczno-autonomiczna: luki (gap://), pętla korekcyjna (loop://), executor
     (agent://) i samodokumentujące API. Wydzielone, by trzymać dispatcher pod bramką CC."""
@@ -331,12 +345,7 @@ def _handle_get_work_diag(handler, parsed, query) -> bool:
             _json_response(handler, 200, {"ok": False, "error": str(exc), "tickets": []})
         return True
     if parsed.path == "/api/work/loop":
-        from .work_queue import _project as _wq_project  # loop:// — plan pętli korekcyjnej (dry-run)
-        try:
-            from urirun_connector_loop import core as _loop
-            _json_response(handler, 200, {"ok": True, **_loop.plan(_wq_project())})
-        except Exception as exc:  # noqa: BLE001
-            _json_response(handler, 200, {"ok": False, "error": str(exc), "actions": []})
+        _json_response(handler, 200, _loop_plan_grounded())
         return True
     if parsed.path == "/api/work/agents":
         from . import agent_admin  # agent:// bridge: dostępne narzędzia AI (executor)

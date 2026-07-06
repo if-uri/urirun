@@ -55,6 +55,18 @@ class PlanfileAdapterTests(unittest.TestCase):
             self.assertEqual(completed["outputs"]["result"], {"ok": True})
             self.assertIn("artifact://test/result", completed["outputs"]["artifacts"])
 
+    def test_block_ticket_clears_running_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ticket = planfile_adapter.create_ticket(tmp, {"name": "Needs operator"})
+            planfile_adapter.start_ticket(tmp, ticket["id"], assigned_to="host")
+
+            blocked = planfile_adapter.block_ticket(tmp, ticket["id"], reason="signal-cli link required")
+
+            self.assertEqual(blocked["status"], "blocked")
+            self.assertEqual(blocked["execution"]["state"], "blocked")
+            self.assertIsNone(blocked["execution"].get("assigned_to"))
+            self.assertIsNotNone(blocked["execution"].get("finished_at"))
+
     def test_dsl_create_ticket(self):
         with tempfile.TemporaryDirectory() as tmp:
             result = planfile_adapter.run_dsl(tmp, 'create ticket "Check ifuri" priority=high labels=daily,domain')

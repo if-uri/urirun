@@ -140,6 +140,7 @@ import re as _re
 
 _KLINE = _re.compile(r"^\[(\d\d:\d\d:\d\d)\]\s*koru\s*[^\s]?\s*([A-Z]+):\s*(.*)$")
 _BACKTICK = _re.compile(r"`([^`]+)`")
+_KORU_LOG_STALE_SECONDS = 1500  # koru cycles can sleep 900s; stale after ~25 min without a heartbeat.
 
 
 def _utc_to_local(hhmmss: str) -> str:
@@ -203,18 +204,94 @@ def _coalesce(rows: list[dict]) -> list[dict]:
     return [seen[k] for k in order]
 
 
+def _local_ts(ts: float | None = None) -> str:
+    try:
+        return _dt.datetime.fromtimestamp(ts or time.time()).astimezone().isoformat(timespec="seconds")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _short_age(seconds: float | None) -> str:
+    if seconds is None:
+        return "?"
+    if seconds < 120:
+        return f"{int(seconds)}s"
+    if seconds < 7200:
+        return f"{int(seconds // 60)}min"
+    return f"{seconds / 3600:.1f}h"
+
+
+def _control_row(text: str) -> dict:
+    now = _dt.datetime.now().strftime("%H:%M:%S")
+    return {"time": now, "type": "CTRL", "text": text[:240], "count": 1, "first": now, "last": now}
+
+
 def koru_log_tail(limit: int = 200) -> dict:
-    """Ostatnie linie realnego logu koru (komendy URI, decyzje), z powtórkami zwiniętymi do ×N."""
+    """Ostatnie linie realnego logu koru, plus grounding źródła.
+
+    The UI used to show an old ``queue.log`` as if it was live.  Return freshness
+    and controller state with every poll so the panel can verify what it is
+    looking at instead of trusting a non-moving file.
+    """
     try:
         from . import ticket_meta
-        from .work_queue import _project
+        from .work_queue import _loop_controller_active, _project, koru_status
+        project = _project()
         log = ticket_meta.koru_log_path(_project())
+        ku = koru_status()
+        loop_controller = _loop_controller_active()
     except Exception:  # noqa: BLE001
-        return {"lines": [], "log": None}
+        return {"lines": [], "log": None, "source": None, "status": "unavailable", "live": False}
+
+    running = bool(ku.get("running"))
+    controller = "koru" if running else ("loop://" if loop_controller else None)
+    base: dict[str, Any] = {
+        "log": str(log) if log else None,
+        "source": str(log) if log else None,
+        "project": project,
+        "server_time": _local_ts(),
+        "controller": controller,
+        "koru_running": running,
+        "loop_controller": loop_controller,
+        "stale_after_seconds": _KORU_LOG_STALE_SECONDS,
+    }
     if not log:
-        return {"lines": [], "log": None}
+        text = f"brak queue.log/soak.log; aktywny kontroler: {controller or 'brak'}"
+        return {**base, "lines": [_control_row(text)], "status": "missing", "live": False,
+                "stale": False, "source_age_seconds": None, "source_mtime": None, "source_mtime_local": None}
+
+    source_age: float | None = None
+    source_mtime: float | None = None
+    try:
+        source_mtime = log.stat().st_mtime
+        source_age = max(0.0, time.time() - source_mtime)
+    except OSError:
+        pass
+    stale = source_age is not None and source_age > _KORU_LOG_STALE_SECONDS
+    live = running and not stale
+    status = "live" if live else ("stale" if stale else ("stopped" if not running else "idle"))
     rows = _coalesce([_koru_line(l) for l in ticket_meta._tail(log, int(limit))])
-    return {"lines": rows, "log": str(log)}
+    if not live:
+        if loop_controller and not running:
+            text = (f"queue.log nie jest aktywnym kontrolerem; ostatnia zmiana {_short_age(source_age)} temu; "
+                    "aktywny kontroler: loop:// (cron /api/work/loop)")
+        elif stale:
+            text = f"brak świeżego heartbeatu koru przez {_short_age(source_age)}; ostatnia zmiana: {_local_ts(source_mtime)}"
+        elif not running:
+            text = f"koru nie działa; ostatnia zmiana logu {_short_age(source_age)} temu; kontroler: {controller or 'brak'}"
+        else:
+            text = f"źródło logu: {log.name}; status: {status}"
+        rows.append(_control_row(text))
+    return {
+        **base,
+        "lines": rows,
+        "status": status,
+        "live": live,
+        "stale": stale,
+        "source_age_seconds": round(source_age) if source_age is not None else None,
+        "source_mtime": source_mtime,
+        "source_mtime_local": _local_ts(source_mtime) if source_mtime is not None else None,
+    }
 
 
 def uri_activity(limit: int = 40) -> list[dict]:
