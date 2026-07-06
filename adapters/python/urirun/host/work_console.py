@@ -135,10 +135,24 @@ def reject_op(op_id: str) -> dict[str, Any]:
 
 # ---------------------------------------------------------------- URI activity feed
 
+import datetime as _dt
 import re as _re
 
 _KLINE = _re.compile(r"^\[(\d\d:\d\d:\d\d)\]\s*koru\s*[^\s]?\s*([A-Z]+):\s*(.*)$")
 _BACKTICK = _re.compile(r"`([^`]+)`")
+
+
+def _utc_to_local(hhmmss: str) -> str:
+    """koru zapisuje log w UTC — konwertuj HH:MM:SS na czas lokalny operatora (widz nie liczy w głowie)."""
+    if not hhmmss:
+        return hhmmss
+    try:
+        h, m, s = (int(x) for x in hhmmss.split(":"))
+        today = _dt.datetime.now().date()
+        utc = _dt.datetime(today.year, today.month, today.day, h, m, s, tzinfo=_dt.timezone.utc)
+        return utc.astimezone().strftime("%H:%M:%S")
+    except Exception:  # noqa: BLE001
+        return hhmmss
 
 
 def _koru_line(ln: str) -> dict:
@@ -147,6 +161,7 @@ def _koru_line(ln: str) -> dict:
     if not m:
         return {"time": "", "type": "LOG", "text": ln.strip()[-240:]}
     t, typ, rest = m.groups()
+    t = _utc_to_local(t)
     text = rest
     if typ == "OBS":
         av = _re.search(r'argv_text="([^"]*)"', rest)
