@@ -284,6 +284,22 @@ def _handle_get_work_where(handler, parsed) -> bool:
         need = (parse_qs(parsed.query).get("need") or [""])[0]
         _json_response(handler, 200, registry_llm.find(need) if need else registry_llm.gather())
         return True
+    if parsed.path == "/api/work/meta":
+        from . import meta_graph  # wyższa warstwa: graf relacji ticketów + wniosków dla wnioskowania
+        q = parse_qs(parsed.query)
+        fmt = (q.get("format") or ["json"])[0]
+        if fmt in ("triples", "ttl"):  # widok dla LLM-planera (fakt-na-linię + legenda)
+            topic = (q.get("topic") or [""])[0]
+            txt = meta_graph.grounding_for(topic) if topic else meta_graph.to_llm(meta_graph.graph())
+            handler.send_response(200)
+            handler.send_header("Content-Type", "text/plain; charset=utf-8")
+            data = txt.encode("utf-8")
+            handler.send_header("Content-Length", str(len(data)))
+            handler.end_headers()
+            handler.wfile.write(data)
+            return True
+        _json_response(handler, 200, {"ok": True, **meta_graph.graph()})
+        return True
     from . import where_admin
     if parsed.path == "/api/work/where":
         node = (parse_qs(parsed.query).get("node") or ["laptop"])[0]
@@ -343,7 +359,7 @@ def _handle_get_work_diag(handler, parsed, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
-    if parsed.path in ("/api/work/where", "/api/work/where/shot", "/api/work/registry"):
+    if parsed.path in ("/api/work/where", "/api/work/where/shot", "/api/work/registry", "/api/work/meta"):
         return _handle_get_work_where(handler, parsed)
     if parsed.path == "/api/work/signal":
         try:

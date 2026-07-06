@@ -180,7 +180,12 @@ def task_action(project: str, ticket_id: str, action: str, payload: dict) -> dic
     elif action == "complete":
         ticket = planfile_adapter.complete_ticket(project, ticket_id, note=payload.get("note"), result=payload.get("result"), artifacts=payload.get("artifacts"))
     elif action == "block":
-        ticket = planfile_adapter.update_ticket(project, ticket_id, {"status": "blocked", "description": str(payload.get("reason") or "Blocked from dashboard")})
+        ticket = planfile_adapter.block_ticket(
+            project,
+            ticket_id,
+            reason=str(payload.get("reason") or "Blocked from dashboard"),
+            note=payload.get("note"),
+        )
     elif action == "ready":
         ticket = planfile_adapter.ready_ticket(project, ticket_id, note=payload.get("note"))
     elif action == "fail":
@@ -596,5 +601,4 @@ def _handle_post(handler, parsed, parts, project, db, config, node_urls, token, 
     if _handle_post_chat(handler, parsed, project, db, config, node_urls, token, identity):
         return
     _json_response(handler, 404, {"ok": False, "error": "not found"})
-
 

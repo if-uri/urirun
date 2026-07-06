@@ -96,6 +96,59 @@ def conclusion_relations() -> dict[str, Any]:
     return {"nodes": nodes, "edges": edges}
 
 
+_PREDICATE_LEGEND = {
+    "blocked_by": "czeka aż tamten będzie done", "enables": "done → odblokowuje tamten",
+    "generates_for": "wytwarza zdolność dla", "retries": "ponawia", "diagnoses": "diagnozuje pętlę w",
+    "fixes": "naprawia anomalię", "clustered_in": "należy do nory", "escalation_of": "eskalacja nory",
+    "relates": "powiązany wniosek (przyczyna/wzmocnienie)", "learned_from": "wniosek narodził się z tematu",
+}
+
+
+def to_llm(g: dict[str, Any]) -> str:
+    """Serializacja DLA LLM: triple podmiot-predykat-obiekt (fakt-na-linię, encje z typem inline,
+    legenda predykatów). Najczytelniejsze dla modelu — atomowa jednostka wiedzy, kompaktowe,
+    filtrowalne, czyta się jak zdania. NIE surowy JSON (rekonstrukcja grafu = koszt tokenów)."""
+    tg, cg = g["ticket_graph"], g["conclusion_graph"]
+    tstat = {n["id"]: n.get("status", "?") for n in tg["nodes"]}
+    ctype = {n["id"]: n.get("type", "?") for n in cg["nodes"]}
+    out = ["# META-GRAF (triple: PODMIOT predykat OBIEKT). Encja ticketu = ID[status], wniosku = nazwa:typ.",
+           "# LEGENDA predykatów:"]
+    out += [f"#   {p} = {d}" for p, d in _PREDICATE_LEGEND.items()]
+    out.append("\n# RELACJE TICKETÓW:")
+    for e in tg["edges"]:
+        out.append(f"{e['from']}[{tstat.get(e['from'], '?')}] {e['rel']} {e['to']}[{tstat.get(e['to'], '?')}]")
+    out.append("\n# RELACJE WNIOSKÓW (łańcuchy wiedzy):")
+    for e in cg["edges"]:
+        out.append(f"{e['from']}:{ctype.get(e['from'], '?')} {e['rel']} {e['to']}:{ctype.get(e['to'], '?')}")
+    out.append("\n# CROSS (zdarzenia → mądrość):")
+    for x in g["cross"]:
+        out.append(f"{x['conclusion']} learned_from topic:{x['topic']}")
+    return "\n".join(out)
+
+
+def grounding_for(topic_or_ids, project: str = "") -> str:
+    """GROUNDING DLA LLM-PLANERA: zawężony triple-widok wokół tematu/ticketów bieżącej decyzji.
+    Nie cały graf (259 krawędzi) — tylko okolica fokusu + legenda predykatów. Wstrzykiwane w prompt,
+    żeby model decydował na RELACJACH (co blokuje/umożliwia/w jakiej norze), nie na płaskiej liście."""
+    g = graph(project)
+    focus = {topic_or_ids} if isinstance(topic_or_ids, str) else set(topic_or_ids or [])
+    tg = g["ticket_graph"]
+    tstat = {n["id"]: n.get("status", "?") for n in tg["nodes"]}
+    ntopic = {n["id"]: n.get("topic", "") for n in tg["nodes"]}
+    # tickety w fokusie: po ID albo po temacie
+    rel_ids = {n["id"] for n in tg["nodes"] if n["id"] in focus or (n.get("topic") and n["topic"] in focus)}
+    rel_ids |= {e["to"] for e in tg["edges"] if e["from"] in rel_ids} | {e["from"] for e in tg["edges"] if e["to"] in rel_ids}
+    out = ["# GROUNDING (triple: PODMIOT predykat OBIEKT) — relacje istotne dla tej decyzji:"]
+    out += [f"#   {p} = {d}" for p, d in _PREDICATE_LEGEND.items() if any(e["rel"] == p for e in tg["edges"])]
+    for e in tg["edges"]:
+        if e["from"] in rel_ids or e["to"] in rel_ids:
+            out.append(f"{e['from']}[{tstat.get(e['from'], '?')}] {e['rel']} {e['to']}[{tstat.get(e['to'], '?')}]")
+    for x in g["cross"]:
+        if x["topic"] in focus:
+            out.append(f"{x['conclusion']} learned_from topic:{x['topic']}  (znany wniosek/antywzorzec)")
+    return "\n".join(out) if len(out) > 1 else "# GROUNDING: brak relacji dla tego fokusu"
+
+
 def graph(project: str = "") -> dict[str, Any]:
     """Pełny meta-graf: relacje ticketów + relacje wniosków + cross (wniosek←nora/ticket)."""
     tg = ticket_relations(project)

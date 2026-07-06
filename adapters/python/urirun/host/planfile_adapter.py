@@ -215,6 +215,20 @@ def fail_ticket(project: str | None, ticket_id: str, error: str) -> dict | None:
     return ticket_to_dict(ticket) if ticket else None
 
 
+def block_ticket(
+    project: str | None,
+    ticket_id: str,
+    reason: str | None = None,
+    note: str | None = None,
+) -> dict | None:
+    pf = load_planfile(project)
+    if hasattr(pf, "block_ticket"):
+        ticket = pf.block_ticket(ticket_id, reason=reason, note=note)
+    else:  # pragma: no cover - compatibility with older planfile packages.
+        ticket = pf.update_ticket(ticket_id, status="blocked", description=reason or "BLOCKED")
+    return ticket_to_dict(ticket) if ticket else None
+
+
 def fail_or_retry(project: str | None, ticket_id: str, error: str) -> dict | None:
     """Fail a ticket, requeuing it for another run while attempts remain.
 

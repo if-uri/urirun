@@ -173,9 +173,11 @@ def _write_planfile_action(pa, action: str, project, payload: dict, args: list) 
             artifacts=_list_param(payload.get("artifact") or payload.get("artifacts")),
         )},
         "fail": lambda: {"ticket": pa.fail_ticket(project, _ticket_id(payload, args), str(payload.get("error") or "failed"))},
-        "block": lambda: {"ticket": pa.update_ticket(
-            project, _ticket_id(payload, args),
-            {"status": "blocked", "description": str(payload.get("reason") or payload.get("description") or "BLOCKED")},
+        "block": lambda: {"ticket": pa.block_ticket(
+            project,
+            _ticket_id(payload, args),
+            reason=str(payload.get("reason") or payload.get("description") or "BLOCKED"),
+            note=payload.get("note"),
         )},
         "ready": lambda: {"ticket": pa.ready_ticket(project, _ticket_id(payload, args), note=payload.get("note"))},
         "wait-for-input": lambda: {"ticket": pa.wait_for_input(

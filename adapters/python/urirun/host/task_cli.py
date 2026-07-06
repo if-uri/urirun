@@ -280,7 +280,7 @@ def _task_fail(args, pa) -> int:
 
 
 def _task_block(args, pa) -> int:
-    return _emit_ticket_result(pa.update_ticket(args.project, args.ticket_id, {"status": "blocked", "description": args.reason or "BLOCKED"}))
+    return _emit_ticket_result(pa.block_ticket(args.project, args.ticket_id, reason=args.reason or "BLOCKED"))
 
 
 def _task_ready(args, pa) -> int:
