@@ -467,13 +467,19 @@ def _work_console_ticket_edit(project, path, body) -> dict:
     from .work_queue import ticket_edit_full
     return ticket_edit_full(str(body.get("id") or ""), name=str(body.get("name") or ""),
                             description=str(body.get("description") or ""), llm=body.get("llm"),
-                            node=body.get("node"), allow=body.get("allow"), deny=body.get("deny"))
+                            node=body.get("node"), allow=body.get("allow"), deny=body.get("deny"),
+                            schedule=body.get("schedule"))
+
+
+def _work_console_cron(project, path, body) -> dict:
+    from . import cron_admin
+    return cron_admin.action(body)
 
 
 _WORK_CONSOLE_ROUTES = {
     "/api/work/ops/confirm": _work_console_ops, "/api/work/ops/reject": _work_console_ops,
     "/api/work/shell": _work_console_shell, "/api/work/ticket": _work_console_ticket,
-    "/api/work/ticket/edit": _work_console_ticket_edit,
+    "/api/work/ticket/edit": _work_console_ticket_edit, "/api/work/cron": _work_console_cron,
 }
 
 
