@@ -240,6 +240,15 @@ def _handle_get_work_console(handler, parsed, project, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
+    if parsed.path in ("/api/work/cron", "/api/work/cron/export"):
+        from . import cron_admin  # cron:// connector bridge: entries, calendar, ics/csv export
+        if parsed.path.endswith("export"):
+            _json_response(handler, 200, cron_admin.export(_first(query, "fmt", "ics") or "ics",
+                           id=_first(query, "id", "") or "", mode=_first(query, "mode", "rrule") or "rrule",
+                           days=int(_first(query, "days", "30") or 30)))
+        else:
+            _json_response(handler, 200, cron_admin.state())
+        return True
     return False
 
 
