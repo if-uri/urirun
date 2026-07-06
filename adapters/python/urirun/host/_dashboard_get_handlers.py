@@ -233,6 +233,13 @@ def _handle_get_work_console(handler, parsed, project, query) -> bool:
         _json_response(handler, 200,
                        {"ok": True, "events": uri_activity(int(_first(query, "limit", "40") or 40))})
         return True
+    if parsed.path == "/api/work/koru-log":
+        from .work_console import koru_log_tail  # realne komendy koru na żywo (tail logu pętli)
+        try:
+            _json_response(handler, 200, {"ok": True, **koru_log_tail(int(_first(query, "tail", "150") or 150))})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
     if parsed.path == "/api/work/ticket/detail":
         from . import ticket_meta  # full process list + editable meta for the ticket popup
         try:
@@ -240,14 +247,20 @@ def _handle_get_work_console(handler, parsed, project, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
-    if parsed.path in ("/api/work/cron", "/api/work/cron/export"):
-        from . import cron_admin  # cron:// connector bridge: entries, calendar, ics/csv export
-        if parsed.path.endswith("export"):
-            _json_response(handler, 200, cron_admin.export(_first(query, "fmt", "ics") or "ics",
-                           id=_first(query, "id", "") or "", mode=_first(query, "mode", "rrule") or "rrule",
-                           days=int(_first(query, "days", "30") or 30)))
-        else:
-            _json_response(handler, 200, cron_admin.state())
+    return _handle_get_work_cron(handler, parsed, query)
+
+
+def _handle_get_work_cron(handler, parsed, query) -> bool:
+    """cron:// connector bridge: entries + upcoming-runs calendar, and iCalendar/CSV export."""
+    if parsed.path == "/api/work/cron":
+        from . import cron_admin
+        _json_response(handler, 200, cron_admin.state())
+        return True
+    if parsed.path == "/api/work/cron/export":
+        from . import cron_admin
+        _json_response(handler, 200, cron_admin.export(_first(query, "fmt", "ics") or "ics",
+                       id=_first(query, "id", "") or "", mode=_first(query, "mode", "rrule") or "rrule",
+                       days=int(_first(query, "days", "30") or 30)))
         return True
     return False
 

@@ -135,6 +135,73 @@ def reject_op(op_id: str) -> dict[str, Any]:
 
 # ---------------------------------------------------------------- URI activity feed
 
+import re as _re
+
+_KLINE = _re.compile(r"^\[(\d\d:\d\d:\d\d)\]\s*koru\s*[^\s]?\s*([A-Z]+):\s*(.*)$")
+_BACKTICK = _re.compile(r"`([^`]+)`")
+
+
+def _koru_line(ln: str) -> dict:
+    """Parse one koru log line into {time, type, text} — realne komendy czytelnie."""
+    m = _KLINE.match(ln)
+    if not m:
+        return {"time": "", "type": "LOG", "text": ln.strip()[-240:]}
+    t, typ, rest = m.groups()
+    text = rest
+    if typ == "OBS":
+        av = _re.search(r'argv_text="([^"]*)"', rest)
+        surf = _re.search(r"surface=(\S+)", rest)
+        op = _re.search(r"operation=(\S+)", rest)
+        if av:
+            text = f"{surf.group(1) if surf else ''}·{op.group(1) if op else ''}  $ {av.group(1)}"
+        else:
+            corr = _re.search(r"corr=(\S+)", rest)
+            text = f"{surf.group(1) if surf else ''} {corr.group(1) if corr else rest}"
+    else:
+        bt = _BACKTICK.search(rest)
+        if bt:
+            text = "$ " + bt.group(1)
+    return {"time": t, "type": typ, "text": text.strip()[:240]}
+
+
+def _coalesce(rows: list[dict]) -> list[dict]:
+    """Zwiń IDENTYCZNE linie (ten sam typ+tekst) w jedną: {count, first, last}. koru wypluwa
+    te same komendy/decyzje w kółko między cyklami — pokazujemy każdą RAZ, z licznikiem ×N,
+    a najświeższą aktywność bąbelkujemy na koniec (czytelny podgląd „co się teraz dzieje")."""
+    seen: dict[tuple, dict] = {}
+    order: list[tuple] = []
+    for r in rows:
+        text = (r.get("text") or "").strip()
+        if not text:
+            continue  # pomiń puste linie
+        key = (r.get("type"), text)
+        e = seen.get(key)
+        if e is None:
+            e = {**r, "count": 1, "first": r.get("time", ""), "last": r.get("time", "")}
+            seen[key] = e
+            order.append(key)
+        else:
+            e["count"] += 1
+            e["last"] = r.get("time") or e["last"]
+            order.remove(key)
+            order.append(key)  # najświeższe wystąpienie → na koniec
+    return [seen[k] for k in order]
+
+
+def koru_log_tail(limit: int = 200) -> dict:
+    """Ostatnie linie realnego logu koru (komendy URI, decyzje), z powtórkami zwiniętymi do ×N."""
+    try:
+        from . import ticket_meta
+        from .work_queue import _project
+        log = ticket_meta.koru_log_path(_project())
+    except Exception:  # noqa: BLE001
+        return {"lines": [], "log": None}
+    if not log:
+        return {"lines": [], "log": None}
+    rows = _coalesce([_koru_line(l) for l in ticket_meta._tail(log, int(limit))])
+    return {"lines": rows, "log": str(log)}
+
+
 def uri_activity(limit: int = 40) -> list[dict]:
     """What urirun is running, by URI: recent twin step events (newest first)."""
     try:
