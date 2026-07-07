@@ -42,8 +42,36 @@ def _host_identity() -> dict:
     return {"hostname": os.uname().nodename, "platform": os.uname().sysname}
 
 
+_HOST_NODES = {"nvidia", "host", "local", "localhost", "self"}
+
+
+def _local_where(node: str, capture: bool) -> dict[str, Any]:
+    """HOST (nvidia): urirun widzi WŁASNY komputer — capture in-process (mutter-screencast),
+    nie zdalny węzeł. Bezpieczne (tylko odczyt). To domyka 'urirun widzi nvidia'."""
+    out: dict[str, Any] = {"ok": True, "node": node, "host": _host_identity(), "at": None,
+                           "node_identity": {"name": node, "kind": "host-local"}}
+    try:
+        from urirun_connector_kvm import core as kvm
+        out["display"] = kvm.display_info() if hasattr(kvm, "display_info") else {}
+        wl = kvm.window_list() if hasattr(kvm, "window_list") else {}
+        out["windows"] = wl.get("windows") or []
+        out["foreground"] = next((w.get("title") for w in out["windows"] if w.get("active") or w.get("focused")),
+                                 (out["windows"][0].get("title") if out["windows"] else None))
+        if capture:
+            cap = kvm.capture(base64=True, max_width=1100)
+            b64 = cap.get("pngBase64") or cap.get("base64") or ""
+            out["capture"] = {"ok": cap.get("ok"), "path": cap.get("path", ""), "from_node": False,
+                              "via": cap.get("via"), "url": ("data:image/png;base64," + b64) if b64 else None}
+    except Exception as exc:  # noqa: BLE001
+        out["capture"] = {"ok": False, "error": str(exc)}
+    out["consistency_note"] = "źródło: KVM capture LOKALNIE na hoście (mutter-screencast, in-process)"
+    return out
+
+
 def where_am_i(node: str = "laptop", capture: bool = True) -> dict[str, Any]:
     """Zbierz: tożsamość węzła, display, okna, foreground i (opcjonalnie) świeży zrzut ekranu."""
+    if node.lower() in _HOST_NODES:  # urirun widzi WŁASNY host (nvidia), nie tylko zdalne węzły
+        return _local_where(node, capture)
     out: dict[str, Any] = {"ok": True, "node": node, "host": _host_identity(), "at": None}
     # tożsamość zdalnego węzła (bezpośrednio z jego /health — nie przez routing)
     url = _node_url(node)

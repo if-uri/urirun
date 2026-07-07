@@ -70,16 +70,21 @@ def tickets(limit: int = 40) -> list[dict[str, Any]]:
     except Exception:  # noqa: BLE001
         return []
     rows = []
-    for t in data[:limit]:
+    for t in data:  # WSZYSTKIE — sortuj przed limitem, żeby aktywne (blocked/open) nigdy nie wypadły
         src = t.get("source") or {}
         rows.append({"id": t.get("id"), "name": t.get("name"), "status": t.get("status"),
                      "priority": t.get("priority"),
                      "source": src.get("tool") if isinstance(src, dict) else src,
                      "labels": t.get("labels") or t.get("label"),
                      "updated": t.get("updated_at") or t.get("updatedAt")})
-    order = {"in_progress": 0, "claimed": 1, "waiting_input": 2, "open": 3, "done": 4, "blocked": 2}
-    rows.sort(key=lambda r: order.get(r.get("status"), 5))
-    return rows
+    order = {"in_progress": 0, "claimed": 1, "waiting_input": 2, "blocked": 2, "open": 3, "done": 4}
+
+    def _rid(r):  # numeryczny sufiks ID malejąco = najnowsze pierwsze w obrębie statusu
+        import re
+        m = re.search(r"(\d+)$", str(r.get("id") or ""))
+        return -int(m.group(1)) if m else 0
+    rows.sort(key=lambda r: (order.get(r.get("status"), 5), _rid(r)))  # aktywne+najnowsze najpierw, PRZED limitem
+    return rows[:limit]
 
 
 def _ticket_cmds(pf: str, tid: str, act: str, note: str) -> tuple[list[list[str]] | None, str]:
@@ -91,6 +96,10 @@ def _ticket_cmds(pf: str, tid: str, act: str, note: str) -> tuple[list[list[str]
         cmds.append([pf, "ticket", "update", tid, "--status", "open"])
     elif act in ("ready", "done", "start", "block", "claim"):
         cmds.append([pf, "ticket", act, tid])
+    elif act in ("close", "cancel"):
+        cmds.append([pf, "ticket", "update", tid, "--status", "cancelled"])
+    elif act == "delete":
+        cmds.append([pf, "ticket", "delete", tid, "--force"])
     elif act and act != "note":
         return None, f"unknown action {act!r}"
     if not cmds:
@@ -156,6 +165,37 @@ def _parse_criteria(text: Any) -> list[dict]:
     return checks
 
 
+def _create_planfile_ticket(cmd: list[str]) -> tuple[str, dict | None]:
+    """Run `planfile ticket create`; return (ticket_id, error_result_or_None)."""
+    import re
+    try:
+        cp = subprocess.run(cmd, capture_output=True, text=True, timeout=20, cwd=_project())
+    except Exception as exc:  # noqa: BLE001
+        return "", {"ok": False, "error": str(exc)}
+    if cp.returncode != 0:
+        return "", {"ok": False, "error": (cp.stderr or cp.stdout or "create failed").strip()[-200:]}
+    m = re.search(r"[A-Z]+-\d+", cp.stdout or "")
+    return (m.group(0) if m else ""), None
+
+
+def _seed_ticket_verify(tid: str, node: str, checks: list) -> int:
+    """Attach node meta + acceptance-criteria verify checks to a fresh ticket; return #seeded."""
+    if tid and node:
+        try:
+            from . import ticket_meta
+            ticket_meta.edit_meta(tid, node=str(node))
+        except Exception:  # noqa: BLE001
+            pass
+    if tid and checks:
+        try:
+            from urirun_connector_verify import core as vf
+            vf.ticket_command_seed(id=tid, checks=checks)
+            return len(checks)
+        except Exception:  # noqa: BLE001
+            pass
+    return 0
+
+
 def create_ticket(name: str, description: str = "", priority: str = "normal", node: str = "",
                   labels: Any = None, criteria: Any = None) -> dict[str, Any]:
     """Człowiek dodaje zadanie z panelu: planfile create + node (meta) + acceptance_criteria (verify)."""
@@ -170,30 +210,10 @@ def create_ticket(name: str, description: str = "", priority: str = "normal", no
         cmd += ["-l", str(lab)]
     if description:
         cmd += ["-d", str(description)]
-    try:
-        cp = subprocess.run(cmd, capture_output=True, text=True, timeout=20, cwd=_project())
-        if cp.returncode != 0:
-            return {"ok": False, "error": (cp.stderr or cp.stdout or "create failed").strip()[-200:]}
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc)}
-    import re
-    m = re.search(r"[A-Z]+-\d+", cp.stdout or "")
-    tid = m.group(0) if m else ""
-    if tid and node:
-        try:
-            from . import ticket_meta
-            ticket_meta.edit_meta(tid, node=str(node))
-        except Exception:  # noqa: BLE001
-            pass
-    checks = _parse_criteria(criteria)
-    seeded = 0
-    if tid and checks:
-        try:
-            from urirun_connector_verify import core as vf
-            vf.ticket_command_seed(id=tid, checks=checks)
-            seeded = len(checks)
-        except Exception:  # noqa: BLE001
-            pass
+    tid, err = _create_planfile_ticket(cmd)
+    if err:
+        return err
+    seeded = _seed_ticket_verify(tid, node, _parse_criteria(criteria))
     return {"ok": True, "id": tid, "node": node, "criteria": seeded,
             "verifiable": seeded > 0}
 
@@ -300,6 +320,28 @@ def _loop_controller_active() -> bool:
         return False
 
 
+def _controller_label(running: bool, loop_ctrl: bool) -> str | None:
+    """Who is actually driving the queue: koru, loop:// (cron), or nobody."""
+    return "koru" if running else ("loop://" if loop_ctrl else None)
+
+
+def _continuity_verdict(running: bool, loop_ctrl: bool, queue_empty: bool,
+                        age: float | None) -> tuple[str, str | None]:
+    """CONTINUITY verdict + suggested action from loop/controller/queue state."""
+    if not running and loop_ctrl:
+        # koru stopped intentionally — loop:// (cron) is controller; do NOT suggest restarting koru (recreates conflict)
+        if queue_empty:
+            return "AT_RISK", "kolejka pusta — inquiry/reflection utworzy następny ticket"
+        return "OK", None
+    if not running:
+        return "STOPPED", "brak kontrolera — zaplanuj loop:// w cronie (*/10 /api/work/loop) lub uruchom cykl"
+    if queue_empty:
+        return "AT_RISK", "queue empty — run inquiry/reflection to create the next ticket"
+    if age is not None and age > _STALE_SECONDS:
+        return "AT_RISK", f"loop running but no heartbeat for {int(age // 60)} min — inspect logs"
+    return "OK", None
+
+
 def work_status() -> dict[str, Any]:
     """The control-room verdict: is the autonomous loop actually continuing?
 
@@ -315,21 +357,9 @@ def work_status() -> dict[str, Any]:
     age = _log_age_seconds()
     running = ku.get("running")
     loop_ctrl = _loop_controller_active()
-    controller = "koru" if running else ("loop://" if loop_ctrl else None)
+    controller = _controller_label(bool(running), loop_ctrl)
     queue_empty = not open_next and not in_progress
-
-    if not running and loop_ctrl:
-        # koru zatrzymany ZAMIERZONO — loop:// (cron) jest kontrolerem; NIE sugeruj restartu koru (odtworzyłby konflikt)
-        cont, action = ("AT_RISK" if queue_empty else "OK"), (
-            "kolejka pusta — inquiry/reflection utworzy następny ticket" if queue_empty else None)
-    elif not running:
-        cont, action = "STOPPED", "brak kontrolera — zaplanuj loop:// w cronie (*/10 /api/work/loop) lub uruchom cykl"
-    elif queue_empty:
-        cont, action = "AT_RISK", "queue empty — run inquiry/reflection to create the next ticket"
-    elif age is not None and age > _STALE_SECONDS:
-        cont, action = "AT_RISK", f"loop running but no heartbeat for {int(age // 60)} min — inspect logs"
-    else:
-        cont, action = "OK", None
+    cont, action = _continuity_verdict(bool(running), loop_ctrl, queue_empty, age)
 
     return {
         "continuity": cont,

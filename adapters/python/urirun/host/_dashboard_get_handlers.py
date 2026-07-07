@@ -277,28 +277,50 @@ def _handle_get_work_cron(handler, parsed, query) -> bool:
     return _handle_get_work_diag(handler, parsed, query)
 
 
-def _handle_get_work_where(handler, parsed) -> bool:
-    """where:// (gdzie jestem) + registry (cross-node registry URI-procesów dla grounded orchestration)."""
+def _handle_work_grounding(handler, parsed) -> bool:
+    """Warstwy groundingu dla planerów/obserwacji: registry, journal (ślad URI), route-health, meta-graf."""
+    q = parse_qs(parsed.query)
     if parsed.path == "/api/work/registry":
         from . import registry_llm
-        need = (parse_qs(parsed.query).get("need") or [""])[0]
+        need = (q.get("need") or [""])[0]
         _json_response(handler, 200, registry_llm.find(need) if need else registry_llm.gather())
+        return True
+    if parsed.path == "/api/work/triage":
+        from urirun_connector_continuity import core as _gap  # triaż blocked: DELETE/UNBLOCK/KEEP
+        apply = (q.get("apply") or ["0"])[0] in ("1", "true")
+        _json_response(handler, 200, {"ok": True, **_gap.triage(__import__('urirun.host.work_queue',fromlist=['_project'])._project(), apply)})
+        return True
+    if parsed.path == "/api/work/journal":
+        from urirun_connector_journal import core as _j  # ślad URI-procesów: ok vs efekt + anomalie
+        _json_response(handler, 200, {"ok": True, **_j.analyze((q.get("ticket") or [""])[0])})
+        return True
+    if parsed.path == "/api/work/route-health":
+        from . import route_health  # grounding środowiskowy: które trasy działają na node
+        node = (q.get("node") or ["lenovo"])[0]
+        _json_response(handler, 200, {"ok": True, "node": node,
+                                      "health": route_health.route_health(node),
+                                      "grounding": route_health.grounding_block(node)})
         return True
     if parsed.path == "/api/work/meta":
         from . import meta_graph  # wyższa warstwa: graf relacji ticketów + wniosków dla wnioskowania
-        q = parse_qs(parsed.query)
-        fmt = (q.get("format") or ["json"])[0]
-        if fmt in ("triples", "ttl"):  # widok dla LLM-planera (fakt-na-linię + legenda)
+        if (q.get("format") or ["json"])[0] in ("triples", "ttl"):
             topic = (q.get("topic") or [""])[0]
             txt = meta_graph.grounding_for(topic) if topic else meta_graph.to_llm(meta_graph.graph())
+            data = txt.encode("utf-8")
             handler.send_response(200)
             handler.send_header("Content-Type", "text/plain; charset=utf-8")
-            data = txt.encode("utf-8")
             handler.send_header("Content-Length", str(len(data)))
             handler.end_headers()
             handler.wfile.write(data)
             return True
         _json_response(handler, 200, {"ok": True, **meta_graph.graph()})
+        return True
+    return False
+
+
+def _handle_get_work_where(handler, parsed) -> bool:
+    """where:// (gdzie jestem) + warstwy groundingu (registry/journal/route-health/meta)."""
+    if _handle_work_grounding(handler, parsed):
         return True
     from . import where_admin
     if parsed.path == "/api/work/where":
@@ -368,7 +390,8 @@ def _handle_get_work_diag(handler, parsed, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
-    if parsed.path in ("/api/work/where", "/api/work/where/shot", "/api/work/registry", "/api/work/meta"):
+    if parsed.path in ("/api/work/where", "/api/work/where/shot", "/api/work/registry",
+                       "/api/work/meta", "/api/work/route-health", "/api/work/journal", "/api/work/triage"):
         return _handle_get_work_where(handler, parsed)
     if parsed.path == "/api/work/signal":
         try:

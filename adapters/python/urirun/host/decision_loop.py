@@ -116,9 +116,9 @@ def _playbook_intent_from_plan(plan: dict) -> dict:
     }
 
 
-def _error_fallback_intent(error: dict) -> dict:
+def _error_fallback_intent(error: dict, *, node: str = "") -> dict:
     """Build a generic repair nextIntent when no PLAYBOOK rule matched."""
-    return {
+    intent = {
         "id": "repair-uri-chain",
         "uri": "urifix://host/chain/command/repair",
         "automatic": False,
@@ -126,9 +126,41 @@ def _error_fallback_intent(error: dict) -> dict:
         "actions": [],
         "errorCategory": error.get("category") or "UNKNOWN",
     }
+    reframe = _route_health_reframe(error, node=node)
+    if reframe:
+        intent["reframe"] = reframe
+    return intent
 
 
-def general_path_next_intent(execution: dict) -> "dict | None":
+def _route_health_lists(node: str) -> tuple[list, list]:
+    """(deprecated, preferred) z route_health dla node — same dict-y. ([], []) gdy brak/błąd."""
+    try:
+        from . import route_health as _route_health
+        health = _route_health.route_health(node)
+    except Exception:  # noqa: BLE001
+        return [], []
+    dep = [d for d in (health.get("deprecated") or []) if isinstance(d, dict)]
+    pref = [p for p in (health.get("preferred") or []) if isinstance(p, dict)]
+    return dep, pref
+
+
+def _route_health_reframe(error: dict, *, node: str = "") -> dict | None:
+    """Suggest a preferred replacement route from route_health when a deprecated route failed."""
+    if not node or not isinstance(error, dict):
+        return None
+    deprecated, preferred = _route_health_lists(node)
+    if not deprecated or not preferred:
+        return None
+    hay = f"{error.get('uri') or ''} {error.get('message') or ''}".lower()
+    hit = next((d for d in deprecated if str(d.get("route") or "").lower() in hay), None)
+    if not hit:
+        return None
+    pref = preferred[0]
+    return {"from": hit.get("route"), "to": pref.get("route"),
+            "recipe": pref.get("recipe") or "", "node": node, "source": "route-health"}
+
+
+def general_path_next_intent(execution: dict, *, node: str = "") -> "dict | None":
     """Produce a structured nextIntent from the PLAYBOOK diagnosis in a failed flow.
 
     Falls back to a generic urifix repair intent when no PLAYBOOK rule matched.
@@ -140,4 +172,4 @@ def general_path_next_intent(execution: dict) -> "dict | None":
     plan = next((r.get("plan") for r in recoveries if isinstance(r.get("plan"), dict)), None)
     if plan:
         return _playbook_intent_from_plan(plan)
-    return _error_fallback_intent(execution.get("error") or {})
+    return _error_fallback_intent(execution.get("error") or {}, node=node)

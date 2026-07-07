@@ -10,6 +10,7 @@ from urirun.host.contracts import (
     flow_execution_verification,
     verification_check,
 )
+from urirun.host import decision_loop
 
 # ─── _general_path_next_intent (imported from host_dashboard) ─────────────────
 # Isolate the helper without loading the whole dashboard (avoids heavy imports).
@@ -67,6 +68,32 @@ def test_next_intent_generic_fallback_when_no_diagnosis():
     assert ni["id"] == "repair-uri-chain"
     assert ni["automatic"] is False
     assert ni["errorCategory"] == "NOT_FOUND"
+
+
+def test_next_intent_adds_route_health_reframe_for_known_node(monkeypatch):
+    err = {
+        "category": "NOT_FOUND",
+        "message": "Route not found: cdp/session/ensure",
+        "uri": "kvm://laptop/cdp/session/command/ensure",
+    }
+
+    monkeypatch.setattr(
+        decision_loop,
+        "_route_health_reframe",
+        lambda error, *, node="": {
+            "from": "cdp/session/ensure",
+            "to": "task/command/run",
+            "recipe": "batch warm input",
+            "node": node,
+            "source": "route-health",
+        },
+    )
+
+    ni = decision_loop.general_path_next_intent(_failed_exec(plan=None, error_category="NOT_FOUND") | {"error": err}, node="lenovo")
+    assert ni["id"] == "repair-uri-chain"
+    assert ni["reframe"]["from"] == "cdp/session/ensure"
+    assert ni["reframe"]["to"] == "task/command/run"
+    assert ni["reframe"]["node"] == "lenovo"
 
 
 def test_verification_check_builds_named_row():

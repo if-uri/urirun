@@ -34,46 +34,59 @@ def _planfile() -> str | None:
     return shutil.which("planfile")
 
 
-def ticket_relations(project: str = "") -> dict[str, Any]:
-    """Węzły=tickety, krawędzie z labeli + not (blocked_by / nora / diagnoza / retry)."""
+_TOPICS = ("signal", "email", "cron", "kvm", "calendar", "system")
+
+
+def _ticket_list(project: str) -> list[dict]:
     pf = _planfile()
-    proj = project or str(Path("~/github/if-uri").expanduser())
     if not pf:
-        return {"nodes": [], "edges": []}
+        return []
     try:
         cp = subprocess.run([pf, "ticket", "list", "--format", "json"], capture_output=True,
-                            text=True, timeout=15, cwd=proj)
-        data = json.loads(cp.stdout[cp.stdout.index("["):cp.stdout.rindex("]") + 1])
+                            text=True, timeout=15, cwd=project or str(Path("~/github/if-uri").expanduser()))
+        return json.loads(cp.stdout[cp.stdout.index("["):cp.stdout.rindex("]") + 1])
     except Exception:  # noqa: BLE001
-        return {"nodes": [], "edges": []}
+        return []
+
+
+def _ticket_topic(t: dict, labs: list) -> str:
+    return next((h for h in _TOPICS if any(h in l.lower() for l in labs) or h in t.get("name", "").lower()), "")
+
+
+def _label_edges(tid: str, labs: list, ids: set) -> list[dict]:
+    out = []
+    for lab in labs:
+        for pref, rel in _LABEL_EDGE.items():
+            if lab.startswith(pref) and lab[len(pref):] in ids:
+                out.append({"from": tid, "to": lab[len(pref):], "rel": rel})
+    return out
+
+
+def _note_edges(t: dict, tid: str, ids: set) -> list[dict]:
+    out = []
+    for note in ((t.get("outputs") or {}).get("notes") or []):
+        s = str(note)
+        out += [{"from": tid, "to": ref, "rel": "blocked_by"}
+                for ref in set(re.findall(r"blocked_by\s+([A-Z]+-\d+)", s)) if ref in ids and ref != tid]
+        m = re.search(r"spięte w rabbithole:\S+ \(([A-Z]+-\d+)\)", s)
+        if m and m.group(1) in ids:
+            out.append({"from": tid, "to": m.group(1), "rel": "clustered_in"})
+    return out
+
+
+def ticket_relations(project: str = "") -> dict[str, Any]:
+    """Węzły=tickety, krawędzie z labeli + not (blocked_by / nora / diagnoza / retry)."""
+    data = _ticket_list(project)
     ids = {t["id"] for t in data}
     nodes, edges = [], []
     for t in data:
-        tid = t["id"]
         labs = [str(x) for x in (t.get("labels") or [])]
-        topic = next((h for h in ("signal", "email", "cron", "kvm", "calendar", "system")
-                      if any(h in l.lower() for l in labs) or h in t.get("name", "").lower()), "")
-        nodes.append({"id": tid, "name": t.get("name", "")[:50], "status": t.get("status"),
-                      "topic": topic, "source": t.get("source")})
-        for lab in labs:
-            for pref, rel in _LABEL_EDGE.items():
-                if lab.startswith(pref):
-                    tgt = lab[len(pref):]
-                    if tgt in ids:
-                        edges.append({"from": tid, "to": tgt, "rel": rel})
-        for note in ((t.get("outputs") or {}).get("notes") or []):
-            s = str(note)
-            for ref in set(re.findall(r"blocked_by\s+([A-Z]+-\d+)", s)):
-                if ref in ids and ref != tid:
-                    edges.append({"from": tid, "to": ref, "rel": "blocked_by"})
-            m = re.search(r"spięte w rabbithole:\S+ \(([A-Z]+-\d+)\)", s)
-            if m and m.group(1) in ids:
-                edges.append({"from": tid, "to": m.group(1), "rel": "clustered_in"})
-    # enables: done ticket → tickety które go blokowały (odwrotność blocked_by)
+        nodes.append({"id": t["id"], "name": t.get("name", "")[:50], "status": t.get("status"),
+                      "topic": _ticket_topic(t, labs), "source": t.get("source")})
+        edges += _label_edges(t["id"], labs, ids) + _note_edges(t, t["id"], ids)
     done = {t["id"] for t in data if t.get("status") in ("done", "closed")}
-    for e in list(edges):
-        if e["rel"] == "blocked_by" and e["to"] in done:
-            edges.append({"from": e["to"], "to": e["from"], "rel": "enables"})
+    edges += [{"from": e["to"], "to": e["from"], "rel": "enables"}
+              for e in list(edges) if e["rel"] == "blocked_by" and e["to"] in done]
     return {"nodes": nodes, "edges": edges}
 
 
@@ -126,26 +139,27 @@ def to_llm(g: dict[str, Any]) -> str:
     return "\n".join(out)
 
 
+def _focus_ids(tg: dict, focus: set) -> set:
+    """ID ticketów w fokusie (po ID albo temacie) + ich bezpośredni sąsiedzi z krawędzi."""
+    rel = {n["id"] for n in tg["nodes"] if n["id"] in focus or (n.get("topic") and n["topic"] in focus)}
+    rel |= {e["to"] for e in tg["edges"] if e["from"] in rel} | {e["from"] for e in tg["edges"] if e["to"] in rel}
+    return rel
+
+
 def grounding_for(topic_or_ids, project: str = "") -> str:
     """GROUNDING DLA LLM-PLANERA: zawężony triple-widok wokół tematu/ticketów bieżącej decyzji.
-    Nie cały graf (259 krawędzi) — tylko okolica fokusu + legenda predykatów. Wstrzykiwane w prompt,
-    żeby model decydował na RELACJACH (co blokuje/umożliwia/w jakiej norze), nie na płaskiej liście."""
+    Nie cały graf — tylko okolica fokusu + legenda predykatów, by model decydował na RELACJACH."""
     g = graph(project)
     focus = {topic_or_ids} if isinstance(topic_or_ids, str) else set(topic_or_ids or [])
     tg = g["ticket_graph"]
     tstat = {n["id"]: n.get("status", "?") for n in tg["nodes"]}
-    ntopic = {n["id"]: n.get("topic", "") for n in tg["nodes"]}
-    # tickety w fokusie: po ID albo po temacie
-    rel_ids = {n["id"] for n in tg["nodes"] if n["id"] in focus or (n.get("topic") and n["topic"] in focus)}
-    rel_ids |= {e["to"] for e in tg["edges"] if e["from"] in rel_ids} | {e["from"] for e in tg["edges"] if e["to"] in rel_ids}
+    rel_ids = _focus_ids(tg, focus)
     out = ["# GROUNDING (triple: PODMIOT predykat OBIEKT) — relacje istotne dla tej decyzji:"]
     out += [f"#   {p} = {d}" for p, d in _PREDICATE_LEGEND.items() if any(e["rel"] == p for e in tg["edges"])]
-    for e in tg["edges"]:
-        if e["from"] in rel_ids or e["to"] in rel_ids:
-            out.append(f"{e['from']}[{tstat.get(e['from'], '?')}] {e['rel']} {e['to']}[{tstat.get(e['to'], '?')}]")
-    for x in g["cross"]:
-        if x["topic"] in focus:
-            out.append(f"{x['conclusion']} learned_from topic:{x['topic']}  (znany wniosek/antywzorzec)")
+    out += [f"{e['from']}[{tstat.get(e['from'], '?')}] {e['rel']} {e['to']}[{tstat.get(e['to'], '?')}]"
+            for e in tg["edges"] if e["from"] in rel_ids or e["to"] in rel_ids]
+    out += [f"{x['conclusion']} learned_from topic:{x['topic']}  (znany wniosek/antywzorzec)"
+            for x in g["cross"] if x["topic"] in focus]
     return "\n".join(out) if len(out) > 1 else "# GROUNDING: brak relacji dla tego fokusu"
 
 

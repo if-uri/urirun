@@ -678,7 +678,8 @@ def _chat_ask_general_build_result(
         from urirun.host.contracts import flow_execution_verification as _flow_exec_verify  # noqa: PLC0415
         result["verification"] = _flow_exec_verify(flow, execution)
     if not result.get("ok") and not result.get("nextIntent"):
-        result["nextIntent"] = general_path_next_intent(execution)
+        node_hint = selected_nodes[0] if selected_nodes else ""
+        result["nextIntent"] = general_path_next_intent(execution, node=node_hint)
     result = compact_chat_result(result, payload)
     attachments = collect_attachments(result, project)
     _enrich_remote_attachments(attachments, result.get("results") or {})

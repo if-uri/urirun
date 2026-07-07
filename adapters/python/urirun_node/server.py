@@ -718,11 +718,39 @@ class NodeHandler(BaseHTTPRequestHandler):
         _verbose_run_end(uri, result, (time.monotonic() - t0) * 1000)
         if not result.get("ok"):
             uri_errors.record(result)  # stamp error:// address + record for /errors
+        self._stamp_run_provenance(result, uri=uri, mode=mode)
         result["service"] = c.state["name"]
         result["runId"] = run_id
         ctrl.result, ctrl.status = result, ("cancelled" if ctrl.cancel.is_set() else "done")
         self._publish_run(uri, result)
         return result
+
+    def _stamp_run_provenance(self, envelope: dict, *, uri: str, mode: str) -> None:
+        """Ensure every /run envelope has top-level provenance metadata.
+
+        Runtime executors already stamp ``result._meta`` when possible; this copies that
+        signal to envelope-level metadata (or adds a node fallback) so consumers can always
+        attribute where a step actually ran.
+        """
+        if not isinstance(envelope, dict):
+            return
+        if isinstance(envelope.get("_meta"), dict):
+            return
+        c = self.ctx
+        source = envelope.get("result") if isinstance(envelope.get("result"), dict) else {}
+        result_meta = source.get("_meta") if isinstance(source, dict) else None
+        meta = dict(result_meta) if isinstance(result_meta, dict) else {}
+        meta.setdefault("servedBy", c.state.get("name") or "")
+        meta.setdefault("node", c.state.get("name") or "")
+        meta.setdefault("mode", mode)
+        meta.setdefault("uri", uri)
+        meta.setdefault("servedAt", time.time())
+        if not meta.get("ranOn"):
+            try:
+                meta["ranOn"] = socket.gethostname()
+            except Exception:  # noqa: BLE001
+                pass
+        envelope["_meta"] = meta
 
     def _dispatch_run_response(self, uri: str, run_id: str, ctrl, body: dict,
                                mode: str, run_it) -> None:

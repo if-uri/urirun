@@ -468,6 +468,16 @@ def _work_console_ticket(project, path, body) -> dict:
                          str(body.get("note") or ""))
 
 
+def _work_console_ticket_create(project, path, body) -> dict:
+    from .work_queue import create_ticket  # NL „nowy ticket" z panelu /work → kolejka
+    name = str(body.get("name") or "").strip()
+    if not name:
+        return {"ok": False, "error": "name wymagane"}
+    return create_ticket(name, description=str(body.get("description") or ""),
+                         priority=str(body.get("priority") or "normal"),
+                         node=str(body.get("node") or ""))
+
+
 def _work_console_ticket_edit(project, path, body) -> dict:
     from .work_queue import ticket_edit_full
     return ticket_edit_full(str(body.get("id") or ""), name=str(body.get("name") or ""),
@@ -564,6 +574,7 @@ def _work_console_action(project, path, body) -> dict:
 _WORK_CONSOLE_ROUTES = {
     "/api/work/ops/confirm": _work_console_ops, "/api/work/ops/reject": _work_console_ops,
     "/api/work/shell": _work_console_shell, "/api/work/ticket": _work_console_ticket,
+    "/api/work/ticket/create": _work_console_ticket_create,
     "/api/work/ticket/edit": _work_console_ticket_edit, "/api/work/cron": _work_console_cron,
     "/api/work/watchdog": _work_console_watchdog, "/api/work/agents": _work_console_agents,
     "/api/work/loop": _work_console_loop, "/api/work/verify": _work_console_verify,

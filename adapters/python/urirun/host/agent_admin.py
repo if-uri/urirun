@@ -11,9 +11,32 @@ Uruchomienie agenta zmienia repo — inicjuje je człowiek klikając „Wykonaj 
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import subprocess
 from typing import Any
+
+
+def _autonomous_default(explicit: bool | None) -> bool:
+    """Czy agent ma pisać BEZ pytania o zgodę (``--dangerously-skip-permissions``).
+
+    Domyślnie WŁĄCZONE: koru pędzi headless — nie ma człowieka, który kliknie „zezwól", więc
+    agent pytający o zgodę STALLuje ticket (obserwowane: run po runie „waiting on approval").
+    Autonomia domyślna domyka pętlę; opt-out ``URIRUN_AGENT_AUTONOMOUS=0`` dla trybu nadzorowanego."""
+    if explicit is not None:
+        return explicit
+    return str(os.environ.get("URIRUN_AGENT_AUTONOMOUS", "1")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _agent_cmd(binp: str, agent: str, prompt: str, autonomous: bool) -> str:
+    """Zbuduj polecenie headless. Dla claude/auto ``autonomous`` ⇒ ``--dangerously-skip-permissions``
+    (agent ZAPISUJE bez pytania). Inne narzędzia (codex) mają własny nieinteraktywny tryb ``exec``."""
+    if agent in ("claude", "auto"):
+        cmd = f"{shlex.quote(binp)} -p {shlex.quote(prompt)}"
+        if autonomous:
+            cmd += " --dangerously-skip-permissions"
+        return cmd
+    return f"{shlex.quote(binp)} exec {shlex.quote(prompt)}"
 
 
 def _conn():
@@ -76,7 +99,6 @@ def run_ticket(project, ticket_id: str, agent: str = "claude", _autonomous: bool
 
     BLOKADA WSPÓŁBIEŻNOŚCI: wiele agentów na jednym repo koliduje (równoległe edycje/git).
     Domyślnie 1 agent naraz (URIRUN_AGENT_MAX_CONCURRENT); nigdy ten sam ticket dwa razy."""
-    import os
     tid = str(ticket_id or "").strip()
     if not tid:
         return {"ok": False, "error": "id ticketu wymagane"}
@@ -95,17 +117,11 @@ def run_ticket(project, ticket_id: str, agent: str = "claude", _autonomous: bool
     if not binp:
         return {"ok": False, "error": f"agent {agent!r} niedostępny — zainstaluj/urun agent tools"}
     prompt = _prompt_for(t)
-    # AUTO-WRITE (gap C): domyślnie claude -p PYTA o zgodę (planuje, nie stosuje). Z
-    # URIRUN_AGENT_AUTONOMOUS=1 agent ZAPISUJE bez pytania — pełna autonomia, ale niebezpieczne
-    # (agent może zrobić wszystko); produkcyjnie tylko w izolowanym worktree.
-    autonomous = _autonomous if _autonomous is not None else \
-        str(os.environ.get("URIRUN_AGENT_AUTONOMOUS", "")).strip().lower() in ("1", "true", "yes", "on")
-    if agent in ("claude", "auto"):
-        cmd = f"{shlex.quote(binp)} -p {shlex.quote(prompt)}"
-        if autonomous:
-            cmd += " --dangerously-skip-permissions"
-    else:
-        cmd = f"{shlex.quote(binp)} exec {shlex.quote(prompt)}"
+    # AUTO-WRITE: koru pędzi headless bez człowieka → domyślnie agent ZAPISUJE bez pytania
+    # (--dangerously-skip-permissions), inaczej stalluje na promptach zgody. Opt-out
+    # URIRUN_AGENT_AUTONOMOUS=0 (nadzór). Agent może zrobić wszystko — no-commit gwarantuje BACKLOG-AGENT.
+    autonomous = _autonomous_default(_autonomous)
+    cmd = _agent_cmd(binp, agent, prompt, autonomous)
     from .work_runs import start_run
     meta = start_run(project, f"agent://{agent}/task/{tid}", cmd, label=f"{tid}: {t.get('name','')[:60]}")
     return {"ok": True, "started": True, "ticket": tid, "agent": agent, "run": meta["id"], "log": meta["log"]}

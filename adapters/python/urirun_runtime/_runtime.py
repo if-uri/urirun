@@ -449,9 +449,22 @@ EXECUTORS = {
 }
 
 
+def _stamp_runtime_provenance(result) -> None:
+    """Fallback provenance for executors that don't stamp their own (fetch, mqtt-publish,
+    shell-template, spawn). local-function already stamps its handler's module, so leave
+    that richer _meta untouched; otherwise record WHERE the runtime that ran this lives so
+    the journal never sees prov=None for a served URI. Best-effort, never raises."""
+    if not isinstance(result, dict) or result.get("_meta"):
+        return
+    meta = _provenance(__name__)
+    if meta:
+        result["_meta"] = meta
+
+
 def _run_execute_step(executor, ctx: dict, policy: dict, envelope: dict) -> None:
     try:
         envelope["result"] = executor(ctx, policy)
+        _stamp_runtime_provenance(envelope["result"])
         exit_code = envelope["result"].get("exitCode", 0)
         envelope["ok"] = exit_code == 0
         if not envelope["ok"] and "error" not in envelope:

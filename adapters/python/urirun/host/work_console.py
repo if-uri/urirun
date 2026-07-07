@@ -226,6 +226,38 @@ def _control_row(text: str) -> dict:
     return {"time": now, "type": "CTRL", "text": text[:240], "count": 1, "first": now, "last": now}
 
 
+def _log_source_age(log: Any) -> "tuple[float | None, float | None]":
+    """(age_seconds, mtime) for the koru log file, or (None, None) if it can't be stat'd."""
+    try:
+        mtime = log.stat().st_mtime
+        return max(0.0, time.time() - mtime), mtime
+    except OSError:
+        return None, None
+
+
+def _koru_log_status(running: bool, stale: bool, live: bool) -> str:
+    """Single label for the panel: what state is the koru log in right now."""
+    if live:
+        return "live"
+    if stale:
+        return "stale"
+    return "stopped" if not running else "idle"
+
+
+def _koru_inactive_text(log: Any, status: str, running: bool, stale: bool,
+                        loop_controller: bool, controller: str | None,
+                        source_age: float | None, source_mtime: float | None) -> str:
+    """Human explanation appended as a control row when the log is not live."""
+    if loop_controller and not running:
+        return (f"queue.log nie jest aktywnym kontrolerem; ostatnia zmiana {_short_age(source_age)} temu; "
+                "aktywny kontroler: loop:// (cron /api/work/loop)")
+    if stale:
+        return f"brak świeżego heartbeatu koru przez {_short_age(source_age)}; ostatnia zmiana: {_local_ts(source_mtime)}"
+    if not running:
+        return f"koru nie działa; ostatnia zmiana logu {_short_age(source_age)} temu; kontroler: {controller or 'brak'}"
+    return f"źródło logu: {log.name}; status: {status}"
+
+
 def koru_log_tail(limit: int = 200) -> dict:
     """Ostatnie linie realnego logu koru, plus grounding źródła.
 
@@ -235,7 +267,7 @@ def koru_log_tail(limit: int = 200) -> dict:
     """
     try:
         from . import ticket_meta
-        from .work_queue import _loop_controller_active, _project, koru_status
+        from .work_queue import _controller_label, _loop_controller_active, _project, koru_status
         project = _project()
         log = ticket_meta.koru_log_path(_project())
         ku = koru_status()
@@ -244,7 +276,7 @@ def koru_log_tail(limit: int = 200) -> dict:
         return {"lines": [], "log": None, "source": None, "status": "unavailable", "live": False}
 
     running = bool(ku.get("running"))
-    controller = "koru" if running else ("loop://" if loop_controller else None)
+    controller = _controller_label(running, loop_controller)
     base: dict[str, Any] = {
         "log": str(log) if log else None,
         "source": str(log) if log else None,
@@ -260,28 +292,14 @@ def koru_log_tail(limit: int = 200) -> dict:
         return {**base, "lines": [_control_row(text)], "status": "missing", "live": False,
                 "stale": False, "source_age_seconds": None, "source_mtime": None, "source_mtime_local": None}
 
-    source_age: float | None = None
-    source_mtime: float | None = None
-    try:
-        source_mtime = log.stat().st_mtime
-        source_age = max(0.0, time.time() - source_mtime)
-    except OSError:
-        pass
+    source_age, source_mtime = _log_source_age(log)
     stale = source_age is not None and source_age > _KORU_LOG_STALE_SECONDS
     live = running and not stale
-    status = "live" if live else ("stale" if stale else ("stopped" if not running else "idle"))
+    status = _koru_log_status(running, stale, live)
     rows = _coalesce([_koru_line(l) for l in ticket_meta._tail(log, int(limit))])
     if not live:
-        if loop_controller and not running:
-            text = (f"queue.log nie jest aktywnym kontrolerem; ostatnia zmiana {_short_age(source_age)} temu; "
-                    "aktywny kontroler: loop:// (cron /api/work/loop)")
-        elif stale:
-            text = f"brak świeżego heartbeatu koru przez {_short_age(source_age)}; ostatnia zmiana: {_local_ts(source_mtime)}"
-        elif not running:
-            text = f"koru nie działa; ostatnia zmiana logu {_short_age(source_age)} temu; kontroler: {controller or 'brak'}"
-        else:
-            text = f"źródło logu: {log.name}; status: {status}"
-        rows.append(_control_row(text))
+        rows.append(_control_row(_koru_inactive_text(
+            log, status, running, stale, loop_controller, controller, source_age, source_mtime)))
     return {
         **base,
         "lines": rows,

@@ -637,6 +637,30 @@ def _now_state(step_events: list, nodes: dict) -> dict:
     return {"fingerprint": None, "url": None, "status": None, "node": None}
 
 
+def _durable_extras(mem: "Any") -> "tuple[list, list, list]":
+    """Optional durable twin layers — degraded runs, reversibility proofs, episodes — each guarded."""
+    degraded_flows = mem.degraded_flows() if hasattr(mem, "degraded_flows") else []
+    proof_store = getattr(mem, "proof_store", None)
+    proofs = list(proof_store.values()) if hasattr(proof_store, "values") else []
+    all_episodes = mem.known_good_episodes() if hasattr(mem, "known_good_episodes") else []
+    return degraded_flows, proofs, all_episodes
+
+
+def _prompt_focus(prompt: str, all_episodes: list, step_events: list) -> "dict | None":
+    """Prompt-scoped replay: THAT chat message's own step events + durable Episode (survives restart)."""
+    if not prompt:
+        return None
+    from urirun.node.episode import intent_signature  # noqa: PLC0415
+    isig = intent_signature(prompt)
+    focus_episodes = [ep for ep in all_episodes if ep.get("intent_sig") == isig]
+    return {
+        "prompt": prompt,
+        "intentSig": isig,
+        "events": [e for e in step_events if e.get("intent_sig") == isig],
+        "episode": focus_episodes[0] if focus_episodes else None,  # newest-first
+    }
+
+
 def api_twin_state(project: str, db: "str | None", config: "str | None", query: dict,
                    node_urls: "list[str] | None" = None) -> "tuple[int, dict]":
     from urirun.node.twin_store import durable_memory as _durable_memory  # noqa: PLC0415
@@ -649,28 +673,11 @@ def api_twin_state(project: str, db: "str | None", config: "str | None", query: 
         e for e in TWIN_EVENT_HUB.replay_since(0)
         if isinstance(e, dict) and e.get("uri") == "twin://monitor/event"
     ][-50:]
-    # Surface the rest of the durable twin layer so the panels have a single state source:
-    # degraded runs (ran but not known-good), reversibility proofs, and episodic memory.
-    degraded_flows = mem.degraded_flows() if hasattr(mem, "degraded_flows") else []
-    proof_store = getattr(mem, "proof_store", None)
-    proofs = list(proof_store.values()) if hasattr(proof_store, "values") else []
-    all_episodes = mem.known_good_episodes() if hasattr(mem, "known_good_episodes") else []
+    # Surface the rest of the durable twin layer so the panels have a single state source.
+    degraded_flows, proofs, all_episodes = _durable_extras(mem)
     episodes_ok, episodes_failed, health_episodes = _split_episodes(all_episodes)
-    # Prompt-scoped focus for an embedded chat widget: the run's own step events (in-memory
-    # ring buffer) plus its durable Episode, so the widget replays what THAT chat message
-    # actually executed — surviving server restarts — instead of the latest global event.
     prompt = str((query.get("prompt") or [""])[0] or "").strip()
-    focus = None
-    if prompt:
-        from urirun.node.episode import intent_signature  # noqa: PLC0415
-        isig = intent_signature(prompt)
-        focus_episodes = [ep for ep in all_episodes if ep.get("intent_sig") == isig]
-        focus = {
-            "prompt": prompt,
-            "intentSig": isig,
-            "events": [e for e in step_events if e.get("intent_sig") == isig],
-            "episode": focus_episodes[0] if focus_episodes else None,  # newest-first
-        }
+    focus = _prompt_focus(prompt, all_episodes, step_events)
     return 200, {
         "ok": True,
         "nodes": nodes,

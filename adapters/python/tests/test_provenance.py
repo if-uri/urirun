@@ -31,3 +31,27 @@ def test_provenance_opt_out(monkeypatch):
     monkeypatch.setenv("URIRUN_NO_PROVENANCE", "1")
     _runtime._PROV_CACHE.clear()
     assert _runtime._provenance("urirun_runtime._runtime") is None
+
+
+def test_non_local_function_executor_gets_runtime_provenance():
+    # fetch/mqtt/shell/spawn results carry no handler _meta; the runtime stamps its own
+    # so the journal never records prov=None for a served URI.
+    _runtime._PROV_CACHE.clear()
+    envelope = {}
+    _runtime._run_execute_step(
+        lambda ctx, policy: {"type": "mqtt", "topic": "t", "delivered": False},
+        {}, {}, envelope,
+    )
+    meta = envelope["result"]["_meta"]
+    assert meta["module"] == "urirun_runtime._runtime" and meta["ranOn"]
+
+
+def test_runtime_provenance_does_not_override_handler_meta():
+    handler_meta = {"module": "some.connector", "ranOn": "node-a"}
+    result = {"type": "function", "_meta": handler_meta}
+    _runtime._stamp_runtime_provenance(result)
+    assert result["_meta"] is handler_meta
+
+
+def test_runtime_provenance_skips_non_dict_result():
+    _runtime._stamp_runtime_provenance("not-a-dict")  # must not raise
