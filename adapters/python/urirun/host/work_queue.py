@@ -87,6 +87,43 @@ def tickets(limit: int = 40) -> list[dict[str, Any]]:
     return rows[:limit]
 
 
+def _bucket_skip(reason: str) -> str:
+    """Map a planfile runnability skip-reason to a /work bucket."""
+    if reason == "autonomy-frontier" or reason == "goal-frozen":
+        return "frozen"
+    if reason == "actor:human" or reason.startswith("waiting:") or reason.startswith("needs-human"):
+        return "waiting"
+    if reason.startswith("blocked_by:"):
+        return "dependency_blocked"
+    return "other"  # exec_state:*, queue:*
+
+
+def runnable_summary() -> dict[str, Any]:
+    """WHY koru serves work or idles — the operator's answer to "czemu koru nic nie bierze?".
+    Uses planfile's runnability contract (`ticket next --debug`) to split the queue into servable
+    vs the reason each open ticket is held (frozen / waiting-on-human-or-resource / dependency).
+    An idle koru with a full ``waiting`` bucket is a CLEAN frontier, not a stall."""
+    buckets: dict[str, Any] = {"selected": None, "servable": [], "frozen": [],
+                               "waiting": [], "dependency_blocked": [], "other": []}
+    pf = _planfile()
+    if not pf:
+        return {**buckets, "error": "planfile not found"}
+    try:
+        cp = subprocess.run([pf, "ticket", "next", "--debug", "--format", "json"],
+                            capture_output=True, text=True, timeout=15, cwd=_project())
+        raw = cp.stdout
+        rep = json.loads(raw[raw.index("{"):raw.rindex("}") + 1])
+    except Exception:  # noqa: BLE001
+        return {**buckets, "error": "planfile next --debug failed"}
+    buckets["selected"] = rep.get("selected")
+    buckets["servable"] = rep.get("servable", [])
+    for row in rep.get("skipped", []):
+        buckets[_bucket_skip(row.get("reason", ""))].append({"id": row.get("id"), "reason": row.get("reason")})
+    if rep.get("warning"):
+        buckets["warning"] = rep["warning"]
+    return buckets
+
+
 def _ticket_cmds(pf: str, tid: str, act: str, note: str) -> tuple[list[list[str]] | None, str]:
     """Map a panel action to planfile CLI invocations (note first, then the status change)."""
     cmds: list[list[str]] = []
@@ -131,8 +168,20 @@ def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str,
         ran.append({"cmd": " ".join(c[3:]), "rc": cp.returncode})
         if cp.returncode != 0:
             return {"ok": False, "error": (cp.stderr or cp.stdout or "planfile error").strip()[-200:], "ran": ran}
+    if action in ("unblock", "ready"):  # ODBLOKOWANIE RAZ = ZAPAMIĘTANE (per Tom): persystuj trwale
+        _remember_unblock(tid, note)     # → bramki/watchdog nigdy więcej nie re-blokują/re-pytają
     _emit_ticket_event(tid, action)  # edge-trigger: zmiana statusu → event na szynę → reconciler
-    return {"ok": True, "ticket": tid, "action": (action or "note"), "ran": ran}
+    return {"ok": True, "ticket": tid, "action": (action or "note"), "ran": ran,
+            "remembered": action in ("unblock", "ready")}
+
+
+def _remember_unblock(tid: str, note: str) -> None:
+    """Zapisz TRWAŁE odblokowanie do ledgera — decyzja człowieka pamiętana na zawsze."""
+    try:
+        from urirun_connector_grants import unblock_ledger
+        unblock_ledger.record_unblock(tid, by="human", note=note or "odblokowane w /work")
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _emit_ticket_event(tid: str, action: str) -> None:
