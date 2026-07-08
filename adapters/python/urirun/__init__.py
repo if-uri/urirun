@@ -39,7 +39,9 @@ def _patch_router_effect_of() -> None:
         router_routing.execution_layers = _execution_layers
 
 
-_patch_router_effect_of()
+# Patch is applied lazily (see test_router_compat and places that need router compat)
+# to keep bare `import urirun` slim (no connector imports at facade load time).
+# _patch_router_effect_of()
 
 
 def parse_uri(uri: str):
