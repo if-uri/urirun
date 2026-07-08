@@ -438,6 +438,10 @@ def _handle_get_work(handler, parsed, project, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
+    if parsed.path == "/api/work/unblocks":
+        from .work_queue import unblock_board
+        _json_response(handler, 200, unblock_board())
+        return True
     return False
 
 

@@ -486,6 +486,19 @@ def _work_console_ticket_edit(project, path, body) -> dict:
                             schedule=body.get("schedule"))
 
 
+def _work_console_unblocks(project, path, body) -> dict:
+    from urirun_connector_grants import unblock_ledger as ul
+    action = str(body.get("action") or "revoke").strip()
+    key = str(body.get("key") or body.get("ticket") or "").strip()
+    if not key:
+        return {"ok": False, "error": "key lub ticket wymagane"}
+    if action == "revoke-ticket":
+        return ul.revoke_unblock(key)
+    if action == "revoke":
+        return ul.revoke_unblock_key(key) if ":" in key else ul.revoke_unblock(key)
+    return {"ok": False, "error": f"unknown action {action!r}"}
+
+
 def _work_console_cron(project, path, body) -> dict:
     from . import cron_admin
     return cron_admin.action(body)
@@ -578,7 +591,9 @@ _WORK_CONSOLE_ROUTES = {
     "/api/work/ticket/edit": _work_console_ticket_edit, "/api/work/cron": _work_console_cron,
     "/api/work/watchdog": _work_console_watchdog, "/api/work/agents": _work_console_agents,
     "/api/work/loop": _work_console_loop, "/api/work/verify": _work_console_verify,
-    "/api/work/task/new": _work_console_task_new, "/api/work/signal": _work_console_signal, "/api/work/system": _work_console_system, "/api/work/action": _work_console_action,
+    "/api/work/task/new": _work_console_task_new, "/api/work/signal": _work_console_signal,
+    "/api/work/system": _work_console_system, "/api/work/unblocks": _work_console_unblocks,
+    "/api/work/action": _work_console_action,
 }
 
 

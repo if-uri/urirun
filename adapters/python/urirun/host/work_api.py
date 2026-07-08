@@ -26,6 +26,8 @@ _CATALOG: list[dict[str, Any]] = [
     {"method": "GET", "path": f"{_BASE}/watchdog", "params": {}, "desc": "Wykryte zapętlenia + rootcause + dead_loop/cycles"},
     {"method": "GET", "path": f"{_BASE}/agents", "params": {}, "desc": "Dostępne narzędzia AI (executor agent://)"},
     {"method": "GET", "path": f"{_BASE}/gaps", "params": {}, "desc": "gap:// — jawne luki per-ticket + systemowe"},
+    {"method": "GET", "path": f"{_BASE}/unblocks", "params": {}, "desc": "Trwałe odblokowania: typy (waiting/action) + tickety z ledgera"},
+    {"method": "POST", "path": f"{_BASE}/unblocks", "params": {"action": "revoke|revoke-ticket", "key": "str", "ticket": "str"}, "desc": "Cofnij grant typu lub ticketu z unblock-ledger"},
     {"method": "GET", "path": f"{_BASE}/loop", "params": {}, "desc": "loop:// — plan pętli korekcyjnej (dry-run)"},
     {"method": "GET", "path": f"{_BASE}/actions", "params": {}, "desc": "Ten katalog API"},
     {"method": "POST", "path": f"{_BASE}/loop", "params": {"apply": "bool", "auto_agent": "bool"}, "desc": "Uruchom cykl pętli korekcyjnej (SAFE auto; run-agent za auto_agent)"},
@@ -47,6 +49,7 @@ _OPS = {
     "ticket.edit": ("POST", f"{_BASE}/ticket/edit"), "cron": ("POST", f"{_BASE}/cron"),
     "watchdog": ("POST", f"{_BASE}/watchdog"), "agents": ("POST", f"{_BASE}/agents"),
     "loop": ("POST", f"{_BASE}/loop"), "koru": ("POST", f"{_BASE}/koru"),
+    "unblocks": ("POST", f"{_BASE}/unblocks"),
 }
 
 

@@ -175,11 +175,31 @@ def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str,
             "remembered": action in ("unblock", "ready")}
 
 
+def _fetch_ticket(tid: str) -> dict | None:
+    """Pobierz ticket z planfile (do wyliczenia kluczy typu przy odblokowaniu)."""
+    pf = _planfile()
+    if not pf:
+        return None
+    try:
+        cp = subprocess.run([pf, "ticket", "show", tid, "--format", "json"],
+                            capture_output=True, text=True, timeout=15, cwd=_project())
+        raw = cp.stdout
+        if cp.returncode != 0 or "{" not in raw:
+            return None
+        return json.loads(raw[raw.index("{"):raw.rindex("}") + 1])
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _remember_unblock(tid: str, note: str) -> None:
-    """Zapisz TRWAŁE odblokowanie do ledgera — decyzja człowieka pamiętana na zawsze."""
+    """Zapisz TRWAŁE odblokowanie do ledgera — ticket + stabilne klucze typu (per Tom: nie re-pytaj)."""
     try:
         from urirun_connector_grants import unblock_ledger
-        unblock_ledger.record_unblock(tid, by="human", note=note or "odblokowane w /work")
+        from urirun_connector_work import gates
+        ticket = _fetch_ticket(tid) or {"id": tid}
+        action = gates.action_of_ticket(ticket) if ticket else ""
+        unblock_ledger.record_unblock(tid, action=action, by="human",
+                                      note=note or "odblokowane w /work", ticket=ticket)
     except Exception:  # noqa: BLE001
         pass
 
@@ -389,6 +409,18 @@ def _continuity_verdict(running: bool, loop_ctrl: bool, queue_empty: bool,
     if age is not None and age > _STALE_SECONDS:
         return "AT_RISK", f"loop running but no heartbeat for {int(age // 60)} min — inspect logs"
     return "OK", None
+
+
+def unblock_board() -> dict[str, Any]:
+    """Trwałe odblokowania z ledgera — typy + tickety (dla panelu /work)."""
+    try:
+        from urirun_connector_grants import unblock_ledger as ul
+        types = ul.list_type_grants()
+        tickets = ul.list_ticket_grants()
+        return {"ok": True, "ledger": ul.ledger_path(), "types": types, "tickets": tickets,
+                "total_types": len(types), "total_tickets": len(tickets)}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "types": [], "tickets": []}
 
 
 def work_status() -> dict[str, Any]:
