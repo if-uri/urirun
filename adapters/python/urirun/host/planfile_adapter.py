@@ -11,6 +11,7 @@ serialize responses without depending on planfile internals.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +66,18 @@ def load_planfile(project: str | None = None):
 
 
 def ticket_to_dict(ticket) -> dict:
-    return _model_dict(ticket) if ticket is not None else {}
+    d = _model_dict(ticket) if ticket is not None else {}
+    if d:
+        tid = d.get("id") or d.get("ticket_id")
+        if tid:
+            work_base = os.environ.get("URIRUN_LAN_QR_BASE") or os.environ.get("URIRUN_WORK_DASHBOARD_BASE") or "http://localhost:8797"
+            chat_base = os.environ.get("URIRUN_CHAT_BASE") or os.environ.get("URIRUN_CHAT_HOST", "http://127.0.0.1:8194")
+            d.setdefault("urls", {})
+            d["urls"]["dashboard"] = f"{work_base}/work?ticket={tid}"
+            d["urls"]["changes_history"] = f"{work_base}/work?ticket={tid}#history"
+            d["urls"]["llm_conversations"] = f"{chat_base}/?ticket={tid}"  # or /api/chat/history?ticket=... for raw
+            d["urls"]["llm_history_api"] = f"{chat_base}/api/chat/history?ticket={tid}"
+    return d
 
 
 def _normalize_labels(data: dict[str, Any]) -> list:
