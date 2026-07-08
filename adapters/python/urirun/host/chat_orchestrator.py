@@ -239,7 +239,7 @@ def _chat_ask_general_planner_failure(
         },
     ))
     try:
-        deps.host_db_fn().add_log(db, "chat", "ask", {
+        log_detail = {
             "prompt": prompt,
             "execute": execute,
             "noLlm": no_llm,
@@ -251,7 +251,10 @@ def _chat_ask_general_planner_failure(
             "error": result.get("error"),
             "recovery": result.get("recovery") or [],
             "remediation": remediation,
-        })
+        }
+        if payload and isinstance(payload, dict) and payload.get("ticket"):
+            log_detail["ticket"] = payload.get("ticket")
+        deps.host_db_fn().add_log(db, "chat", "ask", log_detail)
     except Exception:  # noqa: BLE001
         pass
     return result

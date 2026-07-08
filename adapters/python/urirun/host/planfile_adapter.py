@@ -65,18 +65,34 @@ def load_planfile(project: str | None = None):
     return _imports()["Planfile"](project_root(project))
 
 
+def get_ticket_urls(tid: str) -> dict[str, str]:
+    """Return standard URLs for a ticket's history views."""
+    work_base = (
+        os.environ.get("URIRUN_LAN_QR_BASE")
+        or os.environ.get("URIRUN_WORK_DASHBOARD_BASE")
+        or "http://localhost:8797"
+    )
+    chat_base = (
+        os.environ.get("URIRUN_CHAT_BASE")
+        or os.environ.get("URIRUN_CHAT_HOST", "http://127.0.0.1:8194")
+    )
+    return {
+        "dashboard": f"{work_base}/work?ticket={tid}",
+        "changes_history": f"{work_base}/work?ticket={tid}#history",
+        "llm_conversations": f"{chat_base}/?ticket={tid}",
+        "llm_history_api": f"{chat_base}/api/chat/history?ticket={tid}",
+    }
+
+
 def ticket_to_dict(ticket) -> dict:
     d = _model_dict(ticket) if ticket is not None else {}
     if d:
         tid = d.get("id") or d.get("ticket_id")
         if tid:
-            work_base = os.environ.get("URIRUN_LAN_QR_BASE") or os.environ.get("URIRUN_WORK_DASHBOARD_BASE") or "http://localhost:8797"
-            chat_base = os.environ.get("URIRUN_CHAT_BASE") or os.environ.get("URIRUN_CHAT_HOST", "http://127.0.0.1:8194")
-            d.setdefault("urls", {})
-            d["urls"]["dashboard"] = f"{work_base}/work?ticket={tid}"
-            d["urls"]["changes_history"] = f"{work_base}/work?ticket={tid}#history"
-            d["urls"]["llm_conversations"] = f"{chat_base}/?ticket={tid}"  # or /api/chat/history?ticket=... for raw
-            d["urls"]["llm_history_api"] = f"{chat_base}/api/chat/history?ticket={tid}"
+            urls = get_ticket_urls(tid)
+            if "urls" not in d or not isinstance(d.get("urls"), dict):
+                d["urls"] = {}
+            d["urls"].update(urls)
     return d
 
 
@@ -164,8 +180,25 @@ def create_ticket(project: str | None, payload: dict[str, Any]) -> dict:
     name = data.pop("name", None) or data.pop("title", None)
     if not name:
         raise ValueError("ticket name is required")
+    # Attach urls at creation time for persistence in history
+    tid = None  # will be set after create, but for note we can use placeholder or after
     ticket = pf.create_ticket(name=name, **data)
-    return ticket_to_dict(ticket)
+    tdict = ticket_to_dict(ticket)
+    tid = tdict.get("id")
+    if tid:
+        urls = get_ticket_urls(tid)
+        # append to outputs notes if present
+        outputs = tdict.get("outputs") or {}
+        notes = list(outputs.get("notes") or [])
+        note_text = f"Links: dashboard={urls['dashboard']}, changes={urls['changes_history']}, llm={urls['llm_conversations']}"
+        if note_text not in notes:
+            notes.append(note_text)
+            # update the ticket with note
+            try:
+                pf.update_ticket(tid, note=note_text)
+            except Exception:
+                pass
+    return tdict
 
 
 def list_tickets(

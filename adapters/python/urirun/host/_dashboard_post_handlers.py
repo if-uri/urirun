@@ -161,6 +161,11 @@ def node_set_token(config: str | None, payload: dict, *, identity: str | None = 
 
 def chat_ask(project: str, db: str | None, config: str | None, payload: dict, node_urls: list[str] | None = None,
              token: str | None = None, identity: str | None = None) -> dict:
+    # Support ticket context for per-ticket LLM history
+    ticket = payload.get("ticket") or (payload.get("context") or {}).get("ticket")
+    if ticket:
+        payload = dict(payload)
+        payload["ticket"] = str(ticket)
     return _chat_ask_impl(project, db, config, payload, node_urls, token, identity, deps=ChatDeps(
         host_db_fn=_host_db,
         mesh_fn=_mesh,

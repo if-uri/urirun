@@ -93,7 +93,7 @@ def _package_version() -> str:
 
 # ─── chat_history (stateless, only needs host_db + artifacts_admin) ───────────
 
-def chat_history(db: str | None, project: str, limit: int = 80) -> dict:
+def chat_history(db: str | None, project: str, limit: int = 80, ticket: str | None = None) -> dict:
     from .artifacts_admin import public_chat_attachments as _pca  # noqa: PLC0415
     host_db = _host_db()
     fetch_limit = max(limit * 4, limit)
@@ -103,6 +103,10 @@ def chat_history(db: str | None, project: str, limit: int = 80) -> dict:
         if item.get("event") != "message":
             continue
         detail = item.get("detail") or {}
+        if ticket:
+            msg_ticket = detail.get("ticket") or detail.get("context", {}).get("ticket")
+            if str(msg_ticket) != str(ticket):
+                continue
         msg = dict(detail)
         msg.setdefault("created_at", item.get("created_at"))
         msg.setdefault("id", item.get("id"))
@@ -213,7 +217,9 @@ def _api_chat_history(
     project: str, db: str | None, config: str | None,
     query: dict, node_urls: list[str] | None,
 ) -> tuple[int, dict]:
-    return 200, chat_history(db, project, limit=int(_first(query, "limit", "80") or 80))
+    ticket = _first(query, "ticket")
+    limit = int(_first(query, "limit", "80") or 80)
+    return 200, chat_history(db, project, limit=limit, ticket=ticket)
 
 
 def _api_chat_config(
