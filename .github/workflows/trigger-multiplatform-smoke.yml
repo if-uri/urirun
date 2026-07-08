@@ -23,6 +23,9 @@ jobs:
           URIRUN_REPO_URL: https://github.com/if-uri/urirun.git
           URIRUN_REF: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
+          test -n "$GH_TOKEN" || { echo "URIRUN_MULTIPLATFORM_TEST_TOKEN is not configured"; exit 1; }
+          test -n "$URIRUN_REF" || { echo "URIRUN_REF is empty"; exit 1; }
+
           # repository_dispatch to if-uri/urirun-multiplatform-test
           gh api \
             --method POST \
