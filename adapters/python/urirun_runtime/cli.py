@@ -311,6 +311,13 @@ def _add_host_task_subparser(host_sub) -> None:
     task_ready.add_argument("ticket_id")
     task_ready.add_argument("--note")
 
+    task_archive = task_sub.add_parser("archive", parents=[task_common], help="Archive a done ticket to hide from main view (moves to archive sprint)")
+    task_archive.add_argument("ticket_id")
+    task_archive.add_argument("--note")
+
+    task_unarchive = task_sub.add_parser("unarchive", parents=[task_common], help="Unarchive a ticket back to current sprint")
+    task_unarchive.add_argument("ticket_id")
+
     task_wait = task_sub.add_parser("wait-for-input", parents=[task_common], help="Mark a ticket as waiting for input")
     task_wait.add_argument("ticket_id")
     task_wait.add_argument("--prompt", required=True)

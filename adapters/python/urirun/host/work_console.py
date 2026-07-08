@@ -317,12 +317,12 @@ def uri_activity(limit: int = 40) -> list[dict]:
     try:
         from .twin_bridge import TWIN_EVENT_HUB
         events = [e for e in TWIN_EVENT_HUB.replay_since(0)
-                  if isinstance(e, dict) and e.get("uri") == "twin://monitor/event"]
+                  if isinstance(e, dict) and (e.get("uri") == "twin://monitor/event" or e.get("type") == "URI_PROCESS")]
     except Exception:  # noqa: BLE001
         return []
     rows = []
     for e in events[-int(limit):]:
-        rows.append({"uri": e.get("step_uri"), "narration": e.get("narration"),
+        rows.append({"uri": e.get("step_uri") or e.get("uri"), "narration": e.get("narration"),
                      "status": e.get("status"), "category": e.get("category"),
                      "degraded": e.get("degraded")})
     rows.reverse()
@@ -335,25 +335,77 @@ def shell_enabled() -> bool:
     return str(os.environ.get(_SHELL_ENV, "1")).strip().lower() not in ("0", "false", "no", "off")
 
 
+def _record_shell_error(err_type: str, message: str, cmd: str | None = None, exit_code: int | None = None):
+    try:
+        from urirun_runtime import errors
+        envelope = {
+            "uri": "shell://host/command/run",
+            "ok": False,
+            "error": {
+                "type": err_type,
+                "message": message,
+                "cmd": cmd,
+                "exit": exit_code
+            }
+        }
+        errors.record(envelope)
+    except Exception:
+        pass
+
+
+def _emit_shell_process(cmd: str, status: str, exit_code: int):
+    try:
+        from .twin_bridge import TWIN_EVENT_HUB
+        TWIN_EVENT_HUB.publish({
+            "uri": "shell://host/command/run",
+            "type": "URI_PROCESS",
+            "step_uri": f"shell://{cmd[:50]}",
+            "narration": cmd,
+            "status": status,
+            "category": "shell",
+            "exit": exit_code,
+            "timestamp": time.time()
+        })
+    except Exception:
+        pass
+
+
 def run_shell(project: Any, cmd: str, timeout: float | None = None) -> dict[str, Any]:
     """Run one shell command in the project dir and return its combined output.
 
     The operator's own shell, on the host the loop runs on — deliberately powerful,
     so it is gated by URIRUN_WORK_SHELL and bounded by a timeout."""
     if not shell_enabled():
-        return {"ok": False, "error": "shell console disabled (URIRUN_WORK_SHELL=0)"}
+        err_msg = "shell console disabled (URIRUN_WORK_SHELL=0)"
+        _record_shell_error("PermissionError", err_msg)
+        return {"ok": False, "error": err_msg}
     cmd = str(cmd or "").strip()
     if not cmd:
-        return {"ok": False, "error": "empty command"}
+        err_msg = "empty command"
+        _record_shell_error("ValueError", err_msg)
+        return {"ok": False, "error": err_msg}
     to = float(timeout or os.environ.get(_SHELL_TIMEOUT_ENV) or 30)
     try:
         cp = subprocess.run(["bash", "-lc", cmd], cwd=str(project), capture_output=True,
-                            text=True, timeout=to)  # noqa: S603 - operator console, gated + bounded
+                             text=True, timeout=to)  # noqa: S603 - operator console, gated + bounded
     except subprocess.TimeoutExpired:
-        return {"ok": False, "error": f"timed out after {to:g}s", "cmd": cmd}
+        err_msg = f"timed out after {to:g}s"
+        _record_shell_error("TimeoutExpired", err_msg, cmd=cmd)
+        _emit_shell_process(cmd, "failed", -1)
+        return {"ok": False, "error": err_msg, "cmd": cmd}
     except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc), "cmd": cmd}
+        err_msg = str(exc)
+        _record_shell_error(exc.__class__.__name__, err_msg, cmd=cmd)
+        _emit_shell_process(cmd, "failed", -1)
+        return {"ok": False, "error": err_msg, "cmd": cmd}
     out = (cp.stdout or "") + (cp.stderr or "")
     truncated = len(out) > 20000
+
+    status = "done" if cp.returncode == 0 else "failed"
+    if cp.returncode != 0:
+        _record_shell_error("ShellCommandFailed", f"Command exited with code {cp.returncode}", cmd=cmd, exit_code=cp.returncode)
+
+    _emit_shell_process(cmd, status, cp.returncode)
+
     return {"ok": True, "cmd": cmd, "exit": cp.returncode,
             "out": out[-20000:] if truncated else out, "truncated": truncated}

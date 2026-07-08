@@ -480,10 +480,19 @@ def _work_console_ticket_create(project, path, body) -> dict:
 
 def _work_console_ticket_edit(project, path, body) -> dict:
     from .work_queue import ticket_edit_full
-    return ticket_edit_full(str(body.get("id") or ""), name=str(body.get("name") or ""),
-                            description=str(body.get("description") or ""), llm=body.get("llm"),
-                            node=body.get("node"), allow=body.get("allow"), deny=body.get("deny"),
-                            schedule=body.get("schedule"))
+    return ticket_edit_full(
+        str(body.get("id") or ""),
+        name=str(body.get("name") or ""),
+        description=str(body.get("description") or ""),
+        llm=body.get("llm"),
+        node=body.get("node"),
+        allow=body.get("allow"),
+        deny=body.get("deny"),
+        schedule=body.get("schedule"),
+        owner=body.get("owner"),
+        llm_model=body.get("llm_model"),
+        assigned_person=body.get("assigned_person"),
+    )
 
 
 def _work_console_unblocks(project, path, body) -> dict:
@@ -497,6 +506,16 @@ def _work_console_unblocks(project, path, body) -> dict:
     if action == "revoke":
         return ul.revoke_unblock_key(key) if ":" in key else ul.revoke_unblock(key)
     return {"ok": False, "error": f"unknown action {action!r}"}
+
+
+def _work_console_ticket_archive(project, path, body) -> dict:
+    from .work_queue import ticket_action
+    return ticket_action(str(body.get("id") or ""), "archive", str(body.get("note") or ""))
+
+
+def _work_console_ticket_unarchive(project, path, body) -> dict:
+    from .work_queue import ticket_action
+    return ticket_action(str(body.get("id") or ""), "unarchive", "")
 
 
 def _work_console_cron(project, path, body) -> dict:
@@ -594,6 +613,8 @@ _WORK_CONSOLE_ROUTES = {
     "/api/work/task/new": _work_console_task_new, "/api/work/signal": _work_console_signal,
     "/api/work/system": _work_console_system, "/api/work/unblocks": _work_console_unblocks,
     "/api/work/action": _work_console_action,
+    "/api/work/ticket/archive": _work_console_ticket_archive,
+    "/api/work/ticket/unarchive": _work_console_ticket_unarchive,
 }
 
 

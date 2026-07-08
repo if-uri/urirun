@@ -191,7 +191,7 @@ def test_every_api_route_returns_200_on_empty_query(path, monkeypatch):
     # Stub out all data-fetching deps to avoid needing a live DB/node
     monkeypatch.setattr(hd, "summary", lambda *a, **kw: {"ok": True, "objects": []})
     monkeypatch.setattr(hd, "_node_type_profiles_impl", lambda: [])
-    monkeypatch.setattr(hd, "_safe_tickets", lambda *a, **kw: ([], None))
+    monkeypatch.setattr(da, "_safe_tickets", lambda *a, **kw: ([], None))
     fake_db = type("DB", (), {
         "recent_checks": lambda self, db, **kw: [],
         "recent_logs": lambda self, db, **kw: [],

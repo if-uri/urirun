@@ -196,6 +196,7 @@ def claim_ticket(project: str | None, ticket_id: str, assigned_to: str | None = 
 
 def start_ticket(project: str | None, ticket_id: str, assigned_to: str | None = None) -> dict | None:
     ticket = load_planfile(project).start_ticket(ticket_id, assigned_to=assigned_to)
+    _emit_uri_process(f"ticket://{ticket_id}", "start")
     return ticket_to_dict(ticket) if ticket else None
 
 
@@ -207,6 +208,7 @@ def complete_ticket(
     artifacts: list[str] | None = None,
 ) -> dict | None:
     ticket = load_planfile(project).complete_ticket(ticket_id, note=note, result=result, artifacts=artifacts)
+    _emit_uri_process(f"ticket://{ticket_id}", "complete", {"result": result})
     return ticket_to_dict(ticket) if ticket else None
 
 
@@ -282,6 +284,56 @@ def ready_ticket(project: str | None, ticket_id: str, note: str | None = None) -
     return ticket_to_dict(ticket) if ticket else None
 
 
+# --- Archiving support to reduce clutter in main view ---
+# We use sprint="archive" to move completed work out of the "current" view.
+# Done tickets in "archive" sprint are hidden by default in the /work dashboard queue.
+
+ARCHIVE_SPRINT = "archive"
+
+def archive_ticket(project: str | None, ticket_id: str, note: str | None = None) -> dict | None:
+    """Move a ticket to the archive sprint (and ensure status=done).
+    This hides it from the main active queue in the dashboard.
+    """
+    pf = load_planfile(project)
+    updates = {"sprint": ARCHIVE_SPRINT, "status": "done"}
+    if note:
+        # append note
+        ticket = pf.get_ticket(ticket_id)
+        existing_notes = (getattr(ticket, "outputs", None) or type('obj', (object,), {'notes': []})()).notes or []
+        updates["note"] = (note if isinstance(note, str) else str(note))
+    ticket = pf.update_ticket(ticket_id, **updates)
+    _emit_uri_process(f"ticket://{ticket_id}", "archive", {"sprint": ARCHIVE_SPRINT})
+    return ticket_to_dict(ticket) if ticket else None
+
+
+def archive_done_tickets(project: str | None = None, note: str | None = None) -> list[dict]:
+    """Bulk archive all done tickets by moving them to archive sprint.
+    Useful to clean up the view.
+    """
+    pf = load_planfile(project)
+    done_tickets = pf.list_tickets(sprint="current", status="done")
+    archived = []
+    for t in done_tickets:
+        tid = getattr(t, "id", None) or t.get("id") if isinstance(t, dict) else None
+        if tid:
+            res = archive_ticket(project, tid, note=note)
+            if res:
+                archived.append(res)
+    return archived
+
+
+def unarchive_ticket(project: str | None, ticket_id: str) -> dict | None:
+    """Move ticket back from archive to current sprint."""
+    pf = load_planfile(project)
+    ticket = pf.update_ticket(ticket_id, sprint="current")
+    return ticket_to_dict(ticket) if ticket else None
+
+
+def list_tickets_archived(project: str | None = None) -> list[dict]:
+    """List tickets in the archive sprint."""
+    return list_tickets(project=project, sprint=ARCHIVE_SPRINT)
+
+
 def run_dsl(project: str | None, command: str) -> dict:
     root = project_root(project)
     _imports()["Planfile"](root)  # ensures .planfile/ exists here before DSLExecutor.auto_discover()
@@ -299,6 +351,24 @@ def _register_ticket_creator() -> None:
     """Register create_ticket into the errors module — inverts the dependency arrow."""
     from urirun.runtime import errors
     errors.register_ticket_creator(create_ticket)
+
+
+def _emit_uri_process(uri: str, action: str, details: dict = None):
+    """Standard logging of URI processes via twin events."""
+    try:
+        from .twin_bridge import TWIN_EVENT_HUB
+        TWIN_EVENT_HUB.publish({
+            "uri": uri,
+            "type": "URI_PROCESS",
+            "step_uri": f"{uri}/{action}",
+            "narration": action,
+            "status": "done",
+            "category": "planfile",
+            "details": details or {},
+            "timestamp": __import__("time").time()
+        })
+    except Exception:
+        pass
 
 
 _register_ticket_creator()

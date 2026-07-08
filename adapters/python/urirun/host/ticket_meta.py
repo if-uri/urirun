@@ -27,6 +27,8 @@ _META_ENV = "URIRUN_TICKET_META_FILE"
 _TICKET_RE = re.compile(r"[A-Z]{2,}-\d+")
 _DONE = {"done", "closed", "cancelled"}
 
+_DIGITAL_PERSONS_ENV = "URIRUN_DIGITAL_PERSONS_FILE"
+
 
 # ------------------------------------------------------------------ meta side-store
 
@@ -49,6 +51,88 @@ def load_meta() -> dict:
 
 def save_meta(data: dict) -> None:
     meta_file().write_text(json.dumps(data, indent=1), encoding="utf-8")
+
+
+# ------------------------------------------------------------------ digital persons / twin
+
+def digital_persons_file() -> Path:
+    p = Path(os.environ.get(_DIGITAL_PERSONS_ENV) or "~/.urirun/host-dashboard/digital-persons.json").expanduser()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+_DEFAULT_DIGITAL_PERSONS = [
+    {
+        "id": "tom",
+        "type": "human",
+        "name": "Tom Sapletta",
+        "competencies": ["architecture", "review", "unblock", "signal", "node-setup", "policy", "full"],
+        "grants": ["human:*", "policy:*", "node:*", "secret:*", "unblock:*"]
+    },
+    {
+        "id": "claude-coder",
+        "type": "digital",
+        "name": "Claude Coder",
+        "model": "claude-3.5-sonnet",
+        "competencies": ["code", "refactor", "test", "kvm", "deploy", "ui-control"],
+        "grants": ["code:*", "test:*", "kvm:*", "repo.edit", "agent:code"]
+    },
+    {
+        "id": "gemini-planner",
+        "type": "digital",
+        "name": "Gemini Planner",
+        "model": "gemini-2.5-flash",
+        "competencies": ["plan", "triage", "strategy", "nxdo", "goal"],
+        "grants": ["ticket.create", "plan:*", "intent.resolve", "vision.inspect"]
+    },
+    {
+        "id": "koru-worker",
+        "type": "digital",
+        "name": "Koru Worker",
+        "model": "autonomous",
+        "competencies": ["drive", "claim-next", "verify", "reconcile"],
+        "grants": ["ticket.claim", "work:*", "loop:*"]
+    },
+    {
+        "id": "nvidia-agent",
+        "type": "digital",
+        "name": "NVIDIA Agent",
+        "model": "local",
+        "competencies": ["host-control", "capture", "input", "nvidia"],
+        "grants": ["node:nvidia", "kvm:host", "capture:*"]
+    },
+    {
+        "id": "lenovo-node",
+        "type": "digital",
+        "name": "Lenovo Node Twin",
+        "model": "node",
+        "competencies": ["node:lenovo", "kvm", "signal", "email", "deploy"],
+        "grants": ["node:lenovo", "kvm:*", "signal:*"]
+    }
+]
+
+
+def load_digital_persons() -> list[dict]:
+    f = digital_persons_file()
+    if not f.is_file():
+        save_digital_persons(_DEFAULT_DIGITAL_PERSONS)
+        return list(_DEFAULT_DIGITAL_PERSONS)
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+        return d if isinstance(d, list) else list(_DEFAULT_DIGITAL_PERSONS)
+    except Exception:  # noqa: BLE001
+        return list(_DEFAULT_DIGITAL_PERSONS)
+
+
+def save_digital_persons(persons: list[dict]) -> None:
+    digital_persons_file().write_text(json.dumps(persons, indent=1, ensure_ascii=False), encoding="utf-8")
+
+
+def get_digital_person(pid: str) -> dict | None:
+    for p in load_digital_persons():
+        if p.get("id") == pid:
+            return p
+    return None
 
 
 # ------------------------------------------------------------------ LLM attribution
@@ -170,10 +254,18 @@ def enrich(tickets: list[dict], project: str) -> list[dict]:
     host = os.uname().nodename
     procs = scan_log_processes(project)
     out = []
+    persons = {p["id"]: p for p in load_digital_persons()}
     for t in tickets:
         m = meta.get(t.get("id")) or {}
         p = procs.get(t.get("id")) or []
-        out.append({**t, "llm": ticket_llms(t, m, session), "node": ticket_node(t, m, host),
+        owner_id = m.get("owner") or m.get("assigned_person") or ""
+        owner = persons.get(owner_id) or ({"id": owner_id, "name": owner_id, "type": "unknown"} if owner_id else None)
+        out.append({**t,
+                    "llm": ticket_llms(t, m, session),
+                    "llm_model": m.get("llm_model") or (m.get("llm") or [None])[0] if m.get("llm") else None,
+                    "node": ticket_node(t, m, host),
+                    "owner": owner,
+                    "assigned_person": m.get("assigned_person") or m.get("owner") or "",
                     "procs": p[:3], "procs_total": len(p),
                     "allow": m.get("allow") or [], "deny": m.get("deny") or [],
                     "schedule": m.get("schedule") or "",
@@ -188,8 +280,14 @@ def ticket_detail(project: str, ticket_id: str) -> dict[str, Any]:
         return {"ok": False, "error": "ticket id required"}
     m = load_meta().get(tid) or {}
     procs = scan_log_processes(project).get(tid) or []
+    persons = {p["id"]: p for p in load_digital_persons()}
+    owner_id = m.get("owner") or m.get("assigned_person") or ""
+    owner = persons.get(owner_id)
     return {"ok": True, "id": tid, "processes": procs, "process_total": len(procs),
-            "llm": m.get("llm") or [], "node": m.get("node") or "",
+            "llm": m.get("llm") or [], "llm_model": m.get("llm_model"),
+            "node": m.get("node") or "",
+            "owner": owner,
+            "assigned_person": owner_id,
             "allow": m.get("allow") or [], "deny": m.get("deny") or [],
             "schedule": m.get("schedule") or ""}
 
@@ -201,8 +299,9 @@ def _split_list(value: Any) -> list[str]:
 
 
 def edit_meta(ticket_id: str, *, llm: Any = None, node: Any = None, allow: Any = None,
-              deny: Any = None, schedule: Any = None) -> dict:
-    """Persist the operator's LLM / node / allow / deny / schedule edits to the side-store."""
+              deny: Any = None, schedule: Any = None, owner: Any = None, llm_model: Any = None,
+              assigned_person: Any = None) -> dict:
+    """Persist the operator's LLM / node / allow / deny / schedule / owner / llm_model edits."""
     tid = str(ticket_id or "").strip()
     data = load_meta()
     entry = data.get(tid) or {}
@@ -215,7 +314,13 @@ def edit_meta(ticket_id: str, *, llm: Any = None, node: Any = None, allow: Any =
     if deny is not None:
         entry["deny"] = _split_list(deny)
     if schedule is not None:
-        entry["schedule"] = str(schedule).strip()  # cadencja np. "codziennie 08:00" / cron
+        entry["schedule"] = str(schedule).strip()
+    if owner is not None:
+        entry["owner"] = str(owner).strip()
+    if llm_model is not None:
+        entry["llm_model"] = str(llm_model).strip()
+    if assigned_person is not None:
+        entry["assigned_person"] = str(assigned_person).strip()
     data[tid] = entry
     save_meta(data)
     return entry

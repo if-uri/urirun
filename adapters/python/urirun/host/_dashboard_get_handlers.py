@@ -228,10 +228,10 @@ def _handle_get_work_console(handler, parsed, project, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
-    if parsed.path == "/api/work/uri-log":
-        from .work_console import uri_activity  # which URI processes urirun is running, live
+    if parsed.path in ("/api/work/uri-log", "/api/work/uri-processes"):
+        from .work_console import uri_activity  # which URI processes urirun is running, live - unified standard
         _json_response(handler, 200,
-                       {"ok": True, "events": uri_activity(int(_first(query, "limit", "40") or 40))})
+                       {"ok": True, "events": uri_activity(int(_first(query, "limit", "40") or 40)), "standard": "URI_PROCESS via twin events"})
         return True
     if parsed.path == "/api/work/koru-log":
         from .work_console import koru_log_tail  # realne komendy koru na żywo (tail logu pętli)
@@ -426,8 +426,10 @@ def _handle_get_work(handler, parsed, project, query) -> bool:
         return True
     if parsed.path == "/api/work/queue":
         from .work_queue import queue_state  # koru loop status + planfile ticket queue
+        include_done = str(_first(query, "include_done", "false")).lower() in ("1", "true", "yes")
+        sprint = _first(query, "sprint", "current")
         try:
-            _json_response(handler, 200, {"ok": True, **queue_state()})
+            _json_response(handler, 200, {"ok": True, **queue_state(include_done=include_done, sprint=sprint)})
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
@@ -441,6 +443,20 @@ def _handle_get_work(handler, parsed, project, query) -> bool:
     if parsed.path == "/api/work/unblocks":
         from .work_queue import unblock_board
         _json_response(handler, 200, unblock_board())
+        return True
+    if parsed.path == "/api/work/active":
+        from .work_queue import active_tickets
+        try:
+            _json_response(handler, 200, active_tickets())
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
+    if parsed.path == "/api/work/persons":
+        from . import ticket_meta
+        try:
+            _json_response(handler, 200, {"ok": True, "persons": ticket_meta.load_digital_persons()})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
     return False
 

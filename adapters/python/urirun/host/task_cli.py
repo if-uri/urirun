@@ -287,6 +287,14 @@ def _task_ready(args, pa) -> int:
     return _emit_ticket_result(pa.ready_ticket(args.project, args.ticket_id, note=args.note))
 
 
+def _task_archive(args, pa) -> int:
+    return _emit_ticket_result(pa.archive_ticket(args.project, args.ticket_id, note=args.note))
+
+
+def _task_unarchive(args, pa) -> int:
+    return _emit_ticket_result(pa.unarchive_ticket(args.project, args.ticket_id))
+
+
 def _task_wait(args, pa) -> int:
     return _emit_ticket_result(pa.wait_for_input(args.project, args.ticket_id, args.prompt, env_keys=args.env_key, note=args.note))
 
@@ -351,6 +359,8 @@ _TASK_COMMANDS = {
     "fail": _task_fail,
     "block": _task_block,
     "ready": _task_ready,
+    "archive": _task_archive,
+    "unarchive": _task_unarchive,
     "wait-for-input": _task_wait,
     "dsl": _task_dsl,
     "run": _task_run,

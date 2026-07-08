@@ -27,6 +27,9 @@ _CATALOG: list[dict[str, Any]] = [
     {"method": "GET", "path": f"{_BASE}/agents", "params": {}, "desc": "Dostępne narzędzia AI (executor agent://)"},
     {"method": "GET", "path": f"{_BASE}/gaps", "params": {}, "desc": "gap:// — jawne luki per-ticket + systemowe"},
     {"method": "GET", "path": f"{_BASE}/unblocks", "params": {}, "desc": "Trwałe odblokowania: typy (waiting/action) + tickety z ledgera"},
+    {"method": "GET", "path": f"{_BASE}/active", "params": {}, "desc": "Aktualnie jednocześnie uruchamiane tickety (z lease/worker + badge ▶⏸⏹)"},
+    {"method": "GET", "path": f"{_BASE}/persons", "params": {}, "desc": "Digital Twin — lista osób (human/digital) z kompetencjami i grantami"},
+    {"method": "GET", "path": f"{_BASE}/queue", "params": {}, "desc": "Kolejka + digital_twin (z owner/llm_model per ticket)"},
     {"method": "POST", "path": f"{_BASE}/unblocks", "params": {"action": "revoke|revoke-ticket", "key": "str", "ticket": "str"}, "desc": "Cofnij grant typu lub ticketu z unblock-ledger"},
     {"method": "GET", "path": f"{_BASE}/loop", "params": {}, "desc": "loop:// — plan pętli korekcyjnej (dry-run)"},
     {"method": "GET", "path": f"{_BASE}/actions", "params": {}, "desc": "Ten katalog API"},
@@ -35,11 +38,14 @@ _CATALOG: list[dict[str, Any]] = [
     {"method": "POST", "path": f"{_BASE}/ops/reject", "params": {"id": "str"}, "desc": "Odrzuć operację"},
     {"method": "POST", "path": f"{_BASE}/shell", "params": {"cmd": "str"}, "desc": "Konsola shell (gated URIRUN_WORK_SHELL)"},
     {"method": "POST", "path": f"{_BASE}/ticket", "params": {"id": "str", "action": "unblock|start|done|block|ready|note", "note": "str"}, "desc": "Akcja na ticketcie (status/notatka)"},
-    {"method": "POST", "path": f"{_BASE}/ticket/edit", "params": {"id": "str", "name": "str", "description": "str", "llm": "str", "node": "str", "allow": "str", "deny": "str", "schedule": "str"}, "desc": "Edytuj ticket (tekst→planfile, reszta→meta)"},
+    {"method": "POST", "path": f"{_BASE}/ticket/edit", "params": {"id": "str", "name": "str", "description": "str", "llm": "str", "node": "str", "allow": "str", "deny": "str", "schedule": "str", "owner": "str", "llm_model": "str", "assigned_person": "str"}, "desc": "Edytuj ticket (tekst→planfile, reszta→meta + Digital Twin: owner/llm_model/person)"},
     {"method": "POST", "path": f"{_BASE}/cron", "params": {"action": "add|edit|remove", "schedule": "str", "command": "str", "label": "str", "id": "str"}, "desc": "CRUD wpisów cron"},
     {"method": "POST", "path": f"{_BASE}/watchdog", "params": {"action": "unstick|circuit-break|sweep", "id": "str", "apply": "bool"}, "desc": "Przerwij pętlę / circuit-break (diagnoza) / sweep"},
     {"method": "POST", "path": f"{_BASE}/agents", "params": {"action": "run-ticket", "id": "str", "agent": "claude|codex|auto"}, "desc": "Wykonaj ticket REALNYM agentem (claude -p) → Runs"},
     {"method": "POST", "path": f"{_BASE}/koru", "params": {"lane": "str"}, "desc": "Uruchom/kontynuuj pętlę koru"},
+    {"method": "POST", "path": f"{_BASE}/ticket/archive", "params": {"id": "str", "note": "str"}, "desc": "Archiwizuj ticket (przenieś do sprintu archive, ukryj z widoku)"},
+    {"method": "POST", "path": f"{_BASE}/ticket/unarchive", "params": {"id": "str"}, "desc": "Przywróć zarchiwizowany ticket"},
+    {"method": "GET", "path": f"{_BASE}/uri-processes", "params": {"limit": "int"}, "desc": "URI processes - unified log of all URI actions (standard)"},
 ]
 
 # op → (metoda, ścieżka) dla unijnego dispatchera POST /api/work/action
@@ -50,6 +56,9 @@ _OPS = {
     "watchdog": ("POST", f"{_BASE}/watchdog"), "agents": ("POST", f"{_BASE}/agents"),
     "loop": ("POST", f"{_BASE}/loop"), "koru": ("POST", f"{_BASE}/koru"),
     "unblocks": ("POST", f"{_BASE}/unblocks"),
+    "ticket.archive": ("POST", f"{_BASE}/ticket/archive"),
+    "ticket.unarchive": ("POST", f"{_BASE}/ticket/unarchive"),
+    "uri-processes": ("GET", f"{_BASE}/uri-processes"),
 }
 
 
