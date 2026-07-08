@@ -31,6 +31,47 @@ from urirun.runtime import errors
 
 DEFAULT_CATALOG_BASE = "https://connect.ifuri.com"
 _USER_AGENT = "urirun-connect-catalog"
+_BUILTIN_CONNECTORS: dict[str, dict] = {
+    "planfile": {
+        "id": "planfile",
+        "name": "Planfile Tasks",
+        "status": "available",
+        "category": "Planning",
+        "summary": "Planfile-backed task tickets exposed through task:// and planfile:// URIs.",
+        "uriSchemes": ["task", "planfile"],
+        "routes": [
+            "task://host/tickets/query/list",
+            "task://host/ticket/query/show",
+            "task://host/ticket/command/create",
+            "planfile://host/dsl/command/run",
+        ],
+        "install": {"mode": "bundled"},
+    },
+    "sqlite-context": {
+        "id": "sqlite-context",
+        "name": "SQLite Context",
+        "status": "available",
+        "category": "Data",
+        "summary": "Bundled host SQLite storage for logs, checks, artifacts and context.",
+        "uriSchemes": ["data", "artifact", "check", "log"],
+        "routes": [],
+        "install": {"mode": "bundled"},
+    },
+}
+
+
+def builtin_catalog() -> dict:
+    """Return the offline connector catalog bundled with urirun.
+
+    It covers connector contracts that are part of this distribution, allowing
+    black-box install smoke tests to inspect them without requiring network
+    access to the public catalog.
+    """
+    return {
+        "version": "ifuri.connectors.v1",
+        "source": "urirun-builtin",
+        "connectors": [dict(item) for item in _BUILTIN_CONNECTORS.values()],
+    }
 
 
 def _get_json(url: str, timeout: float = 10.0) -> dict:
@@ -49,6 +90,13 @@ def fetch_catalog(base: str = DEFAULT_CATALOG_BASE, timeout: float = 10.0) -> di
 def fetch_connector(connector_id: str, base: str = DEFAULT_CATALOG_BASE, timeout: float = 10.0) -> dict:
     """Return the parsed ``connectors/<id>.json`` contract document."""
     return _get_json(f"{base.rstrip('/')}/connectors/{connector_id}.json", timeout=timeout)
+
+
+def _builtin_connector_document(connector_id: str) -> dict | None:
+    connector = _BUILTIN_CONNECTORS.get(connector_id)
+    if connector is None:
+        return None
+    return {"connector": dict(connector), "source": "urirun-builtin"}
 
 
 def _connectors(catalog: dict) -> list[dict]:
@@ -148,7 +196,10 @@ def _emit_json(payload) -> int:
 
 
 def _cmd_list(args: argparse.Namespace) -> int:
-    catalog = fetch_catalog(args.catalog)
+    try:
+        catalog = fetch_catalog(args.catalog)
+    except urllib.error.URLError:
+        catalog = builtin_catalog()
     connectors = _connectors(catalog)
     if getattr(args, "available", False):
         connectors = [c for c in connectors if str(c.get("status")) == "available"]
@@ -165,7 +216,12 @@ def _cmd_list(args: argparse.Namespace) -> int:
 
 
 def _cmd_show(args: argparse.Namespace) -> int:
-    document = fetch_connector(args.id, args.catalog)
+    try:
+        document = fetch_connector(args.id, args.catalog)
+    except urllib.error.URLError:
+        document = _builtin_connector_document(args.id)
+        if document is None:
+            raise
     if args.json:
         return _emit_json(document)
     connector = document.get("connector") if isinstance(document.get("connector"), dict) else document

@@ -13,16 +13,16 @@
       <p class="subtle" id="contextLine">Loading...</p>
     </div>
     <div class="toolbar">
-      <div class="tabs desktop-tabs">
-        <button data-view="chat">Chat</button>
-        <button data-view="artifacts">Artifacts</button>
-        <button data-view="tasks">Tasks</button>
-        <button data-view="host">Host</button>
-        <button data-view="nodes">Nodes</button>
-        <button data-view="activity">Activity</button>
+      <div class="tabs desktop-tabs" data-testid="dashboard-primary-nav" aria-label="Dashboard sections">
+        <button data-view="chat" data-testid="chat" aria-label="Open Chat section">Chat</button>
+        <button data-view="artifacts" data-testid="artifacts" aria-label="Open Artifacts section">Artifacts</button>
+        <button data-view="tasks" data-testid="tasks" aria-label="Open Tasks section">Tasks</button>
+        <button data-view="host" data-testid="settings" aria-label="Open Settings section">Settings</button>
+        <button data-view="nodes" data-testid="nodes" aria-label="Open Nodes section">Nodes</button>
+        <button data-view="activity" data-testid="services" aria-label="Open Services section">Services</button>
       </div>
-      <button id="scannerBtn" type="button">Phone Scanner</button>
-      <button id="phoneQrBtn" type="button" title="Pokaz QR tego widoku do otwarcia na telefonie" onclick="showViewQr()">Telefon (QR)</button>
+      <button id="scannerBtn" type="button" data-testid="phone-scanner" aria-label="Open phone scanner">Phone Scanner</button>
+      <button id="phoneQrBtn" type="button" data-testid="view-qr" aria-label="Show QR code for this view" title="Pokaz QR tego widoku do otwarcia na telefonie" onclick="showViewQr()">Telefon (QR)</button>
       <span class="pill" id="activeTabPill">chat</span>
       <button class="primary" id="refreshBtn">Refresh</button>
     </div>
@@ -30,7 +30,7 @@
   <main>
     <section class="metrics" id="metrics"></section>
     <section class="grid">
-      <section class="artifact-layout view-block" data-section="artifacts">
+      <section class="artifact-layout view-block" data-section="artifacts" data-testid="artifacts-section" aria-label="Artifacts section">
         <article class="panel">
           <div class="panel-head">
             <div>
@@ -55,7 +55,7 @@
         </article>
       </section>
 
-      <section class="nodes-layout view-block" data-section="host">
+      <section class="nodes-layout view-block" data-section="host" data-testid="settings-section" aria-label="Settings section">
         <article class="panel">
           <div class="panel-head">
             <div>
@@ -117,7 +117,7 @@
           </div>
         </article>
       </section>
-      <section class="artifact-layout view-block" data-section="tasks">
+      <section class="artifact-layout view-block" data-section="tasks" data-testid="tasks-section" aria-label="Tasks section">
         <article class="panel">
           <div class="panel-head">
             <div>
@@ -168,7 +168,7 @@
         </article>
       </section>
       <div class="stack">
-        <article class="panel view-block chat-panel" data-section="chat">
+        <article class="panel view-block chat-panel" data-section="chat" data-testid="chat-section" aria-label="Chat section">
           <div class="panel-head">
             <div>
               <h2>Chat Result</h2>
@@ -217,7 +217,7 @@
             </div>
           </div>
         </article>
-        <section class="nodes-layout view-block" data-section="nodes">
+        <section class="nodes-layout view-block" data-section="nodes" data-testid="nodes-section" aria-label="Nodes section">
         <article class="panel">
           <div class="panel-head"><h2>Nodes</h2><span class="subtle" id="nodeCount"></span></div>
           <div class="panel-body">
@@ -453,20 +453,20 @@
         </section>
       </div>
       <aside class="stack">
-        <article class="panel view-block" data-section="activity">
+        <article class="panel view-block" data-section="activity" data-testid="services-section" aria-label="Services section">
           <div class="panel-head"><h2>Logs</h2><span class="subtle" id="logCount"></span></div>
           <div class="panel-body"><div id="logsList"></div></div>
         </article>
       </aside>
     </section>
   </main>
-  <nav class="bottom-nav">
-    <button data-view="chat">Chat</button>
-    <button data-view="artifacts">Artifacts</button>
-    <button data-view="tasks">Tasks</button>
-    <button data-view="host">Host</button>
-    <button data-view="nodes">Nodes</button>
-    <button data-view="activity">Activity</button>
+  <nav class="bottom-nav" data-testid="dashboard-bottom-nav" aria-label="Dashboard sections">
+    <button data-view="chat" data-testid="chat-mobile" aria-label="Open Chat section">Chat</button>
+    <button data-view="artifacts" data-testid="artifacts-mobile" aria-label="Open Artifacts section">Artifacts</button>
+    <button data-view="tasks" data-testid="tasks-mobile" aria-label="Open Tasks section">Tasks</button>
+    <button data-view="host" data-testid="settings-mobile" aria-label="Open Settings section">Settings</button>
+    <button data-view="nodes" data-testid="nodes-mobile" aria-label="Open Nodes section">Nodes</button>
+    <button data-view="activity" data-testid="services-mobile" aria-label="Open Services section">Services</button>
   </nav>
   <script src="/dashboard.js"></script>
 </body>

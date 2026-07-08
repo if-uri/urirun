@@ -8,6 +8,21 @@ def _dashboard_js() -> str:
     return (root / "urirun" / "host" / "dashboard.js").read_text(encoding="utf-8")
 
 
+def _dashboard_html() -> str:
+    root = Path(__file__).resolve().parents[1]
+    return (root / "urirun" / "host" / "dashboard.html").read_text(encoding="utf-8")
+
+
+def test_dashboard_exposes_stable_gui_test_selectors():
+    html = _dashboard_html()
+    for selector in ("chat", "nodes", "tasks", "services", "artifacts", "settings"):
+        assert f'data-testid="{selector}"' in html
+        assert f'data-testid="{selector}-section"' in html
+    assert 'data-testid="dashboard-primary-nav"' in html
+    assert 'data-testid="dashboard-bottom-nav"' in html
+    assert 'aria-label="Open Chat section"' in html
+
+
 def test_webpage_node_qr_uses_reconnect_target_not_relay_url_directly():
     source = _dashboard_js()
     assert "function nodeQrTarget" in source

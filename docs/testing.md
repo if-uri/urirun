@@ -6,6 +6,10 @@ separate repository:
 
 <https://github.com/if-uri/urirun-multiplatform-test>
 
+The main-repo workflow, selector, install, artifact, production-promotion and
+gRPC policy contracts are documented in
+[`docs/MULTIPLATFORM_HARNESS.md`](MULTIPLATFORM_HARNESS.md).
+
 ## Tests in this repository
 
 The main `urirun` repository owns developer-facing validation:

@@ -491,6 +491,10 @@ def _cmd_connectors(args, parser) -> int:
     fn = _CLI_BRIDGE.get("connectors_command")
     if fn is not None:
         return fn(args)
+    if sub in {"list", "show", "install", "check"}:
+        from urirun.connectors import connect_catalog
+
+        return connect_catalog.connectors_command(args)
     reglib._emit_json({"ok": False, "error": f"unknown connectors sub-command: {sub!r}"}, "-")
     return 1
 

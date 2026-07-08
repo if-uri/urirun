@@ -1,0 +1,51 @@
+name: trigger multiplatform harness
+
+on:
+  workflow_run:
+    workflows:
+      - ci
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      get_urirun_site_mode:
+        description: get.urirun.com validation mode
+        required: false
+        default: production-site
+        type: choice
+        options:
+          - production-site
+          - local-dev-site
+      allow_remote_install:
+        description: Allow remote production installer execution
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  trigger:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Trigger urirun multiplatform harness
+        env:
+          GH_TOKEN: ${{ secrets.URIRUN_MULTIPLATFORM_TEST_TOKEN }}
+          TARGET_REPO: if-uri/urirun-multiplatform-test
+          URIRUN_REPO_URL: https://github.com/if-uri/urirun.git
+          URIRUN_REF: ${{ github.event.workflow_run.head_sha || github.sha }}
+          SITE_MODE: ${{ inputs.get_urirun_site_mode || 'production-site' }}
+          ALLOW_REMOTE_INSTALL: ${{ inputs.allow_remote_install || 'false' }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/$TARGET_REPO/dispatches \
+            -f event_type=urirun-main-ci \
+            -f client_payload[urirun_repo_url]="$URIRUN_REPO_URL" \
+            -f client_payload[urirun_ref]="$URIRUN_REF" \
+            -f client_payload[sha]="$URIRUN_REF" \
+            -f client_payload[get_urirun_site_mode]="$SITE_MODE" \
+            -f client_payload[allow_remote_install]="$ALLOW_REMOTE_INSTALL"

@@ -9,6 +9,39 @@ from urllib.parse import parse_qsl, unquote
 
 URI_RE = re.compile(r'^(?P<scheme>[a-z][a-z0-9+.-]*)://(?P<target>[^/?#]+)(?P<path>/[^?#]*)?(?:\?(?P<query>[^#]*))?(?:#(?P<fragment>.*))?$', re.I)
 
+
+def _patch_router_effect_of() -> None:
+    """Tolerate older router wheels missing names used by urirun-flow."""
+    try:
+        from urirun_connector_router import routing as router_routing
+    except Exception:
+        return
+    if hasattr(router_routing, "effect_of"):
+        pass
+    else:
+        alias = getattr(router_routing, "effect_of_route", None)
+        if callable(alias):
+            router_routing.effect_of = alias
+        else:
+            def _effect_of(uri: str, *_args, **_kwargs) -> str:
+                text = str(uri or "")
+                if "/query/" in text:
+                    return "read"
+                if "/command/" in text:
+                    return "write"
+                return "unknown"
+
+            router_routing.effect_of = _effect_of
+    if not hasattr(router_routing, "execution_layers"):
+        def _execution_layers(_route: dict | None = None, *_args, **_kwargs) -> list[str]:
+            return ["host", "node"]
+
+        router_routing.execution_layers = _execution_layers
+
+
+_patch_router_effect_of()
+
+
 def parse_uri(uri: str):
     m = URI_RE.match(str(uri))
     if not m:

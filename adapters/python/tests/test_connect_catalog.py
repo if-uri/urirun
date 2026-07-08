@@ -117,6 +117,35 @@ def test_show_json(monkeypatch, capsys):
     assert '"id": "planfile"' in capsys.readouterr().out
 
 
+def test_show_planfile_uses_bundled_contract_when_catalog_offline(monkeypatch, capsys):
+    import urllib.error
+
+    def boom(cid, base="", timeout=10.0):
+        raise urllib.error.URLError("offline")
+
+    monkeypatch.setattr(connect_catalog, "fetch_connector", boom)
+    rc = connect_catalog.connectors_command(_args(connectors_command="show", id="planfile", json=True))
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["source"] == "urirun-builtin"
+    assert payload["connector"]["id"] == "planfile"
+    assert "task" in payload["connector"]["uriSchemes"]
+
+
+def test_show_unknown_connector_still_reports_catalog_error(monkeypatch, capsys):
+    import urllib.error
+
+    def boom(cid, base="", timeout=10.0):
+        raise urllib.error.URLError("offline")
+
+    monkeypatch.setattr(connect_catalog, "fetch_connector", boom)
+    rc = connect_catalog.connectors_command(_args(connectors_command="show", id="ghost", json=True))
+
+    assert rc == 1
+    assert "catalog request failed" in capsys.readouterr().err
+
+
 def test_diff_manifest_in_sync():
     entry = CATALOG["connectors"][0]
     assert connect_catalog.diff_manifest(entry, entry) == []
@@ -154,7 +183,7 @@ def test_check_drift_returns_1(monkeypatch, tmp_path, capsys):
     assert "mismatch" in capsys.readouterr().err
 
 
-def test_catalog_network_error_returns_1(monkeypatch):
+def test_list_uses_bundled_catalog_when_network_offline(monkeypatch, capsys):
     import urllib.error
 
     def boom(base="", timeout=10.0):
@@ -162,4 +191,5 @@ def test_catalog_network_error_returns_1(monkeypatch):
 
     monkeypatch.setattr(connect_catalog, "fetch_catalog", boom)
     rc = connect_catalog.connectors_command(_args(connectors_command="list", available=False, json=False))
-    assert rc == 1
+    assert rc == 0
+    assert "planfile" in capsys.readouterr().out
