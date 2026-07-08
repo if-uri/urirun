@@ -79,8 +79,8 @@ jobs:
           # Contract gate must be SELF-CONTAINED: a re-export of the (unpublished) urirun-contract
           # would make this import fail in a clean venv → would break every fresh `pip install urirun`.
           /tmp/venv/bin/python -c "import urirun_connectors_toolkit.contract_gate as g; assert hasattr(g,'conform') and hasattr(g,'enforce'), 'contract_gate not self-contained'; print('ok  contract_gate self-contained (no urirun-contract needed)')"
-          /tmp/venv/bin/urirun --help >/dev/null
-          /tmp/venv/bin/urirun node serve --help >/dev/null   # exercises the CLI->mesh bridge (the "mesh not available" class)
+          # Full installed CLI help and node smoke coverage lives in if-uri/urirun-multiplatform-test.
+          /tmp/venv/bin/python -c "import importlib.metadata as md; eps={ep.name: ep.value for ep in md.distribution('urirun').entry_points if ep.group == 'console_scripts'}; assert eps.get('urirun') == 'urirun.v2:main', eps; import urirun.runtime.cli; print('ok  urirun console script metadata + parser import')"
 
       # PyPI Trusted Publishing (OIDC). Configure the publisher on pypi.org for
       # if-uri/urirun · workflow release.yml (this same file). No token needed.
