@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Verify a fresh pip install of urirun delivers all 8 bundled sub-namespaces,
-# shims resolve correctly, node serve starts, and host_dashboard imports cleanly.
+# Verify a fresh pip install of urirun delivers bundled sub-namespaces, console
+# script metadata, shims, and host_dashboard imports. Full installed CLI,
+# transport, /health, and /run smokes live in if-uri/urirun-multiplatform-test.
 #
 # Modes:
 #   --local      Install from the local adapters/python directory (no PyPI needed).
@@ -32,18 +33,16 @@ for arg in "$@"; do
 done
 [ -z "$VERSION" ] && VERSION="$(cat "$ROOT/VERSION")"
 VENV="/tmp/_urirun_pypi_gate"
-NODE_DIR="/tmp/_urirun_pypi_gate_node"
 
 cleanup() {
-  [ -n "${NODE_PID:-}" ] && kill "$NODE_PID" >/dev/null 2>&1 || true
-  rm -rf "$VENV" "$NODE_DIR"
+  rm -rf "$VENV"
 }
 trap cleanup EXIT
 
-rm -rf "$VENV" "$NODE_DIR"
+rm -rf "$VENV"
 python3 -m venv "$VENV"
 
-# ── --collision: full local set must resolve each urirun_* import name to one dist ───────────
+# --collision: full local set must resolve each urirun_* import name to one dist.
 if [ "$COLLISION" -eq 1 ]; then
   echo "==> test-collision: install bundle + extracted siblings from local, assert single resolution"
   # Install real-source local siblings first so the local bundle can resolve unpublished floors
@@ -114,11 +113,11 @@ else
 fi
 
 "$VENV/bin/python3" - "$VERSION" <<'PY'
-import importlib, sys
+import importlib, importlib.metadata as md, sys
 
 version = sys.argv[1]
 
-# ── 8 bundled sub-namespaces: module + sentinel symbol ────────────────────────
+# Bundled sub-namespaces: module + sentinel symbol.
 BUNDLE_CHECKS = [
     # (import_path,                      sentinel_symbol)
     ("urirun_runtime._runtime",          "DEFAULT_TIMEOUT"),
@@ -136,7 +135,7 @@ BUNDLE_CHECKS = [
     ("urirun_scanner.artifacts_admin",   "public_chat_attachment"),
 ]
 
-# ── Shim compatibility: host/node paths must resolve to bundle classes ─────────
+# Shim compatibility: host/node paths must resolve to bundle classes.
 SHIM_CHECKS = [
     # (shim_import_path,                 bundle_import_path,           symbol)
     ("urirun.node.event_schema",         "urirun_contracts.event_schema",  "StepEvent"),
@@ -145,7 +144,7 @@ SHIM_CHECKS = [
     ("urirun.runtime._runtime",          "urirun_runtime._runtime",         "DEFAULT_TIMEOUT"),
 ]
 
-# ── host_dashboard must import without urirun_connector_scanner ───────────────
+# host_dashboard must import without urirun_connector_scanner.
 HOST_IMPORT_CHECKS = [
     "urirun.host.host_dashboard",
     "urirun.host.document_sync",
@@ -187,6 +186,16 @@ for mod_path in HOST_IMPORT_CHECKS:
     except Exception as e:
         failures.append(f"HOST IMPORT {mod_path}: {e}")
 
+scripts = {
+    ep.name: ep.value
+    for ep in md.distribution("urirun").entry_points
+    if ep.group == "console_scripts"
+}
+if scripts.get("urirun") != "urirun.v2:main":
+    failures.append(f"ENTRYPOINT urirun -> {scripts.get('urirun')!r}")
+else:
+    print("  ok  console_scripts: urirun -> urirun.v2:main")
+
 if failures:
     print(f"\nFAILED ({len(failures)} issues):", file=sys.stderr)
     for f in failures:
@@ -196,59 +205,7 @@ if failures:
 print(f"\nall {len(BUNDLE_CHECKS)} bundles + {len(SHIM_CHECKS)} shims + {len(HOST_IMPORT_CHECKS)} host imports ok  (urirun=={version})")
 PY
 
-# ── node serve end-to-end: start, hit /health, call a built-in route ──────────
-echo "==> test-published: node serve end-to-end"
-mkdir -p "$NODE_DIR"
-
-NODE_PORT="$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")"
-
-cat > "$NODE_DIR/bindings.json" << 'JSON'
-{"version":"urirun.bindings.v2","bindings":{"env://pypi-gate/runtime/query/health":{"kind":"command","adapter":"argv-template","inputSchema":{"type":"object","additionalProperties":false,"properties":{}},"argv":["python3","-c","import json;print(json.dumps({'ok':True,'node':'pypi-gate'}))"],"policy":{"allowExecute":true,"maxArgs":8},"meta":{"title":"Health"}}}}
-JSON
-
-"$VENV/bin/urirun" validate "$NODE_DIR/bindings.json" >/dev/null
-"$VENV/bin/urirun" compile  "$NODE_DIR/bindings.json" --out "$NODE_DIR/registry.json" >/dev/null
-"$VENV/bin/urirun" node init \
-  --config "$NODE_DIR/node.json" \
-  --name pypi-gate --registry "$NODE_DIR/registry.json" \
-  --host 127.0.0.1 --port "$NODE_PORT" --execute >/dev/null
-
-"$VENV/bin/urirun" node serve --config "$NODE_DIR/node.json" --execute \
-  > "$NODE_DIR/node.log" 2>&1 &
-NODE_PID="$!"
-
-"$VENV/bin/python3" - "$NODE_PORT" "$NODE_DIR/node.log" << 'PY'
-import json, sys, time, urllib.request
-
-port, logfile = sys.argv[1], sys.argv[2]
-
-# wait for /health
-for _ in range(40):
-    try:
-        r = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=1).read())
-        if r.get("ok"):
-            print(f"  ok  /health on 127.0.0.1:{port}")
-            break
-    except Exception:
-        time.sleep(0.25)
-else:
-    with open(logfile) as f:
-        print(f.read(), file=sys.stderr)
-    sys.exit("node did not become healthy")
-
-# call a route
-r = json.loads(urllib.request.urlopen(
-    urllib.request.Request(
-        f"http://127.0.0.1:{port}/run",
-        data=json.dumps({"uri":"env://pypi-gate/runtime/query/health","payload":{},"mode":"execute"}).encode(),
-        headers={"Content-Type":"application/json"},
-    ), timeout=5
-).read())
-assert r.get("ok"), f"/run returned not-ok: {r}"
-print(f"  ok  /run env://pypi-gate/runtime/query/health")
-PY
-
-# ── Collision guard (post-publish): extracted packages must not double-ship import names ──
+# Collision guard (post-publish): extracted packages must not double-ship import names.
 # urirun-runtime / urirun-cdp / urirun-connectors-toolkit remain meta-packages that ship no import
 # package. urirun-flow is now a real-source owner, and bundled `urirun` must not ship
 # `urirun_flow`. Installing them alongside `urirun` must therefore leave EVERY urirun_* import
@@ -275,7 +232,7 @@ if collisions:
     print("  Fix: choose one owner. Meta-packages must ship no import package; real-source "
           "packages require the bundle to exclude that import name.", file=sys.stderr)
     sys.exit(1)
-print("  ok  no package-name collisions — every urirun_* name resolves to a single distribution")
+print("  ok  no package-name collisions - every urirun_* name resolves to a single distribution")
 PY
 
 echo "==> test-published: PASSED for urirun==$VERSION"
