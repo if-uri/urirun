@@ -106,26 +106,111 @@ _DEFAULT_DIGITAL_PERSONS = [
         "type": "digital",
         "name": "Lenovo Node Twin",
         "model": "node",
+        "mode": "real",  # "real" = physical KVM hardware; "sim" = digital twin sim for testing (Signal app etc.)
         "competencies": ["node:lenovo", "kvm", "signal", "email", "deploy"],
         "grants": ["node:lenovo", "kvm:*", "signal:*"]
     }
 ]
 
 
+def _enrich_person(p: dict) -> None:
+    """Add backing (real-node / virtual-twin / human) + components for UI podgląd."""
+    try:
+        if "mode" not in p:
+            p["mode"] = "sim" if str(p.get("id","")).endswith("-sim") else "real"
+        comps_l = [str(c).lower() for c in (p.get("competencies") or [])]
+        keys = ("kvm", "lenovo", "node:", "signal", "desktop", "input")
+        is_node_like = any(any(k in c for k in keys) for c in comps_l)
+        if p.get("type") == "human":
+            p["backing"] = "human"
+        elif p.get("mode") == "real" and is_node_like:
+            p["backing"] = "real-node"
+        else:
+            p["backing"] = "virtual-twin"
+        p["components"] = [c for c in (p.get("competencies") or []) if any(k in c.lower() for k in ("kvm","lenovo","signal","node","input","capture","deploy"))][:5] or (p.get("competencies") or [])[:4]
+    except Exception:
+        p.setdefault("backing", "virtual-twin")
+        p.setdefault("components", [])
+
 def load_digital_persons() -> list[dict]:
     f = digital_persons_file()
     if not f.is_file():
         save_digital_persons(_DEFAULT_DIGITAL_PERSONS)
-        return list(_DEFAULT_DIGITAL_PERSONS)
+        persons = list(_DEFAULT_DIGITAL_PERSONS)
+        for p in persons: _enrich_person(p)
+        return persons
     try:
         d = json.loads(f.read_text(encoding="utf-8"))
-        return d if isinstance(d, list) else list(_DEFAULT_DIGITAL_PERSONS)
+        persons = d if isinstance(d, list) else list(_DEFAULT_DIGITAL_PERSONS)
+        now = time.time()
+        for p in persons:
+            if "enabled" not in p:
+                p["enabled"] = True
+            _enrich_person(p)   # always compute backing + components (wirtualny DT vs rzeczywisty node + inne komponenty)
+            en = bool(p.get("enabled", True))
+            du = p.get("disabled_until")
+            if du:
+                try:
+                    if isinstance(du, (int, float)) and du > now:
+                        en = False
+                    elif isinstance(du, str):
+                        from datetime import datetime
+                        if datetime.fromisoformat(du.replace("Z", "+00:00")).timestamp() > now:
+                            en = False
+                except:
+                    pass
+            p["_is_enabled"] = en
+        return persons
     except Exception:  # noqa: BLE001
-        return list(_DEFAULT_DIGITAL_PERSONS)
+        persons = list(_DEFAULT_DIGITAL_PERSONS)
+        for p in persons: _enrich_person(p)
+        return persons
 
 
 def save_digital_persons(persons: list[dict]) -> None:
     digital_persons_file().write_text(json.dumps(persons, indent=1, ensure_ascii=False), encoding="utf-8")
+
+
+def set_digital_person_enabled(pid: str, enabled: bool, disabled_until: float | str | None = None) -> bool:
+    """Toggle a digital twin on/off. disabled_until can be unix timestamp or ISO for temp disable."""
+    persons = load_digital_persons()
+    changed = False
+    for p in persons:
+        if p.get("id") == pid:
+            p["enabled"] = bool(enabled)
+            if disabled_until is not None:
+                p["disabled_until"] = disabled_until
+            elif "disabled_until" in p and enabled:
+                del p["disabled_until"]
+            changed = True
+            break
+    if changed:
+        save_digital_persons(persons)
+    return changed
+
+
+def set_digital_person_mode(pid: str, mode: str) -> bool:
+    """Set mode for a digital twin: 'real' (use physical hardware/KVM) or 'sim' (digital twin simulation, for testing)."""
+    if mode not in ("real", "sim"):
+        return False
+    persons = load_digital_persons()
+    changed = False
+    for p in persons:
+        if p.get("id") == pid:
+            p["mode"] = mode
+            changed = True
+            break
+    if changed:
+        save_digital_persons(persons)
+    return changed
+
+
+def get_digital_person_mode(pid: str) -> str:
+    """Return 'real' or 'sim' for the twin. Defaults to 'real'."""
+    p = get_digital_person(pid)
+    if p:
+        return p.get("mode", "real")
+    return "real"
 
 
 def get_digital_person(pid: str) -> dict | None:

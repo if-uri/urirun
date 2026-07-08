@@ -446,6 +446,29 @@ def _handle_post_work(handler, parsed, project) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
+    if parsed.path == "/api/work/person/toggle":
+        body = _read_json(handler) or {}
+        pid = str(body.get("id") or "").strip()
+        enabled = body.get("enabled")
+        disabled_until = body.get("disabled_until")
+        from . import ticket_meta
+        try:
+            ok = ticket_meta.set_digital_person_enabled(pid, bool(enabled) if enabled is not None else True, disabled_until)
+            _json_response(handler, 200, {"ok": ok, "id": pid, "enabled": enabled, "disabled_until": disabled_until})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
+    if parsed.path == "/api/work/person/mode":
+        body = _read_json(handler) or {}
+        pid = str(body.get("id") or "").strip()
+        mode = str(body.get("mode") or "real")
+        from . import ticket_meta
+        try:
+            ok = ticket_meta.set_digital_person_mode(pid, mode)
+            _json_response(handler, 200, {"ok": ok, "id": pid, "mode": ticket_meta.get_digital_person_mode(pid)})
+        except Exception as exc:  # noqa: BLE001
+            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
     if _handle_post_work_console(handler, parsed, project):
         return True
     return False

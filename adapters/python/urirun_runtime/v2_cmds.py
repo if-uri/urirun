@@ -634,6 +634,45 @@ def _cmd_version(args, parser) -> int:
     return 0
 
 
+def _cmd_start(args, parser) -> int:
+    """urirun start — launch autonomous koru loop with twin-human for kvm/lenovo (real desktop actions + URI logs)."""
+    import subprocess
+    import sys
+    import os
+    import shutil
+    project = getattr(args, "project", ".")
+    apply = getattr(args, "apply", True)
+    daemon = getattr(args, "daemon", False)
+    use_koru = getattr(args, "koru", False)
+
+    print(f"[urirun start] project={project} apply={apply} daemon={daemon}")
+
+    cmd = [sys.executable, "-m", "urirun_connector_loop", "cycle", "--project", project]
+    if apply:
+        cmd.append("--apply")
+
+    if daemon:
+        print("Starting in background...")
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        print(f"started pid={p.pid}")
+        return 0
+
+    if use_koru:
+        try:
+            koru = shutil.which("koru") or f"{project}/.venv/bin/koru"
+            if os.path.exists(koru):
+                print("also starting koru autonomous...")
+                subprocess.Popen([koru, "autonomous", "up", "--project", project])
+        except Exception:
+            pass
+
+    print("Running koru cycle (Ctrl-C to stop). Real kvm:// commands will be logged to .planfile/.koru/queue.log")
+    try:
+        return subprocess.call(cmd)
+    except KeyboardInterrupt:
+        return 0
+
+
 _COMMANDS = {
     "version": _cmd_version,
     "init": _cmd_init,
@@ -659,7 +698,50 @@ _COMMANDS = {
     "node": _cmd_node,
     "run": _cmd_run_or_list,
     "list": _cmd_run_or_list,
+    "start": _cmd_start,
 }
+
+
+def _cmd_start(args, parser) -> int:
+    """urirun start — launch autonomous koru loop with twin-human for kvm/lenovo (real desktop actions + URI logs)."""
+    import subprocess
+    import sys
+    import os
+    import shutil
+    project = getattr(args, "project", ".")
+    apply = getattr(args, "apply", True)
+    daemon = getattr(args, "daemon", False)
+    use_koru = getattr(args, "koru", False)
+
+    print(f"[urirun start] project={project} apply={apply} daemon={daemon}")
+
+    # Ensure the loop uses twin-human for kvm (already wired in connector-loop)
+    cmd = [sys.executable, "-m", "urirun_connector_loop", "cycle", "--project", project]
+    if apply:
+        cmd.append("--apply")
+
+    if daemon:
+        print("Starting in background...")
+        # simple bg (user can use & or systemd)
+        p = subprocess.Popen(cmd + ["--loop"] if False else cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        print(f"started pid={p.pid}")
+        return 0
+
+    if use_koru:
+        # also kick koru if available
+        try:
+            koru = shutil.which("koru") or f"{project}/.venv/bin/koru"
+            if os.path.exists(koru):
+                print("also starting koru autonomous...")
+                subprocess.Popen([koru, "autonomous", "up", "--project", project])
+        except Exception:
+            pass
+
+    print("Running koru cycle (Ctrl-C to stop). Real kvm:// commands will be logged to .planfile/.koru/queue.log")
+    try:
+        return subprocess.call(cmd)
+    except KeyboardInterrupt:
+        return 0
 
 
 def _main_impl(argv: list[str] | None = None) -> int:

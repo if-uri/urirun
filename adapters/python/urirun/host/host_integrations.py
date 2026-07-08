@@ -148,7 +148,8 @@ def _planfile_update(pa, project, payload: dict, args: list) -> dict:
     updates = payload.get("updates") if isinstance(payload.get("updates"), dict) else {}
     if not updates:
         updates = {key: value for key, value in payload.items() if key not in {"project", "ticket_id", "id"}}
-    return {"ticket": pa.update_ticket(project, _ticket_id(payload, args), updates)}
+    return {"ticket": pa.update_ticket(project, _ticket_id(payload, args), updates,
+                                      reason=payload.get("reason"), actor=payload.get("actor"))}
 
 
 def _planfile_dsl(pa, project, payload: dict, args: list) -> dict:
@@ -166,20 +167,25 @@ def _write_planfile_action(pa, action: str, project, payload: dict, args: list) 
             project, _ticket_id(payload, args),
             assigned_to=payload.get("assigned_to"), lease_seconds=payload.get("lease_seconds"),
         )},
-        "start": lambda: {"ticket": pa.start_ticket(project, _ticket_id(payload, args), assigned_to=payload.get("assigned_to"))},
+        "start": lambda: {"ticket": pa.start_ticket(project, _ticket_id(payload, args), assigned_to=payload.get("assigned_to"),
+                                                      reason=payload.get("reason"), actor=payload.get("actor"))},
         "complete": lambda: {"ticket": pa.complete_ticket(
             project, _ticket_id(payload, args),
             note=payload.get("note"), result=payload.get("result"),
             artifacts=_list_param(payload.get("artifact") or payload.get("artifacts")),
+            reason=payload.get("reason"), actor=payload.get("actor"),
         )},
-        "fail": lambda: {"ticket": pa.fail_ticket(project, _ticket_id(payload, args), str(payload.get("error") or "failed"))},
+        "fail": lambda: {"ticket": pa.fail_ticket(project, _ticket_id(payload, args), str(payload.get("error") or "failed"),
+                                                  reason=payload.get("reason"), actor=payload.get("actor"))},
         "block": lambda: {"ticket": pa.block_ticket(
             project,
             _ticket_id(payload, args),
             reason=str(payload.get("reason") or payload.get("description") or "BLOCKED"),
             note=payload.get("note"),
+            actor=payload.get("actor"),
         )},
-        "ready": lambda: {"ticket": pa.ready_ticket(project, _ticket_id(payload, args), note=payload.get("note"))},
+        "ready": lambda: {"ticket": pa.ready_ticket(project, _ticket_id(payload, args), note=payload.get("note"),
+                                                    reason=payload.get("reason"), actor=payload.get("actor"))},
         "wait-for-input": lambda: {"ticket": pa.wait_for_input(
             project, _ticket_id(payload, args), str(payload.get("prompt") or ""),
             env_keys=_list_param(payload.get("env_key") or payload.get("env_keys")), note=payload.get("note"),

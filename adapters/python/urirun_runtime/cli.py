@@ -752,4 +752,14 @@ def _build_parser(prog: str) -> argparse.ArgumentParser:
 
     _add_host_subparser(subparsers)
     _add_node_subparser(subparsers)
+
+    # urirun start — start autonomous koru loop with twin-human support for kvm/lenovo desktop tasks
+    # (e.g. IFURI-226 style Signal send via KVM on lenovo node)
+    start_parser = subparsers.add_parser("start", help="Start urirun autonomous system (koru loop + twin-human for kvm tasks)")
+    start_parser.add_argument("--project", default=".", help="project dir")
+    start_parser.add_argument("--apply", action="store_true", default=True, help="apply changes (default)")
+    start_parser.add_argument("--no-apply", dest="apply", action="store_false")
+    start_parser.add_argument("--daemon", action="store_true", help="run loop in background")
+    start_parser.add_argument("--koru", action="store_true", help="also ensure koru autonomous is running")
+
     return parser

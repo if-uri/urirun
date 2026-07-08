@@ -96,7 +96,7 @@ def _resolve_ticket_handler(args: argparse.Namespace, ticket: dict) -> tuple:
 def _claim_and_start_ticket(planfile_adapter, args: argparse.Namespace, ticket: dict) -> None:
     """Claim and start a ticket (mutating step before execution)."""
     planfile_adapter.claim_ticket(args.project, ticket["id"], assigned_to=args.assigned_to, lease_seconds=args.lease_seconds)
-    planfile_adapter.start_ticket(args.project, ticket["id"], assigned_to=args.assigned_to)
+    planfile_adapter.start_ticket(args.project, ticket["id"], assigned_to=args.assigned_to, reason=getattr(args, "reason", None), actor=getattr(args, "actor", None))
 
 
 def _run_mesh_flow(args: argparse.Namespace, prompt: str) -> tuple:
@@ -267,12 +267,12 @@ def _task_claim(args, pa) -> int:
 
 
 def _task_start(args, pa) -> int:
-    return _emit_ticket_result(pa.start_ticket(args.project, args.ticket_id, assigned_to=args.assigned_to))
+    return _emit_ticket_result(pa.start_ticket(args.project, args.ticket_id, assigned_to=args.assigned_to, reason=getattr(args, "reason", None), actor=getattr(args, "actor", None)))
 
 
 def _task_complete(args, pa) -> int:
     result = _parse_json_option(args.result, None)
-    return _emit_ticket_result(pa.complete_ticket(args.project, args.ticket_id, note=args.note, result=result, artifacts=args.artifact))
+    return _emit_ticket_result(pa.complete_ticket(args.project, args.ticket_id, note=args.note, result=result, artifacts=args.artifact, reason=getattr(args, "reason", None) or args.note, actor=getattr(args, "actor", None)))
 
 
 def _task_fail(args, pa) -> int:
@@ -280,11 +280,11 @@ def _task_fail(args, pa) -> int:
 
 
 def _task_block(args, pa) -> int:
-    return _emit_ticket_result(pa.block_ticket(args.project, args.ticket_id, reason=args.reason or "BLOCKED"))
+    return _emit_ticket_result(pa.block_ticket(args.project, args.ticket_id, reason=args.reason or "BLOCKED", actor=getattr(args, "actor", None)))
 
 
 def _task_ready(args, pa) -> int:
-    return _emit_ticket_result(pa.ready_ticket(args.project, args.ticket_id, note=args.note))
+    return _emit_ticket_result(pa.ready_ticket(args.project, args.ticket_id, note=args.note, reason=getattr(args, "reason", None) or args.note, actor=getattr(args, "actor", None)))
 
 
 def _task_archive(args, pa) -> int:

@@ -194,8 +194,8 @@ def claim_ticket(project: str | None, ticket_id: str, assigned_to: str | None = 
     return ticket_to_dict(ticket) if ticket else None
 
 
-def start_ticket(project: str | None, ticket_id: str, assigned_to: str | None = None) -> dict | None:
-    ticket = load_planfile(project).start_ticket(ticket_id, assigned_to=assigned_to)
+def start_ticket(project: str | None, ticket_id: str, assigned_to: str | None = None, *, reason: str | None = None, actor: str | None = None) -> dict | None:
+    ticket = load_planfile(project).start_ticket(ticket_id, assigned_to=assigned_to, reason=reason, actor=actor)
     _emit_uri_process(f"ticket://{ticket_id}", "start")
     return ticket_to_dict(ticket) if ticket else None
 
@@ -206,14 +206,17 @@ def complete_ticket(
     note: str | None = None,
     result: Any = None,
     artifacts: list[str] | None = None,
+    *,
+    reason: str | None = None,
+    actor: str | None = None,
 ) -> dict | None:
-    ticket = load_planfile(project).complete_ticket(ticket_id, note=note, result=result, artifacts=artifacts)
+    ticket = load_planfile(project).complete_ticket(ticket_id, note=note, result=result, artifacts=artifacts, reason=reason, actor=actor)
     _emit_uri_process(f"ticket://{ticket_id}", "complete", {"result": result})
     return ticket_to_dict(ticket) if ticket else None
 
 
-def fail_ticket(project: str | None, ticket_id: str, error: str) -> dict | None:
-    ticket = load_planfile(project).fail_ticket(ticket_id, error)
+def fail_ticket(project: str | None, ticket_id: str, error: str, *, reason: str | None = None, actor: str | None = None) -> dict | None:
+    ticket = load_planfile(project).fail_ticket(ticket_id, error, reason=reason, actor=actor)
     return ticket_to_dict(ticket) if ticket else None
 
 
@@ -222,12 +225,14 @@ def block_ticket(
     ticket_id: str,
     reason: str | None = None,
     note: str | None = None,
+    *,
+    actor: str | None = None,
 ) -> dict | None:
     pf = load_planfile(project)
     if hasattr(pf, "block_ticket"):
-        ticket = pf.block_ticket(ticket_id, reason=reason, note=note)
+        ticket = pf.block_ticket(ticket_id, reason=reason, note=note, actor=actor)
     else:  # pragma: no cover - compatibility with older planfile packages.
-        ticket = pf.update_ticket(ticket_id, status="blocked", description=reason or "BLOCKED")
+        ticket = pf.update_ticket(ticket_id, status="blocked", description=reason or "BLOCKED", reason=reason, actor=actor)
     return ticket_to_dict(ticket) if ticket else None
 
 
@@ -260,11 +265,14 @@ def fail_or_retry(project: str | None, ticket_id: str, error: str) -> dict | Non
     return data
 
 
-def update_ticket(project: str | None, ticket_id: str, updates: dict[str, Any]) -> dict | None:
+def update_ticket(project: str | None, ticket_id: str, updates: dict[str, Any], *, reason: str | None = None, actor: str | None = None) -> dict | None:
+    """Update any ticket fields. When status changes, reason (why) and actor (by whom) are
+    recorded into the ticket's structured `history` list (in addition to notes).
+    """
     data = dict(updates)
     if "priority" in data:
         data["priority"] = normalize_priority(data["priority"])
-    ticket = load_planfile(project).update_ticket(ticket_id, **data)
+    ticket = load_planfile(project).update_ticket(ticket_id, reason=reason, actor=actor, **data)
     return ticket_to_dict(ticket) if ticket else None
 
 
@@ -279,8 +287,8 @@ def wait_for_input(
     return ticket_to_dict(ticket) if ticket else None
 
 
-def ready_ticket(project: str | None, ticket_id: str, note: str | None = None) -> dict | None:
-    ticket = load_planfile(project).ready_ticket(ticket_id, note=note)
+def ready_ticket(project: str | None, ticket_id: str, note: str | None = None, *, reason: str | None = None, actor: str | None = None) -> dict | None:
+    ticket = load_planfile(project).ready_ticket(ticket_id, note=note, reason=reason, actor=actor)
     return ticket_to_dict(ticket) if ticket else None
 
 
@@ -290,18 +298,17 @@ def ready_ticket(project: str | None, ticket_id: str, note: str | None = None) -
 
 ARCHIVE_SPRINT = "archive"
 
-def archive_ticket(project: str | None, ticket_id: str, note: str | None = None) -> dict | None:
+def archive_ticket(project: str | None, ticket_id: str, note: str | None = None, *, reason: str | None = None, actor: str | None = None) -> dict | None:
     """Move a ticket to the archive sprint (and ensure status=done).
     This hides it from the main active queue in the dashboard.
     """
     pf = load_planfile(project)
     updates = {"sprint": ARCHIVE_SPRINT, "status": "done"}
     if note:
-        # append note
         ticket = pf.get_ticket(ticket_id)
         existing_notes = (getattr(ticket, "outputs", None) or type('obj', (object,), {'notes': []})()).notes or []
         updates["note"] = (note if isinstance(note, str) else str(note))
-    ticket = pf.update_ticket(ticket_id, **updates)
+    ticket = pf.update_ticket(ticket_id, reason=reason, actor=actor, **updates)
     _emit_uri_process(f"ticket://{ticket_id}", "archive", {"sprint": ARCHIVE_SPRINT})
     return ticket_to_dict(ticket) if ticket else None
 

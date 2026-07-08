@@ -454,7 +454,26 @@ def _handle_get_work(handler, parsed, project, query) -> bool:
     if parsed.path == "/api/work/persons":
         from . import ticket_meta
         try:
-            _json_response(handler, 200, {"ok": True, "persons": ticket_meta.load_digital_persons()})
+            persons = ticket_meta.load_digital_persons()
+            # ensure mode and is_enabled are always present for UI
+            for p in persons:
+                if "mode" not in p:
+                    p["mode"] = "real"
+                if "_is_enabled" not in p:
+                    p["_is_enabled"] = p.get("enabled", True)
+                # NEW: easy view flags for "wirtualny digital twin vs rzeczywisty node"
+                comps = [str(c).lower() for c in (p.get("competencies") or [])]
+                keys = ("kvm", "lenovo", "node:", "signal", "desktop", "input")
+                is_node_like = any(any(k in c for k in keys) for c in comps)
+                if p.get("type") == "human":
+                    p["backing"] = "human"
+                elif p.get("mode") == "real" and is_node_like:
+                    p["backing"] = "real-node"
+                else:
+                    p["backing"] = "virtual-twin"
+                # inne komponenty (wyróżnione zdolności sterowania)
+                p["components"] = [c for c in (p.get("competencies") or []) if any(k in c.lower() for k in ("kvm","lenovo","signal","node","input","capture","deploy","control"))][:5] or (p.get("competencies") or [])[:4]
+            _json_response(handler, 200, {"ok": True, "persons": persons})
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True

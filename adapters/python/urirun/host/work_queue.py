@@ -438,9 +438,11 @@ def queue_state(include_done: bool = False, sprint: str = "current") -> dict[str
     try:
         from . import ticket_meta  # LLM tags, real processes, node, allow/deny per ticket + Digital Twin
         ts = ticket_meta.enrich(ts, _project())
+        persons = ticket_meta.load_digital_persons()
         digital_twin = {
-            "persons": ticket_meta.load_digital_persons(),
+            "persons": persons,
             "file": str(ticket_meta.digital_persons_file()),
+            "active_count": sum(1 for p in persons if p.get("_is_enabled", True)),
         }
     except Exception:  # noqa: BLE001 - enrichment is best-effort; the raw table still renders
         digital_twin = {"persons": [], "error": "unavailable"}
