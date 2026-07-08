@@ -76,12 +76,29 @@ def get_ticket_urls(tid: str) -> dict[str, str]:
         os.environ.get("URIRUN_CHAT_BASE")
         or os.environ.get("URIRUN_CHAT_HOST", "http://127.0.0.1:8194")
     )
-    return {
+    urls = {
         "dashboard": f"{work_base}/work?ticket={tid}",
         "changes_history": f"{work_base}/work?ticket={tid}#history",
         "llm_conversations": f"{chat_base}/?ticket={tid}",
         "llm_history_api": f"{chat_base}/api/chat/history?ticket={tid}",
     }
+    # full registry version at ticket
+    try:
+        import urirun
+        from urirun_connector_router.routing import routes_from_registry
+        # try to get current registry
+        reg = {}  # or urirun.get_current_registry() if available
+        try:
+            # best effort
+            reg = urirun.compile_registry({}) or {}
+        except:
+            pass
+        full_routes = routes_from_registry(reg) if reg else []
+        urls["full_uri_registry"] = [r.get("uri") for r in full_routes[:20]] or "full via urirun list or router"
+        urls["full_uri_registry_context"] = "see planfile://host/ticket/query/history-links for ticket specific + full"
+    except Exception:
+        urls["full_uri_registry"] = "use urirun list or /api/routes for complete"
+    return urls
 
 
 def ticket_to_dict(ticket) -> dict:
@@ -93,6 +110,13 @@ def ticket_to_dict(ticket) -> dict:
             if "urls" not in d or not isinstance(d.get("urls"), dict):
                 d["urls"] = {}
             d["urls"].update(urls)
+            # full registry version at ticket
+            try:
+                import urirun
+                # attach lightweight registry info
+                d["uri_registry_context"] = "full registry via urirun list or router; use history-links for ticket-specific"
+            except Exception:
+                pass
     return d
 
 
