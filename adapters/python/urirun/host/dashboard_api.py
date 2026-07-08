@@ -14,8 +14,11 @@ that live there. Everything else is stateless and imported directly.
 """
 from __future__ import annotations
 
+import base64
+import json
 import os
 from importlib import metadata
+from pathlib import Path
 
 
 # ─── stateless helpers ────────────────────────────────────────────────────────
@@ -115,6 +118,78 @@ def chat_history(db: str | None, project: str, limit: int = 80, ticket: str | No
             msg["detail"] = {**msg["detail"], "attachments": _pca(msg["detail"].get("attachments"), project)}
         messages.append(msg)
     return {"ok": True, "messages": messages[-limit:]}
+
+
+# ─── per-ticket rich history (events + LLM prompt convos + base64 image previews) ─
+
+def _journal_dir() -> Path:
+    return Path(os.environ.get("URIRUN_HOST_DASHBOARD_JOURNAL_DIR") or "~/.urirun/host-dashboard/journal").expanduser()
+
+
+def _read_jsonl_journal(ticket_id: str, suffix: str = "") -> list[dict]:
+    p = _journal_dir() / f"{ticket_id}{suffix}.jsonl"
+    if not p.exists():
+        return []
+    out: list[dict] = []
+    for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except Exception:
+            pass
+    return out
+
+
+def _find_image_paths(obj) -> list[str]:
+    paths: list[str] = []
+    if isinstance(obj, str):
+        if obj.endswith((".png", ".jpg", ".jpeg")) and os.path.exists(obj):
+            paths.append(obj)
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            paths.extend(_find_image_paths(v))
+    elif isinstance(obj, list):
+        for v in obj:
+            paths.extend(_find_image_paths(v))
+    return paths
+
+
+def _attach_base64_previews(entry: dict) -> dict:
+    entry = dict(entry)  # shallow copy
+    paths = _find_image_paths(entry)
+    previews = []
+    for path in set(paths):
+        try:
+            with open(path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("ascii")
+            previews.append({
+                "path": path,
+                "data_url": f"data:image/png;base64,{b64}"
+            })
+        except Exception:
+            pass
+    if previews:
+        entry["image_previews"] = previews
+    return entry
+
+
+def ticket_llm_traces(ticket: str | None) -> dict:
+    if not ticket:
+        return {"ok": False, "error": "ticket required"}
+    raw = _read_jsonl_journal(ticket, "-llm")
+    enriched = [_attach_base64_previews(e) for e in raw]
+    return {"ok": True, "ticket": ticket, "traces": enriched, "count": len(enriched)}
+
+
+def ticket_events(ticket: str | None) -> dict:
+    if not ticket:
+        return {"ok": False, "error": "ticket required"}
+    events = _read_jsonl_journal(ticket, "")  # plain {ticket}.jsonl
+    # also pull any execution/kolejno traces
+    extra = _read_jsonl_journal(ticket, "-kolejno")
+    return {"ok": True, "ticket": ticket, "events": events, "execution": extra}
 
 
 # ─── API handlers ─────────────────────────────────────────────────────────────
@@ -222,6 +297,22 @@ def _api_chat_history(
     return 200, chat_history(db, project, limit=limit, ticket=ticket)
 
 
+def _api_ticket_llm_history(
+    project: str, db: str | None, config: str | None,
+    query: dict, node_urls: list[str] | None,
+) -> tuple[int, dict]:
+    tid = _first(query, "ticket") or _first(query, "id")
+    return 200, ticket_llm_traces(tid)
+
+
+def _api_ticket_events(
+    project: str, db: str | None, config: str | None,
+    query: dict, node_urls: list[str] | None,
+) -> tuple[int, dict]:
+    tid = _first(query, "ticket") or _first(query, "id")
+    return 200, ticket_events(tid)
+
+
 def _api_chat_config(
     project: str, db: str | None, config: str | None,
     query: dict, node_urls: list[str] | None,
@@ -287,6 +378,8 @@ _API_ROUTES: dict = {
     "/api/artifacts": _api_artifacts,
     "/api/chat/config": _api_chat_config,
     "/api/chat/history": _api_chat_history,
+    "/api/ticket/llm-history": _api_ticket_llm_history,
+    "/api/ticket/events": _api_ticket_events,
     "/api/services/live": _api_services_live,
     "/api/scanner/live": _api_scanner_live,
     "/api/twin/flows": _api_twin_flows,

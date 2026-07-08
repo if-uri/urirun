@@ -232,9 +232,9 @@
     }
 
     function renderTasks(tasks) {
-      $('tasksBody').innerHTML = tasks.map((ticket) => {
+      const html = tasks.map((ticket) => {
         const exec = ticket.execution || {};
-        return `<tr>
+        return `<tr data-ticket-id="${ticket.id}" style="cursor:pointer" title="Click to view full history (events + LLM prompts + images)">
           <td class="mono">${ticket.id}</td>
           <td><strong>${ticket.name}</strong><div class="subtle">${text(ticket.description).slice(0, 120)}</div></td>
           <td><span class="status ${ticket.status}">${ticket.status}</span><div class="subtle">${text(exec.state)}</div></td>
@@ -247,6 +247,93 @@
           </div></td>
         </tr>`;
       }).join('') || `<tr><td colspan="6">${empty('No tasks')}</td></tr>`;
+      $('tasksBody').innerHTML = html;
+
+      // Make rows clickable for rich history view (events + LLM convos + base64 image previews)
+      const tbody = $('tasksBody');
+      if (tbody && !tbody._historyBound) {
+        tbody._historyBound = true;
+        tbody.addEventListener('click', (ev) => {
+          if (ev.target.tagName === 'BUTTON') return; // let action buttons handle themselves
+          const tr = ev.target.closest('tr[data-ticket-id]');
+          if (tr) {
+            const tid = tr.getAttribute('data-ticket-id');
+            selectTicket(tid);
+          }
+        });
+      }
+    }
+
+    async function selectTicket(ticketId) {
+      if (!ticketId) return;
+      const container = $('ticketHistory') || createTicketHistoryPanel();
+      container.style.display = 'block';
+      container.innerHTML = `<div class="subtle">Loading history for ${ticketId} … (events + LLM prompts + images)</div>`;
+
+      try {
+        const [llm, evts, chat] = await Promise.all([
+          api(`/api/ticket/llm-history?ticket=${encodeURIComponent(ticketId)}`).catch(() => ({})),
+          api(`/api/ticket/events?ticket=${encodeURIComponent(ticketId)}`).catch(() => ({})),
+          api(`/api/chat/history?ticket=${encodeURIComponent(ticketId)}&limit=30`).catch(() => ({})),
+        ]);
+
+        const urls = (state.tasks || []).find(t => t.id === ticketId)?.urls || {};
+        let html = `<h3 style="margin:4px 0">Historia ticketa <span class="mono">${ticketId}</span></h3>`;
+        html += `<div><a href="${urls.dashboard || '#'}" target="_blank">Dashboard</a> | <a href="${urls.llm_conversations || '#'}" target="_blank">LLM Chat</a> | <a href="${urls.changes_history || '#'}" target="_blank">Changes</a></div>`;
+
+        // Events / URI history
+        const events = evts.events || evts.execution || [];
+        html += `<details open><summary>Event / URI history (${events.length})</summary><pre style="font-size:11px;max-height:180px;overflow:auto">${JSON.stringify(events.slice(-8), null, 2)}</pre></details>`;
+
+        // LLM prompt conversations with image previews
+        const traces = (llm.traces || []);
+        html += `<details open><summary>LLM prompt conversations (${traces.length}) – full prompts + responses + base64 image previews</summary>`;
+        traces.forEach((t, i) => {
+          const phase = t.phase || t.event || 'llm';
+          const model = t.model || '';
+          html += `<div style="border:1px solid #ddd;margin:4px 0;padding:4px;background:#fafafa">`;
+          html += `<strong>${phase}</strong> ${model ? '• ' + model : ''}<br>`;
+          if (t.prompt) html += `<details><summary>Prompt</summary><pre style="white-space:pre-wrap;font-size:10px">${escapeHtml((t.prompt||'').slice(0,800))}</pre></details>`;
+          if (t.response) html += `<details open><summary>Response</summary><pre style="white-space:pre-wrap;font-size:10px">${escapeHtml((t.response||'').slice(0,1200))}</pre></details>`;
+          if (t.image_previews && t.image_previews.length) {
+            html += `<div>Images: `;
+            t.image_previews.forEach(p => {
+              html += `<img src="${p.data_url}" style="max-width:220px;max-height:140px;border:1px solid #ccc;margin:2px;vertical-align:top" title="${p.path}">`;
+            });
+            html += `</div>`;
+          }
+          html += `</div>`;
+        });
+        if (!traces.length) html += `<div class="subtle">No LLM traces yet for this ticket (run prepare_and_validate or deliver with ticket=...)</div>`;
+        html += `</details>`;
+
+        // Chat messages if any
+        if (chat.messages && chat.messages.length) {
+          html += `<details><summary>Chat messages for ticket (${chat.messages.length})</summary><pre style="font-size:10px">${JSON.stringify(chat.messages.slice(-5), null, 2)}</pre></details>`;
+        }
+
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = `<div class="danger">Failed to load history: ${e.message}</div>`;
+      }
+    }
+
+    function createTicketHistoryPanel() {
+      let el = $('ticketHistory');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'ticketHistory';
+        el.className = 'view-block';
+        el.style.cssText = 'margin-top:12px;padding:8px;border:1px solid #aaa;background:#fff';
+        const tasksSection = document.querySelector('section[data-section="tasks"]') || $('tasksBody').parentElement;
+        if (tasksSection && tasksSection.parentElement) tasksSection.parentElement.appendChild(el);
+        else document.body.appendChild(el);
+      }
+      return el;
+    }
+
+    function escapeHtml(s) {
+      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
     // Reload only the tickets table (sprint/queue filters applied) without a full dashboard reload.

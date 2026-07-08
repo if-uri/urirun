@@ -495,6 +495,25 @@ urirun-service-chat restart \
 
 # Dashboard dostępny: http://localhost:8194/
 
+## Restart / ponowne uruchomienie dashboardu
+
+Jeśli chcesz zrestartować dashboard (np. po zmianach w kodzie renderującym listę ticketów):
+
+```bash
+# Zabij poprzedni proces
+fuser -k 8194/tcp || pkill -f "urirun host dashboard"
+
+# Uruchom ponownie (najczęściej używana komenda)
+urirun host dashboard serve \
+  --project . \
+  --db ~/.urirun/host.db \
+  --port 8194
+```
+
+Dashboard dostępny pod: http://127.0.0.1:8194/work
+
+**Uwaga:** poprawna składnia to `urirun host dashboard serve --port XXX` (nie `dashboard --port`).
+
 # Ścieżka in-process/dev: ten sam backend przez CLI urirun
 urirun host dashboard serve \
   --project . \
@@ -534,6 +553,15 @@ urirun host dashboard url --host 0.0.0.0 --port 8194
 
 # Sprawdź, czy na porcie działa właściwy dashboard
 curl http://127.0.0.1:8194/api/health
+```
+
+W liście ticketów (#ticketlist) nazwa ticketa (`.tk-name`) jest teraz klikalnym buttonem (niebieski, podkreślony, z hoverem). Kliknięcie otwiera popup z:
+
+- historią dialogów LLM (pełne prompty i odpowiedzi z EXECUTOR, TEACHER, VALIDATOR, TWIN)
+- historią zdarzeń i execution
+- podglądem base64 zdjęć z capture (w tym quad zooms dla TEACHER)
+
+Dane pochodzą z `~/.urirun/host-dashboard/journal/{ticket}-llm.jsonl` i events.
 ```
 
 ### Node — pozostałe komendy
