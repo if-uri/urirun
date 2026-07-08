@@ -54,6 +54,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix no-relative-imports issues (ticket-4de43b5c)
 - Fix ast-unused-imports issues (ticket-bf08772a)
 
+## [0.4.199] - 2026-07-08
+
+### Docs
+- Update README.md
+
+### Other
+- Update find_comments.py
+- Update format_js.py
+- Update temp_script_0.js
+- Update temp_script_formatted.js
+- Update where_response.json
+
 ## [0.4.198] - 2026-07-06
 
 ### Docs
