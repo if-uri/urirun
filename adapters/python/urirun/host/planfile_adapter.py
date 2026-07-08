@@ -180,24 +180,31 @@ def create_ticket(project: str | None, payload: dict[str, Any]) -> dict:
     name = data.pop("name", None) or data.pop("title", None)
     if not name:
         raise ValueError("ticket name is required")
-    # Attach urls at creation time for persistence in history
-    tid = None  # will be set after create, but for note we can use placeholder or after
     ticket = pf.create_ticket(name=name, **data)
     tdict = ticket_to_dict(ticket)
     tid = tdict.get("id")
     if tid:
         urls = get_ticket_urls(tid)
-        # append to outputs notes if present
+        # Persist URLs in outputs.result and artifacts for history
         outputs = tdict.get("outputs") or {}
+        if not outputs.get("result"):
+            outputs["result"] = {}
+        outputs["result"]["urls"] = urls
+        artifacts = list(outputs.get("artifacts") or [])
+        artifacts.append({"type": "urls", "value": urls, "name": "ticket-history-links"})
+        outputs["artifacts"] = artifacts
+        # also note for visibility
         notes = list(outputs.get("notes") or [])
-        note_text = f"Links: dashboard={urls['dashboard']}, changes={urls['changes_history']}, llm={urls['llm_conversations']}"
+        note_text = f"history-links: {urls}"
         if note_text not in notes:
             notes.append(note_text)
-            # update the ticket with note
-            try:
-                pf.update_ticket(tid, note=note_text)
-            except Exception:
-                pass
+        outputs["notes"] = notes
+        try:
+            pf.update_ticket(tid, outputs=outputs)
+        except Exception:
+            pass
+        tdict["outputs"] = outputs
+        tdict["urls"] = urls
     return tdict
 
 
@@ -255,14 +262,32 @@ def complete_ticket(
     reason: str | None = None,
     actor: str | None = None,
 ) -> dict | None:
-    ticket = load_planfile(project).complete_ticket(ticket_id, note=note, result=result, artifacts=artifacts, reason=reason, actor=actor)
+    urls = get_ticket_urls(ticket_id)
+    if isinstance(result, dict):
+        result = dict(result)
+        result.setdefault("urls", urls)
+    elif result is None:
+        result = {"urls": urls}
+    art_list = list(artifacts or [])
+    art_list.append({"type": "urls", "value": urls, "name": "ticket-history-links"})
+    ticket = load_planfile(project).complete_ticket(ticket_id, note=note, result=result, artifacts=art_list, reason=reason, actor=actor)
     _emit_uri_process(f"ticket://{ticket_id}", "complete", {"result": result})
-    return ticket_to_dict(ticket) if ticket else None
+    tdict = ticket_to_dict(ticket) if ticket else None
+    if tdict:
+        tdict["urls"] = urls
+    return tdict
 
 
 def fail_ticket(project: str | None, ticket_id: str, error: str, *, reason: str | None = None, actor: str | None = None) -> dict | None:
+    urls = get_ticket_urls(ticket_id)
     ticket = load_planfile(project).fail_ticket(ticket_id, error, reason=reason, actor=actor)
-    return ticket_to_dict(ticket) if ticket else None
+    tdict = ticket_to_dict(ticket) if ticket else None
+    if tdict:
+        tdict["urls"] = urls
+        if "outputs" not in tdict:
+            tdict["outputs"] = {}
+        tdict["outputs"].setdefault("result", {})["urls"] = urls
+    return tdict
 
 
 def block_ticket(
