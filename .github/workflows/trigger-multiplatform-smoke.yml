@@ -1,4 +1,4 @@
-name: trigger multiplatform harness
+name: trigger multiplatform smoke
 
 on:
   workflow_run:
@@ -7,20 +7,6 @@ on:
     types:
       - completed
   workflow_dispatch:
-    inputs:
-      get_urirun_site_mode:
-        description: get.urirun.com validation mode
-        required: false
-        default: production-site
-        type: choice
-        options:
-          - production-site
-          - local-dev-site
-      allow_remote_install:
-        description: Allow remote production installer execution
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   trigger:
@@ -36,9 +22,8 @@ jobs:
           TARGET_REPO: if-uri/urirun-multiplatform-test
           URIRUN_REPO_URL: https://github.com/if-uri/urirun.git
           URIRUN_REF: ${{ github.event.workflow_run.head_sha || github.sha }}
-          SITE_MODE: ${{ inputs.get_urirun_site_mode || 'production-site' }}
-          ALLOW_REMOTE_INSTALL: ${{ inputs.allow_remote_install || 'false' }}
         run: |
+          # repository_dispatch to if-uri/urirun-multiplatform-test
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
@@ -47,5 +32,5 @@ jobs:
             -f client_payload[urirun_repo_url]="$URIRUN_REPO_URL" \
             -f client_payload[urirun_ref]="$URIRUN_REF" \
             -f client_payload[sha]="$URIRUN_REF" \
-            -f client_payload[get_urirun_site_mode]="$SITE_MODE" \
-            -f client_payload[allow_remote_install]="$ALLOW_REMOTE_INSTALL"
+            -f client_payload[get_urirun_site_mode]=production-site \
+            -f client_payload[allow_remote_install]=false

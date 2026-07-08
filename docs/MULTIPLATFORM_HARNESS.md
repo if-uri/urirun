@@ -1,108 +1,77 @@
-# Multiplatform Harness Contract
+# Multiplatform Harness
 
-This repository is prepared to be tested by
-`if-uri/urirun-multiplatform-test` after the main `ci` workflow succeeds.
+The main `if-uri/urirun` repository triggers the external
+`if-uri/urirun-multiplatform-test` harness after the main `ci` workflow succeeds.
+The `ci` workflow remains the main gate; this integration only dispatches the
+external black-box test suite after that gate is green.
 
-## GitHub Actions Dispatch
+## Workflow
 
-Workflow: `.github/workflows/multiplatform-harness.yml`
+Workflow file:
 
-Required secret:
-
-- `URIRUN_MULTIPLATFORM_TEST_TOKEN` with permission to call
-  `repository_dispatch` on `if-uri/urirun-multiplatform-test`.
-
-The workflow sends event type `urirun-main-ci` and passes:
-
-- `urirun_repo_url`
-- `urirun_ref`
-- `sha`
-- `get_urirun_site_mode`
-- `allow_remote_install`
-
-`allow_remote_install` defaults to `false`. Keep it false for normal CI so the
-external harness does not execute production installers.
-
-## Fresh Install Contract
-
-The Python package is installable from this repository without a `--no-deps`
-fallback:
-
-```bash
-python -m venv .venv
-python -m pip install --upgrade pip
-python -m pip install ./adapters/python
-urirun --version
-urirun doctor --json
-urirun --help
+```text
+.github/workflows/trigger-multiplatform-smoke.yml
 ```
 
-Runtime split packages required by the base CLI are declared as normal
-dependencies and must resolve from PyPI or the configured package index. The
-current clean-install path resolves `urirun-contract`, `urirun-connector-router`
-and `urirun-flow` without `--no-deps`.
+Triggers:
 
-## Dashboard GUI Contract
+- `workflow_run` after `ci` completes with `success`
+- manual `workflow_dispatch`
 
-The dashboard exposes:
+The workflow calls GitHub `repository_dispatch` on:
 
-- command: `urirun host dashboard serve --project <path> --db <path> --host <host> --port <port>`
-- health endpoint: `GET /api/health`
-- stable selectors: `chat`, `nodes`, `tasks`, `services`, `artifacts`, `settings`
-- matching section selectors: `<name>-section`
-- ARIA labels for the primary and mobile navigation controls.
-
-The selector names use lowercase kebab-case and are guarded by tests.
-
-## Product Artifacts
-
-Build local validation artifacts with:
-
-```bash
-python scripts/build_product_artifacts.py --out-dir dist/product-artifacts
+```text
+if-uri/urirun-multiplatform-test
 ```
 
-The output contains:
+with event type:
 
-- `manifest.json`
-- `SHA256SUMS`
-- Python wheel/sdist when `python -m build` is available
-- platform bootstrap bundles for Windows, Linux, and macOS
-
-The bootstrap bundles are real checksumed artifacts for validation and site
-wiring. They are not signed native installers. Signed `.msi`, `.pkg`, `.dmg`,
-`.deb`, `.rpm`, AppImage, or notarized `.app` outputs remain a release pipeline
-task and must require trusted signing secrets plus approval.
-
-## Production Promotion
-
-The external harness must not deploy production. A trusted promotion job should
-consume the manifest, checksums, and artifacts after tests pass, require manual
-approval, sign/notarize where applicable, publish immutable artifacts, then
-publish the manifest consumed by `get.urirun.com`.
-
-## gRPC Policy
-
-gRPC remains optional. Install it with:
-
-```bash
-python -m pip install "./adapters/python[grpc]"
+```text
+urirun-main-ci
 ```
 
-Main CI verifies the optional extra. Black-box gRPC tests should treat missing
-`grpcio` in a base install as optional coverage, not a base install failure.
+## Required Secret
 
-## External Harness Local Run
+Configure this secret in the main `if-uri/urirun` repository:
 
-From the harness repository:
-
-```bash
-URIRUN_SOURCE_DIR=/path/to/urirun python scripts/run_tests.py
+```text
+URIRUN_MULTIPLATFORM_TEST_TOKEN
 ```
 
-PowerShell:
+The token is used as `GH_TOKEN` for `gh api` and must be allowed to call
+`repository_dispatch` on `if-uri/urirun-multiplatform-test`.
 
-```powershell
-$env:URIRUN_SOURCE_DIR="C:\path\to\urirun"
-python scripts\run_tests.py
-```
+## Dispatch Payload
+
+The workflow sends:
+
+- `urirun_repo_url`: `https://github.com/if-uri/urirun.git`
+- `urirun_ref`: exact SHA/ref from `${{ github.event.workflow_run.head_sha || github.sha }}`
+- `sha`: same exact SHA/ref
+- `get_urirun_site_mode`: `production-site`
+- `allow_remote_install`: `false`
+
+`allow_remote_install=false` is the safe default. It lets the harness validate
+installer and GUI flows without executing remote production installers by
+default.
+
+## Manual Run
+
+In GitHub Actions, open `trigger multiplatform smoke` and choose **Run workflow**.
+For manual runs, the workflow dispatches the current commit SHA as `urirun_ref`
+and `sha`.
+
+## External Profiles
+
+The external harness is responsible for running:
+
+- `linux-docker`
+- `windows-runner`
+- `macos-runner`
+- `linux-installer-gui`
+- `windows-installer-gui`
+- `macos-installer-gui`
+
+This repository only triggers the harness. Do not claim the external harness has
+passed until an actual GitHub Actions run in `if-uri/urirun-multiplatform-test`
+confirms it.
