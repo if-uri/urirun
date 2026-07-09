@@ -22,10 +22,10 @@ FIRST_PROMPT_ROLE = (
     "- Każda akcja = URI proces: `scheme://target/path` + JSON payload zgodny ze schematem.\n"
     "- Dispatch: POST {node_base_url}/run → {\"uri\": \"kvm://host/...\", \"payload\": {...}}.\n"
     "- Segment `host` w kvm://host/... to alias węzła (URIRUN_KVM_URI_HOST), nie hostname.\n"
-    "- Plan realizuj jako listę kroków {id, uri, payload} lub def run(ctx): ctx.run_uri(...).\n"
+    "- Plan realizuj jako blok ```urirun:processes``` (JSON array) lub def run(ctx): ctx.run_uri(...).\n"
     "- Python hosta = tylko cienki glue; NIE zastępuj URI własnym skryptem.\n\n"
-    "**Twoje zadanie:** z poniższej listy procesów (z payload schema) wybierz te, które "
-    "realizują ticket. Zawsze: router://host/plan/query/diagnose przed keyboard, verify po każdej mutacji."
+    "**Twoje zadanie:** z poniższej listy procesów wybierz minimalny plan w formacie "
+    "`urirun:processes`. Zawsze: router://host/plan/query/diagnose przed keyboard, verify po mutacji."
 )
 
 
@@ -189,12 +189,22 @@ def build_first_system_prompt(
         parts.append(
             "**Proces decyzyjny:**\n"
             "1. Zrozum ticket → wybierz minimalny podzbiór URI z katalogu.\n"
-            "2. router://host/plan/query/diagnose na złożony plan.\n"
-            "3. Małe kroki: observe (capture/verify) → jeden URI → verify efektu.\n"
-            "4. Przy błędzie: inquiry:// + poprawiony plan (dostaniesz feedback debugera w historii).\n"
-            "5. Output: lista {\"id\", \"uri\", \"payload\", \"postcondition_verify\"} lub run(ctx) z ctx.run_uri.\n"
+            "2. router://host/plan/query/diagnose na złożony plan (tylko na węźle z connector-router — dashboard; na lenovo pomijaj lub użyj kvm://host/doctor).\n"
+            "3. Małe kroki: observe → jeden URI → verify efektu.\n"
+            "4. Przy błędzie: inquiry:// + poprawiony plan (feedback w historii).\n"
+            "5. Output: WYŁĄCZNIE blok ```urirun:processes``` z JSON array (standard urirun-llm-runtime).\n"
             f"\n[Catalog: {len(catalog)} processes | node={node}]"
         )
+
+    try:
+        from urirun_runtime.process_standard import LLM_OUTPUT_CONTRACT, load_process_examples
+        parts.append(LLM_OUTPUT_CONTRACT)
+        examples = load_process_examples(max_chars=3500)
+        if examples:
+            parts.append("**PRZYKŁADY (prompt → urirun:processes):**\n" + examples)
+    except Exception:  # noqa: BLE001
+        pass
+
     return "\n\n".join(p for p in parts if p)
 
 
@@ -263,3 +273,30 @@ def format_turns_for_llm(ticket: str, *, limit: int = 10) -> str:
     for t in turns:
         parts.append(f"[{t.get('role')}/{t.get('phase')}] {str(t.get('content', ''))[:2000]}")
     return "\n\n".join(parts)
+
+
+def parse_ticket_process_plan(content: str) -> tuple[list[dict[str, Any]], str]:
+    """Parsuj odpowiedź LLM — standard urirun:processes (fallback: decision_loop)."""
+    from urirun_runtime.process_standard import extract_plan_from_llm
+    return extract_plan_from_llm(content)
+
+
+def execute_ticket_process_plan(
+    plan: list[dict[str, Any]],
+    *,
+    node: str,
+    node_run: NodeRunFn,
+    ticket: str | None = None,
+) -> list[dict[str, Any]]:
+    """Wykonaj plan na węźle; zapisz wynik w historii ticketu."""
+    from urirun_runtime.process_standard import execute_plan
+    results = execute_plan(plan, node=node, node_run=node_run)
+    if ticket:
+        save_llm_turn(
+            ticket,
+            role="tool",
+            phase="runtime-process-plan",
+            content=json.dumps({"steps": len(plan), "results": results}, ensure_ascii=False, default=str)[:8000],
+            extra={"node": node, "step_count": len(plan)},
+        )
+    return results

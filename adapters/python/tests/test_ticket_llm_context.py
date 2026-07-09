@@ -20,6 +20,7 @@ def test_first_prompt_includes_environment_ticket_and_catalog(monkeypatch, tmp_p
     assert "IFURI-1" in prompt
     assert "DOSTĘPNE PROCESY URI" in prompt
     assert "kvm://host" in prompt
+    assert "urirun:processes" in prompt
 
 
 def test_save_and_load_llm_turns(tmp_path, monkeypatch):
