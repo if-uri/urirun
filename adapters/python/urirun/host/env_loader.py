@@ -86,3 +86,17 @@ def nxdo_model() -> str:
     if raw.startswith("openrouter/"):
         return raw.split("/", 1)[1]
     return raw
+
+
+def llm_api_base() -> str:
+    """OpenAI-compatible base URL for litellm/OpenRouter calls.
+
+    Prefer the project-level proxy (e.g. ``https://llm.urirun.com/api/v1``), but
+    allow direct OpenRouter fallback.
+    """
+    return (
+        os.environ.get("URIRUN_LLM_API_BASE")
+        or os.environ.get("OPENAI_API_BASE")
+        or os.environ.get("OPENROUTER_BASE_URL")
+        or ""
+    ).strip().rstrip("/")
