@@ -21,6 +21,7 @@ from urirun_runtime.ticket_llm_context import (
     format_turns_for_llm,
     save_llm_turn,
 )
+from urirun_runtime.runtime_markdown import load_runtime_markdown_bundle
 
 NodeRunFn = Callable[[str, str, dict | None, float], dict]
 LlmFn = Callable[[str, str | None], str]
@@ -43,6 +44,16 @@ Jesteś EXECUTOREM TICKETU z pełnym URI runtime do dyspozycji.
 
 **Gap / braki:** jeśli observation.gap.missing niepuste — pierwszy krok ma to adresować.
 **Keyboard:** dopiero po verify/focus Signal; przy błędzie verify — capture + inny URI z katalogu.
+
+**NAPRAWA (REPAIR):** gdy observation.last_error jest ustawione — poprzedni krok URI zawiódł.
+Przeanalizuj error JSON i wybierz INNY URI z runtime bundle (nie powtarzaj tego samego payloadu).
+Możesz: capture → focus → verify → retry z poprawionym payloadem → inquiry:// jeśli 2× fail.
+"""
+
+REPAIR_PROMPT = """\
+**⚠ REPAIR REQUIRED** — ostatni krok URI zwrócił błąd (pełny JSON w observation.last_error).
+Twoje następne kroki MUSZĄ naprawić sytuację używając WYŁĄCZNIE URI z runtime bundle w system prompt.
+Nie kończ done dopóki cel ticketu nie jest spełniony lub nie użyjesz inquiry:// po 2 nieudanych naprawach.
 """
 
 
@@ -141,8 +152,13 @@ class LlmRuntimeLoop:
         self.ticket = ticket
         self.ticket_dict = ticket_dict or ({"id": ticket} if ticket else {})
         self.project = project
-        self._system = build_first_system_prompt(
+        ticket_prompt = build_first_system_prompt(
             ticket=self.ticket_dict, node=node, include_decision_rules=True,
+        )
+        runtime_bundle = load_runtime_markdown_bundle()
+        self._system = (
+            f"{ticket_prompt}\n\n"
+            f"---\n\n# PEŁNY RUNTIME urirun-llm-runtime (markdown bundle)\n\n{runtime_bundle}"
         )
 
     def observe(self, timeline: list[dict[str, Any]]) -> dict[str, Any]:
@@ -164,14 +180,23 @@ class LlmRuntimeLoop:
                 obs["kvm"] = _light_kvm_state(self.node_run, self.node)
             except Exception:
                 pass
+        if timeline and not timeline[-1].get("ok"):
+            last = timeline[-1]
+            obs["last_error"] = {
+                "uri": last.get("uri"),
+                "payload": last.get("payload"),
+                "result": last.get("result"),
+                "repair_hint": "choose corrective URI from runtime bundle; do not repeat failed payload",
+            }
         return obs
 
     def _prompt(self, goal: str, observation: dict[str, Any]) -> str:
+        repair = REPAIR_PROMPT if observation.get("last_error") else ""
         return (
-            f"{LLM_LOOP_ROLE}\n\n{LLM_OUTPUT_CONTRACT}\n\n"
+            f"{LLM_LOOP_ROLE}\n\n{LLM_OUTPUT_CONTRACT}\n\n{repair}"
             f"**CEL TICKETU:**\n{goal}\n\n"
-            f"**OBSERVATION (JSON):**\n{json.dumps(observation, ensure_ascii=False, default=str)[:8000]}\n\n"
-            "Wybierz następne 1–3 kroki URI (lub done). Tylko URI z katalogu w system prompt."
+            f"**OBSERVATION (JSON):**\n{json.dumps(observation, ensure_ascii=False, default=str)[:12000]}\n\n"
+            "Wybierz następne 1–3 kroki URI (lub done). Tylko URI z runtime bundle w system prompt."
         )
 
     def run(
@@ -226,7 +251,7 @@ class LlmRuntimeLoop:
                 uri = str(step.get("uri") or "")
                 if uri == "done":
                     return {"ok": True, "status": "done", "timeline": timeline, "plan_used": "llm-runtime-loop"}
-                if step.get("human_approval"):
+                if step.get("human_approval") and not skip_human_approval_enabled():
                     return {
                         "ok": False,
                         "status": "waiting_human",
@@ -259,6 +284,13 @@ class LlmRuntimeLoop:
                     failures_in_row = 0
                 else:
                     failures_in_row += 1
+                    if self.ticket:
+                        save_llm_turn(
+                            self.ticket, role="tool", phase="runtime-error-repair",
+                            content=json.dumps(entry, default=str)[:6000],
+                            extra={"uri": uri, "needs_repair": True},
+                        )
+                    # skip remaining steps this turn — next turn LLM gets last_error
                     break
 
         verified = any(
@@ -278,4 +310,11 @@ class LlmRuntimeLoop:
 def llm_runtime_control_enabled() -> bool:
     return str(os.environ.get("URIRUN_LLM_RUNTIME_CONTROL", "1")).strip().lower() not in (
         "0", "false", "no", "off",
+    )
+
+
+def skip_human_approval_enabled() -> bool:
+    """Autonomiczne testy E2E — wykonaj kroki human_approval bez waiting_human."""
+    return str(os.environ.get("URIRUN_LLM_SKIP_HUMAN_APPROVAL", "0")).strip().lower() in (
+        "1", "true", "yes", "on",
     )
