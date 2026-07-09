@@ -168,7 +168,6 @@ class LlmRuntimeLoop:
         self.project = project
         ticket_prompt = build_first_system_prompt(
             ticket=self.ticket_dict, node=node, include_decision_rules=True,
-            node_run=self.node_run,
         )
         runtime_bundle = load_runtime_markdown_bundle()
         self._system = (
