@@ -503,7 +503,8 @@ def _work_console_ticket_create(project, path, body) -> dict:
         return {"ok": False, "error": "name wymagane"}
     return create_ticket(name, description=str(body.get("description") or ""),
                          priority=str(body.get("priority") or "normal"),
-                         node=str(body.get("node") or ""))
+                         node=str(body.get("node") or ""),
+                         labels=body.get("labels"), criteria=body.get("criteria"))
 
 
 def _work_console_ticket_edit(project, path, body) -> dict:

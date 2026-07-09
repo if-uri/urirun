@@ -1,3 +1,12 @@
+.code2llm_cache
+.cursor
+.idea
+.koru
+.nlp2dsl
+.planfile
+.planfile_analysis
+.urirun
+.vscode
 __pycache__/
 *.pyc
 .pytest_cache/
