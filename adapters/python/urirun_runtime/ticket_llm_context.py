@@ -193,6 +193,7 @@ def build_first_system_prompt(
             "3. Małe kroki: observe → jeden URI → verify efektu.\n"
             "4. Przy błędzie: inquiry:// + poprawiony plan (feedback w historii).\n"
             "5. Output: WYŁĄCZNIE blok ```urirun:processes``` z JSON array (standard urirun-llm-runtime).\n"
+            "6. W trakcie wykonania: pętla LLM-runtime — każda tura dostajesz OBSERVATION (gap, wyniki /run) i wybierasz 1–3 następne URI.\n"
             f"\n[Catalog: {len(catalog)} processes | node={node}]"
         )
 
