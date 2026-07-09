@@ -1,10 +1,16 @@
 # Fleet gate: lint every if-uri/urirun-connector-* against the in-tree urirun
 # (the build that carries the v2 authoring layer), failing on code<->manifest drift.
+# ALSO runs each connector's own `make test` against that SAME in-tree urirun (not
+# whatever version PyPI resolves) — fleet-lint only catches manifest/code drift, it
+# never executes a single connector test, so a urirun core change that breaks a
+# connector's actual behavior (not just its manifest) would otherwise only surface
+# once each connector's OWN CI runs against the next urirun release — after the fact.
 #
-# The connectors are separate repos, so this job clones them as siblings of the
+# The connectors are separate repos, so these jobs clone them as siblings of the
 # urirun checkout — exactly the layout scripts/lint_connectors.py expects locally —
-# and runs `make lint-connectors`. Per-connector CI should run its own
-# `urirun connectors lint .` (snippet in RELEASE_0.4.4.md); this is the org-wide net.
+# and run `make lint-connectors` / each connector's `make test`. Per-connector CI
+# should run its own `urirun connectors lint .` (snippet in RELEASE_0.4.4.md); this
+# is the org-wide net that catches it here, at the source, before release.
 name: connectors
 
 on:
@@ -77,3 +83,67 @@ jobs:
       # Once the fleet is fully migrated, make STRICT the default: flip the line above
       # to `make lint-connectors STRICT=1` (or set the workflow_dispatch default to true)
       # so the gate also blocks any regression back to the old argv/cli.py style.
+
+  discover:
+    name: List connector repos
+    runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.list.outputs.repos }}
+    steps:
+      - name: List if-uri/urirun-connector-* repos
+        id: list
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repos=$(gh repo list if-uri --no-archived --limit 300 --json name \
+            --jq '[.[].name] | map(select(test("^urirun-connector-"))) | sort')
+          echo "discovered $(echo "$repos" | jq 'length') connector repos"
+          echo "repos=$(echo "$repos" | jq -c .)" >> "$GITHUB_OUTPUT"
+
+  fleet-test:
+    name: test (${{ matrix.repo }})
+    needs: discover
+    runs-on: ubuntu-latest
+    # A connector that's broken (or hardware-dependent, e.g. camera/adb/usb — those
+    # legitimately can't pass on a bare ubuntu-latest runner) must not hide the other
+    # 48 results: fail-fast off + continue-on-error so every connector gets its own
+    # check entry, visible independently in the PR/run summary.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        repo: ${{ fromJson(needs.discover.outputs.repos) }}
+    steps:
+      - name: Check out urirun
+        uses: actions/checkout@v4
+        with:
+          path: urirun
+
+      - name: Check out ${{ matrix.repo }}
+        uses: actions/checkout@v4
+        with:
+          repository: if-uri/${{ matrix.repo }}
+          path: connector
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install the connector (its own deps + pytest — may pull urirun from PyPI as a side effect)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ./connector pytest
+
+      - name: Force the IN-TREE urirun to win (installed last — overrides whatever PyPI version the previous step pulled in)
+        run: pip install -e urirun/adapters/python
+
+      - name: Run the connector's own test suite against in-tree urirun
+        working-directory: connector
+        run: |
+          if [ -f Makefile ] && grep -q '^test:' Makefile; then
+            make test
+          else
+            python3 -m pytest -q
+          fi
