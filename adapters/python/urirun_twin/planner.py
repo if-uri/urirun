@@ -177,5 +177,11 @@ def planner_context(node: str, profile: dict, surface: dict | None = None,
                         "verify/goal step after each mutating action, and for any IRREVERSIBLE or public "
                         "action (post/publish/send/delete/pay) require explicit user confirmation first.")
     constraints = _infeasible_constraints(facts.get("actionMatrix") or {})
+    uri_env = ""
+    try:
+        from urirun_runtime.environment_topology import format_topology_for_llm
+        uri_env = format_topology_for_llm() or ""
+    except Exception:  # noqa: BLE001
+        pass
     return {"facts": facts, "guidance": guidance, "confidence": confidence,
-            "constraints": constraints}
+            "constraints": constraints, "uri_environment": uri_env}
