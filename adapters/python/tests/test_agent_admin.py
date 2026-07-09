@@ -38,3 +38,17 @@ def test_agent_cmd_claude_supervised_no_flag():
 def test_agent_cmd_codex_uses_exec_never_skip_flag():
     cmd = aa._agent_cmd("/opt/codex", "codex", "Execute ticket X", True)
     assert "exec" in cmd and "--dangerously-skip-permissions" not in cmd
+
+
+def test_agent_cmd_aider_uses_model_from_env(monkeypatch):
+    monkeypatch.setenv("URIRUN_AGENT_MODEL", "openrouter/deepseek/deepseek-v4-pro")
+    from urirun.host import env_loader as el
+    cmd = aa._agent_cmd("/opt/aider", "aider", "Execute ticket X", True, model=el.agent_model())
+    assert "--model" in cmd
+    assert "deepseek-v4-pro" in cmd
+
+
+def test_default_agent_from_env(monkeypatch):
+    monkeypatch.setenv("URIRUN_AGENT_DEFAULT", "aider")
+    assert aa._resolve_agent("auto") == "aider"
+    assert aa._resolve_agent("claude") == "claude"

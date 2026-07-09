@@ -507,13 +507,17 @@ def ensure_running(*, lane: str = "queue") -> dict[str, Any]:
     project = _project()
     log = Path(project) / ".planfile" / ".koru" / "queue.log"
     log.parent.mkdir(parents=True, exist_ok=True)
+    from .env_loader import koru_ide, load_project_env
+    load_project_env(project)
+    ide = koru_ide()
     # Long-term: start koru with claim-next hard gate enforced.
     # KORU_WORK_GATE=hard makes work://claim-next the only source of tickets (grants, leases, runnable checks).
+    env = {**os.environ, "KORU_WORK_GATE": "hard"}
     cmd = ["bash", "-lc",
-           f"KORU_WORK_GATE=hard nohup {binp!r} autonomous up --project {project!r} --ide claude "
+           f"nohup {binp!r} autonomous up --project {project!r} --ide {ide!r} "
            f"--ticket-sources {lane} --allow-duplicate >> {str(log)!r} 2>&1 &"]
     try:
-        subprocess.Popen(cmd, start_new_session=True)  # noqa: S603
+        subprocess.Popen(cmd, start_new_session=True, env=env)  # noqa: S603
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc)}
     return {"ok": True, "started": True, "project": project, "cmd": " ".join(cmd[-1:])}

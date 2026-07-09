@@ -28,15 +28,36 @@ def _autonomous_default(explicit: bool | None) -> bool:
     return str(os.environ.get("URIRUN_AGENT_AUTONOMOUS", "1")).strip().lower() in ("1", "true", "yes", "on")
 
 
-def _agent_cmd(binp: str, agent: str, prompt: str, autonomous: bool) -> str:
-    """Zbuduj polecenie headless. Dla claude/auto ``autonomous`` ⇒ ``--dangerously-skip-permissions``
-    (agent ZAPISUJE bez pytania). Inne narzędzia (codex) mają własny nieinteraktywny tryb ``exec``."""
+def _resolve_agent(requested: str) -> str:
+    req = (requested or "").strip().lower()
+    if req and req != "auto":
+        return req
+    from .env_loader import default_agent
+    return default_agent()
+
+
+def _agent_cmd(binp: str, agent: str, prompt: str, autonomous: bool, model: str = "") -> str:
+    """Zbuduj polecenie headless. Model z ``urirun/.env`` (``URIRUN_AGENT_MODEL`` / ``LLM_MODEL_DEVELOPER``)
+    steruje aider/ollama; claude ``autonomous`` ⇒ ``--dangerously-skip-permissions``."""
+    q = shlex.quote
+    if agent == "aider":
+        cmd = f"{q(binp)} --message {q(prompt)} --yes-always --no-auto-commits"
+        if model:
+            cmd += f" --model {q(model)}"
+        return cmd
+    if agent == "opencode":
+        return f"{q(binp)} run {q(prompt)}"
+    if agent == "gemini":
+        return f"{q(binp)} -p {q(prompt)}"
+    if agent == "ollama":
+        tag = (model.split("/")[-1] if model else os.environ.get("URIRUN_OLLAMA_MODEL") or "llama3")
+        return f"{q(binp)} run {q(tag)} {q(prompt)}"
     if agent in ("claude", "auto"):
-        cmd = f"{shlex.quote(binp)} -p {shlex.quote(prompt)}"
+        cmd = f"{q(binp)} -p {q(prompt)}"
         if autonomous:
             cmd += " --dangerously-skip-permissions"
         return cmd
-    return f"{shlex.quote(binp)} exec {shlex.quote(prompt)}"
+    return f"{q(binp)} exec {q(prompt)}"
 
 
 def _conn():
@@ -94,11 +115,14 @@ def _running_agents() -> list[dict]:
     return [r for r in list_runs(tail_lines=1) if r.get("running") and "agent://" in (r.get("uri") or "")]
 
 
-def run_ticket(project, ticket_id: str, agent: str = "claude", _autonomous: bool | None = None) -> dict[str, Any]:
+def run_ticket(project, ticket_id: str, agent: str = "auto", _autonomous: bool | None = None) -> dict[str, Any]:
     """Wykonaj ticket realnym agentem headless; bieg przez work_runs (widoczny w Runs).
 
     BLOKADA WSPÓŁBIEŻNOŚCI: wiele agentów na jednym repo koliduje (równoległe edycje/git).
     Domyślnie 1 agent naraz (URIRUN_AGENT_MAX_CONCURRENT); nigdy ten sam ticket dwa razy."""
+    from .env_loader import agent_model, load_project_env
+    load_project_env(project)
+    agent = _resolve_agent(agent)
     tid = str(ticket_id or "").strip()
     if not tid:
         return {"ok": False, "error": "id ticketu wymagane"}
@@ -121,16 +145,21 @@ def run_ticket(project, ticket_id: str, agent: str = "claude", _autonomous: bool
     # (--dangerously-skip-permissions), inaczej stalluje na promptach zgody. Opt-out
     # URIRUN_AGENT_AUTONOMOUS=0 (nadzór). Agent może zrobić wszystko — no-commit gwarantuje BACKLOG-AGENT.
     autonomous = _autonomous_default(_autonomous)
-    cmd = _agent_cmd(binp, agent, prompt, autonomous)
+    model = agent_model()
+    cmd = _agent_cmd(binp, agent, prompt, autonomous, model=model)
     from .work_runs import start_run
     meta = start_run(project, f"agent://{agent}/task/{tid}", cmd, label=f"{tid}: {t.get('name','')[:60]}")
-    return {"ok": True, "started": True, "ticket": tid, "agent": agent, "run": meta["id"], "log": meta["log"]}
+    out: dict[str, Any] = {"ok": True, "started": True, "ticket": tid, "agent": agent,
+                           "run": meta["id"], "log": meta["log"]}
+    if model:
+        out["model"] = model
+    return out
 
 
 def action(project, payload: dict) -> dict[str, Any]:
     act = str((payload or {}).get("action") or "").strip()
     if act == "run-ticket":
         auto = payload.get("autonomous")
-        return run_ticket(project, str(payload.get("id") or ""), str(payload.get("agent") or "claude"),
+        return run_ticket(project, str(payload.get("id") or ""), str(payload.get("agent") or "auto"),
                           _autonomous=bool(auto) if auto is not None else None)
     return {"ok": False, "error": f"unknown action {act!r}"}

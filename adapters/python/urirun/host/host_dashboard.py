@@ -1341,8 +1341,8 @@ def serve(
     # Load `<project>/.env` so the in-process NL planner sees LLM_MODEL / OPENROUTER_API_KEY
     # without the launcher having to `set -a; . .env`. The real environment always wins
     # (the file never clobbers an already-set variable), mirroring `host ask`.
-    from urirun.node.mesh import _maybe_load_dotenv
-    loaded_env = _maybe_load_dotenv(os.path.join(os.path.expanduser(project), ".env"))
+    from urirun.host.env_loader import load_project_env
+    loaded_env = load_project_env(project)
     if loaded_env:
         print(json.dumps({
             "event": "urirun.host_dashboard.dotenv_loaded",
