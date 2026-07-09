@@ -158,10 +158,12 @@ class LlmRuntimeLoop:
             hist = format_turns_for_llm(str(tid), limit=6)
             if hist:
                 obs["llm_history_excerpt"] = hist[:3000]
-        try:
-            obs["kvm"] = _light_kvm_state(self.node_run, self.node)
-        except Exception:
-            pass
+        need_kvm = not timeline or not (timeline[-1].get("ok") if timeline else True)
+        if need_kvm:
+            try:
+                obs["kvm"] = _light_kvm_state(self.node_run, self.node)
+            except Exception:
+                pass
         return obs
 
     def _prompt(self, goal: str, observation: dict[str, Any]) -> str:
