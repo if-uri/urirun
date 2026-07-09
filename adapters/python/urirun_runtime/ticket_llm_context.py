@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
@@ -55,6 +56,110 @@ def format_ticket_for_llm(ticket: dict[str, Any] | None) -> str:
     except Exception:  # noqa: BLE001
         pass
     return "\n".join(lines)
+
+
+def _node_base_url(node: str) -> str:
+    """URL węzła wykonawczego (POST /run, GET /routes)."""
+    n = (node or "lenovo").strip().lower()
+    for key in (f"URIRUN_{n.upper()}_URL", f"URIRUN_{n}_URL"):
+        raw = os.environ.get(key, "").strip()
+        if raw:
+            return raw.rstrip("/")
+    defaults = {
+        "lenovo": os.environ.get("URIRUN_LENOVO_URL", "http://192.168.188.201:8765"),
+        "host": os.environ.get("URIRUN_HOST_URL", "http://127.0.0.1:8765"),
+        "host-node": os.environ.get("URIRUN_HOST_NODE_URL", "http://127.0.0.1:8765"),
+    }
+    return defaults.get(n, defaults["lenovo"]).rstrip("/")
+
+
+def fetch_routes_from_node(node: str = "lenovo", *, node_url: str = "") -> list[dict[str, Any]]:
+    """GET /routes — pełny katalog URI-procesów z inputSchema (źródło prawdy węzła)."""
+    base = (node_url or _node_base_url(node)).rstrip("/")
+    for path in ("/routes", "/api/routes"):
+        try:
+            with urllib.request.urlopen(f"{base}{path}", timeout=8) as resp:  # noqa: S310
+                data = json.loads(resp.read().decode())
+                routes = data.get("routes", data)
+                if isinstance(routes, dict):
+                    routes = list(routes.values())
+                if isinstance(routes, list):
+                    return [r for r in routes if isinstance(r, dict) and r.get("uri")]
+        except Exception:  # noqa: BLE001
+            continue
+    return []
+
+
+def _compact_schema(schema: dict[str, Any]) -> str:
+    if not schema:
+        return "{}"
+    props = schema.get("properties") or {}
+    if not props:
+        return "{}"
+    compact: dict[str, Any] = {"type": schema.get("type", "object"), "properties": {}}
+    for name, spec in props.items():
+        if not isinstance(spec, dict):
+            compact["properties"][name] = spec
+            continue
+        field: dict[str, Any] = {k: spec[k] for k in ("type", "default", "enum", "description", "title") if k in spec}
+        compact["properties"][name] = field or {"type": "any"}
+    if schema.get("required"):
+        compact["required"] = schema["required"]
+    return json.dumps(compact, ensure_ascii=False)
+
+
+def format_route_schema_entry(route: dict[str, Any]) -> str:
+    """Jeden URI-proces z pełnym payload inputSchema dla LLM."""
+    uri = route.get("uri") or ""
+    title = route.get("title") or route.get("description") or ""
+    effect = route.get("effect")
+    safe = route.get("safe")
+    schema = route.get("inputSchema") or {}
+    meta = []
+    if effect:
+        meta.append(f"effect={effect}")
+    if safe is not None:
+        meta.append(f"safe={safe}")
+    head = f"### `{uri}`"
+    if title:
+        head += f" — {title}"
+    if meta:
+        head += f" ({', '.join(meta)})"
+    return f"{head}\n```json\n{_compact_schema(schema)}\n```"
+
+
+def build_live_uri_process_schemas(
+    node: str = "lenovo",
+    *,
+    node_url: str = "",
+    max_routes: int = 80,
+    max_chars: int = 28000,
+) -> str:
+    """Markdown: każdy URI-proces z węzła + JSON Schema payloadu (GET /routes)."""
+    routes = fetch_routes_from_node(node, node_url=node_url)
+    if not routes:
+        return ""
+    # Priorytet: kvm/ui/signal/app przed resztą
+    def _prio(r: dict) -> tuple[int, str]:
+        u = str(r.get("uri", "")).lower()
+        score = 0
+        for token, w in (("kvm://", 0), ("ui/", 1), ("signal", 2), ("app://", 3), ("router", 4)):
+            if token in u:
+                score = w
+                break
+        return (score, u)
+
+    routes = sorted(routes, key=_prio)[:max_routes]
+    parts = [
+        f"**URI-PROCESY WĘZŁA `{node}` (live GET /routes — schema payloadu per URI):**\n"
+        f"Źródło: `{node_url or _node_base_url(node)}/routes` · {len(routes)} tras\n",
+    ]
+    for r in routes:
+        parts.append(format_route_schema_entry(r))
+    text = "\n\n".join(parts)
+    if len(text) > max_chars:
+        return text[: max_chars - 100] + "\n\n…(truncated; fetch GET /routes for full catalog)\n"
+    return text
 
 
 def _flatten_registry_lines() -> list[str]:
@@ -180,10 +285,14 @@ def build_first_system_prompt(
 
     catalog = collect_uri_process_catalog(node, node_run=node_run)
     parts.append(
-        "**DOSTĘPNE PROCESY URI (wybierz z listy; payload ze schematu — * = required):**\n"
-        "Użyj WYŁĄCZNIE tych URI (+ ich dokładnych nazw pól) do realizacji ticketu.\n"
+        "**DOSTĘPNE PROCESY URI (skrót; pełne schematy payload → sekcja URI-PROCESY WĘZŁA):**\n"
+        "Użyj WYŁĄCZNIE URI z katalogu + dokładnych pól ze schematu JSON.\n"
         + "\n".join(catalog[:60])
     )
+
+    live_schemas = build_live_uri_process_schemas(node)
+    if live_schemas:
+        parts.append(live_schemas)
 
     if include_decision_rules:
         parts.append(

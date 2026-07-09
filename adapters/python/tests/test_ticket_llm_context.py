@@ -4,6 +4,57 @@ from __future__ import annotations
 from urirun_runtime import ticket_llm_context as tlc
 
 
+def test_live_uri_process_schemas_from_routes(monkeypatch):
+    sample = [
+        {
+            "uri": "kvm://host/ui/command/type-verified",
+            "title": "Type with OCR verify",
+            "effect": "mutate",
+            "safe": True,
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "default": ""},
+                    "submit": {"type": "boolean", "default": False},
+                    "draft_expect": {"type": "string"},
+                },
+                "required": ["text"],
+            },
+        }
+    ]
+
+    def fake_fetch(node, *, node_url=""):
+        return sample
+
+    monkeypatch.setattr(tlc, "fetch_routes_from_node", fake_fetch)
+    block = tlc.build_live_uri_process_schemas("lenovo")
+    assert "kvm://host/ui/command/type-verified" in block
+    assert '"submit"' in block
+    assert '"draft_expect"' in block
+    assert "Type with OCR verify" in block
+
+
+def test_first_prompt_includes_live_route_schemas(monkeypatch, tmp_path):
+    monkeypatch.setenv("URIRUN_KORU_PROJECT", str(tmp_path))
+    tpl = tmp_path / "compose/uri-runtime/environment.uri-topology.yaml"
+    tpl.parent.mkdir(parents=True)
+    tpl.write_text("uri_runtime_environment:\n  addressing_rules:\n  - lenovo\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        tlc,
+        "fetch_routes_from_node",
+        lambda node, **kw: [{
+            "uri": "kvm://host/ui/command/type-verified",
+            "title": "type-verified",
+            "inputSchema": {"properties": {"text": {"type": "string"}}},
+        }],
+    )
+    prompt = tlc.build_first_system_prompt(ticket={"id": "T-1"}, node="lenovo")
+    assert "URI-PROCESY WĘZŁA" in prompt
+    assert "type-verified" in prompt
+    assert '"text"' in prompt
+
+
 def test_first_prompt_includes_environment_ticket_and_catalog(monkeypatch, tmp_path):
     monkeypatch.setenv("URIRUN_KORU_PROJECT", str(tmp_path))
     tpl = tmp_path / "compose/uri-runtime/environment.uri-topology.yaml"
