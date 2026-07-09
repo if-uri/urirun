@@ -122,13 +122,27 @@ def parse_llm_action(content: str) -> list[dict[str, Any]]:
     return []
 
 
-def _step_ok(result: dict[str, Any]) -> bool:
+def _step_ok(result: dict[str, Any], *, step: dict[str, Any] | None = None) -> bool:
     if not isinstance(result, dict):
+        return False
+    if not result:
         return False
     if result.get("ok") is False or result.get("error"):
         return False
     inner = result.get("result") or result.get("value") or result
     if isinstance(inner, dict) and inner.get("ok") is False:
+        return False
+    uri = str((step or {}).get("uri") or "")
+    payload = (step or {}).get("payload") if isinstance((step or {}).get("payload"), dict) else {}
+    if "ui/query/verify" in uri:
+        return bool(result.get("present"))
+    if "screen/query/inspect" in uri and payload.get("contains"):
+        return bool(result.get("matched"))
+    if "ui/query/locate" in uri and payload.get("query"):
+        q = str(payload.get("query", "")).lower()
+        for m in result.get("matches") or []:
+            if q in str(m.get("text", "")).lower():
+                return True
         return False
     return True
 
@@ -271,7 +285,7 @@ class LlmRuntimeLoop:
                     "uri": uri,
                     "payload": payload,
                     "result": result,
-                    "ok": _step_ok(result),
+                    "ok": _step_ok(result, step=step),
                 }
                 timeline.append(entry)
                 if self.ticket:
