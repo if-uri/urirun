@@ -16,6 +16,7 @@ _BUNDLE_FILES = [
     "docs/llm/if_uri_integration.md",
     "docs/llm/environment_topology.yaml",
     "docs/llm/route_catalog.yaml",
+    "docs/llm/route_schemas_lenovo.json",
     "docs/llm/process_schema.json",
     "docs/openapi.yaml",
     "docs/markpact_marksync_process_examples.md",

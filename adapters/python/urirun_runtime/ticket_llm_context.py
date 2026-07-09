@@ -84,10 +84,38 @@ def fetch_routes_from_node(node: str = "lenovo", *, node_url: str = "") -> list[
                 if isinstance(routes, dict):
                     routes = list(routes.values())
                 if isinstance(routes, list):
-                    return [r for r in routes if isinstance(r, dict) and r.get("uri")]
+                    live = [r for r in routes if isinstance(r, dict) and r.get("uri")]
+                    if live:
+                        return live
         except Exception:  # noqa: BLE001
             continue
-    return []
+    return _load_offline_route_schemas(node)
+
+
+def _offline_schema_path(node: str) -> Path | None:
+    """Committed snapshot: urirun-llm-runtime/docs/llm/route_schemas_{node}.json."""
+    root = Path(os.environ.get("URIRUN_LLM_RUNTIME_ROOT", "")).expanduser()
+    candidates = [
+        root / "docs" / "llm" / f"route_schemas_{node}.json",
+        Path(__file__).resolve().parents[4] / "urirun-llm-runtime" / "docs" / "llm" / f"route_schemas_{node}.json",
+        Path("/home/tom/github/if-uri/urirun-llm-runtime/docs/llm") / f"route_schemas_{node}.json",
+    ]
+    for p in candidates:
+        if p.is_file():
+            return p
+    return None
+
+
+def _load_offline_route_schemas(node: str) -> list[dict[str, Any]]:
+    path = _offline_schema_path(node)
+    if not path:
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        routes = data.get("routes") or []
+        return [r for r in routes if isinstance(r, dict) and r.get("uri")]
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _compact_schema(schema: dict[str, Any]) -> str:
@@ -139,6 +167,15 @@ def build_live_uri_process_schemas(
     routes = fetch_routes_from_node(node, node_url=node_url)
     if not routes:
         return ""
+    source = node_url or _node_base_url(node)
+    offline = _offline_schema_path(node)
+    if offline and not node_url:
+        try:
+            off = json.loads(offline.read_text(encoding="utf-8"))
+            if off.get("source"):
+                source = f"{off['source']} (offline fallback)"
+        except Exception:  # noqa: BLE001
+            pass
     # Priorytet: kvm/ui/signal/app przed resztą
     def _prio(r: dict) -> tuple[int, str]:
         u = str(r.get("uri", "")).lower()
@@ -151,8 +188,8 @@ def build_live_uri_process_schemas(
 
     routes = sorted(routes, key=_prio)[:max_routes]
     parts = [
-        f"**URI-PROCESY WĘZŁA `{node}` (live GET /routes — schema payloadu per URI):**\n"
-        f"Źródło: `{node_url or _node_base_url(node)}/routes` · {len(routes)} tras\n",
+        f"**URI-PROCESY WĘZŁA `{node}` (JSON Schema payloadu per URI):**\n"
+        f"Źródło: `{source}/routes` · {len(routes)} tras\n",
     ]
     for r in routes:
         parts.append(format_route_schema_entry(r))

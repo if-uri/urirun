@@ -1,6 +1,8 @@
 """ticket_llm_context — pierwszy prompt ze środowiskiem i katalogiem URI."""
 from __future__ import annotations
 
+import json
+
 from urirun_runtime import ticket_llm_context as tlc
 
 
@@ -53,6 +55,24 @@ def test_first_prompt_includes_live_route_schemas(monkeypatch, tmp_path):
     assert "URI-PROCESY WĘZŁA" in prompt
     assert "type-verified" in prompt
     assert '"text"' in prompt
+
+
+def test_offline_route_schemas_fallback(monkeypatch, tmp_path):
+    root = tmp_path / "urirun-llm-runtime"
+    jdir = root / "docs" / "llm"
+    jdir.mkdir(parents=True)
+    snap = jdir / "route_schemas_lenovo.json"
+    snap.write_text(json.dumps({
+        "routes": [{
+            "uri": "kvm://host/ui/command/type-verified",
+            "title": "type-verified",
+            "inputSchema": {"properties": {"text": {"type": "string"}, "x": {"type": "integer"}}},
+        }]
+    }), encoding="utf-8")
+    monkeypatch.setenv("URIRUN_LLM_RUNTIME_ROOT", str(root))
+    monkeypatch.setattr(tlc, "_node_base_url", lambda n: "http://127.0.0.1:1")
+    routes = tlc.fetch_routes_from_node("lenovo")
+    assert any(r.get("uri") == "kvm://host/ui/command/type-verified" for r in routes)
 
 
 def test_first_prompt_includes_environment_ticket_and_catalog(monkeypatch, tmp_path):
