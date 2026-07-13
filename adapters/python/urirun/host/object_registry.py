@@ -2,25 +2,18 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-from .node_types import annotate_node_type, node_type_profile, normalize_node_type
+from .node_types import annotate_node_type
 from ._node_auth import (
-    node_api_slug, node_api_secret_ref, store_node_api_secret,
-    extract_raw_secret, extract_secret_ref, build_auth_extra_fields,
-    normalize_node_api_auth, default_api_items, api_item_fields,
-    normalize_api_item, normalize_node_apis,
+    normalize_node_apis,
 )
 from ._node_builder import (
     derive_node_capabilities, build_node_entry, persist_node_to_config,
-    node_remove_from_mirror, node_kinds_path, node_kinds,
-    set_node_kind, node_remove_kind, annotate_node_kinds,
+    node_remove_from_mirror, set_node_kind, node_remove_kind,
 )
-from urllib.parse import parse_qsl, urlencode, urlunsplit, urlsplit
-import base64
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -791,7 +784,7 @@ def probe_node_token(
     admin-gated. Returns ``{reachable, tokenValid, tokenReason, keyValid, keyAuth}``; no side
     effects beyond a query, the token value is never logged."""
     from .fs_transfer import run_node_uri as _run_node_uri  # noqa: PLC0415
-    url = node_url_fn(name) or (known_nodes_file_urls() or {}).get(name, "")
+    url = node_url_fn(name) or ""
     if not url:
         return {"reachable": False, "reason": "nieznany URL węzła — najpierw dodaj node"}
     try:

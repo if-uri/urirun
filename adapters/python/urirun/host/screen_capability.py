@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from urirun_connector_router.target_resolution import selected_nodes_from_targets
 
 from .document_sync import needs_screen_document_capture as _needs_screen_document_capture
 

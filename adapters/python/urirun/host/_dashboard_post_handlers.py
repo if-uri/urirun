@@ -4,8 +4,6 @@
 """POST-path sub-handlers and auxiliary functions extracted from host_dashboard.py."""
 from __future__ import annotations
 
-import os
-from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .dashboard_http import _json_response, _read_json
@@ -68,7 +66,6 @@ from urirun.host.host_dashboard import (
     scanner_best_finish,
     page_action_enqueue,
     uri_invoke,
-    summary,
 )
 
 
@@ -242,7 +239,7 @@ def documents_reconcile(project: str, db: str | None, payload: dict | None = Non
 
 def _handle_get(handler, parsed, project, db, config, node_urls, token, identity):
     from ._dashboard_get_handlers import (  # noqa: PLC0415 - lazy avoids host_dashboard↔_dashboard_get_handlers cycle
-        _handle_events_sse, _handle_get_static, _handle_get_services, _handle_get_api,
+        _handle_get_static, _handle_get_services, _handle_get_api,
     )
     if _handle_get_static(handler, parsed, project):
         return

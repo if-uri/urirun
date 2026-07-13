@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from urirun.node.mesh import EventHub
 from urirun.node.event_schema import _step_inverse  # moved down; re-exported (host→node, breaks the node→host cycle)
 
@@ -637,7 +639,7 @@ def _now_state(step_events: list, nodes: dict) -> dict:
     return {"fingerprint": None, "url": None, "status": None, "node": None}
 
 
-def _durable_extras(mem: "Any") -> "tuple[list, list, list]":
+def _durable_extras(mem: Any) -> "tuple[list, list, list]":
     """Optional durable twin layers — degraded runs, reversibility proofs, episodes — each guarded."""
     degraded_flows = mem.degraded_flows() if hasattr(mem, "degraded_flows") else []
     proof_store = getattr(mem, "proof_store", None)

@@ -91,7 +91,7 @@ def get_ticket_urls(tid: str) -> dict[str, str]:
         try:
             # best effort
             reg = urirun.compile_registry({}) or {}
-        except:
+        except Exception:  # noqa: BLE001
             pass
         full_routes = routes_from_registry(reg) if reg else []
         urls["full_uri_registry"] = [r.get("uri") for r in full_routes[:20]] or "full via urirun list or router"
@@ -112,7 +112,6 @@ def ticket_to_dict(ticket) -> dict:
             d["urls"].update(urls)
             # full registry version at ticket
             try:
-                import urirun
                 # attach lightweight registry info
                 d["uri_registry_context"] = "full registry via urirun list or router; use history-links for ticket-specific"
             except Exception:
@@ -399,8 +398,6 @@ def archive_ticket(project: str | None, ticket_id: str, note: str | None = None,
     pf = load_planfile(project)
     updates = {"sprint": ARCHIVE_SPRINT, "status": "done"}
     if note:
-        ticket = pf.get_ticket(ticket_id)
-        existing_notes = (getattr(ticket, "outputs", None) or type('obj', (object,), {'notes': []})()).notes or []
         updates["note"] = (note if isinstance(note, str) else str(note))
     ticket = pf.update_ticket(ticket_id, reason=reason, actor=actor, **updates)
     _emit_uri_process(f"ticket://{ticket_id}", "archive", {"sprint": ARCHIVE_SPRINT})

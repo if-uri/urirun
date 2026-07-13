@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 from .scanner_net import _lan_host
 from .scanner_net import _probe_scanner_url

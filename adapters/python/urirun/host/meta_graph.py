@@ -50,7 +50,7 @@ def _ticket_list(project: str) -> list[dict]:
 
 
 def _ticket_topic(t: dict, labs: list) -> str:
-    return next((h for h in _TOPICS if any(h in l.lower() for l in labs) or h in t.get("name", "").lower()), "")
+    return next((h for h in _TOPICS if any(h in label.lower() for label in labs) or h in t.get("name", "").lower()), "")
 
 
 def _label_edges(tid: str, labs: list, ids: set) -> list[dict]:
