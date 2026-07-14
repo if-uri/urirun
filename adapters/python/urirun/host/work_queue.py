@@ -49,8 +49,10 @@ def koru_status() -> dict[str, Any]:
         log = Path(project) / ".planfile" / ".koru" / "soak.log"
     if log.is_file():
         try:
-            lines = [l for l in log.read_text(errors="replace").splitlines()
-                     if "cycle=" in l or "queue:" in l or "QUEUE:" in l or "ticket" in l.lower()]
+            lines = [
+                line for line in log.read_text(errors="replace").splitlines()
+                if "cycle=" in line or "queue:" in line or "QUEUE:" in line or "ticket" in line.lower()
+            ]
             last = lines[-1][-200:] if lines else ""
         except Exception:  # noqa: BLE001
             pass
@@ -107,20 +109,20 @@ def tickets(limit: int = 40, include_done: bool = False, sprint: str = "current"
             return {"type": "ticket", "key": tid}
         labels = [str(x).lower() for x in (t.get("labels") or [])]
         for lab in labels:
-            l = lab.strip()
-            if l in grants["keys"]:
-                return {"type": "type", "key": l}
-            if l.startswith("waiting:"):
-                suffix = l.split(":", 1)[1]
+            label = lab.strip()
+            if label in grants["keys"]:
+                return {"type": "type", "key": label}
+            if label.startswith("waiting:"):
+                suffix = label.split(":", 1)[1]
                 g = "wait-gate:waiting_" + suffix.replace("-", "_")
                 if g in grants["keys"]:
                     return {"type": "type", "key": g}
                 g2 = "waiting:" + suffix
                 if g2 in grants["keys"]:
                     return {"type": "type", "key": g2}
-            if l.startswith(("wait-gate:", "action:", "goal:", "source:")):
-                if l in grants["keys"]:
-                    return {"type": "type", "key": l}
+            if label.startswith(("wait-gate:", "action:", "goal:", "source:")):
+                if label in grants["keys"]:
+                    return {"type": "type", "key": label}
         # action from name heuristic (cheap)
         import re
         m = re.search(r"\b([a-z_]+\.[a-z_]+)\b", t.get("name", "") or "")

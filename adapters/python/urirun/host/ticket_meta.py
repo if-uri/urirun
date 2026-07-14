@@ -20,6 +20,7 @@ import json
 import os
 import re
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -137,7 +138,8 @@ def load_digital_persons() -> list[dict]:
     if not f.is_file():
         save_digital_persons(_DEFAULT_DIGITAL_PERSONS)
         persons = list(_DEFAULT_DIGITAL_PERSONS)
-        for p in persons: _enrich_person(p)
+        for p in persons:
+            _enrich_person(p)
         return persons
     try:
         d = json.loads(f.read_text(encoding="utf-8"))
@@ -157,13 +159,14 @@ def load_digital_persons() -> list[dict]:
                         from datetime import datetime
                         if datetime.fromisoformat(du.replace("Z", "+00:00")).timestamp() > now:
                             en = False
-                except:
+                except Exception:  # noqa: BLE001
                     pass
             p["_is_enabled"] = en
         return persons
     except Exception:  # noqa: BLE001
         persons = list(_DEFAULT_DIGITAL_PERSONS)
-        for p in persons: _enrich_person(p)
+        for p in persons:
+            _enrich_person(p)
         return persons
 
 
@@ -254,10 +257,10 @@ def ticket_llms(ticket: dict, m: dict, session: list[str]) -> list[str]:
     if m.get("llm"):
         return list(m["llm"])
     labels = [str(x) for x in (ticket.get("labels") or [])]
-    explicit = [l.split("llm:", 1)[1] for l in labels if l.startswith("llm:")]
+    explicit = [label.split("llm:", 1)[1] for label in labels if label.startswith("llm:")]
     if explicit:
         return explicit
-    if any("llm" in l.lower() for l in labels):
+    if any("llm" in label.lower() for label in labels):
         return session
     return []
 

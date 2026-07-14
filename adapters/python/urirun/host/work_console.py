@@ -21,6 +21,8 @@ import json
 import os
 import subprocess
 import time
+import datetime as _dt
+import re as _re
 from pathlib import Path
 from typing import Any
 
@@ -134,9 +136,6 @@ def reject_op(op_id: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- URI activity feed
-
-import datetime as _dt
-import re as _re
 
 _KLINE = _re.compile(r"^\[(\d\d:\d\d:\d\d)\]\s*koru\s*[^\s]?\s*([A-Z]+):\s*(.*)$")
 _BACKTICK = _re.compile(r"`([^`]+)`")
@@ -296,7 +295,7 @@ def koru_log_tail(limit: int = 200) -> dict:
     stale = source_age is not None and source_age > _KORU_LOG_STALE_SECONDS
     live = running and not stale
     status = _koru_log_status(running, stale, live)
-    rows = _coalesce([_koru_line(l) for l in ticket_meta._tail(log, int(limit))])
+    rows = _coalesce([_koru_line(line) for line in ticket_meta._tail(log, int(limit))])
     if not live:
         rows.append(_control_row(_koru_inactive_text(
             log, status, running, stale, loop_controller, controller, source_age, source_mtime)))

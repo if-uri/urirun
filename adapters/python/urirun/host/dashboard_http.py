@@ -11,7 +11,6 @@ import mimetypes
 import os
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any
 
 from .html_templates import INDEX_HTML
 

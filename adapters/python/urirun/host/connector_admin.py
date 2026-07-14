@@ -157,7 +157,6 @@ def connector_env_check(payload: dict) -> dict:
 
 
 
-import subprocess
 import sys
 
 CONNECTOR_INSTALL_TIMEOUT = 300

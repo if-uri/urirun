@@ -13,7 +13,6 @@ from typing import Any
 from .scanner_bridge import (
     is_autonomous_scanner_prompt,
     is_camera_start_prompt,
-    is_phone_scanner_prompt,
     scanner_flow_result,
     torch_enabled_from_prompt,
 )

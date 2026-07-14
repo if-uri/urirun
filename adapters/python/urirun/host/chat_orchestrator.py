@@ -38,8 +38,6 @@ from .twin_bridge import (
 from .object_registry import local_entry_point_host_routes
 from urirun_twin.capture_preferences import (
     apply_capture_preferences as _apply_capture_preferences,
-    capture_preference_fingerprint as _capture_preference_fingerprint,
-    capture_preference_from_payload as _capture_preference_from_payload,
     remember_capture_preferences as _remember_capture_preferences,
 )
 from urirun_twin.experience_retrieval import (
@@ -51,23 +49,16 @@ from urirun_twin.experience_retrieval import (
 from urirun_connector_router.target_resolution import (
     apply_host_default_when_no_node_in_prompt as _router_apply_host_default_when_no_node_in_prompt,
     filter_mesh_for_targets as _filter_mesh_for_targets,
-    inactive_node_urls as _inactive_node_urls,
     prompt_says_local as _prompt_says_local,
     rebuild_node_targets as _rebuild_node_targets,
     resolve_selected_targets as _router_resolve_selected_targets,
-    route_targets_active as _route_targets_active,
     selected_nodes_from_targets,
     target_selection_explicit as _target_selection_explicit,
     with_local_host_routes as _with_local_host_routes_impl,
 )
 from urirun_connector_router.routing import diagnose_targets as _router_diagnose_targets
-from urirun_flow.env_selection import resolve_flow_env_enums, resolve_flow_env_enums_with_registry
+from urirun_flow.env_selection import resolve_flow_env_enums_with_registry
 from ._chat_attachments import (
-    _resolve_artifact_value,
-    _process_remote_path_entry,
-    _build_remote_path_maps,
-    _save_inline_attachment,
-    _resolve_attachment_preview,
     _enrich_remote_attachments,
     _register_step_artifacts,
 )
@@ -252,8 +243,6 @@ def _chat_ask_general_planner_failure(
             "recovery": result.get("recovery") or [],
             "remediation": remediation,
         }
-        if payload and isinstance(payload, dict) and payload.get("ticket"):
-            log_detail["ticket"] = payload.get("ticket")
         deps.host_db_fn().add_log(db, "chat", "ask", log_detail)
     except Exception:  # noqa: BLE001
         pass

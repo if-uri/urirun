@@ -90,7 +90,6 @@ def _apply_configured_auth(headers: dict, api: dict) -> str | None:
 
 
 def configured_api_headers(api: dict, payload: dict) -> tuple[dict, str | None]:
-    from .object_registry import normalize_node_api_auth as _nna  # noqa: PLC0415 — lazy to avoid circular
     headers = _merge_api_headers(api, payload)
     error = _apply_configured_auth(headers, api)
     return headers, error

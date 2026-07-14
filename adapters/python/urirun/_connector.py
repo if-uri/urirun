@@ -4,10 +4,7 @@ Moved from ``urirun/__init__.py`` to keep the public init slim. All public
 names are re-exported from ``urirun`` so external callers are unaffected.
 """
 from __future__ import annotations
-import json
-import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 

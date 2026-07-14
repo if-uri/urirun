@@ -531,7 +531,10 @@ def _host_cmd_ask(args: argparse.Namespace, config: dict, mesh: dict) -> int:
         write_flow_document(args.flow_out, flow_document(flow, prompt=prompt, generator=generator), getattr(args, "flow_format", None))
     registry = registry_from_routes(mesh["routes"])
     _run_mode = "execute" if args.execute else "dry-run"
-    _dispatch = lambda _uri, _payload: v2_service.call(_uri, _payload, registry, mode=_run_mode)
+
+    def _dispatch(_uri, _payload):
+        return v2_service.call(_uri, _payload, registry, mode=_run_mode)
+
     execution = execute_flow(flow, mesh, registry, execute=args.execute, dispatch_uri=_dispatch)
     result = {"ok": execution["ok"], "prompt": prompt, "generator": generator, "flow": flow, **execution}
     if getattr(args, "flow_out", None):

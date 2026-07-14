@@ -78,6 +78,9 @@ addopts = "--import-mode=importlib"
 # Deferred imports placed after code break import cycles between the runtime
 # modules (introspect↔v2, _runtime↔_registry/_scan); E731 is one local table-
 # formatting lambda. These are intentional, not lint debt.
+"urirun/__init__.py" = ["F401", "F402", "F811", "E402"]
+"urirun/host/connector_admin.py" = ["E402"]
+"urirun/host/host_dashboard.py" = ["E402", "F401", "F811"]
 "urirun/runtime/_runtime.py" = ["E402", "E731"]
 "urirun/runtime/v2.py" = ["E402"]
 

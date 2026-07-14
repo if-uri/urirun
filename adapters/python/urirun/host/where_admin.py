@@ -7,9 +7,6 @@ strukturę (node/hostname/display/okna) z warstwą wizualną (capture) i HTML-ov
 from __future__ import annotations
 
 import json
-import shutil
-import subprocess
-import time
 import urllib.request
 from pathlib import Path
 from typing import Any
