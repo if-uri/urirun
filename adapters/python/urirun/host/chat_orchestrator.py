@@ -50,8 +50,10 @@ from urirun_connector_router.target_resolution import (
     apply_host_default_when_no_node_in_prompt as _router_apply_host_default_when_no_node_in_prompt,
     filter_mesh_for_targets as _filter_mesh_for_targets,
     prompt_says_local as _prompt_says_local,
+    inactive_node_urls as _inactive_node_urls,  # noqa: F401 — re-exported helper
     rebuild_node_targets as _rebuild_node_targets,
     resolve_selected_targets as _router_resolve_selected_targets,
+    route_targets_active as _route_targets_active,  # noqa: F401 — re-exported predicate
     selected_nodes_from_targets,
     target_selection_explicit as _target_selection_explicit,
     with_local_host_routes as _with_local_host_routes_impl,

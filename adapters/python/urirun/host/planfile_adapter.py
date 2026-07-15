@@ -207,27 +207,12 @@ def create_ticket(project: str | None, payload: dict[str, Any]) -> dict:
     tdict = ticket_to_dict(ticket)
     tid = tdict.get("id")
     if tid:
-        urls = get_ticket_urls(tid)
-        # Persist URLs in outputs.result and artifacts for history
-        outputs = tdict.get("outputs") or {}
-        if not outputs.get("result"):
-            outputs["result"] = {}
-        outputs["result"]["urls"] = urls
-        artifacts = list(outputs.get("artifacts") or [])
-        artifacts.append({"type": "urls", "value": urls, "name": "ticket-history-links"})
-        outputs["artifacts"] = artifacts
-        # also note for visibility
-        notes = list(outputs.get("notes") or [])
-        note_text = f"history-links: {urls}"
-        if note_text not in notes:
-            notes.append(note_text)
-        outputs["notes"] = notes
-        try:
-            pf.update_ticket(tid, outputs=outputs)
-        except Exception:
-            pass
-        tdict["outputs"] = outputs
-        tdict["urls"] = urls
+        # Expose history links to the caller as a transient field only.
+        # Do NOT persist them into outputs.{result,artifacts,notes}: those fields
+        # are part of the planfile ticket schema (artifacts is list[str]) and
+        # callers assert their exact contents. Persisting derived URLs there made
+        # planfile drop the ticket on reload and corrupted outputs.result.
+        tdict["urls"] = get_ticket_urls(tid)
     return tdict
 
 
@@ -286,13 +271,10 @@ def complete_ticket(
     actor: str | None = None,
 ) -> dict | None:
     urls = get_ticket_urls(ticket_id)
-    if isinstance(result, dict):
-        result = dict(result)
-        result.setdefault("urls", urls)
-    elif result is None:
-        result = {"urls": urls}
+    # Keep outputs.result exactly as the caller supplied it and artifacts as
+    # list[str] (planfile schema). History URLs are returned as a transient
+    # top-level field, never persisted into the ticket outputs.
     art_list = list(artifacts or [])
-    art_list.append({"type": "urls", "value": urls, "name": "ticket-history-links"})
     ticket = load_planfile(project).complete_ticket(ticket_id, note=note, result=result, artifacts=art_list, reason=reason, actor=actor)
     _emit_uri_process(f"ticket://{ticket_id}", "complete", {"result": result})
     tdict = ticket_to_dict(ticket) if ticket else None

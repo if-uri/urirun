@@ -13,6 +13,13 @@ from typing import Any, Callable
 
 from .document_sync import needs_screen_document_capture as _needs_screen_document_capture
 
+# Back-compat re-export: this helper's canonical home is
+# ``urirun_connector_router.target_resolution`` after the routing-kernel split,
+# but callers and tests still import it from ``screen_capability``.
+from urirun_connector_router.target_resolution import (  # noqa: F401
+    selected_nodes_from_targets,
+)
+
 _SCREEN_WORDS = ("zrzut", "screenshot", "screen capture", "zrzuty ekranu", "screenshoot")
 
 

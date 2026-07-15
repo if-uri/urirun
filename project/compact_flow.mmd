@@ -1,12 +1,13 @@
 flowchart TD
-%% generated in 0.06s
+%% generated in 0.07s
     adapters__conformance["adapters.conformance<br/>7 funcs"]
     adapters__java["adapters.java<br/>4 funcs"]
     adapters__js["adapters.js<br/>12 funcs"]
     adapters__perl["adapters.perl<br/>4 funcs"]
-    adapters__python["adapters.python<br/>2535 funcs"]
+    adapters__python["adapters.python<br/>2787 funcs"]
     docs__gen_error_codes["docs.gen_error_codes<br/>1 funcs"]
     examples__matrix["examples.matrix<br/>3 funcs"]
+    scripts__build_product_artifacts["scripts.build_product_artifacts<br/>10 funcs"]
     scripts__cc_gate["scripts.cc_gate<br/>3 funcs"]
     scripts__extraction_audit["scripts.extraction_audit<br/>12 funcs"]
     scripts__lint_connectors["scripts.lint_connectors<br/>6 funcs"]
@@ -19,9 +20,9 @@ flowchart TD
     xlang__driver["xlang.driver<br/>3 funcs"]
     xlang__emit_contracts["xlang.emit_contracts<br/>1 funcs"]
     xlang__peer["xlang.peer<br/>27 funcs"]
-    adapters__python ==>|156| scripts__test_pypi_install
+    adapters__python ==>|161| scripts__test_pypi_install
     scripts__extraction_audit ==>|20| scripts__test_pypi_install
-    adapters__python ==>|18| adapters__js
+    adapters__python ==>|20| adapters__js
     scripts__publish_release_chain ==>|12| scripts__test_pypi_install
     scripts__repin_connectors ==>|12| scripts__test_pypi_install
     adapters__conformance ==>|11| scripts__test_pypi_install
@@ -40,5 +41,6 @@ flowchart TD
     scripts__extraction_audit -->|1| adapters__python
     adapters__conformance -->|1| adapters__python
     adapters__python -->|1| adapters__perl
-    adapters__python -->|1| adapters__java
     xlang__driver -->|1| adapters__python
+    scripts__build_product_artifacts -->|1| scripts__test_pypi_install
+    adapters__python -->|1| adapters__java
