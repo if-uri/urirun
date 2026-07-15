@@ -18,7 +18,7 @@ from .document_sync import (
     document_sync_dest_from_prompt,
     document_sync_retry_payload_from_urifix,
 )
-from .screen_capability import selected_nodes_from_targets
+from urirun_connector_router.target_resolution import selected_nodes_from_targets
 from .urifix_bridge import try_urifix_repair
 from ._chat_message import chat_message
 
