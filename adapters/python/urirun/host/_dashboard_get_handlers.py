@@ -407,11 +407,8 @@ def _handle_get_work_diag(handler, parsed, query) -> bool:
     return False
 
 
-def _handle_get_work(handler, parsed, project, query) -> bool:
-    """All /api/work/* read surfaces for the /work view (runs, confirm queue, URI activity,
-    koru queue/continuity, debug). Split out of _handle_get_api to keep each dispatcher small."""
-    if _handle_get_work_console(handler, parsed, project, query):
-        return True
+def _handle_get_work_runs_debug(handler, parsed, project, query) -> bool:
+    """/api/work/runs + /api/work/debug — split out of _handle_get_work to keep its CC low."""
     if parsed.path == "/api/work/runs":
         from .work_runs import list_runs  # lazy, like the other optional surfaces
         _json_response(handler, 200,
@@ -424,6 +421,11 @@ def _handle_get_work(handler, parsed, project, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": f"debug surface unavailable: {exc}"})
         return True
+    return False
+
+
+def _handle_get_work_queue_status(handler, parsed, project, query) -> bool:
+    """/api/work/{queue,status,unblocks,active} — split out of _handle_get_work to keep its CC low."""
     if parsed.path == "/api/work/queue":
         from .work_queue import queue_state  # koru loop status + planfile ticket queue
         include_done = str(_first(query, "include_done", "false")).lower() in ("1", "true", "yes")
@@ -451,31 +453,64 @@ def _handle_get_work(handler, parsed, project, query) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
-    if parsed.path == "/api/work/persons":
-        from . import ticket_meta
-        try:
-            persons = ticket_meta.load_digital_persons()
-            # ensure mode and is_enabled are always present for UI
-            for p in persons:
-                if "mode" not in p:
-                    p["mode"] = "real"
-                if "_is_enabled" not in p:
-                    p["_is_enabled"] = p.get("enabled", True)
-                # NEW: easy view flags for "wirtualny digital twin vs rzeczywisty node"
-                comps = [str(c).lower() for c in (p.get("competencies") or [])]
-                keys = ("kvm", "lenovo", "node:", "signal", "desktop", "input")
-                is_node_like = any(any(k in c for k in keys) for c in comps)
-                if p.get("type") == "human":
-                    p["backing"] = "human"
-                elif p.get("mode") == "real" and is_node_like:
-                    p["backing"] = "real-node"
-                else:
-                    p["backing"] = "virtual-twin"
-                # inne komponenty (wyróżnione zdolności sterowania)
-                p["components"] = [c for c in (p.get("competencies") or []) if any(k in c.lower() for k in ("kvm","lenovo","signal","node","input","capture","deploy","control"))][:5] or (p.get("competencies") or [])[:4]
-            _json_response(handler, 200, {"ok": True, "persons": persons})
-        except Exception as exc:  # noqa: BLE001
-            _json_response(handler, 200, {"ok": False, "error": str(exc)})
+    return False
+
+
+def _person_backing(p: dict) -> str:
+    """wirtualny digital twin vs rzeczywisty node vs człowiek."""
+    if p.get("type") == "human":
+        return "human"
+    comps = [str(c).lower() for c in (p.get("competencies") or [])]
+    keys = ("kvm", "lenovo", "node:", "signal", "desktop", "input")
+    is_node_like = any(any(k in c for k in keys) for c in comps)
+    if p.get("mode") == "real" and is_node_like:
+        return "real-node"
+    return "virtual-twin"
+
+
+def _person_components(p: dict) -> list:
+    """Inne komponenty (wyróżnione zdolności sterowania)."""
+    competencies = p.get("competencies") or []
+    keys = ("kvm", "lenovo", "signal", "node", "input", "capture", "deploy", "control")
+    picked = [c for c in competencies if any(k in c.lower() for k in keys)][:5]
+    return picked or competencies[:4]
+
+
+def _person_view_flags(p: dict) -> None:
+    """Ensure mode/_is_enabled/backing/components are present on a digital person for the UI."""
+    if "mode" not in p:
+        p["mode"] = "real"
+    if "_is_enabled" not in p:
+        p["_is_enabled"] = p.get("enabled", True)
+    p["backing"] = _person_backing(p)
+    p["components"] = _person_components(p)
+
+
+def _handle_get_work_persons(handler, parsed, project, query) -> bool:
+    """/api/work/persons — split out of _handle_get_work to keep its CC low."""
+    if parsed.path != "/api/work/persons":
+        return False
+    from . import ticket_meta
+    try:
+        persons = ticket_meta.load_digital_persons()
+        for p in persons:
+            _person_view_flags(p)
+        _json_response(handler, 200, {"ok": True, "persons": persons})
+    except Exception as exc:  # noqa: BLE001
+        _json_response(handler, 200, {"ok": False, "error": str(exc)})
+    return True
+
+
+def _handle_get_work(handler, parsed, project, query) -> bool:
+    """All /api/work/* read surfaces for the /work view (runs, confirm queue, URI activity,
+    koru queue/continuity, debug). Split out of _handle_get_api to keep each dispatcher small."""
+    if _handle_get_work_console(handler, parsed, project, query):
+        return True
+    if _handle_get_work_runs_debug(handler, parsed, project, query):
+        return True
+    if _handle_get_work_queue_status(handler, parsed, project, query):
+        return True
+    if _handle_get_work_persons(handler, parsed, project, query):
         return True
     return False
 

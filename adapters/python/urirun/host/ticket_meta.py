@@ -114,21 +114,32 @@ _DEFAULT_DIGITAL_PERSONS = [
 ]
 
 
+def _person_backing(p: dict) -> str:
+    """wirtualny digital twin vs rzeczywisty node vs człowiek."""
+    if p.get("type") == "human":
+        return "human"
+    comps_l = [str(c).lower() for c in (p.get("competencies") or [])]
+    keys = ("kvm", "lenovo", "node:", "signal", "desktop", "input")
+    is_node_like = any(any(k in c for k in keys) for c in comps_l)
+    if p.get("mode") == "real" and is_node_like:
+        return "real-node"
+    return "virtual-twin"
+
+
+def _person_components(p: dict) -> list:
+    competencies = p.get("competencies") or []
+    keys = ("kvm", "lenovo", "signal", "node", "input", "capture", "deploy")
+    picked = [c for c in competencies if any(k in c.lower() for k in keys)][:5]
+    return picked or competencies[:4]
+
+
 def _enrich_person(p: dict) -> None:
     """Add backing (real-node / virtual-twin / human) + components for UI podgląd."""
     try:
         if "mode" not in p:
             p["mode"] = "sim" if str(p.get("id","")).endswith("-sim") else "real"
-        comps_l = [str(c).lower() for c in (p.get("competencies") or [])]
-        keys = ("kvm", "lenovo", "node:", "signal", "desktop", "input")
-        is_node_like = any(any(k in c for k in keys) for c in comps_l)
-        if p.get("type") == "human":
-            p["backing"] = "human"
-        elif p.get("mode") == "real" and is_node_like:
-            p["backing"] = "real-node"
-        else:
-            p["backing"] = "virtual-twin"
-        p["components"] = [c for c in (p.get("competencies") or []) if any(k in c.lower() for k in ("kvm","lenovo","signal","node","input","capture","deploy"))][:5] or (p.get("competencies") or [])[:4]
+        p["backing"] = _person_backing(p)
+        p["components"] = _person_components(p)
     except Exception:
         p.setdefault("backing", "virtual-twin")
         p.setdefault("components", [])
@@ -335,30 +346,36 @@ def scan_log_processes(project: str, per_ticket: int = 40) -> dict[str, list[dic
 
 # ------------------------------------------------------------------ enrichment + detail + edit
 
+def _ticket_owner(owner_id: str, persons: dict) -> dict | None:
+    if not owner_id:
+        return None
+    return persons.get(owner_id) or {"id": owner_id, "name": owner_id, "type": "unknown"}
+
+
+def _enrich_row(t: dict, meta: dict, session: list[str], host: str, procs: dict, persons: dict) -> dict:
+    m = meta.get(t.get("id")) or {}
+    p = procs.get(t.get("id")) or []
+    owner_id = m.get("owner") or m.get("assigned_person") or ""
+    return {**t,
+            "llm": ticket_llms(t, m, session),
+            "llm_model": m.get("llm_model") or (m.get("llm") or [None])[0] if m.get("llm") else None,
+            "node": ticket_node(t, m, host),
+            "owner": _ticket_owner(owner_id, persons),
+            "assigned_person": m.get("assigned_person") or m.get("owner") or "",
+            "procs": p[:3], "procs_total": len(p),
+            "allow": m.get("allow") or [], "deny": m.get("deny") or [],
+            "schedule": m.get("schedule") or "",
+            "editable": (t.get("status") not in _DONE)}
+
+
 def enrich(tickets: list[dict], project: str) -> list[dict]:
     """Attach llm / node / process-preview / allow-deny to each ticket row (in place-ish)."""
     meta = load_meta()
     session = session_llms(project)
     host = os.uname().nodename
     procs = scan_log_processes(project)
-    out = []
     persons = {p["id"]: p for p in load_digital_persons()}
-    for t in tickets:
-        m = meta.get(t.get("id")) or {}
-        p = procs.get(t.get("id")) or []
-        owner_id = m.get("owner") or m.get("assigned_person") or ""
-        owner = persons.get(owner_id) or ({"id": owner_id, "name": owner_id, "type": "unknown"} if owner_id else None)
-        out.append({**t,
-                    "llm": ticket_llms(t, m, session),
-                    "llm_model": m.get("llm_model") or (m.get("llm") or [None])[0] if m.get("llm") else None,
-                    "node": ticket_node(t, m, host),
-                    "owner": owner,
-                    "assigned_person": m.get("assigned_person") or m.get("owner") or "",
-                    "procs": p[:3], "procs_total": len(p),
-                    "allow": m.get("allow") or [], "deny": m.get("deny") or [],
-                    "schedule": m.get("schedule") or "",
-                    "editable": (t.get("status") not in _DONE)})
-    return out
+    return [_enrich_row(t, meta, session, host, procs, persons) for t in tickets]
 
 
 def ticket_detail(project: str, ticket_id: str) -> dict[str, Any]:

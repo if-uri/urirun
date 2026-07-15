@@ -59,16 +59,8 @@ def koru_status() -> dict[str, Any]:
     return {"running": running, "loops": len(loops), "project": project, "last_activity": last.strip()}
 
 
-def tickets(limit: int = 40, include_done: bool = False, sprint: str = "current") -> list[dict[str, Any]]:
-    """The planfile queue — tickets for the view.
-
-    By default we exclude done tickets (they should be archived to 'archive' sprint
-    using the new archiving functions). This keeps the main /work view clean.
-    Use include_done=True or sprint="archive" to see historical/archived work.
-    """
-    pf = _planfile()
-    if not pf:
-        return []
+def _fetch_tickets_raw(pf: str, sprint: str, include_done: bool) -> list[dict] | None:
+    """Run `planfile ticket list` and parse its JSON; None on any failure."""
     try:
         cmd = [pf, "ticket", "list", "--format", "json", "--sprint", sprint]
         if not include_done:
@@ -77,17 +69,14 @@ def tickets(limit: int = 40, include_done: bool = False, sprint: str = "current"
             cmd += ["--status", "all"]
         cp = subprocess.run(cmd, capture_output=True, text=True, timeout=15, cwd=_project())
         raw = cp.stdout
-        data = json.loads(raw[raw.index("["):raw.rindex("]") + 1]) if "[" in raw else \
+        return json.loads(raw[raw.index("["):raw.rindex("]") + 1]) if "[" in raw else \
             json.loads(raw).get("tickets", [])
     except Exception:  # noqa: BLE001
-        return []
+        return None
 
-    if not include_done and sprint == "current":
-        data = [t for t in data if (t.get("status") or "").lower() != "done"]
 
-    # Load grants once (best-effort, long-term autonomy memory).
-    # We attach grant + autonomy_state to every ticket row so UI and drivers
-    # can distinguish "planfile blocked" from "human-granted for autonomous drive".
+def _load_grants() -> dict:
+    """Load ledger grants once (best-effort, long-term autonomy memory)."""
     grants = {"keys": set(), "tickets": set()}
     try:
         from urirun_connector_grants import unblock_ledger as ul
@@ -101,75 +90,107 @@ def tickets(limit: int = 40, include_done: bool = False, sprint: str = "current"
                 grants["tickets"].add(tid)
     except Exception:  # noqa: BLE001
         pass
+    return grants
 
-    def _has_grant(t: dict) -> dict | None:
-        """Lightweight grant detection (mirrors key ideas from ledger.decision_keys)."""
-        tid = str(t.get("id") or "").strip()
-        if tid and tid in grants["tickets"]:
-            return {"type": "ticket", "key": tid}
-        labels = [str(x).lower() for x in (t.get("labels") or [])]
-        for lab in labels:
-            label = lab.strip()
-            if label in grants["keys"]:
-                return {"type": "type", "key": label}
-            if label.startswith("waiting:"):
-                suffix = label.split(":", 1)[1]
-                g = "wait-gate:waiting_" + suffix.replace("-", "_")
-                if g in grants["keys"]:
-                    return {"type": "type", "key": g}
-                g2 = "waiting:" + suffix
-                if g2 in grants["keys"]:
-                    return {"type": "type", "key": g2}
-            if label.startswith(("wait-gate:", "action:", "goal:", "source:")):
-                if label in grants["keys"]:
-                    return {"type": "type", "key": label}
-        # action from name heuristic (cheap)
-        import re
-        m = re.search(r"\b([a-z_]+\.[a-z_]+)\b", t.get("name", "") or "")
-        if m:
-            ak = "action:" + m.group(1).lower()
-            if ak in grants["keys"]:
-                return {"type": "type", "key": ak}
+
+def _label_grant(label: str, grants: dict) -> dict | None:
+    """Grant lookup for one ticket label (plain key, waiting:-suffix, or typed prefix)."""
+    if label in grants["keys"]:
+        return {"type": "type", "key": label}
+    if label.startswith("waiting:"):
+        suffix = label.split(":", 1)[1]
+        g = "wait-gate:waiting_" + suffix.replace("-", "_")
+        if g in grants["keys"]:
+            return {"type": "type", "key": g}
+        g2 = "waiting:" + suffix
+        if g2 in grants["keys"]:
+            return {"type": "type", "key": g2}
+    if label.startswith(("wait-gate:", "action:", "goal:", "source:")) and label in grants["keys"]:
+        return {"type": "type", "key": label}
+    return None
+
+
+def _name_action_grant(name: str, grants: dict) -> dict | None:
+    """Grant lookup from a cheap action-heuristic parsed out of the ticket name."""
+    import re
+    m = re.search(r"\b([a-z_]+\.[a-z_]+)\b", name or "")
+    if not m:
         return None
+    ak = "action:" + m.group(1).lower()
+    return {"type": "type", "key": ak} if ak in grants["keys"] else None
 
-    rows = []
-    for t in data:  # WSZYSTKIE — sortuj przed limitem...
-        src = t.get("source") or {}
-        status = t.get("status")
-        row = {
-            "id": t.get("id"),
-            "name": t.get("name"),
-            "status": status,
-            "priority": t.get("priority"),
-            "source": src.get("tool") if isinstance(src, dict) else src,
-            "labels": t.get("labels") or t.get("label"),
-            "updated": t.get("updated_at") or t.get("updatedAt"),
-            "sprint": t.get("sprint") or "current",
-        }
-        gh = _has_grant(t)
-        if gh:
-            row["grant"] = gh
-            # Canonical long-term autonomy states for UI / claim-next / drivers.
-            # "granted_blocked" = planfile still shows blocked/waiting (real condition or label),
-            #                    but human has permanently granted this class → koru/claim-next should treat as runnable.
-            if status in ("blocked", "waiting_input"):
-                row["autonomy"] = "granted_blocked"
-                row["autonomy_note"] = "granted — will auto-drive when koru/executor is ready"
-            elif status in ("open", "ready"):
-                row["autonomy"] = "granted_open"
-            else:
-                row["autonomy"] = "granted"
+
+def _has_grant(t: dict, grants: dict) -> dict | None:
+    """Lightweight grant detection (mirrors key ideas from ledger.decision_keys)."""
+    tid = str(t.get("id") or "").strip()
+    if tid and tid in grants["tickets"]:
+        return {"type": "ticket", "key": tid}
+    labels = [str(x).lower().strip() for x in (t.get("labels") or [])]
+    for label in labels:
+        hit = _label_grant(label, grants)
+        if hit:
+            return hit
+    return _name_action_grant(t.get("name", "") or "", grants)
+
+
+def _ticket_row(t: dict, grants: dict) -> dict:
+    src = t.get("source") or {}
+    status = t.get("status")
+    row = {
+        "id": t.get("id"),
+        "name": t.get("name"),
+        "status": status,
+        "priority": t.get("priority"),
+        "source": src.get("tool") if isinstance(src, dict) else src,
+        "labels": t.get("labels") or t.get("label"),
+        "updated": t.get("updated_at") or t.get("updatedAt"),
+        "sprint": t.get("sprint") or "current",
+    }
+    gh = _has_grant(t, grants)
+    if gh:
+        row["grant"] = gh
+        # Canonical long-term autonomy states for UI / claim-next / drivers.
+        # "granted_blocked" = planfile still shows blocked/waiting (real condition or label),
+        #                    but human has permanently granted this class → koru/claim-next should treat as runnable.
+        if status in ("blocked", "waiting_input"):
+            row["autonomy"] = "granted_blocked"
+            row["autonomy_note"] = "granted — will auto-drive when koru/executor is ready"
+        elif status in ("open", "ready"):
+            row["autonomy"] = "granted_open"
         else:
-            if status in ("blocked", "waiting_input"):
-                row["autonomy"] = "needs_human_or_condition"
-        rows.append(row)
+            row["autonomy"] = "granted"
+    elif status in ("blocked", "waiting_input"):
+        row["autonomy"] = "needs_human_or_condition"
+    return row
+
+
+def _rid(r: dict) -> int:  # numeryczny sufiks ID malejąco = najnowsze pierwsze w obrębie statusu
+    import re
+    m = re.search(r"(\d+)$", str(r.get("id") or ""))
+    return -int(m.group(1)) if m else 0
+
+
+def tickets(limit: int = 40, include_done: bool = False, sprint: str = "current") -> list[dict[str, Any]]:
+    """The planfile queue — tickets for the view.
+
+    By default we exclude done tickets (they should be archived to 'archive' sprint
+    using the new archiving functions). This keeps the main /work view clean.
+    Use include_done=True or sprint="archive" to see historical/archived work.
+    """
+    pf = _planfile()
+    if not pf:
+        return []
+    data = _fetch_tickets_raw(pf, sprint, include_done)
+    if data is None:
+        return []
+
+    if not include_done and sprint == "current":
+        data = [t for t in data if (t.get("status") or "").lower() != "done"]
+
+    grants = _load_grants()
+    rows = [_ticket_row(t, grants) for t in data]  # WSZYSTKIE — sortuj przed limitem...
 
     order = {"in_progress": 0, "claimed": 1, "waiting_input": 2, "blocked": 2, "open": 3, "done": 4}
-
-    def _rid(r):  # numeryczny sufiks ID malejąco = najnowsze pierwsze w obrębie statusu
-        import re
-        m = re.search(r"(\d+)$", str(r.get("id") or ""))
-        return -int(m.group(1)) if m else 0
     rows.sort(key=lambda r: (order.get(r.get("status"), 5), _rid(r)))  # aktywne+najnowsze najpierw, PRZED limitem
     return rows[:limit]
 
@@ -254,6 +275,56 @@ def _ticket_cmds(pf: str, tid: str, act: str, note: str) -> tuple[list[list[str]
     return cmds, ""
 
 
+def _run_ticket_cmds(cmds: list[list[str]]) -> tuple[list[dict], dict | None]:
+    """Run each planfile CLI invocation for the action; returns (ran, error_result_or_None)."""
+    ran: list[dict] = []
+    for c in cmds or []:
+        try:
+            cp = subprocess.run(c, capture_output=True, text=True, timeout=20, cwd=_project())
+        except Exception as exc:  # noqa: BLE001
+            return ran, {"ok": False, "error": str(exc), "ran": ran}
+        ran.append({"cmd": " ".join(c[3:]), "rc": cp.returncode})
+        if cp.returncode != 0:
+            return ran, {"ok": False, "error": (cp.stderr or cp.stdout or "planfile error").strip()[-200:], "ran": ran}
+    return ran, None
+
+
+def _archive_or_unarchive(action: str, tid: str, note: str, ran: list[dict]) -> dict | None:
+    """Archiwizacja/przywrócenie: przenieś ticket między sprintem 'archive' i 'current'."""
+    if action == "archive":
+        try:
+            from . import planfile_adapter as pa
+            pa.archive_ticket(_project(), tid, note=note or "zarchiwizowane z /work dashboard")
+            ran.append({"cmd": f"planfile archive {tid} -> sprint=archive", "rc": 0})
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": f"archive failed: {exc}", "ran": ran}
+    elif action == "unarchive":
+        try:
+            from . import planfile_adapter as pa
+            pa.unarchive_ticket(_project(), tid)
+            ran.append({"cmd": f"planfile unarchive {tid} -> sprint=current", "rc": 0})
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": f"unarchive failed: {exc}", "ran": ran}
+    return None
+
+
+def _publish_ticket_twin_event(tid: str, action: str, note: str) -> None:
+    """Standard URI process logging."""
+    try:
+        from .twin_bridge import TWIN_EVENT_HUB
+        TWIN_EVENT_HUB.publish({
+            "uri": f"ticket://{tid}/{action or 'note'}",
+            "type": "URI_PROCESS",
+            "step": "ticket-action",
+            "ticket": tid,
+            "action": action,
+            "note": note or "",
+            "timestamp": __import__("time").time()
+        })
+    except Exception:
+        pass
+
+
 def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str, Any]:
     """React to a queue ticket from the /work panel: change its status and/or append a note.
 
@@ -269,47 +340,16 @@ def ticket_action(ticket_id: str, action: str = "", note: str = "") -> dict[str,
     cmds, err = _ticket_cmds(pf, tid, str(action or "").strip(), note)
     if err:
         return {"ok": False, "error": err}
-    ran = []
-    for c in cmds or []:
-        try:
-            cp = subprocess.run(c, capture_output=True, text=True, timeout=20, cwd=_project())
-        except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "error": str(exc), "ran": ran}
-        ran.append({"cmd": " ".join(c[3:]), "rc": cp.returncode})
-        if cp.returncode != 0:
-            return {"ok": False, "error": (cp.stderr or cp.stdout or "planfile error").strip()[-200:], "ran": ran}
+    ran, run_error = _run_ticket_cmds(cmds)
+    if run_error:
+        return run_error
     if action in ("unblock", "ready"):  # ODBLOKOWANIE RAZ = ZAPAMIĘTANE (per Tom): persystuj trwale
         _remember_unblock(tid, note)     # → bramki/watchdog nigdy więcej nie re-blokują/re-pytają
-    if action == "archive":
-        # Archiwizacja: przenieś do sprintu "archive" aby zmniejszyć zaśmiecenie widoku /work
-        try:
-            from . import planfile_adapter as pa
-            pa.archive_ticket(_project(), tid, note=note or "zarchiwizowane z /work dashboard")
-            ran.append({"cmd": f"planfile archive {tid} -> sprint=archive", "rc": 0})
-        except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "error": f"archive failed: {exc}", "ran": ran}
-    elif action == "unarchive":
-        try:
-            from . import planfile_adapter as pa
-            pa.unarchive_ticket(_project(), tid)
-            ran.append({"cmd": f"planfile unarchive {tid} -> sprint=current", "rc": 0})
-        except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "error": f"unarchive failed: {exc}", "ran": ran}
+    archive_error = _archive_or_unarchive(action, tid, note, ran)
+    if archive_error:
+        return archive_error
     _emit_ticket_event(tid, action)  # edge-trigger: zmiana statusu → event na szynę → reconciler
-    # Standard URI process logging
-    try:
-        from .twin_bridge import TWIN_EVENT_HUB
-        TWIN_EVENT_HUB.publish({
-            "uri": f"ticket://{tid}/{action or 'note'}",
-            "type": "URI_PROCESS",
-            "step": "ticket-action",
-            "ticket": tid,
-            "action": action,
-            "note": note or "",
-            "timestamp": __import__("time").time()
-        })
-    except Exception:
-        pass
+    _publish_ticket_twin_event(tid, action, note)
     return {"ok": True, "ticket": tid, "action": (action or "note"), "ran": ran,
             "remembered": action in ("unblock", "ready"),
             "archived": action == "archive",
@@ -586,56 +626,73 @@ def unblock_board() -> dict[str, Any]:
         return {"ok": False, "error": str(exc), "types": [], "tickets": []}
 
 
+def _lease_badge(lstatus: str, ticket_status: Any) -> tuple[str, str]:
+    """Badge mapping: ▶ play (executing), ⏸ pause (waiting/claimed), ⏹ stop (releasing/stopping)."""
+    if any(k in lstatus for k in ("pause", "wait", "input")) or ticket_status in ("waiting_input",):
+        return "⏸", "pause"
+    if any(k in lstatus for k in ("stop", "release", "done")):
+        return "⏹", "stop"
+    return "▶", "play"
+
+
+def _lease_item(lease: dict) -> dict | None:
+    tid = str(lease.get("ticket") or "").strip()
+    if not tid:
+        return None
+    t = _fetch_ticket(tid) or {"id": tid, "name": f"Ticket {tid}", "status": lease.get("status", "in_progress")}
+    worker = lease.get("worker") or "?"
+    lstatus = str(lease.get("status") or "running").lower()
+    badge, badge_label = _lease_badge(lstatus, t.get("status"))
+    return {
+        "id": tid,
+        "name": t.get("name") or tid,
+        "status": t.get("status"),
+        "worker": worker,
+        "lease_id": lease.get("id"),
+        "badge": badge,
+        "badge_label": badge_label,
+        "expires_in": max(0, int((lease.get("expires", 0) or 0) - time.time())),
+    }
+
+
+def _active_items_from_leases() -> list[dict]:
+    from urirun_connector_work import core as wc
+    leases = (wc.locks_query_list() or {}).get("active", []) or []
+    items = []
+    for lease in leases:
+        item = _lease_item(lease)
+        if item:
+            items.append(item)
+    return items
+
+
+def _fallback_active_items() -> list[dict]:
+    """Fallback: just use planfile in_progress / claimed (work connector not fully available)."""
+    items = []
+    for t in tickets(include_done=True):
+        if t.get("status") in ("in_progress", "claimed"):
+            items.append({
+                "id": t["id"],
+                "name": t.get("name") or t["id"],
+                "status": t.get("status"),
+                "worker": "koru",
+                "badge": "▶",
+                "badge_label": "play",
+                "expires_in": None,
+            })
+    return items
+
+
 def active_tickets() -> dict[str, Any]:
     """Currently simultaneously running / active tickets (with leases/workers).
 
     Returns list of active items with a visual badge: ▶ play (executing), ⏸ pause (waiting/claimed),
     ⏹ stop (releasing/stopping). Used to show concurrent work in /work.
     """
-    items: list[dict] = []
     try:
-        from urirun_connector_work import core as wc
-        leases = (wc.locks_query_list() or {}).get("active", []) or []
-        for lease in leases:
-            tid = str(lease.get("ticket") or "").strip()
-            if not tid:
-                continue
-            t = _fetch_ticket(tid) or {"id": tid, "name": f"Ticket {tid}", "status": lease.get("status", "in_progress")}
-            worker = lease.get("worker") or "?"
-            lstatus = str(lease.get("status") or "running").lower()
-            # Badge mapping
-            if any(k in lstatus for k in ("pause", "wait", "input")) or t.get("status") in ("waiting_input",):
-                badge = "⏸"
-                badge_label = "pause"
-            elif any(k in lstatus for k in ("stop", "release", "done")):
-                badge = "⏹"
-                badge_label = "stop"
-            else:
-                badge = "▶"
-                badge_label = "play"
-            items.append({
-                "id": tid,
-                "name": t.get("name") or tid,
-                "status": t.get("status"),
-                "worker": worker,
-                "lease_id": lease.get("id"),
-                "badge": badge,
-                "badge_label": badge_label,
-                "expires_in": max(0, int((lease.get("expires", 0) or 0) - time.time())),
-            })
+        items = _active_items_from_leases()
     except Exception:  # noqa: BLE001 - degrade gracefully if work connector not fully available
-        # Fallback: just use planfile in_progress / claimed
-        for t in tickets(include_done=True):
-            if t.get("status") in ("in_progress", "claimed"):
-                items.append({
-                    "id": t["id"],
-                    "name": t.get("name") or t["id"],
-                    "status": t.get("status"),
-                    "worker": "koru",
-                    "badge": "▶",
-                    "badge_label": "play",
-                    "expires_in": None,
-                })
+        items = _fallback_active_items()
 
     # sort by worker or id
     items.sort(key=lambda x: (x.get("worker") or "", x.get("id") or ""))

@@ -427,7 +427,8 @@ def _work_approve(project, body: dict) -> dict:
             "message": action.get("label") or "Approved — running in the background."}
 
 
-def _handle_post_work(handler, parsed, project) -> bool:
+def _handle_post_work_ops(handler, parsed, project) -> bool:
+    """/api/work/{approve,debug/snapshot,koru} — split out of _handle_post_work to keep its CC low."""
     if parsed.path == "/api/work/approve":
         _json_response(handler, 200, _work_approve(project, _read_json(handler)))
         return True
@@ -448,6 +449,11 @@ def _handle_post_work(handler, parsed, project) -> bool:
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
         return True
+    return False
+
+
+def _handle_post_work_person(handler, parsed, project) -> bool:
+    """/api/work/person/{toggle,mode} — split out of _handle_post_work to keep its CC low."""
     if parsed.path == "/api/work/person/toggle":
         body = _read_json(handler) or {}
         pid = str(body.get("id") or "").strip()
@@ -470,6 +476,14 @@ def _handle_post_work(handler, parsed, project) -> bool:
             _json_response(handler, 200, {"ok": ok, "id": pid, "mode": ticket_meta.get_digital_person_mode(pid)})
         except Exception as exc:  # noqa: BLE001
             _json_response(handler, 200, {"ok": False, "error": str(exc)})
+        return True
+    return False
+
+
+def _handle_post_work(handler, parsed, project) -> bool:
+    if _handle_post_work_ops(handler, parsed, project):
+        return True
+    if _handle_post_work_person(handler, parsed, project):
         return True
     if _handle_post_work_console(handler, parsed, project):
         return True
