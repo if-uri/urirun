@@ -21,6 +21,10 @@ registry.
 The GitHub repository is `if-uri/urirun`. The runtime, CLI, Python import namespace, JS package
 name, schema prefix, Docker labels, and C adapter names are all `urirun`.
 
+> **Branch note:** all `if-uri/*` repos use `main` (the old `master` was retired). If you have an
+> existing clone on `master`, re-point it once — see the
+> [branch migration guide](https://github.com/if-uri/docs/blob/main/BRANCH-MIGRATION.md).
+
 ## Dokumentacja
 
 <!-- docs-nav -->
