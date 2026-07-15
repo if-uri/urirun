@@ -315,6 +315,10 @@ except ImportError:
             attachments.append(item)
 
         _TAGGED_KINDS = {"screenshot", "photo", "image", "scan", "crop", "artifact"}
+        # Diagnostic/contract blocks embed sample results (route.meta.contract.examples)
+        # whose placeholder paths must never be surfaced as real attachments. Do not
+        # descend into these keys during the recursive walk.
+        _SKIP_WALK_KEYS = {"routing", "contract", "examples", "inputSchema", "outputSchema", "schema"}
 
         def walk(node: Any, hint: str = "") -> None:
             if len(attachments) >= limit:
@@ -339,7 +343,7 @@ except ImportError:
                     elif isinstance(child, str) and ("/" in child or "\\" in child):
                         add(child, kind=key)
                 for key, child in node.items():
-                    if key in {"bytes_b64", "base64", "data"}:
+                    if key in {"bytes_b64", "base64", "data"} or key in _SKIP_WALK_KEYS:
                         continue
                     walk(child, str(key))
             elif isinstance(node, list):

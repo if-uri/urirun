@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-07-05
 
+### Added
+- Export `urirun.__version__`, resolved from installed distribution metadata
+  with a source-checkout fallback.
+
 ### Fixed
+- `collect_attachments` no longer harvests a route contract's `examples`
+  placeholder paths as phantom screenshot attachments. The recursive artifact
+  walk now skips diagnostic/contract keys
+  (`routing`, `contract`, `examples`, `inputSchema`, `outputSchema`, `schema`),
+  matching the documented behaviour. (`urirun_scanner/artifacts_admin.py`)
+- Dashboard API routes `/api/ticket/events` and `/api/ticket/llm-history`
+  degrade gracefully on an empty query, returning `ok: true` with empty
+  collections instead of a hard `ticket required` error.
+- Repair host chat/dashboard import regressions from the routing-kernel and
+  scanner extractions: `document_sync_chat`/`screen_capability` now import
+  `selected_nodes_from_targets` from `urirun_connector_router.target_resolution`;
+  `object_registry` re-exports the `_node_auth` and `_node_builder` helpers
+  (`node_api_slug`, `node_kinds`, `annotate_node_kinds`, …); `scanner_chat`
+  re-exports `is_phone_scanner_prompt`; `chat_orchestrator` re-exports
+  `route_targets_active` and `inactive_node_urls`. This unblocked importing
+  `chat_orchestrator` and `host_dashboard` and ~20 previously erroring tests.
+- Fix the planfile task adapter round-trip: `create_ticket`/`complete_ticket`
+  no longer persist derived history URLs into `outputs.result`,
+  `outputs.artifacts` (typed `list[str]`) or `outputs.notes`. Writing a dict
+  into `artifacts` made planfile silently drop the ticket on reload, so
+  `host task list`/`next` returned empty. URLs are now returned as a transient
+  top-level `urls` field. `urirun host task create → list → next` works again.
+- Full Python adapter suite: 620 pass / 0 fail (was 514 pass / 34 fail).
 - Fix ast-unused-imports issues (ticket-63e56112)
 - Fix ast-string-concat issues (ticket-effb1b7e)
 - Fix ast-print-statements issues (ticket-16d433f8)

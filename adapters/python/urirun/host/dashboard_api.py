@@ -176,8 +176,10 @@ def _attach_base64_previews(entry: dict) -> dict:
 
 
 def ticket_llm_traces(ticket: str | None) -> dict:
+    # An absent ticket is an empty selection, not an error: degrade gracefully so
+    # the route stays 200/ok on an empty query instead of surfacing a hard error.
     if not ticket:
-        return {"ok": False, "error": "ticket required"}
+        return {"ok": True, "ticket": "", "traces": [], "count": 0}
     raw = _read_jsonl_journal(ticket, "-llm")
     enriched = [_attach_base64_previews(e) for e in raw]
     return {"ok": True, "ticket": ticket, "traces": enriched, "count": len(enriched)}
@@ -185,7 +187,7 @@ def ticket_llm_traces(ticket: str | None) -> dict:
 
 def ticket_events(ticket: str | None) -> dict:
     if not ticket:
-        return {"ok": False, "error": "ticket required"}
+        return {"ok": True, "ticket": "", "events": [], "execution": []}
     events = _read_jsonl_journal(ticket, "")  # plain {ticket}.jsonl
     # also pull any execution/kolejno traces
     extra = _read_jsonl_journal(ticket, "-kolejno")

@@ -7,6 +7,19 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import parse_qsl, unquote
 
+
+def _resolve_version() -> str:
+    """Version of the installed ``urirun`` distribution, with a source fallback."""
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        return version("urirun")
+    except Exception:  # pragma: no cover - metadata missing in source checkouts
+        return "0.4.199"
+
+
+__version__ = _resolve_version()
+
 URI_RE = re.compile(r'^(?P<scheme>[a-z][a-z0-9+.-]*)://(?P<target>[^/?#]+)(?P<path>/[^?#]*)?(?:\?(?P<query>[^#]*))?(?:#(?P<fragment>.*))?$', re.I)
 
 
