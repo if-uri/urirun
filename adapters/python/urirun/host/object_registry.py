@@ -9,21 +9,25 @@ from urllib.parse import urlparse
 from .node_types import annotate_node_type
 from ._node_auth import (
     normalize_node_apis,
-    node_api_slug,
-    node_api_secret_ref,
-    store_node_api_secret,
-    extract_raw_secret,
-    extract_secret_ref,
-    build_auth_extra_fields,
-    normalize_node_api_auth,
-    default_api_items,
-    api_item_fields,
-    normalize_api_item,
+    # Re-exported for host_dashboard (redundant alias marks intentional re-export).
+    node_api_slug as node_api_slug,
+    node_api_secret_ref as node_api_secret_ref,
+    store_node_api_secret as store_node_api_secret,
+    extract_raw_secret as extract_raw_secret,
+    extract_secret_ref as extract_secret_ref,
+    build_auth_extra_fields as build_auth_extra_fields,
+    normalize_node_api_auth as normalize_node_api_auth,
+    default_api_items as default_api_items,
+    api_item_fields as api_item_fields,
+    normalize_api_item as normalize_api_item,
 )
 from ._node_builder import (
     derive_node_capabilities, build_node_entry, persist_node_to_config,
-    node_remove_from_mirror, set_node_kind, node_remove_kind, node_kinds_path,
-    node_kinds, annotate_node_kinds,
+    node_remove_from_mirror, set_node_kind, node_remove_kind,
+    # Re-exported for host_dashboard (redundant alias marks intentional re-export).
+    node_kinds_path as node_kinds_path,
+    node_kinds as node_kinds,
+    annotate_node_kinds as annotate_node_kinds,
 )
 import urllib.error
 import urllib.parse

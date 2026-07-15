@@ -186,6 +186,28 @@ outputs:
 możemy użyć pola tekstowego bez łamania modelu. Wykonawca `urirun` będzie rozumiał
 ten `kind` jako flow URI.
 
+## Status weryfikacji (2026-07-15)
+
+Round-trip `create → list → next` przez adapter i CLI **działa i jest pokryty
+testami** (`adapters/python/tests/test_planfile_adapter.py`, `test_domain_monitor.py`).
+
+Naprawiono wcześniejszą regresję: `planfile_adapter.create_ticket` /
+`complete_ticket` utrwalały pochodne linki historii w `outputs.result`,
+`outputs.artifacts` i `outputs.notes`. Ponieważ `TicketOutputs.artifacts` ma typ
+`list[str]`, wstawienie tam `dict` powodowało, że planfile **po cichu odrzucał
+ticket przy ponownym odczycie** (`Ticket(**data)` rzucało `ValidationError`,
+łapane jako `return None`), więc `host task list`/`next` zwracały pustkę. Linki
+są teraz zwracane wyłącznie jako transientne pole `urls` w odpowiedzi adaptera,
+a `outputs` pozostaje zgodne ze schematem planfile. Po stronie planfile
+`_ticket_from_data` loguje teraz ostrzeżenie zamiast cicho gubić niepoprawny
+ticket. Weryfikacja:
+
+```bash
+urirun host task create "Sprawdź domeny" --project /tmp/pf --prompt "sprawdz" --queue daily
+urirun host task list  --project /tmp/pf --json   # → ticket PLF-001 widoczny
+urirun host task next  --project /tmp/pf          # → zwraca PLF-001
+```
+
 ## Plan wdrożenia
 
 Plan wdrożenia jest sekwencyjny: najpierw kompatybilność biblioteki, potem
