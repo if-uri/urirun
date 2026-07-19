@@ -34,7 +34,7 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e ./urirun/adapters/python
-          python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('urirun/adapters/python').resolve().as_posix())"
+          (cd urirun/adapters/python && python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('.').resolve().as_posix())")
       - name: Run urirun tests
         run: make -C urirun test
 
@@ -59,7 +59,7 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e ./urirun/adapters/python
-          python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('urirun/adapters/python').resolve().as_posix())"
+          (cd urirun/adapters/python && python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('.').resolve().as_posix())")
       - name: Validate manifest and audit coverage
         run: |
           make -C examples audit
@@ -92,7 +92,7 @@ jobs:
         run: |
           python -m pip install -U pip pytest
           python -m pip install -e ./urirun/adapters/python
-          python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('urirun/adapters/python').resolve().as_posix())"
+          (cd urirun/adapters/python && python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('.').resolve().as_posix())")
       - name: Run host examples
         env:
           URIRUN_SHA: ${{ github.sha }}
@@ -129,7 +129,7 @@ jobs:
         run: |
           python -m pip install -U pip pytest
           python -m pip install -e ./urirun/adapters/python
-          python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('urirun/adapters/python').resolve().as_posix())"
+          (cd urirun/adapters/python && python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('.').resolve().as_posix())")
       - name: Run Docker examples
         env:
           URIRUN_SHA: ${{ github.sha }}
