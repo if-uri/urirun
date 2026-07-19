@@ -18,8 +18,11 @@ deny-by-default policy, and is redacted in logs.
 | `secret://vault/<mount>/<path>#<field>` | — | HashiCorp Vault KV v2 |
 | `secret://oauth/<provider>/<account>` | — | cached OAuth token (auto-refresh) |
 
-`secret://browser/...` deliberately refuses (auto-scraping a browser's saved logins is the
-infostealer pattern). Implementation: `urirun/adapters/python/urirun/runtime/secrets.py`.
+`secret://browser/<acquirer>/<target>#<field>` is browser-assisted acquisition,
+not an unconditional scraper. It requires both `secretAllow` and a standing AQL
+contract granting discover/acquire/use, then delegates to a registered connector.
+The result is still a `SecretStr` plus credential handle; plaintext is visible
+only at the injection boundary. See [`AUTONOMOUS_ACCESS.md`](AUTONOMOUS_ACCESS.md).
 
 ## Policy — deny-by-default
 
@@ -68,3 +71,8 @@ Prefer the **keyring** (or Vault) over a `.env`. Some libraries — notably `lit
 `dotenv.load_dotenv()` on import and pull any cwd `.env` into `os.environ` regardless of this
 layer; if the key lives only in `secret://keyring/...` there is no `.env` value for them to
 leak, and it is materialised only at the call boundary under `secretAllow`.
+
+For unrestricted local application automation, operators may explicitly load
+`examples/policies/development-autonomy.json`. It removes hard-coded acquisition
+blocking in the development envelope while retaining reference-only transport,
+redaction, typed AQL decisions and connector-owned acquisition.

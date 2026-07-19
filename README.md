@@ -3,7 +3,7 @@
 
 ## AI Cost Tracking
 
-![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.199-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.4.200-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ![AI Cost](https://img.shields.io/badge/AI%20Cost-$2.43-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-176.7h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
 
 - 🤖 **LLM usage:** $2.4305 (661 commits)
@@ -42,6 +42,7 @@ name, schema prefix, Docker labels, and C adapter names are all `urirun`.
 | Dashboard & chat — cykl życia prompta NL | [docs/HOST_DASHBOARD_CHAT.md](docs/HOST_DASHBOARD_CHAT.md) |
 | Host↔Node — protokół HTTP, auth, deploy | [docs/HOST_NODE_COMMUNICATION.md](docs/HOST_NODE_COMMUNICATION.md) |
 | Sekrety — `secret://`, deny-by-default | [docs/SECRETS.md](docs/SECRETS.md) |
+| Autonomiczne pozyskiwanie dostępu — AQL, child grants, typed blockers | [docs/AUTONOMOUS_ACCESS.md](docs/AUTONOMOUS_ACCESS.md) |
 | Archiwum dokumentów (OCR, dedup, sync) | [docs/DOCUMENT_ARCHIVE.md](docs/DOCUMENT_ARCHIVE.md) |
 | Decision Loop — `intent→flow→result→nextIntent` | [docs/DECISION_LOOP.md](docs/DECISION_LOOP.md) |
 | Autonomia — LLM proposes, kernel accepts/blocks | [docs/AUTONOMY_ARCHITECTURE.md](docs/AUTONOMY_ARCHITECTURE.md) |

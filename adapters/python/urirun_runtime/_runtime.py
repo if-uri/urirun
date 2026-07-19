@@ -226,10 +226,17 @@ def _make_secret_injector(policy: dict):
 
     secret_allow = policy.get("secretAllow") if isinstance(policy, dict) else None
     secrets_disabled = bool(policy.get("secretsDisabled")) if isinstance(policy, dict) else False
+    access_context = policy.get("access") if isinstance(policy, dict) else None
 
     def _inject(value):
         if isinstance(value, str):
-            return _secrets.fill_secrets(value, execute=True, allow=secret_allow, disabled=secrets_disabled)
+            return _secrets.fill_secrets(
+                value,
+                execute=True,
+                allow=secret_allow,
+                disabled=secrets_disabled,
+                access=access_context,
+            )
         if isinstance(value, dict):
             return {key: _inject(val) for key, val in value.items()}
         if isinstance(value, list):
@@ -478,6 +485,9 @@ def _run_execute_step(executor, ctx: dict, policy: dict, envelope: dict) -> None
     except (PolicyError, subprocess.TimeoutExpired, OSError, ValueError) as err:
         envelope["ok"] = False
         envelope["error"] = {"type": type(err).__name__, "message": str(err)}
+        blocker = getattr(err, "code", "")
+        if blocker:
+            envelope["error"]["blocker"] = blocker
 
 
 def run(

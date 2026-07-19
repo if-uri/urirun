@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ifuri.com/schemas/access-requirement-v1.schema.json",
+  "title": "Access requirement v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "actor",
+    "environment",
+    "environment_fingerprint",
+    "capability",
+    "provider",
+    "target",
+    "requested_actions",
+    "effect"
+  ],
+  "properties": {
+    "schema_version": {"const": "access.requirement.v1"},
+    "actor": {"type": "string", "minLength": 1},
+    "environment": {"type": "string", "minLength": 1},
+    "environment_fingerprint": {"type": "string", "minLength": 1},
+    "capability": {"type": "string", "minLength": 1},
+    "provider": {"type": "string", "minLength": 1},
+    "target": {"type": "string", "minLength": 1},
+    "requested_actions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "ALLOW_DISCOVER",
+          "ALLOW_ACQUIRE",
+          "ALLOW_USE",
+          "ALLOW_DELEGATE",
+          "ALLOW_ROTATE",
+          "ALLOW_REVOKE",
+          "ALLOW_MUTATE",
+          "ALLOW_SPEND",
+          "ALLOW_ACCEPT_TERMS"
+        ]
+      }
+    },
+    "effect": {"type": "string", "minLength": 1},
+    "estimated_cost": {"type": "number", "minimum": 0},
+    "max_credential_ttl_seconds": {"type": "integer", "minimum": 1},
+    "max_mutations": {"type": "integer", "minimum": 0},
+    "rollback_required": {"type": "boolean"}
+  }
+}

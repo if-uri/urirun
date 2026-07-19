@@ -83,6 +83,8 @@ TYPE_CATEGORY: dict[str, str] = {
     "NotADirectoryError": "NOT_FOUND",
     "IsADirectoryError": "INVALID_ARGUMENT",
     "PermissionError": "PERMISSION_DENIED",
+    "AccessPolicyError": "PERMISSION_DENIED",
+    "BrowserAcquisitionError": "FAILED_PRECONDITION",
     "FileExistsError": "ALREADY_EXISTS",
     "TimeoutError": "DEADLINE_EXCEEDED",
     "TimeoutExpired": "DEADLINE_EXCEEDED",

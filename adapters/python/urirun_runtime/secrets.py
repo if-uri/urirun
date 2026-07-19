@@ -12,9 +12,8 @@ prints ``****`` instead of the secret.
 
 Providers: ``env`` / ``getv`` (process env), ``dotenv`` (a .env file), ``keyring``
 (OS credential store), ``vault`` (HashiCorp Vault KV v2) and ``oauth`` (a cached
-access token with refresh). ``browser`` deliberately refuses (§7): auto-scraping a
-browser's saved logins is the infostealer pattern the OS blocks by design — export
-the one credential you need to your keyring instead.
+access token with refresh). ``browser`` delegates acquisition to a registered
+connector only after a standing AQL access contract grants discover/acquire/use.
 """
 
 from __future__ import annotations
@@ -22,8 +21,9 @@ from __future__ import annotations
 import fnmatch
 import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SECRET_PLACEHOLDER = re.compile(r"\{(secret|getv):([^{}]*)\}")
 
@@ -32,11 +32,12 @@ class SecretStr:
     """An opaque secret value. ``str``/``repr``/JSON show ``****``; ``reveal()``
     returns the plaintext (call only at the injection boundary)."""
 
-    __slots__ = ("_value", "_ref")
+    __slots__ = ("_value", "_ref", "_metadata")
 
-    def __init__(self, value: str | None, ref: str):
+    def __init__(self, value: str | None, ref: str, metadata: dict | None = None):
         self._value = value
         self._ref = ref
+        self._metadata = dict(metadata or {})
 
     def reveal(self) -> str:
         if self._value is None:
@@ -47,11 +48,21 @@ class SecretStr:
     def ref(self) -> str:
         return self._ref
 
+    @property
+    def credential_handle(self) -> str:
+        return str(self._metadata.get("credential_handle") or "")
+
+    @property
+    def metadata(self) -> dict:
+        return dict(self._metadata)
+
     def __str__(self) -> str:  # noqa: D105
         return "****"
 
     def __repr__(self) -> str:  # noqa: D105
-        return f"SecretStr(ref={self._ref!r})"
+        handle = self.credential_handle
+        suffix = f", credential_handle={handle!r}" if handle else ""
+        return f"SecretStr(ref={self._ref!r}{suffix})"
 
     def __bool__(self) -> bool:  # noqa: D105
         return self._value is not None
@@ -69,6 +80,51 @@ def redact(value: Any) -> Any:
 
 
 # --- providers -------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BrowserAcquisitionRequest:
+    acquirer: str
+    target: str
+    field: str
+    actor: str
+    environment: str
+    environment_fingerprint: str
+
+
+@dataclass(frozen=True)
+class BrowserCredential:
+    value: str
+    credential_handle: str
+    provider: str
+    scopes: tuple[str, ...] = ()
+    expires_at: str | None = None
+    refreshable: bool = False
+    delegatable: bool = False
+    secret_value_visible: bool = False
+
+
+class BrowserAcquisitionError(OSError):
+    """A typed missing/invalid delegated browser acquisition route."""
+
+    def __init__(self, code: str, detail: str = ""):
+        self.code = code
+        super().__init__(f"{code}{': ' + detail if detail else ''}")
+
+
+BrowserAcquirer = Callable[[BrowserAcquisitionRequest], BrowserCredential]
+_BROWSER_ACQUIRERS: dict[str, BrowserAcquirer] = {}
+
+
+def register_browser_acquirer(name: str, acquirer: BrowserAcquirer) -> None:
+    """Register a connector-owned acquisition bridge for development/runtime use."""
+    if not re.fullmatch(r"[a-zA-Z0-9_.-]+", name):
+        raise ValueError("invalid browser acquirer name")
+    _BROWSER_ACQUIRERS[name] = acquirer
+
+
+def unregister_browser_acquirer(name: str) -> None:
+    _BROWSER_ACQUIRERS.pop(name, None)
 
 def _provider_env(location: str, field: str | None) -> str:
     name = field or location
@@ -164,20 +220,59 @@ def _provider_oauth(location: str, field: str | None) -> str:
     return str(entry["access_token"])
 
 
-def _provider_browser(location: str, field: str | None) -> str:
-    """Deliberately refuses (KSeF/secret spec §7). Auto-scraping a browser's saved
-    logins is the infostealer pattern; OS App-Bound Encryption / Keychain block it
-    by design. Export the one credential you need to your keyring instead."""
-    raise PermissionError(
-        "browser secret store is not auto-scraped: that is the infostealer pattern and the OS "
-        "(App-Bound Encryption / Keychain / Secret Service) blocks it by design. Export the specific "
-        f"credential once to your keyring and use secret://keyring/... instead (requested: browser/{location})."
+def _provider_browser(location: str, field: str | None, access_context: dict | None) -> BrowserCredential:
+    """Delegate browser-assisted acquisition under a standing AQL contract."""
+    from urirun_runtime import access as _access
+
+    acquirer_name, separator, target = location.partition("/")
+    if not separator or not target or not field:
+        raise BrowserAcquisitionError(
+            "BROWSER_ACQUISITION_REFERENCE_INVALID",
+            "expected secret://browser/<acquirer>/<target>#<field>",
+        )
+    context = dict(access_context or {})
+    requirement = {
+        "schema_version": "access.requirement.v1",
+        "actor": context.get("actor", ""),
+        "environment": context.get("environment", ""),
+        "environment_fingerprint": context.get("environment_fingerprint", ""),
+        "capability": "credential.acquire.browser",
+        "provider": "browser",
+        "target": target,
+        "requested_actions": ["ALLOW_DISCOVER", "ALLOW_ACQUIRE", "ALLOW_USE"],
+        "effect": "credential_acquisition",
+        "estimated_cost": 0,
+        "max_credential_ttl_seconds": int(context.get("max_credential_ttl_seconds") or 1800),
+    }
+    _access.require_access(requirement, context.get("contract"))
+    acquirer = _BROWSER_ACQUIRERS.get(acquirer_name)
+    if acquirer is None:
+        raise BrowserAcquisitionError(
+            "AUTO_ACQUISITION_ROUTE_MISSING",
+            f"browser acquirer {acquirer_name!r} is not registered",
+        )
+    acquired = acquirer(
+        BrowserAcquisitionRequest(
+            acquirer=acquirer_name,
+            target=target,
+            field=field,
+            actor=requirement["actor"],
+            environment=requirement["environment"],
+            environment_fingerprint=requirement["environment_fingerprint"],
+        )
     )
+    if not isinstance(acquired, BrowserCredential):
+        raise BrowserAcquisitionError("BROWSER_ACQUISITION_CONTRACT_INVALID")
+    if not acquired.value or not acquired.credential_handle:
+        raise BrowserAcquisitionError("BROWSER_ACQUISITION_EMPTY")
+    if acquired.secret_value_visible:
+        raise BrowserAcquisitionError("BROWSER_ACQUISITION_SECRET_VISIBILITY_INVALID")
+    return acquired
 
 
 _PROVIDERS = {
     "env": _provider_env, "getv": _provider_env, "dotenv": _provider_dotenv, "keyring": _provider_keyring,
-    "vault": _provider_vault, "oauth": _provider_oauth, "browser": _provider_browser,
+    "vault": _provider_vault, "oauth": _provider_oauth,
 }
 
 
@@ -199,19 +294,47 @@ def allowed(ref: str, allow: list[str] | None) -> bool:
     return any(fnmatch.fnmatch(ref, pattern) for pattern in allow)
 
 
-def resolve(ref: str, *, execute: bool, allow: list[str] | None = None) -> SecretStr:
+def resolve(
+    ref: str,
+    *,
+    execute: bool,
+    allow: list[str] | None = None,
+    access: dict | None = None,
+) -> SecretStr:
     if execute and not allowed(ref, allow):
         raise PermissionError(f"secret denied by policy (add it to --secret-allow): {ref}")
     if not execute:
         return SecretStr(None, ref)  # dry-run: reference only, never the value
     provider, location, field = _parse_ref(ref)
+    if provider == "browser":
+        acquired = _provider_browser(location, field, access)
+        return SecretStr(
+            acquired.value,
+            ref,
+            {
+                "credential_handle": acquired.credential_handle,
+                "provider": acquired.provider,
+                "scopes": list(acquired.scopes),
+                "expires_at": acquired.expires_at,
+                "refreshable": acquired.refreshable,
+                "delegatable": acquired.delegatable,
+                "secret_value_visible": acquired.secret_value_visible,
+            },
+        )
     func = _PROVIDERS.get(provider)
     if func is None:
         raise ValueError(f"unknown secret provider '{provider}' in {ref}")
     return SecretStr(func(location, field), ref)
 
 
-def fill_secrets(text: str, *, execute: bool, allow: list[str] | None = None, disabled: bool = False) -> str:
+def fill_secrets(
+    text: str,
+    *,
+    execute: bool,
+    allow: list[str] | None = None,
+    disabled: bool = False,
+    access: dict | None = None,
+) -> str:
     """Replace ``{secret:...}`` / ``{getv:...}`` in a string with the value
     (execute) or ``****`` (dry-run). Run payload templating first so nested
     ``{param}`` slots are already filled.
@@ -225,7 +348,7 @@ def fill_secrets(text: str, *, execute: bool, allow: list[str] | None = None, di
             return "****"
         if disabled:
             raise PermissionError(f"secret resolution disabled here (node guard): {ref}")
-        return resolve(ref, execute=True, allow=allow).reveal()
+        return resolve(ref, execute=True, allow=allow, access=access).reveal()
 
     return SECRET_PLACEHOLDER.sub(repl, str(text))
 

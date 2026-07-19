@@ -6,6 +6,7 @@ import json
 
 import pytest
 
+from urirun import v2
 from urirun.runtime import _runtime, secrets
 
 
@@ -100,6 +101,8 @@ def _resp(payload):
     import json as _json
 
     class _R:
+        status = 200
+
         def read(self):
             return _json.dumps(payload).encode()
 
@@ -152,10 +155,175 @@ def test_oauth_provider_returns_cached_then_refreshes(monkeypatch):
     assert "new" in store[("oauth:google", "me")]                 # cached back to keyring
 
 
-def test_browser_provider_refuses(monkeypatch):
-    with pytest.raises(PermissionError) as exc:
-        secrets.resolve("secret://browser/chrome/example.com", execute=True, allow=["secret://browser/**"])
-    assert "keyring" in str(exc.value)
+def test_browser_provider_requires_aql_contract_and_delegates_acquisition(monkeypatch):
+    contract = {
+        "schema_version": "aql.access.v1",
+        "contract_id": "local-browser-tests",
+        "environment": "development",
+        "grants": [{
+            "grant_id": "browser-all",
+            "actor": "subactor:test",
+            "actions": ["ALLOW_DISCOVER", "ALLOW_ACQUIRE", "ALLOW_USE"],
+            "providers": ["browser"],
+            "capabilities": ["credential.acquire.browser"],
+            "targets": ["*"],
+        }],
+    }
+    acquired = secrets.BrowserCredential(
+        value="browser-acquired-value",
+        credential_handle="cred_browser_test_01",
+        provider="chrome-test",
+        scopes=("github:app:create",),
+        secret_value_visible=False,
+    )
+    secrets.register_browser_acquirer("chrome", lambda request: acquired)
+    try:
+        with pytest.raises(PermissionError, match="AQL_ALLOW_REQUIRED"):
+            secrets.resolve(
+                "secret://browser/chrome/github.com#app-bootstrap",
+                execute=True,
+                allow=["secret://browser/**"],
+            )
+
+        out = secrets.resolve(
+            "secret://browser/chrome/github.com#app-bootstrap",
+            execute=True,
+            allow=["secret://browser/**"],
+            access={
+                "contract": contract,
+                "actor": "subactor:test",
+                "environment": "development",
+                "environment_fingerprint": "pytest",
+            },
+        )
+    finally:
+        secrets.unregister_browser_acquirer("chrome")
+
+    assert out.reveal() == "browser-acquired-value"
+    assert out.credential_handle == "cred_browser_test_01"
+    assert out.metadata["secret_value_visible"] is False
+    assert "browser-acquired-value" not in repr(out)
+    assert "browser-acquired-value" not in json.dumps(secrets.redact({"auth": out}))
+
+
+def test_fetch_uses_browser_acquisition_at_injection_boundary(monkeypatch):
+    contract = {
+        "schema_version": "aql.access.v1",
+        "contract_id": "browser-fetch-development",
+        "environment": "development",
+        "grants": [{
+            "grant_id": "browser-fetch",
+            "actor": "subactor:test",
+            "actions": ["ALLOW_DISCOVER", "ALLOW_ACQUIRE", "ALLOW_USE"],
+            "providers": ["browser"],
+            "capabilities": ["credential.acquire.browser"],
+            "targets": ["github.com"],
+        }],
+    }
+    captured = {}
+
+    def acquire(request):
+        assert request.target == "github.com"
+        assert request.field == "app-bootstrap"
+        return secrets.BrowserCredential(
+            value="delegated-browser-token",
+            credential_handle="cred_browser_fetch_01",
+            provider="chrome-test",
+            secret_value_visible=False,
+        )
+
+    def fake_urlopen(request, timeout=None):
+        captured["authorization"] = request.get_header("Authorization")
+        return _resp({"ok": True})
+
+    secrets.register_browser_acquirer("chrome", acquire)
+    monkeypatch.setattr(_runtime.urllib.request, "urlopen", fake_urlopen)
+    route_entry = {"config": {
+        "method": "POST",
+        "url": "https://api.example.test/bootstrap",
+        "headers": {
+            "Authorization": "Bearer {secret:browser/chrome/github.com#app-bootstrap}"
+        },
+    }}
+    ctx = {
+        "routeEntry": route_entry,
+        "payload": {},
+        "target": "prod",
+        "args": [],
+        "descriptor": {},
+    }
+    policy = {
+        "secretAllow": ["secret://browser/**"],
+        "access": {
+            "contract": contract,
+            "actor": "subactor:test",
+            "environment": "development",
+            "environment_fingerprint": "pytest",
+        },
+        "timeout": 5,
+    }
+    try:
+        result = _runtime.run_fetch(ctx, policy)
+    finally:
+        secrets.unregister_browser_acquirer("chrome")
+
+    assert captured["authorization"] == "Bearer delegated-browser-token"
+    assert "delegated-browser-token" not in json.dumps(result)
+
+
+def test_missing_browser_bridge_is_a_typed_runtime_blocker(monkeypatch, tmp_path):
+    monkeypatch.setenv("URIRUN_ERROR_LOG", str(tmp_path / "errors.jsonl"))
+    registry = v2.compile_registry({
+        "version": "urirun.bindings.v2",
+        "bindings": {
+            "api://github/bootstrap/command/run": {
+                "kind": "fetch",
+                "adapter": "fetch",
+                "config": {
+                    "method": "POST",
+                    "url": "https://api.example.test/bootstrap",
+                    "headers": {
+                        "Authorization": "Bearer {secret:browser/missing/github.com#app-bootstrap}"
+                    },
+                },
+                "policy": {"allowExecute": True},
+            }
+        },
+    })
+    contract = {
+        "schema_version": "aql.access.v1",
+        "contract_id": "browser-missing-route",
+        "environment": "development",
+        "grants": [{
+            "grant_id": "browser",
+            "actor": "subactor:test",
+            "actions": ["ALLOW_DISCOVER", "ALLOW_ACQUIRE", "ALLOW_USE"],
+            "providers": ["browser"],
+            "capabilities": ["credential.acquire.browser"],
+            "targets": ["github.com"],
+        }],
+    }
+    policy = {
+        "execute": {"allow": ["api://**"], "deny": []},
+        "secretAllow": ["secret://browser/**"],
+        "access": {
+            "contract": contract,
+            "actor": "subactor:test",
+            "environment": "development",
+            "environment_fingerprint": "pytest",
+        },
+    }
+
+    result = _runtime.run(
+        "api://github/bootstrap/command/run",
+        registry,
+        mode="execute",
+        policy=policy,
+    )
+
+    assert result["ok"] is False
+    assert result["error"]["blocker"] == "AUTO_ACQUISITION_ROUTE_MISSING"
+    assert result["error"]["category"] == "FAILED_PRECONDITION"
 
 
 def test_run_fetch_secret_denied_without_allow(monkeypatch):

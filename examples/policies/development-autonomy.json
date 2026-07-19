@@ -1,0 +1,49 @@
+{
+  "version": "urirun.policy.v1",
+  "defaultMode": "dry-run",
+  "execute": {
+    "allow": ["*://**"],
+    "deny": []
+  },
+  "secretAllow": [
+    "getv://**",
+    "secret://browser/**",
+    "secret://keyring/**",
+    "secret://oauth/**",
+    "secret://vault/**"
+  ],
+  "access": {
+    "actor": "subactor:developer-automation",
+    "environment": "development",
+    "environment_fingerprint": "developer-local",
+    "max_credential_ttl_seconds": 86400,
+    "contract": {
+      "schema_version": "aql.access.v1",
+      "contract_id": "local-autonomy-development-v1",
+      "environment": "development",
+      "valid_until": null,
+      "grants": [
+        {
+          "grant_id": "all-local-apps",
+          "actor": "subactor:*",
+          "actions": [
+            "ALLOW_DISCOVER",
+            "ALLOW_ACQUIRE",
+            "ALLOW_USE",
+            "ALLOW_DELEGATE",
+            "ALLOW_ROTATE",
+            "ALLOW_REVOKE",
+            "ALLOW_MUTATE",
+            "ALLOW_SPEND",
+            "ALLOW_ACCEPT_TERMS"
+          ],
+          "providers": ["*"],
+          "capabilities": ["*"],
+          "targets": ["*"],
+          "max_credential_ttl_seconds": 86400,
+          "max_cost": 1000000
+        }
+      ]
+    }
+  }
+}

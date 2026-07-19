@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ifuri.com/schemas/aql-execution-grant-v1.schema.json",
+  "title": "AQL child execution grant v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "grant_id",
+    "parent_contract",
+    "parent_grant",
+    "actor",
+    "capability",
+    "target",
+    "provider",
+    "plan_hash",
+    "environment_fingerprint",
+    "issued_at",
+    "valid_until",
+    "nonce",
+    "max_mutations",
+    "rollback_required"
+  ],
+  "properties": {
+    "schema_version": {"const": "aql.execution-grant.v1"},
+    "grant_id": {"type": "string", "pattern": "^exec_[A-Za-z0-9_-]+$"},
+    "parent_contract": {"type": "string", "minLength": 1},
+    "parent_grant": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "minLength": 1},
+    "capability": {"type": "string", "minLength": 1},
+    "target": {"type": "string", "minLength": 1},
+    "provider": {"type": "string", "minLength": 1},
+    "plan_hash": {"type": "string", "minLength": 1},
+    "environment_fingerprint": {"type": "string", "minLength": 1},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "valid_until": {"type": "string", "format": "date-time"},
+    "nonce": {"type": "string", "minLength": 8},
+    "max_mutations": {"type": "integer", "minimum": 0},
+    "rollback_required": {"type": "boolean"}
+  }
+}

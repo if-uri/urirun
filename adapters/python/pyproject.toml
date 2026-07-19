@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "urirun"
-version = "0.4.199"
+version = "0.4.200"
 description = "Language-agnostic URI to handler adapter"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -43,6 +43,7 @@ uri-copy-id = "urirun.node.mesh:copy_id_cli"
 skill = "urirun.node.skill:skill_bindings"
 session = "urirun.node.skill:session_bindings"
 ready = "urirun.node.preconditions:ready_bindings"
+access = "urirun_runtime.access:access_bindings"
 
 [tool.setuptools.packages.find]
 where = ["."]

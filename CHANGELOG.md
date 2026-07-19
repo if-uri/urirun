@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.200] - 2026-07-19
+
+### Added
+
+- Added versioned `aql.access.v1`, `access.requirement.v1`, and child execution
+  grant schemas plus an Access Resolver with typed autonomous acquisition states.
+- Added opt-in unrestricted development policy for local multi-application
+  automation and a connector conformance runbook.
+- Added registered browser acquisition bridges that return credential handles
+  and inject `SecretStr` values only at the executor boundary.
+- Added discoverable `access://` routes for standing-contract evaluation,
+  acquisition resolution, and bounded child-grant compilation.
+
+### Changed
+
+- Replaced the unconditional `secret://browser` denial with standing AQL
+  discover/acquire/use evaluation and connector-owned acquisition.
+
 ## [Unreleased] - 2026-07-05
 
 ### Added
