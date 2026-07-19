@@ -52,6 +52,7 @@ HOST_CONNECTORS = (
 )
 HOST = (
     ("if-uri/urirun-declarative", "urirun-declarative"),
+    ("if-uri/urirun-openapi-import", "urirun-openapi-import"),
     *((f"urirun-connectors/urirun-connector-{name}", f"urirun-connector-{name}") for name in HOST_CONNECTORS),
 )
 

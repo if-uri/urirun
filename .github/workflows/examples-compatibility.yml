@@ -97,7 +97,7 @@ jobs:
         run: |
           python -m pip install -U pip pytest cryptography litellm
           python -m pip install -e ./urirun/adapters/python
-          editable=(-e ./urirun-declarative)
+          editable=(-e ./urirun-declarative -e ./urirun-openapi-import)
           for directory in urirun-connector-*; do
             if [[ -f "$directory/pyproject.toml" ]]; then editable+=(-e "./$directory"); fi
           done
