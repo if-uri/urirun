@@ -15,8 +15,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install CI test runner
-        run: python -m pip install 'pytest>=7'
+      - name: Checkout extracted test dependencies in parallel
+        run: python scripts/checkout_ci_dependencies.py unit ..
+      - name: Install urirun test environment
+        run: |
+          python -m pip install -e './adapters/python[test]'
+          python -m pip install --no-deps \
+            -e ../urirun-connector-twin \
+            -e ../urirun-connector-domain-monitor
       - run: make version-check
       - name: Ruff lint (keep main green)
         run: |
