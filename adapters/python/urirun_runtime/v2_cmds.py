@@ -199,7 +199,7 @@ def _cmd_add_pypi(args, parser) -> int:
 
 
 def _cmd_add_openapi(args, parser) -> int:
-    fn = _CLI_BRIDGE.get("add_openapi")
+    fn = _ensure_cli_bridge("add_openapi")
     if fn is None:
         reglib._emit_json({"ok": False, "error": "openapi connector not available (import urirun.connectors.openapi_import to activate)"}, "-")
         return 1
