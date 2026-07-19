@@ -108,6 +108,39 @@ Wartość zostaje opakowana w `SecretStr` i materializowana tylko na granicy
 injection. Wynik, log, JSON i LLM widzą `****`, `credential_handle`, scope i
 evidence — nie wartość.
 
+## Pełny test developerski i CI
+
+Workflow [`examples-compatibility.yml`](../.github/workflows/examples-compatibility.yml)
+odtwarza czysty układ wielu repozytoriów i uruchamia trzy profile:
+
+```text
+unit   → runtime + Twin + Domain Monitor
+host   → runtime + declarative + wszystkie connectory wymagane przez przykłady
+docker → runtime + contract + flow + router + Domain Monitor
+```
+
+Zależności są pobierane płytko i równolegle przez
+[`checkout_ci_dependencies.py`](../scripts/checkout_ci_dependencies.py):
+
+```bash
+python scripts/checkout_ci_dependencies.py host /tmp/urirun-ci --jobs 8
+python scripts/checkout_ci_dependencies.py docker /tmp/urirun-ci --jobs 8
+```
+
+Deterministyczny zestaw nie wymaga sekretów i testuje discovery, standing
+ALLOW, provisioning, registry, transport HTTP, Docker oraz recovery
+executor/validator/twin/teacher. Scenariusze oznaczone `external-secret`,
+`hardware` albo `self-hosted` pozostają jawnie sklasyfikowane, ponieważ wymagają
+odpowiednio prawdziwego providera, urządzenia albo kontrolowanego desktopu; nie
+są raportowane jako wykonany test produkcyjny.
+
+GitHub Actions:
+<https://github.com/if-uri/urirun/actions/workflows/examples-compatibility.yml>.
+Standardowa macierz nie kopiuje lokalnego `.env`. Live OpenRouter powinien
+otrzymać `OPENROUTER_API_KEY` jako GitHub Actions secret, a flow powinien używać
+referencji `getv://OPENROUTER_API_KEY` objętej `secretAllow`, nigdy plaintextu w
+YAML, artefakcie lub logu.
+
 ## Connector auth conformance
 
 Connector posiadający autoryzację powinien docelowo udostępniać:
