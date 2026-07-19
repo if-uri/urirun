@@ -26,6 +26,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: urirun
+      - name: Checkout Twin connector used by core contract tests
+        uses: actions/checkout@v4
+        with:
+          repository: urirun-connectors/urirun-connector-twin
+          path: urirun-connector-twin
+      - name: Checkout Domain Monitor connector used by compatibility tests
+        uses: actions/checkout@v4
+        with:
+          repository: urirun-connectors/urirun-connector-domain-monitor
+          path: urirun-connector-domain-monitor
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -33,7 +43,8 @@ jobs:
       - name: Install urirun from this checkout
         run: |
           python -m pip install -U pip
-          python -m pip install -e ./urirun/adapters/python
+          python -m pip install -e './urirun/adapters/python[test]'
+          python -m pip install --no-deps -e ./urirun-connector-twin -e ./urirun-connector-domain-monitor
           (cd urirun/adapters/python && python -c "import urirun, pathlib; print(urirun.__file__); print(getattr(urirun, '__version__', 'unknown')); assert pathlib.Path(urirun.__file__).resolve().as_posix().startswith(pathlib.Path('.').resolve().as_posix())")
       - name: Run urirun tests
         run: make -C urirun test
