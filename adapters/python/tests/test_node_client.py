@@ -71,7 +71,13 @@ class NodeClientTests(unittest.TestCase):
             calls.append(("POST", url, body, headers, timeout)) or {"ok": True, "allow": ["browser://**"]}
         )
         try:
-            out = client.deploy(bindings={"bindings": {}}, allow=["browser://**"], merge=True, timeout=5)
+            out = client.deploy(
+                bindings={"bindings": {}},
+                allow=["browser://**"],
+                merge=True,
+                persist=True,
+                timeout=5,
+            )
         finally:
             client_mod._get = orig_get
             client_mod._post = orig
@@ -85,7 +91,7 @@ class NodeClientTests(unittest.TestCase):
         ), (
             "POST",
             "http://node/deploy",
-            {"bindings": {"bindings": {}}, "allow": ["browser://**"], "merge": True},
+            {"bindings": {"bindings": {}}, "allow": ["browser://**"], "merge": True, "persist": True},
             {"X-Urirun-Token": "secret"},
             5,
         )])
@@ -191,6 +197,7 @@ class NodeClientTests(unittest.TestCase):
         self.assertEqual(calls[1][0], "deploy")
         self.assertEqual(calls[1][1]["allow"], ["browser://**"])
         self.assertTrue(calls[1][1]["merge"])
+        self.assertTrue(calls[1][1]["persist"])
 
     def test_ensure_scheme_does_not_accept_adopt_without_live_scheme(self):
         client = NodeClient.__new__(NodeClient)

@@ -890,7 +890,8 @@ class MeshTests(unittest.TestCase):
 
     def test_node_side_adopt_makes_installed_routes_live(self):
         # node://<name>/registry/command/adopt — the node merges its installed connector
-        # bindings into the LIVE registry itself (no host deploy), admin-gated.
+        # bindings into the LIVE registry itself (no host deploy), persists the result,
+        # and remains admin-gated.
         import socket as _socket
         import threading
 
@@ -904,9 +905,14 @@ class MeshTests(unittest.TestCase):
         reg = mesh.v2.compile_registry({"version": mesh.v2.VERSION, "bindings": {
             "env://self/x/query/p": {"kind": "query", "adapter": "argv-template", "argv": ["true"],
                                      "inputSchema": {"type": "object"}, "policy": {"allowExecute": True}}}})
+        persisted = tempfile.TemporaryDirectory()
+        self.addCleanup(persisted.cleanup)
+        registry_path = str(Path(persisted.name) / "registry.json")
+        config_path = str(Path(persisted.name) / "node.json")
         s = _socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
         server = mesh.serve_node("self", reg, "127.0.0.1", port, execute=True,
-                                 allow=["env://**"], admin_token="T", manage=True)
+                                 allow=["env://**"], admin_token="T", manage=True,
+                                 registry_path=registry_path, config_path=config_path)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         base = f"http://127.0.0.1:{port}"
         try:
@@ -915,8 +921,13 @@ class MeshTests(unittest.TestCase):
             self.assertNotIn("demo", c.schemes())
             adopt = c.run("node://self/registry/command/adopt", {"scheme": "demo"})
             self.assertTrue(adopt["ok"])
+            self.assertTrue(adopt["durable"])
+            self.assertEqual(adopt["persisted"], registry_path)
+            self.assertIn("demo://**", adopt["persistedAllow"])
             self.assertIn("demo", c.schemes())                      # live without a host deploy
             self.assertTrue(c.run("demo://self/thing/query/ping")["ok"])  # and runnable (allow unioned)
+            self.assertIn("demo://self/thing/query/ping", Path(registry_path).read_text(encoding="utf-8"))
+            self.assertIn("demo://**", Path(config_path).read_text(encoding="utf-8"))
             # adopt is admin-gated
             self.assertFalse(NodeClient(base).run("node://self/registry/command/adopt", {"scheme": "demo"})["ok"])
         finally:

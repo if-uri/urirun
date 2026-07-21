@@ -788,7 +788,27 @@ class NodeHandler(BaseHTTPRequestHandler):
             allow.append(f"{scheme}://**")
         summary = apply_deploy(c.state, {"bindings": {"version": doc["version"], "bindings": doc["bindings"]},
                                          "merge": True, "allow": allow})
-        send_json(self, 200, {"ok": True, "adopted": summary.get("routeCount"), "schemes": summary.get("schemes"), "scheme": scheme})
+        if getattr(c, "registry_path", None):
+            self._persist_registry(summary)
+            self._persist_allow_config(summary)
+        else:
+            summary["persistError"] = "node has no registry path to persist to"
+        durable = bool(
+            summary.get("persisted")
+            and not summary.get("persistError")
+            and not summary.get("persistAllowError")
+        )
+        send_json(self, 200, {
+            "ok": True,
+            "adopted": summary.get("routeCount"),
+            "schemes": summary.get("schemes"),
+            "scheme": scheme,
+            "durable": durable,
+            "persisted": summary.get("persisted"),
+            "persistedAllow": summary.get("persistedAllow"),
+            "persistError": summary.get("persistError"),
+            "persistAllowError": summary.get("persistAllowError"),
+        })
 
     def _handle_need(self, raw: bytes, body: dict):
         # node://<name>/host/command/request {kind: connector|scheme|folder, what} — the

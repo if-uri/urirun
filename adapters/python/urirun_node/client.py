@@ -111,9 +111,12 @@ class NodeClient:
 
     # --- self-management: deploy + acquire a capability on demand ---
     def deploy(self, bindings: dict | None = None, code: dict | None = None, allow: list | None = None,
-               env: dict | None = None, merge: bool = False, timeout: float = _DEFAULT_TIMEOUT) -> dict:
+               env: dict | None = None, merge: bool = False, persist: bool = False,
+               timeout: float = _DEFAULT_TIMEOUT) -> dict:
         """Push a registry (+ optional handler code/env) onto the node; merge adds routes
-        to the existing surface instead of replacing it. Needs the node's admin token."""
+        to the existing surface instead of replacing it. ``persist=True`` writes the
+        resulting registry and allow policy so they survive a node restart. Needs the
+        node's admin token."""
         body: dict = {}
         if bindings is not None:
             body["bindings"] = bindings
@@ -125,6 +128,8 @@ class NodeClient:
             body["env"] = env
         if merge:
             body["merge"] = True
+        if persist:
+            body["persist"] = True
         before = None
         if merge and allow:
             try:
@@ -270,7 +275,7 @@ class NodeClient:
             return {"ok": False, "scheme": scheme,
                     "error": f"no installed bindings or local source for scheme ({payload.get('error')})"}
         dep = self.deploy(code=payload["code"], bindings=payload["bindings"],
-                          allow=[f"{scheme}://**"], merge=True)
+                          allow=[f"{scheme}://**"], merge=True, persist=True)
         route_ok = self._has_route(route) if route else True
         live = scheme in self.schemes() and route_ok
         return {"ok": live, "scheme": scheme, "via": "host-deploy", "acquired": live,
@@ -288,7 +293,10 @@ class NodeClient:
         if adopt.get("ok"):
             live = self.schemes()
             if scheme in live and (not route or self._has_route(route)):
-                return {"ok": True, "scheme": scheme, "acquired": True, "adopted": adopt.get("adopted")}
+                return {"ok": True, "scheme": scheme, "acquired": True,
+                        "adopted": adopt.get("adopted"),
+                        "durable": adopt.get("durable"),
+                        "persisted": adopt.get("persisted")}
             if scheme in live and route:
                 return {"ok": False, "scheme": scheme,
                         "error": "adopt completed but requested route is not live",
@@ -334,7 +342,7 @@ class NodeClient:
             return self._ensure_via_host_deploy(scheme, route, install)
         dep = self.deploy(
             bindings={"version": inst.get("version", "urirun.bindings.v2"), "bindings": binds},
-            allow=[f"{scheme}://**"], merge=True,
+            allow=[f"{scheme}://**"], merge=True, persist=True,
         )
         route_ok = self._has_route(route) if route else True
         if route and not route_ok:
