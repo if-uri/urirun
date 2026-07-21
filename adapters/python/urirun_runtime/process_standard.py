@@ -64,7 +64,7 @@ class UriProcess:
     retries: int = 0
 
     def as_step(self) -> dict[str, Any]:
-        return {
+        step = {
             "id": self.id,
             "name": self.name,
             "uri": self.uri,
@@ -72,6 +72,11 @@ class UriProcess:
             "depends_on": self.depends_on,
             "human_approval": self.human_approval,
         }
+        if self.timeout_seconds is not None:
+            step["timeout_seconds"] = self.timeout_seconds
+        if self.retries:
+            step["retries"] = self.retries
+        return step
 
 
 def from_dict(item: dict[str, Any]) -> UriProcess:
@@ -116,10 +121,47 @@ def validate_processes(processes: list[UriProcess]) -> list[str]:
         for dep in proc.depends_on:
             if dep not in ids:
                 errors.append(f"{proc.id}: unknown depends_on {dep!r}")
+    cycle = _dependency_cycle(processes)
+    if cycle:
+        errors.append(f"dependency cycle: {' -> '.join(cycle)}")
     return errors
 
 
+def _dependency_cycle(processes: list[UriProcess]) -> list[str]:
+    """Return one dependency cycle, including its repeated closing id."""
+    by_id = {p.id: p for p in processes}
+    state: dict[str, int] = {}
+    stack: list[str] = []
+
+    def visit(pid: str) -> list[str]:
+        if state.get(pid) == 2:
+            return []
+        if state.get(pid) == 1:
+            start = stack.index(pid)
+            return [*stack[start:], pid]
+        state[pid] = 1
+        stack.append(pid)
+        for dep in by_id[pid].depends_on:
+            if dep not in by_id:
+                continue
+            cycle = visit(dep)
+            if cycle:
+                return cycle
+        stack.pop()
+        state[pid] = 2
+        return []
+
+    for pid in by_id:
+        cycle = visit(pid)
+        if cycle:
+            return cycle
+    return []
+
+
 def topological_order(processes: list[UriProcess]) -> list[UriProcess]:
+    cycle = _dependency_cycle(processes)
+    if cycle:
+        raise ValueError(f"dependency cycle: {' -> '.join(cycle)}")
     by_id = {p.id: p for p in processes}
     order: list[UriProcess] = []
     done: set[str] = set()
@@ -203,11 +245,32 @@ def execute_plan(
 ) -> list[dict[str, Any]]:
     """Wykonaj plan kroków na węźle przez node_run (POST /run)."""
     results: list[dict[str, Any]] = []
+    completed: set[str] = set()
     for step in plan:
         if not isinstance(step, dict):
             continue
+        step_id = str(step.get("id") or "")
+        blocked_by = [str(dep) for dep in (step.get("depends_on") or []) if str(dep) not in completed]
+        if blocked_by:
+            results.append({
+                "id": step_id,
+                "ok": False,
+                "blocked": True,
+                "reason": "dependency_not_completed",
+                "blockedBy": blocked_by,
+            })
+            if stop_on_error:
+                break
+            continue
         if step.get("human_approval"):
-            results.append({"id": step.get("id"), "skipped": True, "reason": "human_approval"})
+            results.append({
+                "id": step_id,
+                "ok": False,
+                "blocked": True,
+                "reason": "human_approval_required",
+            })
+            if stop_on_error:
+                break
             continue
         uri = str(step.get("uri") or "")
         if not uri:
@@ -227,4 +290,6 @@ def execute_plan(
         results.append(entry)
         if stop_on_error and (last.get("ok") is False or last.get("error")):
             break
+        if last.get("ok", True) is not False and not last.get("error"):
+            completed.add(step_id)
     return results

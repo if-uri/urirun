@@ -320,6 +320,39 @@ class UriHandlerTests(unittest.TestCase):
         finally:
             v2.metadata.entry_points = original
 
+    def test_concrete_node_authority_keeps_full_command_path(self):
+        """A node alias must not collapse key/move/wait onto the first command route."""
+        bindings = {}
+        for action in ("click", "key", "move", "wait"):
+            bindings[f"kvm://host/input/command/{action}"] = {
+                "kind": "command",
+                "adapter": "argv-template",
+                "argv": [action],
+            }
+        registry = urirun.compile_registry({"version": v2.VERSION, "bindings": bindings})
+
+        for uri in bindings:
+            verb = uri.rsplit("/", 1)[-1]
+            concrete = uri.replace("kvm://host/", "kvm://laptop/")
+            result = urirun.run(concrete, registry, {}, mode="dry-run")
+            self.assertTrue(result["ok"], result)
+            self.assertEqual(result["result"]["command"], [verb])
+
+    def test_unknown_authority_fails_closed_for_target_specific_collision(self):
+        bindings = {
+            "demo://east/device/query/status": {
+                "kind": "command", "adapter": "argv-template", "argv": ["east"]},
+            "demo://west/device/query/status": {
+                "kind": "command", "adapter": "argv-template", "argv": ["west"]},
+        }
+        registry = urirun.compile_registry({"version": v2.VERSION, "bindings": bindings})
+
+        east = urirun.run("demo://east/device/query/status", registry, {}, mode="dry-run")
+        self.assertEqual(east["result"]["command"], ["east"])
+        unknown = urirun.run("demo://north/device/query/status", registry, {}, mode="dry-run")
+        self.assertFalse(unknown["ok"])
+        self.assertIn("Ambiguous route authority", unknown["error"]["message"])
+
     def test_connector_installed_predicate(self):
         """The env-independence guard: True for a discoverable scheme, False otherwise."""
         from urirun import testing

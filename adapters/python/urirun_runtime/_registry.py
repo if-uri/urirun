@@ -29,6 +29,7 @@ HTTP_METHODS = {"get", "post", "put", "patch", "delete", "options", "head"}
 # so a field can no longer be silently dropped in one stage (the `python` bug).
 ROUTE_ENTRY_CARRY = ("ref", "python", "policy", "meta")
 ROUTE_ENTRY_KEYS = {"kind", "adapter", "config", *ROUTE_ENTRY_CARRY}
+_AMBIGUOUS_INDEX_ROUTE = object()
 
 
 def parse_uri(uri: str) -> dict:
@@ -456,13 +457,47 @@ def registry_tree(registry: dict) -> dict:
     return registry.get("routes", registry) if isinstance(registry, dict) else {}
 
 
-def _resolve_from_index(normalized, registry: dict) -> dict | None:
-    """Fast path: a precompiled registry index maps a hashed URI to its route entry."""
+def _resolve_from_index(normalized, registry: dict) -> dict | object | None:
+    """Resolve an indexed URI, including a node-local authority alias.
+
+    Connector bindings conventionally use ``host`` as their authority while callers
+    address a remote node by its concrete mesh name (for example ``laptop``). The old
+    exact-hash-only lookup missed in that case and fell back to the legacy three-part
+    route tree. Four-segment command families such as ``input/command/{key,move,click}``
+    all share that tree key, so the fallback could execute the wrong mutation.
+
+    After the exact lookup, match the complete scheme + path while ignoring authority.
+    Only a unique route (or several byte-for-byte identical route entries) is safe. A
+    genuinely target-specific collision is marked ambiguous and must fail closed.
+    """
     index = registry.get("index") if isinstance(registry, dict) else None
     if normalized and isinstance(index, dict):
         meta = index.get(hash_uri(normalized))
         if meta and isinstance(meta.get("routeEntry"), dict):
             return meta["routeEntry"]
+        try:
+            wanted = parse_uri(normalized)
+        except ValueError:
+            return None
+        candidates = []
+        for candidate in index.values():
+            uri = candidate.get("uri") if isinstance(candidate, dict) else None
+            entry = candidate.get("routeEntry") if isinstance(candidate, dict) else None
+            if not uri or not isinstance(entry, dict):
+                continue
+            try:
+                described = parse_uri(uri)
+            except ValueError:
+                continue
+            if (described["package"] == wanted["package"]
+                    and described["segments"] == wanted["segments"]):
+                candidates.append(entry)
+        if len(candidates) == 1:
+            return candidates[0]
+        if candidates and all(_route_entry_equal(candidates[0], entry) for entry in candidates[1:]):
+            return candidates[0]
+        if candidates:
+            return _AMBIGUOUS_INDEX_ROUTE
     return None
 
 
@@ -488,6 +523,11 @@ def _walk_route_tree(tree, route: list) -> tuple[dict | None, dict[str, str]]:
 def resolve_route(translation: dict, registry: dict) -> dict:
     descriptor = translation.get("descriptor") or {}
     cached = _resolve_from_index(descriptor.get("normalized"), registry)
+    if cached is _AMBIGUOUS_INDEX_ROUTE:
+        raise KeyError(
+            f"Ambiguous route authority for {descriptor.get('normalized')}: "
+            "multiple target-specific bindings share this full path"
+        )
     if cached is not None:
         return cached
 
