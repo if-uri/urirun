@@ -199,58 +199,80 @@ def build_live_uri_process_schemas(
     return text
 
 
+def _load_registry(urirun_mod: Any) -> dict:
+    """Entry-point registry, falling back to a compiled empty one; {} when neither works."""
+    try:
+        return urirun_mod.entry_point_registry() or {}
+    except Exception:  # noqa: BLE001
+        try:
+            return urirun_mod.compile_registry({}) or {}
+        except Exception:  # noqa: BLE001
+            return {}
+
+
+def _payload_hint(schema: dict) -> str:
+    """Compact payload shape for the prompt: ``{name*:type=default, …}`` (8 fields max)."""
+    props = schema.get("properties") or {}
+    if not props:
+        return "{}"
+    required = set(schema.get("required") or [])
+    fields = []
+    for name, spec in list(props.items())[:8]:
+        typed = spec.get("type", "any") if isinstance(spec, dict) else "any"
+        hint = f"{name}{'*' if name in required else ''}:{typed}"
+        default = spec.get("default") if isinstance(spec, dict) else None
+        if default not in (None, False, ""):
+            hint += f"={default!r}"
+        fields.append(hint)
+    return "{" + ", ".join(fields) + "}"
+
+
+def _registry_route_line(entry: Any) -> str:
+    """One catalog line for a flattened registry route ("" when it has no URI)."""
+    if not isinstance(entry, dict):
+        return ""
+    uri = entry.get("uri") or entry.get("path")
+    if not uri:
+        return ""
+    route_entry = entry.get("routeEntry") or {}
+    meta = route_entry.get("meta") or {}
+    desc = (
+        entry.get("description") or entry.get("doc") or entry.get("help")
+        or meta.get("label") or meta.get("description") or ""
+    )
+    cls = entry.get("class") or meta.get("connector", "")
+    schema = ((route_entry.get("config") or {}).get("inputSchema")) or {}
+    return f"- {uri} payload={_payload_hint(schema)} [{cls}] {str(desc)[:80]}"
+
+
+def _action_space_lines(urirun_mod: Any, reg: dict) -> list[str]:
+    """Action-space entries, when this urirun build exposes them."""
+    try:
+        space = urirun_mod.action_space(reg) if hasattr(urirun_mod, "action_space") and reg else []
+    except Exception:  # noqa: BLE001
+        return []
+    lines: list[str] = []
+    for item in space[:50]:
+        if isinstance(item, dict) and item.get("uri"):
+            lines.append(f"- {item['uri']} (action)")
+        elif isinstance(item, str):
+            lines.append(f"- {item}")
+    return lines
+
+
 def _flatten_registry_lines() -> list[str]:
+    """Live URI catalog from the local registry; partial results beat none."""
     live: list[str] = []
     try:
         import urirun
         from urirun.runtime._registry import flatten_registry_document
-        reg: dict = {}
-        try:
-            reg = urirun.entry_point_registry() or {}
-        except Exception:  # noqa: BLE001
-            try:
-                reg = urirun.compile_registry({}) or {}
-            except Exception:  # noqa: BLE001
-                reg = {}
-        flat = flatten_registry_document(reg) if reg else []
-        for r in flat[:100]:
-            if not isinstance(r, dict):
-                continue
-            u = r.get("uri") or r.get("path")
-            route_entry = r.get("routeEntry") or {}
-            meta = route_entry.get("meta") or {}
-            desc = (
-                r.get("description") or r.get("doc") or r.get("help")
-                or meta.get("label") or meta.get("description") or ""
-            )
-            cls = r.get("class") or meta.get("connector", "")
-            schema = ((route_entry.get("config") or {}).get("inputSchema")) or {}
-            props = schema.get("properties") or {}
-            required = set(schema.get("required") or [])
-            if props:
-                fields = []
-                for name, spec in list(props.items())[:8]:
-                    t = spec.get("type", "any") if isinstance(spec, dict) else "any"
-                    mark = "*" if name in required else ""
-                    default = spec.get("default") if isinstance(spec, dict) else None
-                    hint = f"{name}{mark}:{t}"
-                    if default not in (None, False, ""):
-                        hint += f"={default!r}"
-                    fields.append(hint)
-                payload_hint = "{" + ", ".join(fields) + "}"
-            else:
-                payload_hint = "{}"
-            if u:
-                live.append(f"- {u} payload={payload_hint} [{cls}] {str(desc)[:80]}")
-        try:
-            space = urirun.action_space(reg) if hasattr(urirun, "action_space") and reg else []
-            for s in space[:50]:
-                if isinstance(s, dict) and s.get("uri"):
-                    live.append(f"- {s['uri']} (action)")
-                elif isinstance(s, str):
-                    live.append(f"- {s}")
-        except Exception:  # noqa: BLE001
-            pass
+
+        reg = _load_registry(urirun)
+        for entry in (flatten_registry_document(reg) if reg else [])[:100]:
+            line = _registry_route_line(entry)
+            if line:
+                live.append(line)
+        live.extend(_action_space_lines(urirun, reg))
     except Exception:  # noqa: BLE001
         pass
     return live
