@@ -1002,19 +1002,6 @@ def _run_executor(executor_registry: dict, route_entry: dict, envelope: dict):
     return executor
 
 
-def _run_dry(executor, ctx: dict, policy: dict, envelope: dict) -> dict:
-    try:
-        envelope["result"] = executor(ctx, policy, False)
-        envelope["ok"] = True
-    except KeyError as err:
-        envelope["ok"] = False
-        envelope["error"] = {"type": "schema", "message": f"unresolved placeholder: {err.args[0]}"}
-    except ValueError as err:
-        envelope["ok"] = False
-        envelope["error"] = {"type": "error", "message": str(err)}
-    return envelope
-
-
 def _run_execute(executor, ctx: dict, policy: dict, envelope: dict, decision: dict, confirm: bool) -> dict:
     if not decision["allowed"]:
         envelope["ok"] = False
@@ -1081,7 +1068,13 @@ def run(
         envelope["decision"] = decision
         executor = _run_executor(executor_registry, route_entry, envelope)
         if mode != "execute":
-            envelope = _run_dry(executor, ctx, policy, envelope)
+            envelope = runtime.run_dry(
+                executor,
+                ctx,
+                policy,
+                envelope,
+                placeholder_error_type="schema",
+            )
         else:
             envelope = _run_execute(executor, ctx, policy, envelope, decision, confirm)
     except _RunAbort as abort:

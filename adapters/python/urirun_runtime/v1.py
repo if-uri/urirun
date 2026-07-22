@@ -284,19 +284,6 @@ def _build_run_ctx(route_entry: dict, descriptor: dict, translation: dict, paylo
     }
 
 
-def _run_dry_run_mode(executor, ctx: dict, policy: dict, envelope: dict) -> dict:
-    try:
-        envelope["result"] = executor(ctx, policy, False)
-        envelope["ok"] = True
-    except KeyError as err:
-        envelope["ok"] = False
-        envelope["error"] = {"type": "params", "message": f"unresolved placeholder: {err.args[0]}"}
-    except ValueError as err:
-        envelope["ok"] = False
-        envelope["error"] = {"type": "error", "message": str(err)}
-    return envelope
-
-
 def _run_execute_mode(executor, ctx: dict, policy: dict, envelope: dict, decision: dict, confirm: bool) -> dict:
     if not decision["allowed"]:
         envelope["ok"] = False
@@ -347,7 +334,13 @@ def run(uri: str, registry: dict, payload=None, mode: str = "dry-run", policy: d
         raise ValueError(f"Executor not found: {route_entry.get('adapter') or route_entry.get('kind')}")
 
     if mode != "execute":
-        return _run_dry_run_mode(executor, ctx, policy, envelope)
+        return runtime.run_dry(
+            executor,
+            ctx,
+            policy,
+            envelope,
+            placeholder_error_type="params",
+        )
     return _run_execute_mode(executor, ctx, policy, envelope, decision, confirm)
 
 

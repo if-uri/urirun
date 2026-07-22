@@ -52,6 +52,30 @@ class PolicyError(Exception):
     """Raised when a route is blocked by policy in execute mode."""
 
 
+def run_dry(
+    executor,
+    ctx: dict,
+    policy: dict,
+    envelope: dict,
+    *,
+    placeholder_error_type: str,
+) -> dict:
+    """Run a v1/v2 executor preview with the shared error-envelope contract."""
+    try:
+        envelope["result"] = executor(ctx, policy, False)
+        envelope["ok"] = True
+    except KeyError as err:
+        envelope["ok"] = False
+        envelope["error"] = {
+            "type": placeholder_error_type,
+            "message": f"unresolved placeholder: {err.args[0]}",
+        }
+    except ValueError as err:
+        envelope["ok"] = False
+        envelope["error"] = {"type": "error", "message": str(err)}
+    return envelope
+
+
 def default_policy() -> dict:
     return {
         "version": POLICY_VERSION,

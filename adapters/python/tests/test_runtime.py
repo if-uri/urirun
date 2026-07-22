@@ -9,10 +9,49 @@ from urirun.runtime._runtime import (
     default_policy,
     evaluate_policy,
     merge_policy,
+    run_dry,
 )
 
 
 # ─── default_policy ──────────────────────────────────────────────────────────
+
+
+def test_run_dry_calls_executor_without_execution():
+    calls = []
+
+    def executor(ctx, policy, execute):
+        calls.append((ctx, policy, execute))
+        return {"preview": True}
+
+    result = run_dry(
+        executor,
+        {"value": 1},
+        {"execute": {}},
+        {"mode": "dry-run"},
+        placeholder_error_type="params",
+    )
+
+    assert result["ok"] is True
+    assert result["result"] == {"preview": True}
+    assert calls == [({"value": 1}, {"execute": {}}, False)]
+
+
+def test_run_dry_preserves_version_specific_placeholder_error_type():
+    def executor(_ctx, _policy, _execute):
+        raise KeyError("name")
+
+    result = run_dry(
+        executor,
+        {},
+        {},
+        {},
+        placeholder_error_type="schema",
+    )
+
+    assert result == {
+        "ok": False,
+        "error": {"type": "schema", "message": "unresolved placeholder: name"},
+    }
 
 def test_default_policy_keys():
     p = default_policy()
