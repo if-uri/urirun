@@ -14,7 +14,7 @@ NODE_URLS ?=
 FORCE_REPLACE ?=
 NODE_URL_ARGS = $(foreach url,$(NODE_URLS),--node-url $(url))
 FORCE_REPLACE_ARG = $(if $(FORCE_REPLACE),--force-replace,)
-DEV_PYTHONPATH := $(CURDIR)/adapters/python:$(CURDIR)/../urirun-flow:$(CURDIR)/../urirun-connector-kvm:$(CURDIR)/../urirun-connector-router:$(CURDIR)/../urirun-connector-twin:$(CURDIR)/../urirun-widgets:$(CURDIR)/../urirun-contract
+DEV_PYTHONPATH := $(CURDIR)/adapters/python:$(CURDIR)/../urirun-flow:$(CURDIR)/../urirun-connector-kvm:$(CURDIR)/../urirun-connector-router:$(CURDIR)/../urirun-connector-twin:$(CURDIR)/../../urirun-connectors/urirun-widgets:$(CURDIR)/../urirun-contract
 
 .DEFAULT_GOAL := help
 
