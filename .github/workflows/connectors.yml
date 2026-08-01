@@ -177,6 +177,12 @@ jobs:
           done
           pip install -e './connector[test]' pytest
 
+      - name: Install camera barcode system dependency
+        if: steps.runtime.outputs.kind == 'python' && matrix.repo == 'urirun-connector-camera'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libzbar0
+
       - name: Install the Node connector
         if: steps.runtime.outputs.kind == 'node'
         working-directory: connector
