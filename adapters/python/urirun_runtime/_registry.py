@@ -552,7 +552,10 @@ def _walk_route_entries(node):
 
 def hydrate_registry(registry: dict, refs: dict[str, object]) -> dict:
     hydrated = copy.deepcopy(registry)
-    for route_entry in _walk_route_entries(registry_tree(hydrated)):
+    # Hydrate both the legacy route tree and exact-URI index entries. Routes that
+    # share the same three-part legacy key (for example .../query/plan and
+    # .../query/decide) resolve through the index and must receive the same live ref.
+    for route_entry in _walk_route_entries(hydrated):
         ref = route_entry.get("ref")
         if isinstance(ref, str) and ref in refs:
             route_entry["ref"] = refs[ref]

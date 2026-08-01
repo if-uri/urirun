@@ -21,5 +21,4 @@ def test_host_ci_dependencies_include_direct_example_imports(tmp_path: Path) -> 
     )
 
     dependencies = set(result.stdout.splitlines())
-    assert f"tellmesh/urillm\t{tmp_path / 'urillm'}" in dependencies
     assert f"if-uri/urirun-work\t{tmp_path / 'urirun-work'}" in dependencies

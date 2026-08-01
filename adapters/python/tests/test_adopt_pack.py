@@ -70,6 +70,42 @@ class AdoptPackTests(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_hydration_updates_exact_index_for_shared_legacy_route(self):
+        from urirun import _registry as reg, _runtime as rt
+
+        document = {
+            "version": v2.VERSION,
+            "bindings": {
+                "demo://{host}/text/query/plan": {
+                    "adapter": "local-function",
+                    "kind": "function",
+                    "ref": "demo.handlers:plan",
+                },
+                "demo://{host}/text/query/decide": {
+                    "adapter": "local-function",
+                    "kind": "function",
+                    "ref": "demo.handlers:decide",
+                },
+            },
+        }
+        hydrated = reg.hydrate_registry(
+            v2.compile_registry(document),
+            {
+                "demo.handlers:plan": lambda t, a, p, d: {"operation": "plan"},
+                "demo.handlers:decide": lambda t, a, p, d: {"operation": "decide"},
+            },
+        )
+
+        for operation in ("plan", "decide"):
+            envelope = rt.run(
+                f"demo://host/text/query/{operation}",
+                hydrated,
+                mode="execute",
+                policy={"execute": {"allow": ["demo://*"]}},
+            )
+            self.assertTrue(envelope.get("ok"), envelope.get("error"))
+            self.assertEqual(envelope["result"]["value"]["operation"], operation)
+
     def test_package_json_inline_manifest(self):
         import tempfile, os
         pkg = {

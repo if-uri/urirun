@@ -37,8 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   protection and unsigned additional-key denial.
 - Update the supported GitHub checkout, Python, Node, and artifact actions to
   their Node 24-based v7 releases.
-- Declare and install the `urillm` and `urirun-work` source dependencies used by
-  the hosted examples compatibility suite.
+- Hydrate live handler references in exact-URI index entries as well as the legacy
+  route tree, covering distinct operations that share one legacy route key.
+- Declare and install the `urirun-work` source dependency used by the hosted
+  examples compatibility suite.
 - Pin the CI lint gate to Ruff 0.15.21 so a new default rule set cannot turn a
   tool release into hundreds of unrelated source failures.
 - `collect_attachments` no longer harvests a route contract's `examples`
