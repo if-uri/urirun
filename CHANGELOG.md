@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a source-checkout fallback.
 
 ### Fixed
+- Pin the CI lint gate to Ruff 0.15.21 so a new default rule set cannot turn a
+  tool release into hundreds of unrelated source failures.
 - `collect_attachments` no longer harvests a route contract's `examples`
   placeholder paths as phantom screenshot attachments. The recursive artifact
   walk now skips diagnostic/contract keys
