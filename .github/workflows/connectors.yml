@@ -151,8 +151,30 @@ jobs:
 
       - name: Install the Python connector and its test dependencies
         if: steps.runtime.outputs.kind == 'python'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python -m pip install --upgrade pip
+          mapfile -t sibling_deps < <(
+            python - <<'PY'
+          import re
+          import tomllib
+
+          with open("connector/pyproject.toml", "rb") as stream:
+              project = tomllib.load(stream).get("project", {})
+          requirements = list(project.get("dependencies", []))
+          for values in project.get("optional-dependencies", {}).values():
+              requirements.extend(values)
+          for requirement in requirements:
+              match = re.match(r"^(urirun-connector-[a-z0-9-]+)(?:\s|@|[<>=!~;]|$)", requirement)
+              if match and "git+" not in requirement:
+                  print(match.group(1))
+          PY
+          )
+          for dependency in "${sibling_deps[@]}"; do
+            gh repo clone "urirun-connectors/$dependency" "dependency-$dependency" -- --depth 1 --quiet
+            pip install --no-deps -e "./dependency-$dependency"
+          done
           pip install -e './connector[test]' pytest
 
       - name: Install the Node connector
