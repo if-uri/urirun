@@ -42,7 +42,10 @@ _SECRET_ENV_RE = re.compile(
 )
 # Excluded: keyfile/cert *paths* (a filename, not the value) and ``*_ALLOW`` policy/allow-list
 # var names (which hold globs naming a secret, not the secret itself).
-_SECRET_ENV_EXCLUDE = re.compile(r"(KEY[_-]?ID|KEYWORD|KEY_?FILE|KEY_?PATH|CERT_?FILE|_ALLOW$)", re.IGNORECASE)
+_SECRET_ENV_EXCLUDE = re.compile(
+    r"(KEY[_-]?ID|KEYWORD|(?:KEY|CERT|PASSWORD|PASSWD|TOKEN|CREDENTIAL)[_-]?(?:FILE|PATH)|_ALLOW$)",
+    re.IGNORECASE,
+)
 
 # Each decorator kind binds to one runtime adapter. The manifest's ``adapterKinds``
 # advertises which adapters the connector uses; if it omits one a decorator route

@@ -97,7 +97,9 @@ class ConnectorLintTests(unittest.TestCase):
             "    host = os.getenv('SMTP_HOST')\n"           # not a secret
             "    pub = os.getenv('SSH_PUBLIC_KEY')\n"       # excluded
             "    kid = os.getenv('AWS_KEY_ID')\n"           # excluded
-            "    return a, b, c, user, host, pub, kid\n"
+            "    password_file = os.getenv('ONEDEV_PASSWORD_FILE')\n"  # path -> excluded
+            "    token_path = os.getenv('SERVICE_TOKEN_PATH')\n"       # path -> excluded
+            "    return a, b, c, user, host, pub, kid, password_file, token_path\n"
         )
         rep = connector_lint.lint_connector(self._pkg(core, {"id": "x"}))
         sr = rep["secretEnvReads"]
