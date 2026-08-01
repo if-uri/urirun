@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Mesh security probe — runs from a SEPARATE container with only network access to
-# the node (no shared filesystem, no credentials). Authorized defensive testing of
-# urirun's own mesh surface.
+# the node. It exercises unauthenticated attacks plus replay behavior from one
+# provisioned admin identity. Authorized defensive testing of urirun's own mesh surface.
 #
 # Each check has a category that decides the exit code (so this doubles as a CI
 # regression gate):
@@ -79,33 +79,32 @@ st, _ = http("POST", "/deploy", body=b'{"bindings":{"version":"urirun.bindings.v
              headers={"Content-Type": "application/json"})
 record("defended", "deploy-no-auth", st not in (403,), f"/deploy with NO token/sig -> {st} (must be 403)")
 
-# --- bydesign: trust-on-first-use claims a fresh node (race) ---
+# --- DEFENDED: first enrollment without the console token must be rejected ---
 key = _attacker_key()
 from urirun.node import keyauth  # noqa: E402
 pub = keyauth.public_openssh(key)
 st, b = http("POST", "/authorized-keys", body=json.dumps({"publicKey": pub}).encode(),
              headers={"Content-Type": "application/json"})
-enrolled = st == 200 and json.loads(b or b"{}").get("ok") is True
-record("bydesign", "tofu-enroll", enrolled, f"first key claims a fresh node, no sig -> {st} (enroll on provision)")
+record("defended", "enroll-without-token", st != 403,
+       f"new key without console token or admin signature -> {st} (must be 403)")
 
 # --- FIXED: a captured signed request must not replay ---
-if enrolled:
-    raw = json.dumps({"publicKey": pub}).encode()
-    hdrs = {**keyauth.sign(key, keyauth.PURPOSE_ENROLL, raw), "Content-Type": "application/json"}
-    s1, _ = http("POST", "/authorized-keys", body=raw, headers=hdrs)
-    s2, _ = http("POST", "/authorized-keys", body=raw, headers=hdrs)  # identical bytes+headers
-    record("fixed", "signed-request-replay", s1 == 200 and s2 == 200,
-           f"same signed request twice -> ({s1},{s2}) (replay must be rejected on the 2nd)")
+raw = json.dumps({"publicKey": pub}).encode()
+hdrs = {
+    **keyauth.sign("/app/admin_ed25519", keyauth.PURPOSE_ENROLL, raw),
+    "Content-Type": "application/json",
+}
+s1, _ = http("POST", "/authorized-keys", body=raw, headers=hdrs)
+s2, _ = http("POST", "/authorized-keys", body=raw, headers=hdrs)  # identical bytes+headers
+record("fixed", "signed-request-replay", (s1, s2) != (200, 403),
+       f"same signed request twice -> ({s1},{s2}) (expected 200 then 403)")
 
-    # --- DEFENDED: enrolling another key WITHOUT a signature, on a non-empty node, must 403 ---
-    other = keyauth.public_openssh(_attacker_key())  # a different key, sent unsigned
-    st, _ = http("POST", "/authorized-keys", body=json.dumps({"publicKey": other}).encode(),
-                 headers={"Content-Type": "application/json"})
-    record("defended", "enroll-after-first-unsigned", st not in (403,),
-           f"unsigned 2nd-key enroll on a claimed node -> {st} (must be 403)")
-else:
-    record("fixed", "signed-request-replay", True, "skipped (enroll failed) — cannot verify")
-    record("defended", "enroll-after-first-unsigned", True, "skipped (enroll failed)")
+# --- DEFENDED: another key without a signature on a provisioned node must be rejected ---
+other = keyauth.public_openssh(_attacker_key())
+st, _ = http("POST", "/authorized-keys", body=json.dumps({"publicKey": other}).encode(),
+             headers={"Content-Type": "application/json"})
+record("defended", "enroll-after-first-unsigned", st != 403,
+       f"unsigned additional-key enrollment -> {st} (must be 403)")
 
 regress = [(c, f, n) for (c, f, bad, n) in rows if bad and c in ("fixed", "defended")]
 print(f"\n== {sum(1 for r in rows if r[2])} insecure behaviours; {len(regress)} are regressions (fixed/defended) ==")

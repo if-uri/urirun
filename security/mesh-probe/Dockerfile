@@ -6,7 +6,8 @@ COPY urirun-*.whl /tmp/
 RUN pip install --no-cache-dir /tmp/urirun-*.whl cryptography
 
 WORKDIR /app
-COPY node.bindings.json probe.py /app/
+COPY node.bindings.json probe.py provision_admin.py /app/
+RUN python /app/provision_admin.py
 RUN urirun compile node.bindings.json --out node.registry.json
 
 EXPOSE 8765

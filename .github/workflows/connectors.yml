@@ -1,4 +1,4 @@
-# Fleet gate: lint every if-uri/urirun-connector-* against the in-tree urirun
+# Fleet gate: lint every urirun-connectors/urirun-connector-* against the in-tree urirun
 # (the build that carries the v2 authoring layer), failing on code<->manifest drift.
 # ALSO runs each connector's own `make test` against that SAME in-tree urirun (not
 # whatever version PyPI resolves) — fleet-lint only catches manifest/code drift, it
@@ -62,13 +62,13 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t repos < <(
-            gh repo list if-uri --no-archived --limit 300 --json name --jq '.[].name' \
+            gh repo list urirun-connectors --no-archived --limit 300 --json name --jq '.[].name' \
             | grep -E '^urirun-connector-' | sort
           )
           echo "discovered ${#repos[@]} connector repos"
           for r in "${repos[@]}"; do
             # "../$r" lands in the parent of the urirun checkout = the sibling layout
-            gh repo clone "if-uri/$r" "../$r" -- --depth 1 --quiet
+            gh repo clone "urirun-connectors/$r" "../$r" -- --depth 1 --quiet
             echo "  cloned $r"
           done
 
@@ -90,13 +90,13 @@ jobs:
     outputs:
       repos: ${{ steps.list.outputs.repos }}
     steps:
-      - name: List if-uri/urirun-connector-* repos
+      - name: List urirun-connectors/urirun-connector-* repos
         id: list
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          repos=$(gh repo list if-uri --no-archived --limit 300 --json name \
+          repos=$(gh repo list urirun-connectors --no-archived --limit 300 --json name \
             --jq '[.[].name] | map(select(test("^urirun-connector-"))) | sort')
           echo "discovered $(echo "$repos" | jq 'length') connector repos"
           echo "repos=$(echo "$repos" | jq -c .)" >> "$GITHUB_OUTPUT"
@@ -123,7 +123,7 @@ jobs:
       - name: Check out ${{ matrix.repo }}
         uses: actions/checkout@v7
         with:
-          repository: if-uri/${{ matrix.repo }}
+          repository: urirun-connectors/${{ matrix.repo }}
           path: connector
 
       - uses: actions/setup-python@v7

@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a source-checkout fallback.
 
 ### Fixed
+- Point connector fleet discovery and checkout at the current
+  `urirun-connectors` organization.
+- Update the mesh security probe for console-token enrollment: unauthenticated
+  first enrollment is rejected, while a provisioned admin still exercises replay
+  protection and unsigned additional-key denial.
 - Update the supported GitHub checkout, Python, Node, and artifact actions to
   their Node 24-based v7 releases.
 - Declare and install the `urillm` and `urirun-work` source dependencies used by
