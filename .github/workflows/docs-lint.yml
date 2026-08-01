@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: ifURI documentation standard
         # Self-contained mirror of if-uri/ifuri-com scripts/docs-lint.sh
         # Standard: https://docs.ifuri.com/repo-standards.html

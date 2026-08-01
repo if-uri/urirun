@@ -53,6 +53,8 @@ HOST_CONNECTORS = (
 HOST = (
     ("if-uri/urirun-declarative", "urirun-declarative"),
     ("if-uri/urirun-openapi-import", "urirun-openapi-import"),
+    ("if-uri/urirun-work", "urirun-work"),
+    ("tellmesh/urillm", "urillm"),
     *((f"urirun-connectors/urirun-connector-{name}", f"urirun-connector-{name}") for name in HOST_CONNECTORS),
 )
 

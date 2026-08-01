@@ -23,11 +23,11 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout urirun
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: urirun
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Checkout extracted test dependencies in parallel
@@ -46,16 +46,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout urirun
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: urirun
       - name: Checkout examples
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: if-uri/examples
           path: examples
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install urirun from this checkout
@@ -73,22 +73,22 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout urirun
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: urirun
       - name: Checkout examples
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: if-uri/examples
           path: examples
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Checkout host example dependencies in parallel
         run: python urirun/scripts/checkout_ci_dependencies.py host .
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
       - name: Install host toolchain
@@ -97,6 +97,7 @@ jobs:
         run: |
           python -m pip install -U pip pytest cryptography litellm
           python -m pip install -e ./urirun/adapters/python
+          python -m pip install -e ./urillm -e ./urirun-work
           editable=(-e ./urirun-declarative -e ./urirun-openapi-import)
           for directory in urirun-connector-*; do
             if [[ -f "$directory/pyproject.toml" ]]; then editable+=(-e "./$directory"); fi
@@ -113,7 +114,7 @@ jobs:
           make -C examples ci-host
       - name: Upload host artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: examples-host-artifacts
           path: examples/ci-artifacts/host
@@ -123,16 +124,16 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout urirun
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: urirun
       - name: Checkout examples
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: if-uri/examples
           path: examples
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Checkout Docker example dependencies in parallel
@@ -162,7 +163,7 @@ jobs:
           docker system prune -af --volumes || true
       - name: Upload Docker artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: examples-docker-artifacts
           path: examples/ci-artifacts/docker

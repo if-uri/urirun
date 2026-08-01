@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a source-checkout fallback.
 
 ### Fixed
+- Update the supported GitHub checkout, Python, Node, and artifact actions to
+  their Node 24-based v7 releases.
+- Declare and install the `urillm` and `urirun-work` source dependencies used by
+  the hosted examples compatibility suite.
 - Pin the CI lint gate to Ruff 0.15.21 so a new default rule set cannot turn a
   tool release into hundreds of unrelated source failures.
 - `collect_attachments` no longer harvests a route contract's `examples`

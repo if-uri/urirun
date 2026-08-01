@@ -46,10 +46,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out urirun
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -116,17 +116,17 @@ jobs:
         repo: ${{ fromJson(needs.discover.outputs.repos) }}
     steps:
       - name: Check out urirun
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: urirun
 
       - name: Check out ${{ matrix.repo }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: if-uri/${{ matrix.repo }}
           path: connector
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
