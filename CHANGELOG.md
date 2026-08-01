@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Point connector fleet discovery and checkout at the current
   `urirun-connectors` organization.
+- Keep discovered connector drift observational on push and schedule while
+  retaining a blocking manually dispatched `strict` migration gate.
 - Update the mesh security probe for console-token enrollment: unauthenticated
   first enrollment is rejected, while a provisioned admin still exercises replay
   protection and unsigned additional-key denial.

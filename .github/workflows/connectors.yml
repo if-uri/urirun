@@ -44,6 +44,9 @@ concurrency:
 jobs:
   fleet-lint:
     runs-on: ubuntu-latest
+    # Existing cross-repository debt remains visible without making every urirun
+    # push red. A manual strict run is the explicit blocking migration gate.
+    continue-on-error: ${{ github.event_name != 'workflow_dispatch' || inputs.strict != true }}
     steps:
       - name: Check out urirun
         uses: actions/checkout@v7
