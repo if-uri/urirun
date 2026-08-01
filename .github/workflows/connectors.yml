@@ -134,15 +134,38 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install the connector (its own deps + pytest — may pull urirun from PyPI as a side effect)
+      - name: Detect connector runtime
+        id: runtime
+        run: |
+          if [ -f connector/pyproject.toml ] || [ -f connector/setup.py ]; then
+            echo "kind=python" >> "$GITHUB_OUTPUT"
+          elif [ -f connector/package.json ]; then
+            echo "kind=node" >> "$GITHUB_OUTPUT"
+          elif [ -f connector/go.mod ]; then
+            echo "kind=go" >> "$GITHUB_OUTPUT"
+          elif [ -f connector/test.php ]; then
+            echo "kind=php" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=declarative" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install the Python connector and its test dependencies
+        if: steps.runtime.outputs.kind == 'python'
         run: |
           python -m pip install --upgrade pip
-          pip install -e ./connector pytest
+          pip install -e './connector[test]' pytest
+
+      - name: Install the Node connector
+        if: steps.runtime.outputs.kind == 'node'
+        working-directory: connector
+        run: npm install --ignore-scripts
 
       - name: Force the IN-TREE urirun to win (installed last — overrides whatever PyPI version the previous step pulled in)
+        if: steps.runtime.outputs.kind == 'python'
         run: pip install -e urirun/adapters/python
 
-      - name: Run the connector's own test suite against in-tree urirun
+      - name: Run the Python connector's own test suite against in-tree urirun
+        if: steps.runtime.outputs.kind == 'python'
         working-directory: connector
         run: |
           if [ -f Makefile ] && grep -q '^test:' Makefile; then
@@ -150,3 +173,29 @@ jobs:
           else
             python3 -m pytest -q
           fi
+
+      - name: Run the Node connector's test suite
+        if: steps.runtime.outputs.kind == 'node'
+        working-directory: connector
+        run: |
+          if npm pkg get scripts.test | grep -qv '^{}$'; then
+            npm test
+          elif [ -f test.mjs ]; then
+            node test.mjs
+          else
+            node --test
+          fi
+
+      - name: Run the Go connector's test suite
+        if: steps.runtime.outputs.kind == 'go'
+        working-directory: connector
+        run: go test ./...
+
+      - name: Run the PHP connector's test suite
+        if: steps.runtime.outputs.kind == 'php'
+        working-directory: connector
+        run: php test.php
+
+      - name: Validate a declarative connector
+        if: steps.runtime.outputs.kind == 'declarative'
+        run: python -m json.tool connector/connector.manifest.json > /dev/null
