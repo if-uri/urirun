@@ -18,6 +18,22 @@ DEV_PYTHONPATH := $(CURDIR)/adapters/python:$(CURDIR)/../urirun-flow:$(CURDIR)/.
 
 .DEFAULT_GOAL := help
 
+.PHONY: doctor-setup doctor-build doctor-test doctor-health
+doctor-setup: ## Prepare the same clean test dependencies used by CI.
+	$(PYTHON) scripts/checkout_ci_dependencies.py unit ..
+	$(PYTHON) -m pip install -e './adapters/python[test]'
+	$(PYTHON) -m pip install --no-deps \
+		-e ../urirun-connector-twin \
+		-e ../urirun-connector-domain-monitor
+
+doctor-build: version-check ## Verify release metadata and compile Python sources.
+	$(PYTHON) -m compileall -q adapters/python/urirun
+
+doctor-test: version-check slim-import render-single-source test-js conformance test-v1 test-v2 ## Run bounded repository diagnostics.
+
+doctor-health: ## Verify the source checkout exposes the public package.
+	PYTHONPATH=adapters/python $(PYTHON) -c "import urirun; print(urirun.__name__)"
+
 .PHONY: help
 help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
