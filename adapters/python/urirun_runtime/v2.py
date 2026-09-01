@@ -844,8 +844,18 @@ def run_local_function_subprocess(ctx: dict, policy: dict, execute: bool) -> dic
         timeout=policy.get("timeout", 30), cwd=str(runner_cwd), env=env,
     )
     value = _subprocess_parse_output(proc)
-    return {"type": "function-subprocess", "ref": ref, "isolated": True,
-            "exitCode": proc.returncode, "value": value, "stderr": proc.stderr[-2000:]}
+    return {
+        "type": "function-subprocess",
+        "ref": ref,
+        "isolated": True,
+        "exitCode": proc.returncode,
+        # Keep the historical value field and expose the same payload through
+        # the canonical successful transport envelope used by URI consumers.
+        "ok": proc.returncode == 0,
+        "result": value,
+        "value": value,
+        "stderr": proc.stderr[-2000:],
+    }
 
 
 def _last_json_object(text: str) -> dict:
