@@ -116,6 +116,8 @@ def test_executor_runs_in_subprocess(tmp_path, monkeypatch):
     pol = _runtime.build_policy(None, ["iso://*"], None)
     r = urirun.run("iso://host/x/query/square", reg, {"n": 9}, mode="execute", policy=pol)
     assert r["ok"] is True and r["result"]["isolated"] is True and r["result"]["value"]["square"] == 81
+    assert r["result"]["ok"] is True
+    assert r["result"]["result"] == r["result"]["value"]
 
 
 def test_subprocess_cwd_does_not_shadow_urirun_package(tmp_path, monkeypatch):
@@ -142,6 +144,7 @@ def test_crash_is_contained(tmp_path, monkeypatch):
     pid = os.getpid()
     r = urirun.run("iso://host/x/query/boom", reg, {"msg": "x"}, mode="execute", policy=pol)
     assert r["ok"] is False                       # crash -> non-zero exit -> ok False
+    assert r["result"]["ok"] is False
     assert r["result"]["exitCode"] != 0 and "RuntimeError" in r["result"]["stderr"]
     assert os.getpid() == pid                     # host survived
 
