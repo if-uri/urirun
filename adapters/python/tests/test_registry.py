@@ -150,3 +150,27 @@ def test_list_routes_preserves_meta_contract_domains():
 
     assert routes[0]["inputSchema"]["properties"]["monitor"]["type"] == "integer"
     assert routes[0]["meta"]["contract"]["domains"]["monitor"]["domain"] == "env:monitors.id"
+
+
+def test_write_json_stringifies_callable_ref(tmp_path):
+    from urirun.runtime._registry import write_json, load_json
+
+    def handler():
+        return {"ok": True}
+
+    path = tmp_path / "bindings.json"
+    write_json(
+        path,
+        {
+            "version": "urirun.bindings.v2",
+            "bindings": [
+                {
+                    "uri": "demo://local/echo/query/text",
+                    "ref": handler,
+                    "python": {"module": __name__, "export": "handler"},
+                }
+            ],
+        },
+    )
+    data = load_json(path)
+    assert data["bindings"][0]["ref"] == f"{handler.__module__}.{handler.__name__}"

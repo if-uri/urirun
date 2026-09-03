@@ -655,11 +655,27 @@ def load_json(path: str | Path):
         return json.load(f)
 
 
+def _json_default(value):
+    """Serialize live callables that survive into binding documents.
+
+    In-process ``local-function`` handlers keep a callable ``ref`` for dispatch.
+    Discover/scan still emit those documents as JSON; stringify to ``module.name``
+    (same shape as the portable ``python`` re-import hint) instead of crashing.
+    """
+    if callable(value) and not isinstance(value, type):
+        module = getattr(value, "__module__", None)
+        name = getattr(value, "__name__", None)
+        if module and name:
+            return f"{module}.{name}"
+        return name or str(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 def write_json(path: str | Path, value) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
-        json.dump(value, f, indent=2, sort_keys=True)
+        json.dump(value, f, indent=2, sort_keys=True, default=_json_default)
         f.write("\n")
 
 
@@ -667,7 +683,7 @@ def _emit_json(value, out: str | None) -> None:
     if out and out != "-":
         write_json(out, value)
         return
-    json.dump(value, sys.stdout, indent=2, sort_keys=True)
+    json.dump(value, sys.stdout, indent=2, sort_keys=True, default=_json_default)
     sys.stdout.write("\n")
 
 
