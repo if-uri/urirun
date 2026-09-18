@@ -206,3 +206,18 @@ test-local: ## Verify a fresh install from the local source tree (no PyPI needed
 .PHONY: clean
 clean: ## Remove local generated cache files.
 	rm -rf node_modules .pytest_cache adapters/python/tests/__pycache__ adapters/python/urirun/__pycache__ adapters/python/*.egg-info adapters/python/build adapters/python/dist __pycache__
+
+.PHONY: doctor-setup doctor-build doctor-test doctor-health
+
+doctor-setup: ## Install the Python adapter for repository-owned diagnostics.
+	$(PYTHON) -m pip install -e adapters/python
+
+doctor-build: heal ## Offline syntax gate for OneDev / doctor-agent.
+	$(PYTHON) -m compileall -q adapters/python/urirun
+	$(MAKE) version-check slim-import
+
+doctor-health: ## Import smoke for the installed slim core package.
+	$(PYTHON) -c "import urirun; print('urirun import OK')"
+
+doctor-test: doctor-build doctor-health ## Repository-owned diagnostic bundle without network services.
+	@echo "doctor-test OK"
